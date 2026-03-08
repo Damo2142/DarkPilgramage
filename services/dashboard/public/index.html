@@ -5,26 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dark Pilgrimage — Co-DM</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Source+Sans+3:wght@300;400;600&display=swap');
+
     :root {
-      --bg: #0a0a0c;
-      --surface: #141418;
-      --surface2: #1c1c22;
-      --border: #2a2a33;
-      --text: #e0ddd5;
-      --text-dim: #7a7770;
+      --bg: #07070a;
+      --surface: #0f0f14;
+      --surface2: #16161d;
+      --surface3: #1e1e28;
+      --border: #252530;
+      --border-light: #333340;
+      --text: #ddd9cf;
+      --text-dim: #6b6760;
       --accent: #c9a54e;
       --accent-dim: #8a7030;
+      --accent-glow: rgba(201,165,78,0.15);
       --red: #a03030;
       --red-bright: #d04040;
       --green: #30a050;
+      --green-dim: #1a5a30;
       --blue: #4080c0;
+      --blue-dim: #2a5580;
+      --purple: #7050a0;
       --orange: #c07030;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Source Sans 3', system-ui, sans-serif;
       background: var(--bg);
       color: var(--text);
       height: 100vh;
@@ -36,610 +44,789 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 8px 16px;
+      padding: 6px 16px;
       background: var(--surface);
       border-bottom: 1px solid var(--border);
-      height: 48px;
+      height: 42px;
     }
 
     header h1 {
-      font-size: 16px;
+      font-family: 'Cinzel', serif;
+      font-size: 14px;
       font-weight: 600;
       color: var(--accent);
-      letter-spacing: 1px;
+      letter-spacing: 2px;
     }
 
     .header-status {
       display: flex;
       align-items: center;
       gap: 16px;
-      font-size: 13px;
+      font-size: 12px;
     }
 
-    .status-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      display: inline-block;
-      margin-right: 4px;
-    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+    .dot.green { background: var(--green); box-shadow: 0 0 4px var(--green); }
+    .dot.red { background: var(--red-bright); }
+    .dot.yellow { background: var(--orange); }
 
-    .status-dot.green { background: var(--green); }
-    .status-dot.red { background: var(--red-bright); }
-    .status-dot.yellow { background: var(--orange); }
+    #session-timer { font-family: monospace; color: var(--accent); font-size: 13px; }
 
-    #session-timer {
-      font-family: monospace;
-      color: var(--accent);
-    }
-
-    /* === MAIN GRID === */
+    /* === MAIN GRID — 3 columns === */
     .grid {
       display: grid;
-      grid-template-columns: 1fr 320px;
-      grid-template-rows: 1fr auto;
-      height: calc(100vh - 48px);
+      grid-template-columns: 1fr 300px 320px;
+      height: calc(100vh - 42px);
     }
 
-    /* === TRANSCRIPT PANEL (left) === */
-    .transcript-panel {
-      display: flex;
-      flex-direction: column;
-      border-right: 1px solid var(--border);
-    }
-
-    .panel-header {
-      padding: 8px 12px;
+    /* === COLUMN HEADERS === */
+    .col-header {
+      padding: 6px 10px;
       background: var(--surface);
       border-bottom: 1px solid var(--border);
-      font-size: 12px;
+      font-family: 'Cinzel', serif;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--text-dim);
+    }
+
+    .section-header {
+      padding: 5px 10px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      font-size: 10px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 1px;
       color: var(--text-dim);
     }
 
+    /* === LEFT: TRANSCRIPT === */
+    .transcript-col {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+    }
+
     #transcript {
       flex: 1;
       overflow-y: auto;
-      padding: 12px;
-      font-size: 14px;
-      line-height: 1.6;
+      padding: 8px;
+      font-size: 13px;
+      line-height: 1.5;
     }
 
-    .transcript-entry {
-      margin-bottom: 8px;
-      padding: 6px 10px;
-      border-radius: 4px;
-      background: var(--surface);
+    .t-entry { margin-bottom: 6px; padding: 5px 8px; border-radius: 3px; background: var(--surface); }
+    .t-entry .speaker { font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .t-entry .speaker.dm { color: var(--accent); }
+    .t-entry .speaker.player { color: var(--blue); }
+    .t-entry .speaker.system { color: var(--text-dim); }
+    .t-entry .speaker.npc { color: var(--purple); }
+    .t-entry .time { float: right; font-size: 10px; color: var(--text-dim); font-family: monospace; }
+    .t-entry .text { color: var(--text); font-size: 13px; }
+
+    /* === MIDDLE: CONTROLS === */
+    .controls-col {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
     }
 
-    .transcript-entry .speaker {
-      font-weight: 600;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 2px;
-    }
-
-    .transcript-entry .speaker.dm { color: var(--accent); }
-    .transcript-entry .speaker.player { color: var(--blue); }
-    .transcript-entry .speaker.system { color: var(--text-dim); }
-
-    .transcript-entry .time {
-      float: right;
-      font-size: 11px;
-      color: var(--text-dim);
-      font-family: monospace;
-    }
-
-    .transcript-entry .text {
+    /* Buttons */
+    button {
+      padding: 5px 10px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      background: var(--surface2);
       color: var(--text);
+      font-size: 11px;
+      cursor: pointer;
+      font-family: 'Source Sans 3', sans-serif;
+      transition: all 0.1s;
+    }
+    button:hover { background: var(--surface3); border-color: var(--border-light); }
+    button:active { transform: scale(0.97); }
+    button.primary { background: var(--accent-dim); border-color: var(--accent); color: #fff; }
+    button.primary:hover { background: var(--accent); }
+    button.danger { background: var(--red); border-color: var(--red-bright); color: #fff; }
+    button.danger:hover { background: var(--red-bright); }
+    button.active { background: var(--accent-dim); border-color: var(--accent); color: #fff; }
+    button.sm { padding: 3px 8px; font-size: 10px; }
+    button.ghost { background: transparent; border-color: transparent; color: var(--text-dim); }
+    button.ghost:hover { color: var(--text); border-color: var(--border); }
+
+    /* Session controls */
+    .session-bar {
+      display: flex;
+      gap: 4px;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
     }
 
-    /* === SIDEBAR (right) === */
-    .sidebar {
+    .session-bar button { flex: 1; min-width: 60px; }
+
+    /* Atmosphere grid */
+    .atmo-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .atmo-btn {
+      padding: 6px 4px;
+      font-size: 10px;
+      text-align: center;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .atmo-btn:hover { border-color: var(--accent-dim); color: var(--text); }
+    .atmo-btn.active { border-color: var(--accent); background: var(--accent-dim); color: #fff; }
+
+    .atmo-btn .atmo-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      display: inline-block; margin-right: 3px;
+    }
+
+    /* Horror controls */
+    .horror-controls {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .horror-controls select, .horror-controls input[type="text"] {
+      width: 100%;
+      padding: 4px 8px;
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text);
+      font-size: 12px;
+      font-family: inherit;
+      margin-bottom: 6px;
+    }
+
+    .horror-controls .row {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 6px;
+    }
+
+    .horror-controls .row button { flex: 1; }
+
+    /* Private message */
+    .pm-controls {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .pm-controls select, .pm-controls textarea {
+      width: 100%;
+      padding: 4px 8px;
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text);
+      font-size: 12px;
+      font-family: inherit;
+      margin-bottom: 6px;
+    }
+
+    .pm-controls textarea { resize: vertical; min-height: 50px; }
+
+    /* Story beats */
+    .beat-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      font-size: 11px;
+      border-bottom: 1px solid var(--bg);
+      cursor: pointer;
+    }
+    .beat-item:hover { background: var(--surface2); }
+    .beat-item .beat-check { width: 14px; height: 14px; border: 1px solid var(--border); border-radius: 2px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+    .beat-item.completed .beat-check { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+    .beat-item.completed .beat-name { color: var(--text-dim); text-decoration: line-through; }
+
+    /* === RIGHT: PLAYERS & NPC === */
+    .players-col {
       display: flex;
       flex-direction: column;
       overflow-y: auto;
       background: var(--surface);
     }
 
-    /* Session Controls */
-    .session-controls {
-      padding: 12px;
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
+    /* Player card */
+    .p-card {
+      padding: 8px 10px;
       border-bottom: 1px solid var(--border);
     }
 
-    button {
-      padding: 6px 14px;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      background: var(--surface2);
-      color: var(--text);
-      font-size: 13px;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-
-    button:hover { background: var(--border); }
-    button:active { transform: scale(0.97); }
-
-    button.primary {
-      background: var(--accent-dim);
-      border-color: var(--accent);
-      color: #fff;
-    }
-    button.primary:hover { background: var(--accent); }
-
-    button.danger {
-      background: var(--red);
-      border-color: var(--red-bright);
-      color: #fff;
-    }
-    button.danger:hover { background: var(--red-bright); }
-
-    /* Players */
-    .player-card {
-      padding: 10px 12px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .player-card .player-name {
-      font-weight: 600;
-      font-size: 13px;
-      margin-bottom: 6px;
+    .p-card .p-header {
       display: flex;
       justify-content: space-between;
-    }
-
-    .bar-container {
-      height: 6px;
-      background: var(--surface2);
-      border-radius: 3px;
+      align-items: center;
       margin-bottom: 4px;
-      overflow: hidden;
     }
 
-    .bar-fill {
-      height: 100%;
-      border-radius: 3px;
-      transition: width 0.5s ease;
-    }
+    .p-card .p-name { font-weight: 600; font-size: 12px; }
+    .p-card .p-info { font-size: 10px; color: var(--text-dim); }
 
+    .bar { height: 5px; background: var(--surface3); border-radius: 2px; margin: 2px 0; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s; }
     .bar-fill.hp { background: var(--green); }
-    .bar-fill.dread { background: var(--red-bright); }
+    .bar-fill.hp.wounded { background: var(--orange); }
+    .bar-fill.hp.critical { background: var(--red-bright); }
+    .bar-fill.dread { background: linear-gradient(90deg, var(--accent-dim), var(--red-bright)); }
 
-    .bar-label {
-      font-size: 11px;
-      color: var(--text-dim);
+    .bar-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); }
+
+    .p-card .dread-controls {
       display: flex;
-      justify-content: space-between;
+      gap: 3px;
+      margin-top: 4px;
     }
 
-    /* NPC Queue */
-    .npc-queue-item {
-      padding: 10px 12px;
+    .p-card .dread-controls button {
+      padding: 2px 6px;
+      font-size: 10px;
+    }
+
+    /* NPC queue */
+    .npc-item {
+      padding: 8px 10px;
       border-bottom: 1px solid var(--border);
       background: var(--surface2);
     }
 
-    .npc-queue-item .npc-name {
-      font-weight: 600;
-      color: var(--accent);
-      font-size: 12px;
-      margin-bottom: 4px;
-    }
+    .npc-item .npc-name { font-weight: 600; color: var(--accent); font-size: 11px; margin-bottom: 3px; }
+    .npc-item .npc-text { font-size: 12px; font-style: italic; margin-bottom: 6px; line-height: 1.4; }
+    .npc-item .npc-actions { display: flex; gap: 4px; }
 
-    .npc-queue-item .npc-text {
-      font-size: 13px;
-      font-style: italic;
-      margin-bottom: 8px;
-      color: var(--text);
-    }
-
-    .npc-queue-item .npc-actions {
+    /* Services */
+    .svc-item {
       display: flex;
-      gap: 6px;
-    }
-
-    .npc-queue-item .npc-actions button {
+      justify-content: space-between;
+      align-items: center;
       font-size: 11px;
       padding: 3px 10px;
     }
 
-    /* Trust Level */
-    .trust-selector {
-      padding: 12px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .trust-selector label {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-dim);
-      display: block;
-      margin-bottom: 6px;
-    }
-
-    .trust-buttons {
-      display: flex;
-      gap: 4px;
-    }
-
-    .trust-buttons button {
-      flex: 1;
-      font-size: 11px;
-      padding: 4px 8px;
-    }
-
-    .trust-buttons button.active {
-      background: var(--accent-dim);
-      border-color: var(--accent);
-      color: #fff;
-    }
-
-    /* Services */
-    .service-list {
-      padding: 12px;
-    }
-
-    .service-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 12px;
-      padding: 3px 0;
-    }
-
-    /* Event Log */
+    /* Event log */
     #event-log {
-      padding: 12px;
-      font-size: 11px;
+      padding: 6px 10px;
+      font-size: 10px;
       font-family: monospace;
       color: var(--text-dim);
-      max-height: 200px;
+      max-height: 150px;
       overflow-y: auto;
     }
-
-    #event-log .event {
-      padding: 1px 0;
-      border-bottom: 1px solid var(--bg);
-    }
-
-    .event .event-name { color: var(--accent); }
-    .event .event-time { color: var(--text-dim); }
+    .ev { padding: 1px 0; }
+    .ev .ev-name { color: var(--accent); }
 
     /* Connection overlay */
-    #connection-overlay {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.8);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    #overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.85);
+      display: flex; align-items: center; justify-content: center;
       z-index: 1000;
-      color: var(--text);
-      font-size: 18px;
+      font-family: 'Cinzel', serif;
+      font-size: 16px;
+      color: var(--accent);
+      letter-spacing: 2px;
     }
-
-    #connection-overlay.connected { display: none; }
+    #overlay.connected { display: none; }
 
     /* Scrollbar */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* Tooltip */
+    .tooltip { position: relative; }
+    .tooltip:hover::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-size: 10px;
+      white-space: nowrap;
+      z-index: 100;
+    }
   </style>
 </head>
 <body>
-  <div id="connection-overlay">Connecting to Co-DM...</div>
+
+  <div id="overlay">⛧ Connecting to Co-DM...</div>
 
   <header>
     <h1>⛧ DARK PILGRIMAGE — CO-DM</h1>
     <div class="header-status">
-      <span><span class="status-dot" id="ws-status"></span><span id="ws-label">Disconnected</span></span>
-      <span>Session: <strong id="session-status">Idle</strong></span>
+      <span><span class="dot" id="ws-dot"></span><span id="ws-label">—</span></span>
+      <span>Session: <strong id="sess-status">Idle</strong></span>
       <span id="session-timer">00:00:00</span>
     </div>
   </header>
 
   <div class="grid">
-    <!-- LEFT: Transcript -->
-    <div class="transcript-panel">
-      <div class="panel-header">Live Transcript</div>
+
+    <!-- LEFT: TRANSCRIPT -->
+    <div class="transcript-col">
+      <div class="col-header">Live Transcript</div>
       <div id="transcript">
-        <div class="transcript-entry">
-          <span class="speaker system">System</span>
-          <span class="text">Waiting for session to start...</span>
-        </div>
+        <div class="t-entry"><span class="speaker system">System</span><span class="text">Waiting for session to start...</span></div>
       </div>
     </div>
 
-    <!-- RIGHT: Sidebar -->
-    <div class="sidebar">
-      <!-- Session Controls -->
-      <div class="panel-header">Session</div>
-      <div class="session-controls">
+    <!-- MIDDLE: CONTROLS -->
+    <div class="controls-col">
+      <div class="col-header">Controls</div>
+
+      <!-- Session -->
+      <div class="section-header">Session</div>
+      <div class="session-bar">
         <button class="primary" onclick="send('session:start')">▶ Start</button>
         <button onclick="send('session:pause')">⏸ Pause</button>
         <button onclick="send('session:resume')">▶ Resume</button>
         <button onclick="send('session:end')">⏹ End</button>
-        <button class="danger" onclick="if(confirm('PANIC — Kill all effects?')) send('panic')">🚨 PANIC</button>
+      </div>
+      <div class="session-bar">
+        <button class="danger" onclick="if(confirm('PANIC — Kill all effects?')) send('panic')" style="flex:2">🚨 PANIC</button>
       </div>
 
-      <!-- Trust Level -->
-      <div class="trust-selector">
-        <label>AI Trust Level</label>
-        <div class="trust-buttons">
-          <button id="trust-manual" class="active" onclick="setTrust('manual')">Manual</button>
-          <button id="trust-assisted" onclick="setTrust('assisted')">Assisted</button>
-          <button id="trust-autopilot" onclick="setTrust('autopilot')">Autopilot</button>
-        </div>
+      <!-- Trust -->
+      <div class="section-header">AI Trust Level</div>
+      <div class="session-bar">
+        <button id="t-manual" class="active" onclick="setTrust('manual')">Manual</button>
+        <button id="t-assisted" onclick="setTrust('assisted')">Assisted</button>
+        <button id="t-autopilot" onclick="setTrust('autopilot')">Autopilot</button>
       </div>
 
-      <!-- Players -->
-      <div class="panel-header">Players</div>
-      <div id="players">
-        <div class="player-card">
-          <div style="color: var(--text-dim); font-size: 12px; text-align: center; padding: 8px;">
-            No players connected
-          </div>
-        </div>
+      <!-- Atmosphere -->
+      <div class="section-header">Atmosphere</div>
+      <div class="atmo-grid" id="atmo-grid">
+        <div class="atmo-btn" onclick="setAtmo('tavern_warm')" data-profile="tavern_warm"><span class="atmo-dot" style="background:#c9a54e"></span>Warm</div>
+        <div class="atmo-btn" onclick="setAtmo('tavern_tense')" data-profile="tavern_tense"><span class="atmo-dot" style="background:#a08030"></span>Tense</div>
+        <div class="atmo-btn" onclick="setAtmo('tavern_dark')" data-profile="tavern_dark"><span class="atmo-dot" style="background:#803020"></span>Dark</div>
+        <div class="atmo-btn" onclick="setAtmo('investigation')" data-profile="investigation"><span class="atmo-dot" style="background:#4080c0"></span>Investigate</div>
+        <div class="atmo-btn" onclick="setAtmo('dread_rising')" data-profile="dread_rising"><span class="atmo-dot" style="background:#c03030"></span>Dread</div>
+        <div class="atmo-btn" onclick="setAtmo('terror_peak')" data-profile="terror_peak"><span class="atmo-dot" style="background:#800000"></span>Terror</div>
+        <div class="atmo-btn" onclick="setAtmo('combat')" data-profile="combat"><span class="atmo-dot" style="background:#d04020"></span>Combat</div>
+        <div class="atmo-btn" onclick="setAtmo('revelation')" data-profile="revelation"><span class="atmo-dot" style="background:#8080ff"></span>Reveal</div>
+        <div class="atmo-btn" onclick="setAtmo('dawn')" data-profile="dawn"><span class="atmo-dot" style="background:#e0c060"></span>Dawn</div>
       </div>
 
-      <!-- NPC Queue -->
-      <div class="panel-header">NPC Dialogue Queue</div>
-      <div id="npc-queue">
-        <div style="color: var(--text-dim); font-size: 12px; text-align: center; padding: 12px;">
-          No pending dialogue
+      <!-- Horror Effects -->
+      <div class="section-header">Horror Effects</div>
+      <div class="horror-controls">
+        <select id="horror-target">
+          <option value="all">All Players</option>
+        </select>
+        <div class="row">
+          <button onclick="sendHorror('screen_tint', {color:'rgba(80,0,0,0.12)',pulse:true}, 5000)">Red Tint</button>
+          <button onclick="sendHorror('screen_flash', {color:'rgba(255,255,255,0.8)',flashMs:100}, 100)">Flash</button>
+          <button onclick="sendHorror('glitch', {}, 2000)">Glitch</button>
         </div>
+        <div class="row">
+          <button onclick="sendHorror('shake', {intensity:0.05}, 1000)">Shake</button>
+          <button onclick="sendDreadVision()">Vision</button>
+          <button onclick="sendWhisper()">Whisper</button>
+        </div>
+        <input type="text" id="horror-text" placeholder="Vision or whisper text...">
       </div>
+
+      <!-- Private Message -->
+      <div class="section-header">Private Message</div>
+      <div class="pm-controls">
+        <select id="pm-target">
+          <option value="">Select player...</option>
+        </select>
+        <textarea id="pm-text" placeholder="Message only this player sees..."></textarea>
+        <button class="primary" onclick="sendPM()" style="width:100%">Send Private Message</button>
+      </div>
+
+      <!-- Story Beats -->
+      <div class="section-header">Story Beats</div>
+      <div id="beats"></div>
 
       <!-- Services -->
-      <div class="panel-header">Services</div>
-      <div class="service-list" id="services"></div>
+      <div class="section-header">Services</div>
+      <div id="services"></div>
 
       <!-- Event Log -->
-      <div class="panel-header">Event Log</div>
+      <div class="section-header">Event Log</div>
       <div id="event-log"></div>
+    </div>
+
+    <!-- RIGHT: PLAYERS & NPC -->
+    <div class="players-col">
+      <div class="col-header">Players</div>
+      <div id="players"></div>
+
+      <div class="col-header">NPC Dialogue Queue</div>
+      <div id="npc-queue">
+        <div style="color:var(--text-dim);font-size:11px;text-align:center;padding:12px;">No pending dialogue</div>
+      </div>
+
+      <div class="col-header">NPC Manual</div>
+      <div class="pm-controls">
+        <select id="npc-select">
+          <option value="">Select NPC...</option>
+        </select>
+        <input type="text" id="npc-manual-text" placeholder="What should the NPC say about..." style="width:100%;padding:4px 8px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:12px;font-family:inherit;margin-bottom:6px;">
+        <button class="primary" onclick="sendNpcManual()" style="width:100%">Generate Dialogue</button>
+      </div>
     </div>
   </div>
 
-  <script>
-    // === WebSocket Connection ===
-    let ws = null;
-    let state = {};
-    let reconnectTimer = null;
+<script>
+  let ws = null;
+  let state = {};
+  let currentAtmo = '';
 
-    function connect() {
-      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${protocol}//${location.host}`);
+  function connect() {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${proto}//${location.host}`);
 
-      ws.onopen = () => {
-        document.getElementById('connection-overlay').classList.add('connected');
-        document.getElementById('ws-status').className = 'status-dot green';
-        document.getElementById('ws-label').textContent = 'Connected';
-        if (reconnectTimer) clearInterval(reconnectTimer);
-      };
+    ws.onopen = () => {
+      document.getElementById('overlay').classList.add('connected');
+      document.getElementById('ws-dot').className = 'dot green';
+      document.getElementById('ws-label').textContent = 'Connected';
+    };
 
-      ws.onmessage = (e) => {
-        const msg = JSON.parse(e.data);
-        handleMessage(msg);
-      };
+    ws.onmessage = (e) => handleMessage(JSON.parse(e.data));
 
-      ws.onclose = () => {
-        document.getElementById('ws-status').className = 'status-dot red';
-        document.getElementById('ws-label').textContent = 'Disconnected';
-        document.getElementById('connection-overlay').classList.remove('connected');
-        reconnectTimer = setTimeout(connect, 2000);
-      };
+    ws.onclose = () => {
+      document.getElementById('ws-dot').className = 'dot red';
+      document.getElementById('ws-label').textContent = 'Disconnected';
+      document.getElementById('overlay').classList.remove('connected');
+      setTimeout(connect, 2000);
+    };
+  }
+
+  function send(type, data = {}) {
+    if (ws?.readyState === 1) ws.send(JSON.stringify({ type, ...data }));
+  }
+
+  // === MESSAGE HANDLER ===
+  function handleMessage(msg) {
+    switch (msg.type || msg.event) {
+      case 'init':
+        state = msg.state || {};
+        updateAll();
+        if (msg.services) renderServices(msg.services);
+        break;
+      case 'state:change':
+        setNested(state, msg.data.path, msg.data.value);
+        updateAll();
+        break;
+      case 'transcript:segment':
+        addTranscript(msg.data);
+        break;
+      case 'ai:npc_dialogue':
+        addNpcSuggestion(msg.data);
+        break;
+      case 'ai:atmosphere':
+        addTranscript({ speaker: 'system', text: `AI suggests: ${msg.data.profile} (${msg.data.reason}, confidence: ${msg.data.confidence})` });
+        break;
+      case 'ai:dm_suggestion':
+        addTranscript({ speaker: 'system', text: `💡 ${msg.data.text}` });
+        break;
+      case 'atmo:profile_active':
+        currentAtmo = msg.data.profile;
+        updateAtmoGrid();
+        addTranscript({ speaker: 'system', text: `Atmosphere: ${msg.data.profile}` });
+        break;
+      case 'session:started':
+        addTranscript({ speaker: 'system', text: 'Session started.' });
+        break;
+      case 'session:paused':
+        addTranscript({ speaker: 'system', text: 'Session paused.' });
+        break;
+      case 'session:ended':
+        addTranscript({ speaker: 'system', text: 'Session ended.' });
+        break;
+      case 'player:connected':
+        addTranscript({ speaker: 'system', text: `${msg.data.playerId} connected` });
+        break;
+      case 'player:disconnected':
+        addTranscript({ speaker: 'system', text: `${msg.data.playerId} disconnected` });
+        break;
+      case 'dread:update':
+        break;
+      case 'system:ready':
+        if (msg.data?.services) renderServices(msg.data.services);
+        break;
+      case 'story:beat':
+        addTranscript({ speaker: 'system', text: `📖 Beat completed: ${msg.data.name}` });
+        renderBeats();
+        break;
     }
 
-    function send(type, data = {}) {
-      if (ws && ws.readyState === 1) {
-        ws.send(JSON.stringify({ type, ...data }));
-      }
+    // Event log (skip noisy)
+    const evType = msg.event || msg.type;
+    if (!['state:change', 'audio:chunk'].includes(evType)) addEvent(evType);
+  }
+
+  // === UI UPDATES ===
+  function updateAll() {
+    // Session
+    const s = state.session?.status || 'idle';
+    document.getElementById('sess-status').textContent = s.charAt(0).toUpperCase() + s.slice(1);
+    if (state.session?.elapsedMs) document.getElementById('session-timer').textContent = fmtTime(state.session.elapsedMs);
+
+    // Trust
+    ['manual','assisted','autopilot'].forEach(l => {
+      document.getElementById(`t-${l}`).classList.toggle('active', state.session?.aiTrustLevel === l);
+    });
+
+    // Atmosphere
+    currentAtmo = state.atmosphere?.currentProfile || '';
+    updateAtmoGrid();
+
+    // Players
+    renderPlayers();
+
+    // Beats
+    renderBeats();
+
+    // NPCs in selectors
+    updateNpcSelect();
+    updatePlayerSelects();
+  }
+
+  function updateAtmoGrid() {
+    document.querySelectorAll('.atmo-btn').forEach(btn => {
+      const p = btn.dataset.profile;
+      btn.classList.toggle('active', p === currentAtmo || p === currentAtmo.replace(/-/g,'_') || p === currentAtmo.replace(/_/g,'-'));
+    });
+  }
+
+  function renderPlayers() {
+    const c = document.getElementById('players');
+    const players = state.players || {};
+    const ids = Object.keys(players);
+
+    if (ids.length === 0) {
+      c.innerHTML = '<div style="color:var(--text-dim);font-size:11px;text-align:center;padding:12px;">No players connected</div>';
+      return;
     }
 
-    // === Message Handler ===
-    function handleMessage(msg) {
-      switch (msg.type) {
-        case 'init':
-          state = msg.state;
-          updateUI();
-          if (msg.services) renderServices(msg.services);
-          break;
+    c.innerHTML = ids.map(id => {
+      const p = players[id];
+      const hp = p.character?.hp || { current: 10, max: 10 };
+      const hpPct = Math.round((hp.current / hp.max) * 100);
+      const hpClass = hpPct <= 25 ? 'critical' : hpPct <= 50 ? 'wounded' : '';
+      const d = p.dread?.score || 0;
+      const dt = p.dread?.threshold || 'calm';
+      const name = p.character?.name || p.name || id;
 
-        case 'state:change':
-          setNestedValue(state, msg.data.path, msg.data.value);
-          updateUI();
-          break;
-
-        case 'transcript:segment':
-          addTranscript(msg.data);
-          break;
-
-        case 'ai:npc_dialogue':
-          addNpcSuggestion(msg.data);
-          break;
-
-        case 'session:started':
-          addTranscript({ speaker: 'system', text: 'Session started.' });
-          break;
-
-        case 'session:paused':
-          addTranscript({ speaker: 'system', text: 'Session paused.' });
-          break;
-
-        case 'session:ended':
-          addTranscript({ speaker: 'system', text: 'Session ended.' });
-          break;
-
-        case 'system:ready':
-          if (msg.data.services) renderServices(msg.data.services);
-          break;
-
-        case 'dread:update':
-          addTranscript({
-            speaker: 'system',
-            text: `Dread: ${msg.data.playerId} → ${msg.data.score} (${msg.data.threshold})`
-          });
-          break;
-      }
-
-      // Add to event log (skip noisy events)
-      if (!['state:change'].includes(msg.event || msg.type)) {
-        addEventLog(msg.event || msg.type);
-      }
-    }
-
-    // === UI Updates ===
-    function updateUI() {
-      // Session status
-      const status = state.session?.status || 'idle';
-      document.getElementById('session-status').textContent = status.charAt(0).toUpperCase() + status.slice(1);
-
-      // Timer
-      if (state.session?.elapsedMs) {
-        document.getElementById('session-timer').textContent = formatTime(state.session.elapsedMs);
-      }
-
-      // Trust level
-      ['manual', 'assisted', 'autopilot'].forEach(l => {
-        document.getElementById(`trust-${l}`).classList.toggle('active', state.session?.aiTrustLevel === l);
-      });
-
-      // Players
-      renderPlayers();
-    }
-
-    function renderPlayers() {
-      const container = document.getElementById('players');
-      const players = state.players || {};
-
-      if (Object.keys(players).length === 0) {
-        container.innerHTML = '<div class="player-card"><div style="color:var(--text-dim);font-size:12px;text-align:center;padding:8px;">No players connected</div></div>';
-        return;
-      }
-
-      container.innerHTML = Object.entries(players).map(([id, p]) => {
-        const hp = p.character?.hp || { current: 0, max: 1 };
-        const hpPct = Math.round((hp.current / hp.max) * 100);
-        const dreadPct = p.dread?.score || 0;
-        return `
-          <div class="player-card">
-            <div class="player-name">
-              <span>${p.character?.name || p.name || id}</span>
-              <span class="status-dot ${p.connected ? 'green' : 'red'}"></span>
-            </div>
-            <div class="bar-label"><span>HP</span><span>${hp.current}/${hp.max}</span></div>
-            <div class="bar-container"><div class="bar-fill hp" style="width:${hpPct}%"></div></div>
-            <div class="bar-label"><span>Dread</span><span>${dreadPct}/100 (${p.dread?.threshold || 'calm'})</span></div>
-            <div class="bar-container"><div class="bar-fill dread" style="width:${dreadPct}%"></div></div>
-          </div>`;
-      }).join('');
-    }
-
-    function renderServices(services) {
-      const container = document.getElementById('services');
-      container.innerHTML = Object.entries(services).map(([name, info]) => {
-        const status = info.status || 'unknown';
-        const dotClass = status === 'running' ? 'green' : status === 'stopped' ? 'red' : 'yellow';
-        return `<div class="service-item"><span>${name}</span><span><span class="status-dot ${dotClass}"></span>${status}</span></div>`;
-      }).join('');
-    }
-
-    function addTranscript(segment) {
-      const container = document.getElementById('transcript');
-      const div = document.createElement('div');
-      div.className = 'transcript-entry';
-
-      const speaker = segment.speaker || 'unknown';
-      const speakerClass = speaker === 'dm' ? 'dm' : speaker === 'system' ? 'system' : 'player';
-      const time = new Date().toLocaleTimeString('en-US', { hour12: false });
-
-      div.innerHTML = `
-        <span class="time">${time}</span>
-        <div class="speaker ${speakerClass}">${speaker}</div>
-        <div class="text">${escapeHtml(segment.text)}</div>
-      `;
-
-      container.appendChild(div);
-      container.scrollTop = container.scrollHeight;
-    }
-
-    function addNpcSuggestion(data) {
-      const container = document.getElementById('npc-queue');
-      // Clear "no pending" placeholder
-      if (container.querySelector('div[style]')) container.innerHTML = '';
-
-      const div = document.createElement('div');
-      div.className = 'npc-queue-item';
-      div.id = `npc-${data.id}`;
-      div.innerHTML = `
-        <div class="npc-name">${escapeHtml(data.npc)}</div>
-        <div class="npc-text">"${escapeHtml(data.text)}"</div>
-        <div class="npc-actions">
-          <button class="primary" onclick="approveNpc('${data.id}')">✓ Speak</button>
-          <button onclick="rejectNpc('${data.id}')">✗ Reject</button>
+      return `<div class="p-card">
+        <div class="p-header">
+          <span class="p-name">${esc(name)}</span>
+          <span><span class="dot ${p.connected ? 'green' : 'red'}"></span>${p.connected ? 'on' : 'off'}</span>
         </div>
-      `;
-      container.prepend(div);
+        <div class="bar-label"><span>HP</span><span>${hp.current}/${hp.max}</span></div>
+        <div class="bar"><div class="bar-fill hp ${hpClass}" style="width:${hpPct}%"></div></div>
+        <div class="bar-label"><span>Dread</span><span>${d}/100 (${dt})</span></div>
+        <div class="bar"><div class="bar-fill dread" style="width:${d}%"></div></div>
+        <div class="dread-controls">
+          <button class="sm" onclick="adjDread('${id}',-10)">-10</button>
+          <button class="sm" onclick="adjDread('${id}',-5)">-5</button>
+          <button class="sm" onclick="adjDread('${id}',5)">+5</button>
+          <button class="sm" onclick="adjDread('${id}',10)">+10</button>
+          <button class="sm" onclick="adjDread('${id}',20)">+20</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderBeats() {
+    const c = document.getElementById('beats');
+    const beats = state.story?.beats || [];
+    if (beats.length === 0) {
+      c.innerHTML = '<div style="color:var(--text-dim);font-size:11px;text-align:center;padding:8px;">No beats loaded</div>';
+      return;
     }
 
-    function approveNpc(id) {
-      send('npc:approve', { id });
-      document.getElementById(`npc-${id}`)?.remove();
-    }
+    c.innerHTML = beats.map((b, i) => {
+      const done = b.status === 'completed';
+      return `<div class="beat-item ${done ? 'completed' : ''}" onclick="toggleBeat(${i}, '${b.id}')">
+        <div class="beat-check">${done ? '✓' : ''}</div>
+        <span class="beat-name">${esc(b.name)}</span>
+      </div>`;
+    }).join('');
+  }
 
-    function rejectNpc(id) {
-      send('npc:reject', { id });
-      document.getElementById(`npc-${id}`)?.remove();
-    }
+  function renderServices(services) {
+    document.getElementById('services').innerHTML = Object.entries(services).map(([n, info]) => {
+      const s = info.status || 'unknown';
+      const d = s === 'running' ? 'green' : s === 'stopped' ? 'red' : 'yellow';
+      return `<div class="svc-item"><span>${n}</span><span><span class="dot ${d}"></span>${s}</span></div>`;
+    }).join('');
+  }
 
-    function addEventLog(eventName) {
-      const container = document.getElementById('event-log');
-      const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      const div = document.createElement('div');
-      div.className = 'event';
-      div.innerHTML = `<span class="event-time">${time}</span> <span class="event-name">${eventName}</span>`;
-      container.prepend(div);
-      // Keep only last 50 events
-      while (container.children.length > 50) container.lastChild.remove();
-    }
+  function updatePlayerSelects() {
+    const players = state.players || {};
+    const ids = Object.keys(players);
+    const options = ids.map(id => {
+      const name = players[id].character?.name || players[id].name || id;
+      return `<option value="${id}">${esc(name)}</option>`;
+    }).join('');
 
-    function setTrust(level) {
-      send('config:trust_level', { level });
-    }
+    // Horror target
+    document.getElementById('horror-target').innerHTML = `<option value="all">All Players</option>${options}`;
+    // PM target
+    document.getElementById('pm-target').innerHTML = `<option value="">Select player...</option>${options}`;
+  }
 
-    // === Helpers ===
-    function formatTime(ms) {
-      const s = Math.floor(ms / 1000);
-      const h = Math.floor(s / 3600);
-      const m = Math.floor((s % 3600) / 60);
-      const sec = s % 60;
-      return [h, m, sec].map(v => String(v).padStart(2, '0')).join(':');
-    }
+  function updateNpcSelect() {
+    const npcs = state.npcs || {};
+    const options = Object.entries(npcs).map(([id, npc]) =>
+      `<option value="${id}">${esc(npc.name || id)}</option>`
+    ).join('');
+    document.getElementById('npc-select').innerHTML = `<option value="">Select NPC...</option>${options}`;
+  }
 
-    function escapeHtml(str) {
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
-    }
+  // === ACTIONS ===
+  function setAtmo(profile) {
+    fetch(`/api/atmosphere/${profile}`, { method: 'POST' }).catch(console.error);
+  }
 
-    function setNestedValue(obj, path, value) {
-      const keys = path.split('.');
-      const last = keys.pop();
-      const target = keys.reduce((o, k) => o[k] = o[k] || {}, obj);
-      target[last] = value;
-    }
+  function setTrust(level) { send('config:trust_level', { level }); }
 
-    // Start
-    connect();
-  </script>
+  function adjDread(playerId, delta) {
+    const current = state.players?.[playerId]?.dread?.score || 0;
+    fetch(`/api/dread/${playerId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ score: current + delta })
+    }).catch(console.error);
+  }
+
+  function sendHorror(effect, payload, durationMs) {
+    const target = document.getElementById('horror-target').value;
+    send('player:horror', { playerId: target, horrorType: effect, payload, durationMs });
+  }
+
+  function sendDreadVision() {
+    const text = document.getElementById('horror-text').value || 'Something stirs in the darkness...';
+    const target = document.getElementById('horror-target').value;
+    send('player:horror', { playerId: target, horrorType: 'dread_vision', payload: { text }, durationMs: 0 });
+    document.getElementById('horror-text').value = '';
+  }
+
+  function sendWhisper() {
+    const text = document.getElementById('horror-text').value || '...';
+    const target = document.getElementById('horror-target').value;
+    send('player:horror', { playerId: target, horrorType: 'whisper', payload: { text }, durationMs: 5000 });
+    document.getElementById('horror-text').value = '';
+  }
+
+  function sendPM() {
+    const target = document.getElementById('pm-target').value;
+    const text = document.getElementById('pm-text').value;
+    if (!target || !text) return;
+    send('player:horror', { playerId: target, horrorType: 'whisper', payload: { text }, durationMs: 15000 });
+    addTranscript({ speaker: 'system', text: `PM → ${target}: ${text}` });
+    document.getElementById('pm-text').value = '';
+  }
+
+  function sendNpcManual() {
+    const npcId = document.getElementById('npc-select').value;
+    const text = document.getElementById('npc-manual-text').value;
+    if (!npcId || !text) return;
+    send('npc:manual', { npc: npcId, text });
+    document.getElementById('npc-manual-text').value = '';
+  }
+
+  function toggleBeat(index, beatId) {
+    const beats = state.story?.beats || [];
+    if (!beats[index]) return;
+    const newStatus = beats[index].status === 'completed' ? 'pending' : 'completed';
+    beats[index].status = newStatus;
+    send('story:mark_beat', { beatId, status: newStatus });
+    renderBeats();
+  }
+
+  // === NPC QUEUE ===
+  function addNpcSuggestion(data) {
+    const c = document.getElementById('npc-queue');
+    if (c.querySelector('div[style]')) c.innerHTML = '';
+
+    const div = document.createElement('div');
+    div.className = 'npc-item';
+    div.id = `npc-${data.id}`;
+    div.innerHTML = `
+      <div class="npc-name">${esc(data.npc)}</div>
+      <div class="npc-text">"${esc(data.text)}"</div>
+      <div class="npc-actions">
+        <button class="primary sm" onclick="send('npc:approve',{id:'${data.id}'});this.closest('.npc-item').remove()">✓ Speak</button>
+        <button class="sm" onclick="send('npc:reject',{id:'${data.id}'});this.closest('.npc-item').remove()">✗ Reject</button>
+      </div>`;
+    c.prepend(div);
+  }
+
+  // === TRANSCRIPT ===
+  function addTranscript(seg) {
+    const c = document.getElementById('transcript');
+    const div = document.createElement('div');
+    div.className = 't-entry';
+    const sp = seg.speaker || 'unknown';
+    const cls = sp === 'dm' ? 'dm' : sp === 'system' ? 'system' : sp.startsWith('npc') ? 'npc' : 'player';
+    const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+    div.innerHTML = `<span class="time">${time}</span><div class="speaker ${cls}">${esc(sp)}</div><div class="text">${esc(seg.text)}</div>`;
+    c.appendChild(div);
+    c.scrollTop = c.scrollHeight;
+  }
+
+  function addEvent(name) {
+    if (!name) return;
+    const c = document.getElementById('event-log');
+    const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+    const div = document.createElement('div');
+    div.className = 'ev';
+    div.innerHTML = `<span>${time}</span> <span class="ev-name">${name}</span>`;
+    c.prepend(div);
+    while (c.children.length > 50) c.lastChild.remove();
+  }
+
+  // === HELPERS ===
+  function fmtTime(ms) {
+    const s = Math.floor(ms / 1000);
+    return [Math.floor(s/3600), Math.floor((s%3600)/60), s%60].map(v => String(v).padStart(2,'0')).join(':');
+  }
+
+  function esc(str) {
+    if (!str) return '';
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function setNested(obj, path, val) {
+    const k = path.split('.');
+    const last = k.pop();
+    const t = k.reduce((o, k) => o[k] = o[k] || {}, obj);
+    t[last] = val;
+  }
+
+  connect();
+</script>
 </body>
 </html>

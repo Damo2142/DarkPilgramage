@@ -32,7 +32,6 @@ class DashboardService {
 
     this._setupRoutes();
 
-    // Try HTTPS, fall back to HTTP
     try {
       const sslKey = fs.readFileSync(path.join(__dirname, '..', '..', 'key.pem'));
       const sslCert = fs.readFileSync(path.join(__dirname, '..', '..', 'cert.pem'));
@@ -98,11 +97,7 @@ class DashboardService {
       this.bus.dispatch('panic', {});
       res.json({ status: 'panic triggered' });
     });
-    this.app.post('/api/atmosphere/:profile', (req, res) => {
-      const profile = req.params.profile;
-      this.bus.dispatch('atmo:change', { profile, reason: 'DM manual', auto: false });
-      res.json({ profile });
-    });
+
     this.app.post('/api/state/set', (req, res) => {
       const { path, value } = req.body;
       if (!path) return res.status(400).json({ error: 'path required' });
@@ -125,6 +120,12 @@ class DashboardService {
       const { score } = req.body;
       const result = this.state.updateDread(playerId, score);
       res.json(result);
+    });
+
+    this.app.post('/api/atmosphere/:profile', (req, res) => {
+      const profile = req.params.profile;
+      this.bus.dispatch('atmo:change', { profile, reason: 'DM manual', auto: false });
+      res.json({ profile });
     });
   }
 
@@ -177,12 +178,29 @@ class DashboardService {
       case 'npc:approve':
       case 'npc:reject':
       case 'npc:edit':
+        this.bus.dispatch(msg.type, msg);
+        break;
       case 'npc:manual':
+        this.bus.dispatch('npc:manual', { npc: msg.npc, text: msg.text });
+        break;
       case 'atmo:change':
       case 'atmo:light':
       case 'atmo:sound':
-      case 'player:horror':
         this.bus.dispatch(msg.type, msg);
+        break;
+      case 'player:horror':
+        this.bus.dispatch('player:horror_effect', {
+          playerId: msg.playerId || 'all',
+          type: msg.horrorType || msg.payload?.type || 'whisper',
+          payload: msg.payload || {},
+          durationMs: msg.durationMs || 5000
+        });
+        break;
+      case 'story:mark_beat':
+        this.bus.dispatch('story:mark_beat', { beatId: msg.beatId, status: msg.status });
+        break;
+      case 'story:add_clue':
+        this.bus.dispatch('story:add_clue', { clue: msg.clue });
         break;
       default:
         console.log(`[Dashboard] Unknown message type: ${msg.type}`);
@@ -192,9 +210,7 @@ class DashboardService {
   _broadcast(data) {
     const json = JSON.stringify(data);
     for (const ws of this.clients) {
-      if (ws.readyState === 1) {
-        ws.send(json);
-      }
+      if (ws.readyState === 1) ws.send(json);
     }
   }
 

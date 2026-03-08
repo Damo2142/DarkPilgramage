@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>The Dark Pilgrimage</title>
+  <style>
+    :root {
+      --bg: #08080a;
+      --surface: #111115;
+      --surface2: #1a1a20;
+      --surface3: #222228;
+      --border: #2a2a33;
+      --text: #ddd9d0;
+      --text-dim: #706b63;
+      --accent: #c9a54e;
+      --accent-dim: #8a7030;
+      --red: #b03030;
+      --red-bright: #e04040;
+      --green: #308040;
+      --green-bright: #40b060;
+      --blue: #4080c0;
+      --purple: #8060b0;
+      --dread-glow: rgba(180, 40, 40, 0.15);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* === HORROR OVERLAY LAYERS === */
+    #horror-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none;
+      z-index: 9000;
+      transition: background 1s ease;
+    }
+
+    #dread-vision {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9500;
+      background: rgba(0,0,0,0.95);
+      cursor: pointer;
+      pointer-events: auto;
+    }
+
+    #dread-vision .vision-text {
+      max-width: 80%;
+      font-size: 22px;
+      line-height: 1.7;
+      color: var(--red-bright);
+      text-align: center;
+      font-style: italic;
+      text-shadow: 0 0 30px rgba(200, 40, 40, 0.5);
+      animation: visionPulse 3s ease-in-out infinite;
+    }
+
+    @keyframes visionPulse {
+      0%, 100% { opacity: 0.8; }
+      50% { opacity: 1; }
+    }
+
+    #glitch-layer {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none;
+      z-index: 8500;
+      display: none;
+    }
+
+    #whisper-bar {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.9);
+      border: 1px solid var(--accent-dim);
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-style: italic;
+      color: var(--accent);
+      font-size: 15px;
+      z-index: 8000;
+      display: none;
+      max-width: 90%;
+      text-align: center;
+      animation: whisperFade 0.5s ease-in;
+    }
+
+    @keyframes whisperFade {
+      from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    /* === HEADER === */
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 12px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      min-height: 44px;
+    }
+
+    .player-identity {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .player-identity .char-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .player-identity .char-info {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .header-icons {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-indicator {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--red);
+    }
+    .status-indicator.connected { background: var(--green-bright); }
+
+    .mic-btn {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text-dim);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .mic-btn.active { background: var(--red); border-color: var(--red-bright); color: #fff; }
+
+    /* === TAB BAR === */
+    .tab-bar {
+      display: flex;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab {
+      flex: 1;
+      padding: 8px 4px;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    /* === MAIN CONTENT === */
+    .tab-content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .tab-panel {
+      display: none;
+      padding: 12px;
+      min-height: 100%;
+    }
+
+    .tab-panel.active { display: block; }
+
+    /* === CHARACTER SHEET === */
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .stat-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px;
+      text-align: center;
+    }
+
+    .stat-box .stat-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      margin-bottom: 2px;
+    }
+
+    .stat-box .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .stat-box .stat-mod {
+      font-size: 13px;
+      color: var(--accent);
+    }
+
+    /* HP Bar */
+    .hp-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .hp-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .hp-header .hp-label { font-size: 11px; text-transform: uppercase; color: var(--text-dim); }
+    .hp-header .hp-numbers { font-size: 20px; font-weight: 700; }
+
+    .hp-bar {
+      height: 12px;
+      background: var(--surface3);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .hp-bar-fill {
+      height: 100%;
+      background: var(--green);
+      border-radius: 6px;
+      transition: width 0.5s ease, background 0.5s;
+    }
+
+    .hp-bar-fill.wounded { background: var(--accent); }
+    .hp-bar-fill.critical { background: var(--red-bright); animation: hpPulse 1s ease infinite; }
+
+    @keyframes hpPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    .hp-buttons {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+    }
+
+    .hp-btn {
+      width: 40px; height: 36px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .hp-btn.heal { border-color: var(--green); color: var(--green-bright); }
+    .hp-btn.damage { border-color: var(--red); color: var(--red-bright); }
+
+    .hp-input {
+      width: 50px;
+      height: 36px;
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 16px;
+      text-align: center;
+    }
+
+    /* Dread Meter */
+    .dread-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .dread-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .dread-label { font-size: 11px; text-transform: uppercase; color: var(--text-dim); }
+    .dread-threshold { font-size: 13px; font-weight: 600; color: var(--red-bright); }
+
+    .dread-bar {
+      height: 8px;
+      background: var(--surface3);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .dread-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 1s ease;
+      background: linear-gradient(90deg, var(--accent-dim), var(--red-bright));
+    }
+
+    /* Conditions */
+    .conditions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 12px;
+    }
+
+    .condition-tag {
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+    }
+
+    .condition-tag.active { border-color: var(--purple); color: var(--purple); }
+
+    /* Info cards */
+    .info-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .info-card h3 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .info-card .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 13px;
+      border-bottom: 1px solid var(--bg);
+    }
+
+    .info-card .detail-row:last-child { border-bottom: none; }
+    .info-card .detail-label { color: var(--text-dim); }
+    .info-card .detail-value { font-weight: 600; }
+
+    /* === DICE ROLLER === */
+    .dice-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .dice-btn {
+      aspect-ratio: 1;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .dice-btn:active {
+      transform: scale(0.93);
+      background: var(--accent-dim);
+      border-color: var(--accent);
+    }
+
+    .dice-btn .dice-label {
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    .dice-modifier {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .dice-modifier label { font-size: 13px; color: var(--text-dim); }
+
+    .mod-input {
+      width: 60px;
+      height: 36px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 16px;
+      text-align: center;
+    }
+
+    .advantage-btns {
+      display: flex;
+      gap: 6px;
+    }
+
+    .adv-btn {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text-dim);
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .adv-btn.active { border-color: var(--accent); color: var(--accent); background: var(--surface2); }
+
+    .roll-history {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .roll-entry {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .roll-entry .roll-formula {
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    .roll-entry .roll-total {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .roll-entry .roll-total.crit { color: var(--green-bright); }
+    .roll-entry .roll-total.fail { color: var(--red-bright); }
+
+    .roll-entry .roll-dice {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    /* === INVENTORY === */
+    .inventory-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 6px;
+    }
+
+    .inventory-item .item-name { font-size: 14px; }
+    .inventory-item .item-qty {
+      font-size: 12px;
+      color: var(--text-dim);
+      background: var(--surface3);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    /* === CHAT / LOG === */
+    .chat-log {
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: 8px;
+    }
+
+    .chat-entry {
+      padding: 8px;
+      margin-bottom: 4px;
+      border-radius: 4px;
+    }
+
+    .chat-entry.npc {
+      background: rgba(201, 165, 78, 0.08);
+      border-left: 2px solid var(--accent);
+    }
+
+    .chat-entry.system {
+      background: var(--surface);
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .chat-entry .chat-speaker {
+      font-weight: 700;
+      font-size: 12px;
+      margin-bottom: 2px;
+    }
+
+    .chat-entry .chat-speaker.npc-speaker { color: var(--accent); }
+
+    .chat-input-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .chat-text-input {
+      flex: 1;
+      height: 36px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 0 10px;
+      font-size: 14px;
+    }
+
+    .chat-send-btn {
+      width: 60px;
+      height: 36px;
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    /* === FOOTER STATUS BAR === */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 12px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      font-size: 10px;
+      color: var(--text-dim);
+      min-height: 24px;
+    }
+
+    /* === CONNECTION SCREEN === */
+    #connect-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+    }
+
+    #connect-screen.hidden { display: none; }
+
+    #connect-screen h1 {
+      font-size: 20px;
+      color: var(--accent);
+      margin-bottom: 8px;
+      letter-spacing: 2px;
+    }
+
+    #connect-screen .subtitle {
+      color: var(--text-dim);
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    #connect-screen .connecting-text {
+      color: var(--text-dim);
+      font-size: 13px;
+    }
+
+    .spinner {
+      width: 24px; height: 24px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 12px auto;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Screen tint animations for horror */
+    @keyframes screenFlicker {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 0.15; }
+    }
+
+    @keyframes glitchShift {
+      0% { clip-path: inset(20% 0 60% 0); transform: translateX(-3px); }
+      20% { clip-path: inset(60% 0 10% 0); transform: translateX(3px); }
+      40% { clip-path: inset(40% 0 30% 0); transform: translateX(-2px); }
+      60% { clip-path: inset(10% 0 70% 0); transform: translateX(1px); }
+      80% { clip-path: inset(80% 0 5% 0); transform: translateX(2px); }
+      100% { clip-path: inset(30% 0 50% 0); transform: translateX(-1px); }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+  <!-- Connection Screen -->
+  <div id="connect-screen">
+    <h1>⛧ THE DARK PILGRIMAGE</h1>
+    <div class="subtitle" id="player-greeting">Connecting...</div>
+    <div class="spinner"></div>
+    <div class="connecting-text" id="connect-status">Establishing connection</div>
+  </div>
+
+  <!-- Horror Overlay Layers -->
+  <div id="horror-overlay"></div>
+  <div id="glitch-layer"></div>
+  <div id="dread-vision" onclick="dismissVision()">
+    <div class="vision-text" id="vision-text"></div>
+  </div>
+  <div id="whisper-bar" id="whisper-bar"></div>
+
+  <!-- App Header -->
+  <div class="app-header">
+    <div class="player-identity">
+      <div>
+        <div class="char-name" id="char-name">—</div>
+        <div class="char-info" id="char-info">—</div>
+      </div>
+    </div>
+    <div class="header-icons">
+      <button class="mic-btn" id="mic-btn" onclick="toggleMic()" title="Microphone">🎤</button>
+      <div class="status-indicator" id="conn-indicator"></div>
+    </div>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <div class="tab active" data-tab="sheet" onclick="switchTab('sheet')">Character</div>
+    <div class="tab" data-tab="dice" onclick="switchTab('dice')">Dice</div>
+    <div class="tab" data-tab="inventory" onclick="switchTab('inventory')">Inventory</div>
+    <div class="tab" data-tab="log" onclick="switchTab('log')">Log</div>
+  </div>
+
+  <!-- Tab Content -->
+  <div class="tab-content">
+
+    <!-- CHARACTER SHEET -->
+    <div class="tab-panel active" id="panel-sheet">
+      <!-- HP -->
+      <div class="hp-section">
+        <div class="hp-header">
+          <span class="hp-label">Hit Points</span>
+          <span class="hp-numbers"><span id="hp-current">0</span> / <span id="hp-max">0</span></span>
+        </div>
+        <div class="hp-bar"><div class="hp-bar-fill" id="hp-bar-fill" style="width:100%"></div></div>
+        <div class="hp-buttons">
+          <button class="hp-btn damage" onclick="adjustHp(-parseInt(document.getElementById('hp-adj').value)||0)">−</button>
+          <input type="number" id="hp-adj" class="hp-input" value="1" min="1">
+          <button class="hp-btn heal" onclick="adjustHp(parseInt(document.getElementById('hp-adj').value)||0)">+</button>
+        </div>
+      </div>
+
+      <!-- Dread Meter -->
+      <div class="dread-section">
+        <div class="dread-header">
+          <span class="dread-label">☠ Dread</span>
+          <span class="dread-threshold" id="dread-threshold">Calm</span>
+        </div>
+        <div class="dread-bar"><div class="dread-bar-fill" id="dread-bar-fill" style="width:0%"></div></div>
+      </div>
+
+      <!-- Conditions -->
+      <div class="conditions" id="conditions"></div>
+
+      <!-- Ability Scores -->
+      <div class="stat-row" id="ability-scores"></div>
+
+      <!-- Combat Info -->
+      <div class="info-card">
+        <h3>Combat</h3>
+        <div class="detail-row"><span class="detail-label">Armor Class</span><span class="detail-value" id="ac-value">10</span></div>
+        <div class="detail-row"><span class="detail-label">Initiative</span><span class="detail-value" id="init-value">+0</span></div>
+        <div class="detail-row"><span class="detail-label">Speed</span><span class="detail-value" id="speed-value">30 ft</span></div>
+        <div class="detail-row"><span class="detail-label">Prof. Bonus</span><span class="detail-value" id="prof-value">+2</span></div>
+      </div>
+
+      <!-- Saving Throws -->
+      <div class="info-card">
+        <h3>Saving Throws</h3>
+        <div id="saving-throws"></div>
+      </div>
+
+      <!-- Skills -->
+      <div class="info-card">
+        <h3>Skills</h3>
+        <div id="skills-list"></div>
+      </div>
+    </div>
+
+    <!-- DICE ROLLER -->
+    <div class="tab-panel" id="panel-dice">
+      <div class="dice-grid">
+        <button class="dice-btn" onclick="roll(4)">d4<span class="dice-label">1-4</span></button>
+        <button class="dice-btn" onclick="roll(6)">d6<span class="dice-label">1-6</span></button>
+        <button class="dice-btn" onclick="roll(8)">d8<span class="dice-label">1-8</span></button>
+        <button class="dice-btn" onclick="roll(10)">d10<span class="dice-label">1-10</span></button>
+        <button class="dice-btn" onclick="roll(12)">d12<span class="dice-label">1-12</span></button>
+        <button class="dice-btn" onclick="roll(20)">d20<span class="dice-label">1-20</span></button>
+        <button class="dice-btn" onclick="roll(100)">d100<span class="dice-label">1-100</span></button>
+        <button class="dice-btn" onclick="rollCustom()">✦<span class="dice-label">Custom</span></button>
+      </div>
+
+      <div class="dice-modifier">
+        <label>Count:</label>
+        <input type="number" class="mod-input" id="dice-count" value="1" min="1" max="20">
+        <label>Mod:</label>
+        <input type="number" class="mod-input" id="dice-mod" value="0">
+      </div>
+
+      <div class="dice-modifier">
+        <div class="advantage-btns">
+          <button class="adv-btn" id="adv-normal" onclick="setAdvantage('normal')">Normal</button>
+          <button class="adv-btn" id="adv-advantage" onclick="setAdvantage('advantage')">Advantage</button>
+          <button class="adv-btn" id="adv-disadvantage" onclick="setAdvantage('disadvantage')">Disadvantage</button>
+        </div>
+      </div>
+
+      <div class="roll-history" id="roll-history"></div>
+    </div>
+
+    <!-- INVENTORY -->
+    <div class="tab-panel" id="panel-inventory">
+      <div id="inventory-list">
+        <div style="color:var(--text-dim); text-align:center; padding:24px; font-size:13px;">
+          Inventory loads from D&D Beyond sync
+        </div>
+      </div>
+    </div>
+
+    <!-- LOG / CHAT -->
+    <div class="tab-panel" id="panel-log" style="display:none; flex-direction:column; height:100%;">
+      <div class="chat-log" id="chat-log">
+        <div class="chat-entry system">
+          <div>Session log will appear here...</div>
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <input type="text" class="chat-text-input" id="chat-input" placeholder="Send a message..." onkeydown="if(event.key==='Enter')sendChat()">
+        <button class="chat-send-btn" onclick="sendChat()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span id="status-left">Disconnected</span>
+    <span id="status-right"></span>
+  </div>
+
+<script>
+  // ==============================
+  // CONFIG & STATE
+  // ==============================
+  const PLAYER_ID = window.location.pathname.split('/player/')[1] || 'unknown';
+  const WS_PROTO = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const WS_URL = `${WS_PROTO}//${location.hostname}:${location.port}?player=${PLAYER_ID}`;
+
+  let ws = null;
+  let connected = false;
+  let advantage = 'normal';
+  let rollLog = [];
+  let audioContext = null;
+  let micStream = null;
+  let micProcessor = null;
+  let micActive = false;
+
+  let playerState = {
+    character: {
+      name: PLAYER_ID,
+      class: '',
+      level: 1,
+      race: '',
+      hp: { current: 10, max: 10, temp: 0 },
+      ac: 10,
+      speed: '30 ft',
+      profBonus: 2,
+      abilities: {
+        str: { score: 10, mod: 0 },
+        dex: { score: 10, mod: 0 },
+        con: { score: 10, mod: 0 },
+        int: { score: 10, mod: 0 },
+        wis: { score: 10, mod: 0 },
+        cha: { score: 10, mod: 0 }
+      },
+      savingThrows: {},
+      skills: {},
+      inventory: [],
+      conditions: []
+    },
+    dread: { score: 0, threshold: 'calm' }
+  };
+
+  // ==============================
+  // WEBSOCKET
+  // ==============================
+  function connect() {
+    ws = new WebSocket(WS_URL);
+
+    ws.onopen = () => {
+      connected = true;
+      document.getElementById('connect-screen').classList.add('hidden');
+      document.getElementById('conn-indicator').classList.add('connected');
+      document.getElementById('status-left').textContent = `Connected as ${PLAYER_ID}`;
+      updateUI();
+    };
+
+    ws.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      handleMessage(msg);
+    };
+
+    ws.onclose = () => {
+      connected = false;
+      document.getElementById('conn-indicator').classList.remove('connected');
+      document.getElementById('status-left').textContent = 'Disconnected — reconnecting...';
+      setTimeout(connect, 2000);
+    };
+
+    ws.onerror = () => {
+      document.getElementById('connect-status').textContent = 'Connection failed — retrying...';
+    };
+  }
+
+  function send(type, data = {}) {
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type, ...data }));
+    }
+  }
+
+  function handleMessage(msg) {
+    switch (msg.type) {
+      case 'init':
+        if (msg.player && Object.keys(msg.player).length > 0) {
+          playerState = { ...playerState, ...msg.player };
+        }
+        document.getElementById('player-greeting').textContent = `Welcome, ${playerState.character?.name || PLAYER_ID}`;
+        updateUI();
+        break;
+
+      case 'state:update':
+        applyStateUpdate(msg.path, msg.value);
+        updateUI();
+        break;
+
+      case 'dread:update':
+        playerState.dread.score = msg.score;
+        playerState.dread.threshold = msg.threshold;
+        updateDreadUI();
+        applyDreadEffects(msg.score);
+        break;
+
+      case 'horror:effect':
+        triggerHorrorEffect(msg.effect, msg.payload, msg.durationMs);
+        break;
+
+      case 'horror:clear':
+        clearAllEffects();
+        break;
+
+      case 'npc:dialogue':
+        addChatEntry(msg.npc, msg.text, 'npc');
+        break;
+
+      case 'pong':
+        break;
+    }
+  }
+
+  function applyStateUpdate(path, value) {
+    const keys = path.split('.');
+    let target = playerState;
+    for (let i = 0; i < keys.length - 1; i++) {
+      if (!target[keys[i]]) target[keys[i]] = {};
+      target = target[keys[i]];
+    }
+    target[keys[keys.length - 1]] = value;
+  }
+
+  // ==============================
+  // UI UPDATES
+  // ==============================
+  function updateUI() {
+    const c = playerState.character || {};
+
+    // Header
+    document.getElementById('char-name').textContent = c.name || PLAYER_ID;
+    document.getElementById('char-info').textContent =
+      [c.race, c.class, c.level ? `Lv ${c.level}` : ''].filter(Boolean).join(' · ') || '—';
+
+    // HP
+    const hp = c.hp || { current: 0, max: 1 };
+    document.getElementById('hp-current').textContent = hp.current;
+    document.getElementById('hp-max').textContent = hp.max;
+    const hpPct = Math.max(0, (hp.current / hp.max) * 100);
+    const hpFill = document.getElementById('hp-bar-fill');
+    hpFill.style.width = hpPct + '%';
+    hpFill.className = 'hp-bar-fill' + (hpPct <= 25 ? ' critical' : hpPct <= 50 ? ' wounded' : '');
+
+    // Combat info
+    document.getElementById('ac-value').textContent = c.ac || 10;
+    const dexMod = c.abilities?.dex?.mod || 0;
+    document.getElementById('init-value').textContent = (dexMod >= 0 ? '+' : '') + dexMod;
+    document.getElementById('speed-value').textContent = c.speed || '30 ft';
+    document.getElementById('prof-value').textContent = '+' + (c.profBonus || 2);
+
+    // Ability scores
+    const abilitiesHtml = Object.entries(c.abilities || {}).map(([key, val]) => {
+      const mod = val.mod || Math.floor((val.score - 10) / 2);
+      const modStr = mod >= 0 ? `+${mod}` : `${mod}`;
+      return `<div class="stat-box">
+        <div class="stat-label">${key.toUpperCase()}</div>
+        <div class="stat-value">${val.score}</div>
+        <div class="stat-mod">${modStr}</div>
+      </div>`;
+    }).join('');
+    document.getElementById('ability-scores').innerHTML = abilitiesHtml;
+
+    // Saving throws
+    const savesHtml = Object.entries(c.savingThrows || {}).map(([key, val]) => {
+      const modStr = val >= 0 ? `+${val}` : `${val}`;
+      return `<div class="detail-row"><span class="detail-label">${key.toUpperCase()}</span><span class="detail-value">${modStr}</span></div>`;
+    }).join('') || '<div class="detail-row"><span class="detail-label">—</span></div>';
+    document.getElementById('saving-throws').innerHTML = savesHtml;
+
+    // Skills
+    const skillsHtml = Object.entries(c.skills || {}).map(([key, val]) => {
+      const modStr = val >= 0 ? `+${val}` : `${val}`;
+      return `<div class="detail-row"><span class="detail-label">${key}</span><span class="detail-value">${modStr}</span></div>`;
+    }).join('') || '<div class="detail-row"><span class="detail-label">—</span></div>';
+    document.getElementById('skills-list').innerHTML = skillsHtml;
+
+    // Conditions
+    const condHtml = (c.conditions || []).map(cond =>
+      `<span class="condition-tag active">${cond}</span>`
+    ).join('');
+    document.getElementById('conditions').innerHTML = condHtml;
+
+    // Inventory
+    const invHtml = (c.inventory || []).map(item =>
+      `<div class="inventory-item"><span class="item-name">${item.name}</span><span class="item-qty">×${item.qty || 1}</span></div>`
+    ).join('');
+    if (invHtml) document.getElementById('inventory-list').innerHTML = invHtml;
+
+    // Dread
+    updateDreadUI();
+  }
+
+  function updateDreadUI() {
+    const d = playerState.dread || {};
+    document.getElementById('dread-threshold').textContent = (d.threshold || 'calm').charAt(0).toUpperCase() + (d.threshold || 'calm').slice(1);
+    document.getElementById('dread-bar-fill').style.width = (d.score || 0) + '%';
+  }
+
+  // ==============================
+  // HP
+  // ==============================
+  function adjustHp(delta) {
+    const hp = playerState.character.hp;
+    hp.current = Math.max(0, Math.min(hp.max, hp.current + delta));
+    send('action:hp', { delta });
+    updateUI();
+  }
+
+  // ==============================
+  // DICE ROLLER
+  // ==============================
+  function roll(sides) {
+    const count = parseInt(document.getElementById('dice-count').value) || 1;
+    const mod = parseInt(document.getElementById('dice-mod').value) || 0;
+
+    let dice = [];
+    let total = 0;
+
+    if (advantage !== 'normal' && sides === 20 && count === 1) {
+      const r1 = Math.floor(Math.random() * sides) + 1;
+      const r2 = Math.floor(Math.random() * sides) + 1;
+      const chosen = advantage === 'advantage' ? Math.max(r1, r2) : Math.min(r1, r2);
+      dice = [r1, r2];
+      total = chosen + mod;
+    } else {
+      for (let i = 0; i < count; i++) {
+        const r = Math.floor(Math.random() * sides) + 1;
+        dice.push(r);
+        total += r;
+      }
+      total += mod;
+    }
+
+    const formula = `${count}d${sides}${mod >= 0 ? '+' + mod : mod}`;
+    const isCrit = sides === 20 && count === 1 && dice.includes(20);
+    const isFail = sides === 20 && count === 1 && dice.includes(1);
+
+    const entry = { formula, dice, total, sides, mod, isCrit, isFail, time: Date.now() };
+    rollLog.unshift(entry);
+    if (rollLog.length > 30) rollLog.pop();
+
+    // Send to server
+    send('roll:result', {
+      rollType: `d${sides}`,
+      formula,
+      result: dice,
+      total
+    });
+
+    renderRollHistory();
+  }
+
+  function rollCustom() {
+    const input = prompt('Enter roll formula (e.g., 2d6+3):');
+    if (!input) return;
+
+    const match = input.match(/^(\d+)d(\d+)([+-]\d+)?$/);
+    if (!match) { alert('Format: NdS+M (e.g., 2d6+3)'); return; }
+
+    const count = parseInt(match[1]);
+    const sides = parseInt(match[2]);
+    const mod = parseInt(match[3] || 0);
+
+    document.getElementById('dice-count').value = count;
+    document.getElementById('dice-mod').value = mod;
+    roll(sides);
+  }
+
+  function setAdvantage(mode) {
+    advantage = mode;
+    ['normal', 'advantage', 'disadvantage'].forEach(m => {
+      document.getElementById(`adv-${m}`).classList.toggle('active', m === mode);
+    });
+  }
+  setAdvantage('normal');
+
+  function renderRollHistory() {
+    const container = document.getElementById('roll-history');
+    container.innerHTML = rollLog.map(r => {
+      const totalClass = r.isCrit ? 'crit' : r.isFail ? 'fail' : '';
+      return `<div class="roll-entry">
+        <div>
+          <div class="roll-formula">${r.formula}</div>
+          <div class="roll-dice">[${r.dice.join(', ')}]</div>
+        </div>
+        <div class="roll-total ${totalClass}">${r.total}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ==============================
+  // CHAT
+  // ==============================
+  function addChatEntry(speaker, text, type = 'player') {
+    const log = document.getElementById('chat-log');
+    const div = document.createElement('div');
+    div.className = `chat-entry ${type}`;
+    div.innerHTML = `<div class="chat-speaker ${type === 'npc' ? 'npc-speaker' : ''}">${speaker}</div><div>${text}</div>`;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function sendChat() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+    send('chat:message', { text });
+    addChatEntry(playerState.character?.name || PLAYER_ID, text, 'player');
+    input.value = '';
+  }
+
+  // ==============================
+  // TABS
+  // ==============================
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
+    document.querySelectorAll('.tab-panel').forEach(p => {
+      const isActive = p.id === `panel-${tabId}`;
+      p.classList.toggle('active', isActive);
+      p.style.display = isActive ? (tabId === 'log' ? 'flex' : 'block') : 'none';
+    });
+  }
+
+  // ==============================
+  // HORROR EFFECTS
+  // ==============================
+  function triggerHorrorEffect(effect, payload, durationMs) {
+    switch (effect) {
+      case 'screen_tint':
+        const overlay = document.getElementById('horror-overlay');
+        overlay.style.background = payload.color || 'rgba(180,0,0,0.15)';
+        if (payload.pulse) overlay.style.animation = `screenFlicker ${payload.pulseSpeed || 2}s ease-in-out infinite`;
+        setTimeout(() => {
+          overlay.style.background = 'transparent';
+          overlay.style.animation = '';
+        }, durationMs || 5000);
+        break;
+
+      case 'dread_vision':
+        const vision = document.getElementById('dread-vision');
+        document.getElementById('vision-text').textContent = payload.text || 'Something stirs in the darkness...';
+        vision.style.display = 'flex';
+        if (durationMs) setTimeout(dismissVision, durationMs);
+        break;
+
+      case 'glitch':
+        const glitch = document.getElementById('glitch-layer');
+        glitch.style.display = 'block';
+        glitch.style.background = 'inherit';
+        glitch.style.animation = `glitchShift ${payload.speed || 0.1}s steps(1) infinite`;
+        setTimeout(() => {
+          glitch.style.display = 'none';
+          glitch.style.animation = '';
+        }, durationMs || 2000);
+        break;
+
+      case 'whisper':
+        const bar = document.getElementById('whisper-bar');
+        bar.textContent = payload.text || '...';
+        bar.style.display = 'block';
+        setTimeout(() => { bar.style.display = 'none'; }, durationMs || 5000);
+        break;
+
+      case 'screen_flash':
+        document.getElementById('horror-overlay').style.background = payload.color || 'rgba(255,255,255,0.8)';
+        setTimeout(() => {
+          document.getElementById('horror-overlay').style.background = 'transparent';
+        }, payload.flashMs || 100);
+        break;
+
+      case 'shake':
+        document.body.style.animation = `glitchShift ${payload.intensity || 0.05}s steps(1) ${Math.ceil((durationMs || 1000) / 50)}`;
+        setTimeout(() => { document.body.style.animation = ''; }, durationMs || 1000);
+        break;
+    }
+  }
+
+  function dismissVision() {
+    document.getElementById('dread-vision').style.display = 'none';
+  }
+
+  function clearAllEffects() {
+    document.getElementById('horror-overlay').style.background = 'transparent';
+    document.getElementById('horror-overlay').style.animation = '';
+    document.getElementById('dread-vision').style.display = 'none';
+    document.getElementById('glitch-layer').style.display = 'none';
+    document.getElementById('whisper-bar').style.display = 'none';
+    document.body.style.animation = '';
+  }
+
+  function applyDreadEffects(score) {
+    // Persistent ambient effects based on dread level
+    const overlay = document.getElementById('horror-overlay');
+    if (score >= 80) {
+      overlay.style.background = 'rgba(80, 0, 0, 0.12)';
+      overlay.style.animation = 'screenFlicker 3s ease-in-out infinite';
+    } else if (score >= 60) {
+      overlay.style.background = 'rgba(60, 0, 0, 0.08)';
+      overlay.style.animation = '';
+    } else if (score >= 40) {
+      overlay.style.background = 'rgba(40, 0, 0, 0.05)';
+      overlay.style.animation = '';
+    } else {
+      overlay.style.background = 'transparent';
+      overlay.style.animation = '';
+    }
+  }
+
+  // ==============================
+  // MICROPHONE
+  // ==============================
+  async function toggleMic() {
+    const btn = document.getElementById('mic-btn');
+
+    if (micActive) {
+      stopMic();
+      btn.classList.remove('active');
+      return;
+    }
+
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 16000
+        }
+      });
+
+      audioContext = new AudioContext({ sampleRate: 16000 });
+      const source = audioContext.createMediaStreamSource(micStream);
+
+      // Use ScriptProcessor for raw PCM (AudioWorklet is better but more complex)
+      micProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+      micProcessor.onaudioprocess = (e) => {
+        if (!micActive || !ws || ws.readyState !== 1) return;
+        const pcm = e.inputBuffer.getChannelData(0);
+        // Convert float32 to int16
+        const int16 = new Int16Array(pcm.length);
+        for (let i = 0; i < pcm.length; i++) {
+          int16[i] = Math.max(-32768, Math.min(32767, pcm[i] * 32768));
+        }
+        ws.send(int16.buffer);
+      };
+
+      source.connect(micProcessor);
+      micProcessor.connect(audioContext.destination);
+
+      micActive = true;
+      btn.classList.add('active');
+      send('audio:start', { sampleRate: 16000 });
+
+    } catch (err) {
+      console.error('Mic error:', err);
+      alert('Could not access microphone. Check permissions.');
+    }
+  }
+
+  function stopMic() {
+    micActive = false;
+    if (micProcessor) { micProcessor.disconnect(); micProcessor = null; }
+    if (audioContext) { audioContext.close(); audioContext = null; }
+    if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+    send('audio:stop');
+  }
+
+  // ==============================
+  // KEEPALIVE
+  // ==============================
+  setInterval(() => {
+    if (connected) send('ping');
+  }, 30000);
+
+  // ==============================
+  // START
+  // ==============================
+  document.getElementById('player-greeting').textContent = `Welcome, ${PLAYER_ID}`;
+  connect();
+</script>
+</body>
+</html>

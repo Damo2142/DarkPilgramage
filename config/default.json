@@ -1,0 +1,72 @@
+{
+  "server": {
+    "port": 3200,
+    "host": "0.0.0.0"
+  },
+
+  "audio": {
+    "enabled": false,
+    "whisperModel": "base.en",
+    "vadThreshold": 0.5,
+    "segmentDurationMs": 3000,
+    "silenceThresholdMs": 1000
+  },
+
+  "ai": {
+    "gemini": {
+      "model": "gemini-2.0-flash",
+      "apiKeyEnv": "GEMINI_API_KEY",
+      "maxTokens": 500,
+      "temperature": 0.8
+    },
+    "claude": {
+      "model": "claude-sonnet-4-5-20250929",
+      "apiKeyEnv": "CLAUDE_API_KEY",
+      "maxTokens": 2000,
+      "temperature": 0.7
+    },
+    "trustLevel": "manual",
+    "npcAutoPilot": [],
+    "contextWindowMinutes": 5
+  },
+
+  "voice": {
+    "primaryDevice": "echo_dot_max_game_room",
+    "surroundDevices": [],
+    "defaultVolume": 60
+  },
+
+  "atmosphere": {
+    "defaultProfile": "tavern_warm",
+    "transitionDurationMs": 3000,
+    "flickerEnabled": true,
+    "flickerIntensity": 0.3
+  },
+
+"hubitat": {
+    "host": "192.168.0.131",
+    "makerApiAppId": "1102",
+    "tokenEnv": "HUBITAT_TOKEN",
+    "echoSpeaksDevices": {},
+    "lightDevices": {}
+  },
+  "lightDevices": {
+    "color": [912, 913],
+    "ambient": [880, 881, 649, 582]
+  },
+  "foundry": {
+    "host": "localhost",
+    "port": 30000,
+    "apiKeyEnv": "FOUNDRY_API_KEY"
+  },
+
+  "playerBridge": {
+    "port": 3202
+  },
+
+  "session": {
+    "logDir": "./sessions",
+    "stateSnapshotIntervalMs": 60000,
+    "autoSave": true
+  }
+}

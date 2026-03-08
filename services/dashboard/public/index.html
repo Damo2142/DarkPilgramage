@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dark Pilgrimage — Co-DM</title>
+  <style>
+    :root {
+      --bg: #0a0a0c;
+      --surface: #141418;
+      --surface2: #1c1c22;
+      --border: #2a2a33;
+      --text: #e0ddd5;
+      --text-dim: #7a7770;
+      --accent: #c9a54e;
+      --accent-dim: #8a7030;
+      --red: #a03030;
+      --red-bright: #d04040;
+      --green: #30a050;
+      --blue: #4080c0;
+      --orange: #c07030;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* === HEADER === */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      height: 48px;
+    }
+
+    header h1 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 1px;
+    }
+
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 13px;
+    }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 4px;
+    }
+
+    .status-dot.green { background: var(--green); }
+    .status-dot.red { background: var(--red-bright); }
+    .status-dot.yellow { background: var(--orange); }
+
+    #session-timer {
+      font-family: monospace;
+      color: var(--accent);
+    }
+
+    /* === MAIN GRID === */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      grid-template-rows: 1fr auto;
+      height: calc(100vh - 48px);
+    }
+
+    /* === TRANSCRIPT PANEL (left) === */
+    .transcript-panel {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+    }
+
+    .panel-header {
+      padding: 8px 12px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+    }
+
+    #transcript {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .transcript-entry {
+      margin-bottom: 8px;
+      padding: 6px 10px;
+      border-radius: 4px;
+      background: var(--surface);
+    }
+
+    .transcript-entry .speaker {
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+
+    .transcript-entry .speaker.dm { color: var(--accent); }
+    .transcript-entry .speaker.player { color: var(--blue); }
+    .transcript-entry .speaker.system { color: var(--text-dim); }
+
+    .transcript-entry .time {
+      float: right;
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: monospace;
+    }
+
+    .transcript-entry .text {
+      color: var(--text);
+    }
+
+    /* === SIDEBAR (right) === */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      background: var(--surface);
+    }
+
+    /* Session Controls */
+    .session-controls {
+      padding: 12px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--border);
+    }
+
+    button {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    button:hover { background: var(--border); }
+    button:active { transform: scale(0.97); }
+
+    button.primary {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    button.primary:hover { background: var(--accent); }
+
+    button.danger {
+      background: var(--red);
+      border-color: var(--red-bright);
+      color: #fff;
+    }
+    button.danger:hover { background: var(--red-bright); }
+
+    /* Players */
+    .player-card {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .player-card .player-name {
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .bar-container {
+      height: 6px;
+      background: var(--surface2);
+      border-radius: 3px;
+      margin-bottom: 4px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.5s ease;
+    }
+
+    .bar-fill.hp { background: var(--green); }
+    .bar-fill.dread { background: var(--red-bright); }
+
+    .bar-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* NPC Queue */
+    .npc-queue-item {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+
+    .npc-queue-item .npc-name {
+      font-weight: 600;
+      color: var(--accent);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .npc-queue-item .npc-text {
+      font-size: 13px;
+      font-style: italic;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .npc-queue-item .npc-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .npc-queue-item .npc-actions button {
+      font-size: 11px;
+      padding: 3px 10px;
+    }
+
+    /* Trust Level */
+    .trust-selector {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .trust-selector label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .trust-buttons {
+      display: flex;
+      gap: 4px;
+    }
+
+    .trust-buttons button {
+      flex: 1;
+      font-size: 11px;
+      padding: 4px 8px;
+    }
+
+    .trust-buttons button.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* Services */
+    .service-list {
+      padding: 12px;
+    }
+
+    .service-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      padding: 3px 0;
+    }
+
+    /* Event Log */
+    #event-log {
+      padding: 12px;
+      font-size: 11px;
+      font-family: monospace;
+      color: var(--text-dim);
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    #event-log .event {
+      padding: 1px 0;
+      border-bottom: 1px solid var(--bg);
+    }
+
+    .event .event-name { color: var(--accent); }
+    .event .event-time { color: var(--text-dim); }
+
+    /* Connection overlay */
+    #connection-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      color: var(--text);
+      font-size: 18px;
+    }
+
+    #connection-overlay.connected { display: none; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+  </style>
+</head>
+<body>
+  <div id="connection-overlay">Connecting to Co-DM...</div>
+
+  <header>
+    <h1>⛧ DARK PILGRIMAGE — CO-DM</h1>
+    <div class="header-status">
+      <span><span class="status-dot" id="ws-status"></span><span id="ws-label">Disconnected</span></span>
+      <span>Session: <strong id="session-status">Idle</strong></span>
+      <span id="session-timer">00:00:00</span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT: Transcript -->
+    <div class="transcript-panel">
+      <div class="panel-header">Live Transcript</div>
+      <div id="transcript">
+        <div class="transcript-entry">
+          <span class="speaker system">System</span>
+          <span class="text">Waiting for session to start...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Sidebar -->
+    <div class="sidebar">
+      <!-- Session Controls -->
+      <div class="panel-header">Session</div>
+      <div class="session-controls">
+        <button class="primary" onclick="send('session:start')">▶ Start</button>
+        <button onclick="send('session:pause')">⏸ Pause</button>
+        <button onclick="send('session:resume')">▶ Resume</button>
+        <button onclick="send('session:end')">⏹ End</button>
+        <button class="danger" onclick="if(confirm('PANIC — Kill all effects?')) send('panic')">🚨 PANIC</button>
+      </div>
+
+      <!-- Trust Level -->
+      <div class="trust-selector">
+        <label>AI Trust Level</label>
+        <div class="trust-buttons">
+          <button id="trust-manual" class="active" onclick="setTrust('manual')">Manual</button>
+          <button id="trust-assisted" onclick="setTrust('assisted')">Assisted</button>
+          <button id="trust-autopilot" onclick="setTrust('autopilot')">Autopilot</button>
+        </div>
+      </div>
+
+      <!-- Players -->
+      <div class="panel-header">Players</div>
+      <div id="players">
+        <div class="player-card">
+          <div style="color: var(--text-dim); font-size: 12px; text-align: center; padding: 8px;">
+            No players connected
+          </div>
+        </div>
+      </div>
+
+      <!-- NPC Queue -->
+      <div class="panel-header">NPC Dialogue Queue</div>
+      <div id="npc-queue">
+        <div style="color: var(--text-dim); font-size: 12px; text-align: center; padding: 12px;">
+          No pending dialogue
+        </div>
+      </div>
+
+      <!-- Services -->
+      <div class="panel-header">Services</div>
+      <div class="service-list" id="services"></div>
+
+      <!-- Event Log -->
+      <div class="panel-header">Event Log</div>
+      <div id="event-log"></div>
+    </div>
+  </div>
+
+  <script>
+    // === WebSocket Connection ===
+    let ws = null;
+    let state = {};
+    let reconnectTimer = null;
+
+    function connect() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${location.host}`);
+
+      ws.onopen = () => {
+        document.getElementById('connection-overlay').classList.add('connected');
+        document.getElementById('ws-status').className = 'status-dot green';
+        document.getElementById('ws-label').textContent = 'Connected';
+        if (reconnectTimer) clearInterval(reconnectTimer);
+      };
+
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        handleMessage(msg);
+      };
+
+      ws.onclose = () => {
+        document.getElementById('ws-status').className = 'status-dot red';
+        document.getElementById('ws-label').textContent = 'Disconnected';
+        document.getElementById('connection-overlay').classList.remove('connected');
+        reconnectTimer = setTimeout(connect, 2000);
+      };
+    }
+
+    function send(type, data = {}) {
+      if (ws && ws.readyState === 1) {
+        ws.send(JSON.stringify({ type, ...data }));
+      }
+    }
+
+    // === Message Handler ===
+    function handleMessage(msg) {
+      switch (msg.type) {
+        case 'init':
+          state = msg.state;
+          updateUI();
+          if (msg.services) renderServices(msg.services);
+          break;
+
+        case 'state:change':
+          setNestedValue(state, msg.data.path, msg.data.value);
+          updateUI();
+          break;
+
+        case 'transcript:segment':
+          addTranscript(msg.data);
+          break;
+
+        case 'ai:npc_dialogue':
+          addNpcSuggestion(msg.data);
+          break;
+
+        case 'session:started':
+          addTranscript({ speaker: 'system', text: 'Session started.' });
+          break;
+
+        case 'session:paused':
+          addTranscript({ speaker: 'system', text: 'Session paused.' });
+          break;
+
+        case 'session:ended':
+          addTranscript({ speaker: 'system', text: 'Session ended.' });
+          break;
+
+        case 'system:ready':
+          if (msg.data.services) renderServices(msg.data.services);
+          break;
+
+        case 'dread:update':
+          addTranscript({
+            speaker: 'system',
+            text: `Dread: ${msg.data.playerId} → ${msg.data.score} (${msg.data.threshold})`
+          });
+          break;
+      }
+
+      // Add to event log (skip noisy events)
+      if (!['state:change'].includes(msg.event || msg.type)) {
+        addEventLog(msg.event || msg.type);
+      }
+    }
+
+    // === UI Updates ===
+    function updateUI() {
+      // Session status
+      const status = state.session?.status || 'idle';
+      document.getElementById('session-status').textContent = status.charAt(0).toUpperCase() + status.slice(1);
+
+      // Timer
+      if (state.session?.elapsedMs) {
+        document.getElementById('session-timer').textContent = formatTime(state.session.elapsedMs);
+      }
+
+      // Trust level
+      ['manual', 'assisted', 'autopilot'].forEach(l => {
+        document.getElementById(`trust-${l}`).classList.toggle('active', state.session?.aiTrustLevel === l);
+      });
+
+      // Players
+      renderPlayers();
+    }
+
+    function renderPlayers() {
+      const container = document.getElementById('players');
+      const players = state.players || {};
+
+      if (Object.keys(players).length === 0) {
+        container.innerHTML = '<div class="player-card"><div style="color:var(--text-dim);font-size:12px;text-align:center;padding:8px;">No players connected</div></div>';
+        return;
+      }
+
+      container.innerHTML = Object.entries(players).map(([id, p]) => {
+        const hp = p.character?.hp || { current: 0, max: 1 };
+        const hpPct = Math.round((hp.current / hp.max) * 100);
+        const dreadPct = p.dread?.score || 0;
+        return `
+          <div class="player-card">
+            <div class="player-name">
+              <span>${p.character?.name || p.name || id}</span>
+              <span class="status-dot ${p.connected ? 'green' : 'red'}"></span>
+            </div>
+            <div class="bar-label"><span>HP</span><span>${hp.current}/${hp.max}</span></div>
+            <div class="bar-container"><div class="bar-fill hp" style="width:${hpPct}%"></div></div>
+            <div class="bar-label"><span>Dread</span><span>${dreadPct}/100 (${p.dread?.threshold || 'calm'})</span></div>
+            <div class="bar-container"><div class="bar-fill dread" style="width:${dreadPct}%"></div></div>
+          </div>`;
+      }).join('');
+    }
+
+    function renderServices(services) {
+      const container = document.getElementById('services');
+      container.innerHTML = Object.entries(services).map(([name, info]) => {
+        const status = info.status || 'unknown';
+        const dotClass = status === 'running' ? 'green' : status === 'stopped' ? 'red' : 'yellow';
+        return `<div class="service-item"><span>${name}</span><span><span class="status-dot ${dotClass}"></span>${status}</span></div>`;
+      }).join('');
+    }
+
+    function addTranscript(segment) {
+      const container = document.getElementById('transcript');
+      const div = document.createElement('div');
+      div.className = 'transcript-entry';
+
+      const speaker = segment.speaker || 'unknown';
+      const speakerClass = speaker === 'dm' ? 'dm' : speaker === 'system' ? 'system' : 'player';
+      const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+
+      div.innerHTML = `
+        <span class="time">${time}</span>
+        <div class="speaker ${speakerClass}">${speaker}</div>
+        <div class="text">${escapeHtml(segment.text)}</div>
+      `;
+
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function addNpcSuggestion(data) {
+      const container = document.getElementById('npc-queue');
+      // Clear "no pending" placeholder
+      if (container.querySelector('div[style]')) container.innerHTML = '';
+
+      const div = document.createElement('div');
+      div.className = 'npc-queue-item';
+      div.id = `npc-${data.id}`;
+      div.innerHTML = `
+        <div class="npc-name">${escapeHtml(data.npc)}</div>
+        <div class="npc-text">"${escapeHtml(data.text)}"</div>
+        <div class="npc-actions">
+          <button class="primary" onclick="approveNpc('${data.id}')">✓ Speak</button>
+          <button onclick="rejectNpc('${data.id}')">✗ Reject</button>
+        </div>
+      `;
+      container.prepend(div);
+    }
+
+    function approveNpc(id) {
+      send('npc:approve', { id });
+      document.getElementById(`npc-${id}`)?.remove();
+    }
+
+    function rejectNpc(id) {
+      send('npc:reject', { id });
+      document.getElementById(`npc-${id}`)?.remove();
+    }
+
+    function addEventLog(eventName) {
+      const container = document.getElementById('event-log');
+      const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const div = document.createElement('div');
+      div.className = 'event';
+      div.innerHTML = `<span class="event-time">${time}</span> <span class="event-name">${eventName}</span>`;
+      container.prepend(div);
+      // Keep only last 50 events
+      while (container.children.length > 50) container.lastChild.remove();
+    }
+
+    function setTrust(level) {
+      send('config:trust_level', { level });
+    }
+
+    // === Helpers ===
+    function formatTime(ms) {
+      const s = Math.floor(ms / 1000);
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = s % 60;
+      return [h, m, sec].map(v => String(v).padStart(2, '0')).join(':');
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function setNestedValue(obj, path, value) {
+      const keys = path.split('.');
+      const last = keys.pop();
+      const target = keys.reduce((o, k) => o[k] = o[k] || {}, obj);
+      target[last] = value;
+    }
+
+    // Start
+    connect();
+  </script>
+</body>
+</html>

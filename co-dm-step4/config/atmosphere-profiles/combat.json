@@ -1,0 +1,16 @@
+{
+  "name": "combat",
+  "description": "Violence erupts. Bright red/orange, driving percussion.",
+  "lights": {
+    "color": { "h": 10, "s": 100, "v": 50 },
+    "transition_ms": 500,
+    "flicker": { "enabled": true, "intensity": 0.5, "speed": "fast" }
+  },
+  "audio": {
+    "ambient": null,
+    "music": "combat_percussion",
+    "volume": { "ambient": 0, "music": 0.5, "effects": 1.0 }
+  },
+  "horrorLevel": 4,
+  "playerEffects": null
+}

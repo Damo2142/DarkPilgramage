@@ -1,0 +1,15 @@
+{
+  "name": "tavern_warm",
+  "description": "Warm, welcoming tavern interior. Fire crackling, gentle conversation.",
+  "lights": {
+    "color": { "hue": 7, "sat": 80, "level": 45 },
+    "flicker": { "enabled": true, "intensity": 0.15, "speed": "slow" }
+  },
+  "audio": {
+    "ambient": "fireplace_crackling",
+    "music": "tavern_folk_quiet",
+    "volume": { "ambient": 0.5, "music": 0.25, "effects": 0.7 }
+  },
+  "horrorLevel": 0,
+  "playerEffects": null
+}

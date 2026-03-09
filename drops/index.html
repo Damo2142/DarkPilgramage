@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dark Pilgrimage — Co-DM</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Source+Sans+3:wght@300;400;600&display=swap');
+
+    :root {
+      --bg: #07070a;
+      --surface: #0f0f14;
+      --surface2: #16161d;
+      --surface3: #1e1e28;
+      --border: #252530;
+      --border-light: #333340;
+      --text: #ddd9cf;
+      --text-dim: #6b6760;
+      --accent: #c9a54e;
+      --accent-dim: #8a7030;
+      --accent-glow: rgba(201,165,78,0.15);
+      --red: #a03030;
+      --red-bright: #d04040;
+      --green: #30a050;
+      --green-dim: #1a5a30;
+      --blue: #4080c0;
+      --blue-dim: #2a5580;
+      --purple: #7050a0;
+      --orange: #c07030;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Source Sans 3', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* === HEADER === */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      height: 42px;
+    }
+
+    header h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 2px;
+    }
+
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 12px;
+    }
+
+    .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+    .dot.green { background: var(--green); box-shadow: 0 0 4px var(--green); }
+    .dot.red { background: var(--red-bright); }
+    .dot.yellow { background: var(--orange); }
+
+    #session-timer { font-family: monospace; color: var(--accent); font-size: 13px; }
+
+    /* === EARBUD TTS === */
+    .earbud-panel {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .earbud-sliders { display: flex; gap: 8px; margin-bottom: 6px; }
+    .earbud-sliders label { flex: 1; font-size: 10px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; }
+    .earbud-sliders input[type="range"] { flex: 1; accent-color: var(--accent); height: 3px; }
+    .earbud-cats { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+    .earbud-cats label { font-size: 10px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; cursor: pointer; }
+    .earbud-cats input[type="checkbox"] { accent-color: var(--accent); width: 10px; height: 10px; }
+
+    /* NPC countdown badge */
+    .npc-countdown {
+      display: inline-block;
+      min-width: 18px;
+      height: 18px;
+      line-height: 18px;
+      text-align: center;
+      border-radius: 9px;
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      color: #fff;
+      font-size: 10px;
+      font-family: monospace;
+      font-weight: 700;
+      margin-left: 6px;
+      animation: countdown-pulse 1s infinite;
+    }
+    .npc-countdown.done { background: var(--surface3); border-color: var(--border); animation: none; opacity: 0.4; }
+    @keyframes countdown-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    /* === MAIN GRID — 3 columns === */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 300px 320px;
+      height: calc(100vh - 42px);
+    }
+
+    /* === COLUMN HEADERS === */
+    .col-header {
+      padding: 6px 10px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-family: 'Cinzel', serif;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--text-dim);
+    }
+
+    .section-header {
+      padding: 5px 10px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+    }
+
+    /* === LEFT: TRANSCRIPT === */
+    .transcript-col {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+    }
+
+    #transcript {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .t-entry { margin-bottom: 6px; padding: 5px 8px; border-radius: 3px; background: var(--surface); }
+    .t-entry .speaker { font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .t-entry .speaker.dm { color: var(--accent); }
+    .t-entry .speaker.player { color: var(--blue); }
+    .t-entry .speaker.system { color: var(--text-dim); }
+    .t-entry .speaker.npc { color: var(--purple); }
+    .t-entry .time { float: right; font-size: 10px; color: var(--text-dim); font-family: monospace; }
+    .t-entry .text { color: var(--text); font-size: 13px; }
+
+    /* === MIDDLE: CONTROLS === */
+    .controls-col {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+    }
+
+    /* Buttons */
+    button {
+      padding: 5px 10px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 11px;
+      cursor: pointer;
+      font-family: 'Source Sans 3', sans-serif;
+      transition: all 0.1s;
+    }
+    button:hover { background: var(--surface3); border-color: var(--border-light); }
+    button:active { transform: scale(0.97); }
+    button.primary { background: var(--accent-dim); border-color: var(--accent); color: #fff; }
+    button.primary:hover { background: var(--accent); }
+    button.danger { background: var(--red); border-color: var(--red-bright); color: #fff; }
+    button.danger:hover { background: var(--red-bright); }
+    button.active { background: var(--accent-dim); border-color: var(--accent); color: #fff; }
+    button.sm { padding: 3px 8px; font-size: 10px; }
+    button.ghost { background: transparent; border-color: transparent; color: var(--text-dim); }
+    button.ghost:hover { color: var(--text); border-color: var(--border); }
+
+    /* Session controls */
+    .session-bar {
+      display: flex;
+      gap: 4px;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .session-bar button { flex: 1; min-width: 60px; }
+
+    /* Atmosphere grid */
+    .atmo-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .atmo-btn {
+      padding: 6px 4px;
+      font-size: 10px;
+      text-align: center;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .atmo-btn:hover { border-color: var(--accent-dim); color: var(--text); }
+    .atmo-btn.active { border-color: var(--accent); background: var(--accent-dim); color: #fff; }
+
+    .atmo-btn .atmo-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      display: inline-block; margin-right: 3px;
+    }
+
+    /* Horror controls */
+    .horror-controls {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .horror-controls select, .horror-controls input[type="text"] {
+      width: 100%;
+      padding: 4px 8px;
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text);
+      font-size: 12px;
+      font-family: inherit;
+      margin-bottom: 6px;
+    }
+
+    .horror-controls .row {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 6px;
+    }
+
+    .horror-controls .row button { flex: 1; }
+
+    /* Private message */
+    .pm-controls {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .pm-controls select, .pm-controls textarea {
+      width: 100%;
+      padding: 4px 8px;
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text);
+      font-size: 12px;
+      font-family: inherit;
+      margin-bottom: 6px;
+    }
+
+    .pm-controls textarea { resize: vertical; min-height: 50px; }
+
+    /* Story beats */
+    .beat-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      font-size: 11px;
+      border-bottom: 1px solid var(--bg);
+      cursor: pointer;
+    }
+    .beat-item:hover { background: var(--surface2); }
+    .beat-item .beat-check { width: 14px; height: 14px; border: 1px solid var(--border); border-radius: 2px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+    .beat-item.completed .beat-check { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+    .beat-item.completed .beat-name { color: var(--text-dim); text-decoration: line-through; }
+
+    /* === RIGHT: PLAYERS & NPC === */
+    .players-col {
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      background: var(--surface);
+    }
+
+    /* Player card */
+    .p-card {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .p-card .p-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .p-card .p-name { font-weight: 600; font-size: 12px; }
+    .p-card .p-info { font-size: 10px; color: var(--text-dim); }
+
+    .bar { height: 5px; background: var(--surface3); border-radius: 2px; margin: 2px 0; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s; }
+    .bar-fill.hp { background: var(--green); }
+    .bar-fill.hp.wounded { background: var(--orange); }
+    .bar-fill.hp.critical { background: var(--red-bright); }
+    .bar-fill.dread { background: linear-gradient(90deg, var(--accent-dim), var(--red-bright)); }
+
+    .bar-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); }
+
+    .p-card .dread-controls {
+      display: flex;
+      gap: 3px;
+      margin-top: 4px;
+    }
+
+    .p-card .dread-controls button {
+      padding: 2px 6px;
+      font-size: 10px;
+    }
+
+    /* NPC queue */
+    .npc-item {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+
+    .npc-item .npc-name { font-weight: 600; color: var(--accent); font-size: 11px; margin-bottom: 3px; }
+    .npc-item .npc-text { font-size: 12px; font-style: italic; margin-bottom: 6px; line-height: 1.4; }
+    .npc-item .npc-actions { display: flex; gap: 4px; }
+
+    /* Services */
+    .svc-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      padding: 3px 10px;
+    }
+
+    /* Event log */
+    #event-log {
+      padding: 6px 10px;
+      font-size: 10px;
+      font-family: monospace;
+      color: var(--text-dim);
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    .ev { padding: 1px 0; }
+    .ev .ev-name { color: var(--accent); }
+
+    /* Connection overlay */
+    #overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.85);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000;
+      font-family: 'Cinzel', serif;
+      font-size: 16px;
+      color: var(--accent);
+      letter-spacing: 2px;
+    }
+    #overlay.connected { display: none; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* Tooltip */
+    .tooltip { position: relative; }
+    .tooltip:hover::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-size: 10px;
+      white-space: nowrap;
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="overlay">⛧ Connecting to Co-DM...</div>
+
+  <header>
+    <h1>⛧ DARK PILGRIMAGE — CO-DM</h1>
+    <div class="header-status">
+      <span><span class="dot" id="ws-dot"></span><span id="ws-label">—</span></span>
+      <span><span class="dot green" id="earbud-indicator" title="Earbud TTS"></span>🎧</span>
+      <span>Session: <strong id="sess-status">Idle</strong></span>
+      <span id="session-timer">00:00:00</span>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- LEFT: TRANSCRIPT -->
+    <div class="transcript-col">
+      <div class="col-header">Live Transcript</div>
+      <div id="transcript">
+        <div class="t-entry"><span class="speaker system">System</span><span class="text">Waiting for session to start...</span></div>
+      </div>
+    </div>
+
+    <!-- MIDDLE: CONTROLS -->
+    <div class="controls-col">
+      <div class="col-header">Controls</div>
+
+      <!-- Earbud TTS -->
+      <div class="section-header">DM Earbud</div>
+      <div class="earbud-panel">
+        <button id="earbud-toggle" class="primary" onclick="Earbud.toggle()" style="width:100%;margin-bottom:7px;">🎧 Earbud ON</button>
+        <div class="earbud-sliders">
+          <label>Vol <input type="range" min="0" max="1" step="0.05" value="0.9" oninput="Earbud.volume=+this.value"></label>
+          <label>Speed <input type="range" min="0.7" max="1.5" step="0.05" value="1.05" oninput="Earbud.rate=+this.value"></label>
+        </div>
+        <div class="earbud-cats">
+          <label><input type="checkbox" checked onchange="Earbud.categories.dread=this.checked"> Dread alerts</label>
+          <label><input type="checkbox" checked onchange="Earbud.categories.story=this.checked"> Story nudges</label>
+          <label><input type="checkbox" checked onchange="Earbud.categories.atmosphere=this.checked"> Atmosphere</label>
+          <label><input type="checkbox" checked onchange="Earbud.categories.npc=this.checked"> NPC dialogue</label>
+        </div>
+        <button onclick="Earbud.speak('Co-DM online, earbud ready', 3)" style="width:100%;margin-top:6px;font-size:10px;">🔊 Test Voice</button>
+      </div>
+      <div class="section-header">Session</div>
+      <div class="session-bar">
+        <button class="primary" onclick="send('session:start')">▶ Start</button>
+        <button onclick="send('session:pause')">⏸ Pause</button>
+        <button onclick="send('session:resume')">▶ Resume</button>
+        <button onclick="send('session:end')">⏹ End</button>
+      </div>
+      <div class="session-bar">
+        <button class="danger" onclick="if(confirm('PANIC — Kill all effects?')) send('panic')" style="flex:2">🚨 PANIC</button>
+      </div>
+
+      <!-- Trust -->
+      <div class="section-header">AI Trust Level</div>
+      <div class="session-bar">
+        <button id="t-manual" class="active" onclick="setTrust('manual')">Manual</button>
+        <button id="t-assisted" onclick="setTrust('assisted')">Assisted</button>
+        <button id="t-autopilot" onclick="setTrust('autopilot')">Autopilot</button>
+      </div>
+
+      <!-- Atmosphere -->
+      <div class="section-header">Atmosphere</div>
+      <div class="atmo-grid" id="atmo-grid">
+        <div class="atmo-btn" onclick="setAtmo('tavern_warm')" data-profile="tavern_warm"><span class="atmo-dot" style="background:#c9a54e"></span>Warm</div>
+        <div class="atmo-btn" onclick="setAtmo('tavern_tense')" data-profile="tavern_tense"><span class="atmo-dot" style="background:#a08030"></span>Tense</div>
+        <div class="atmo-btn" onclick="setAtmo('tavern_dark')" data-profile="tavern_dark"><span class="atmo-dot" style="background:#803020"></span>Dark</div>
+        <div class="atmo-btn" onclick="setAtmo('investigation')" data-profile="investigation"><span class="atmo-dot" style="background:#4080c0"></span>Investigate</div>
+        <div class="atmo-btn" onclick="setAtmo('dread_rising')" data-profile="dread_rising"><span class="atmo-dot" style="background:#c03030"></span>Dread</div>
+        <div class="atmo-btn" onclick="setAtmo('terror_peak')" data-profile="terror_peak"><span class="atmo-dot" style="background:#800000"></span>Terror</div>
+        <div class="atmo-btn" onclick="setAtmo('combat')" data-profile="combat"><span class="atmo-dot" style="background:#d04020"></span>Combat</div>
+        <div class="atmo-btn" onclick="setAtmo('revelation')" data-profile="revelation"><span class="atmo-dot" style="background:#8080ff"></span>Reveal</div>
+        <div class="atmo-btn" onclick="setAtmo('dawn')" data-profile="dawn"><span class="atmo-dot" style="background:#e0c060"></span>Dawn</div>
+      </div>
+
+      <!-- Horror Effects -->
+      <div class="section-header">Horror Effects</div>
+      <div class="horror-controls">
+        <select id="horror-target">
+          <option value="all">All Players</option>
+        </select>
+        <div class="row">
+          <button onclick="sendHorror('screen_tint', {color:'rgba(80,0,0,0.12)',pulse:true}, 5000)">Red Tint</button>
+          <button onclick="sendHorror('screen_flash', {color:'rgba(255,255,255,0.8)',flashMs:100}, 100)">Flash</button>
+          <button onclick="sendHorror('glitch', {}, 2000)">Glitch</button>
+        </div>
+        <div class="row">
+          <button onclick="sendHorror('shake', {intensity:0.05}, 1000)">Shake</button>
+          <button onclick="sendDreadVision()">Vision</button>
+          <button onclick="sendWhisper()">Whisper</button>
+        </div>
+        <input type="text" id="horror-text" placeholder="Vision or whisper text...">
+      </div>
+
+      <!-- Private Message -->
+      <div class="section-header">Private Message</div>
+      <div class="pm-controls">
+        <select id="pm-target">
+          <option value="">Select player...</option>
+        </select>
+        <textarea id="pm-text" placeholder="Message only this player sees..."></textarea>
+        <button class="primary" onclick="sendPM()" style="width:100%">Send Private Message</button>
+      </div>
+
+      <!-- Story Beats -->
+      <div class="section-header">Story Beats</div>
+      <div id="beats"></div>
+
+      <!-- Services -->
+      <div class="section-header">Services</div>
+      <div id="services"></div>
+
+      <!-- Event Log -->
+      <div class="section-header">Event Log</div>
+      <div id="event-log"></div>
+    </div>
+
+    <!-- RIGHT: PLAYERS & NPC -->
+    <div class="players-col">
+      <div class="col-header">Players</div>
+      <div id="players"></div>
+
+      <div class="col-header">NPC Dialogue Queue</div>
+      <div id="npc-queue">
+        <div style="color:var(--text-dim);font-size:11px;text-align:center;padding:12px;">No pending dialogue</div>
+      </div>
+
+      <div class="col-header">NPC Manual</div>
+      <div class="pm-controls">
+        <select id="npc-select">
+          <option value="">Select NPC...</option>
+        </select>
+        <input type="text" id="npc-manual-text" placeholder="What should the NPC say about..." style="width:100%;padding:4px 8px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:12px;font-family:inherit;margin-bottom:6px;">
+        <button class="primary" onclick="sendNpcManual()" style="width:100%">Generate Dialogue</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  let ws = null;
+  let state = {};
+  let currentAtmo = '';
+
+  function connect() {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${proto}//${location.host}`);
+
+    ws.onopen = () => {
+      document.getElementById('overlay').classList.add('connected');
+      document.getElementById('ws-dot').className = 'dot green';
+      document.getElementById('ws-label').textContent = 'Connected';
+    };
+
+    ws.onmessage = (e) => handleMessage(JSON.parse(e.data));
+
+    ws.onclose = () => {
+      document.getElementById('ws-dot').className = 'dot red';
+      document.getElementById('ws-label').textContent = 'Disconnected';
+      document.getElementById('overlay').classList.remove('connected');
+      setTimeout(connect, 2000);
+    };
+  }
+
+  function send(type, data = {}) {
+    if (ws?.readyState === 1) ws.send(JSON.stringify({ type, ...data }));
+  }
+
+  // === MESSAGE HANDLER ===
+  function handleMessage(msg) {
+    switch (msg.type || msg.event) {
+      case 'init':
+        state = msg.state || {};
+        updateAll();
+        if (msg.services) renderServices(msg.services);
+        break;
+      case 'state:change':
+        setNested(state, msg.data.path, msg.data.value);
+        updateAll();
+        break;
+      case 'transcript:segment':
+        addTranscript(msg.data);
+        break;
+      case 'ai:npc_dialogue':
+        addNpcSuggestion(msg.data);
+        Earbud.onNpcSuggestion(msg.data);
+        break;
+      case 'ai:atmosphere':
+        addTranscript({ speaker: 'system', text: `AI suggests: ${msg.data.profile} (${msg.data.reason}, confidence: ${msg.data.confidence})` });
+        Earbud.onAtmosphereSuggestion(msg.data);
+        break;
+      case 'ai:dm_suggestion':
+        addTranscript({ speaker: 'system', text: `💡 ${msg.data.text}` });
+        Earbud.onDmSuggestion(msg.data);
+        break;
+      case 'atmo:profile_active':
+        currentAtmo = msg.data.profile;
+        updateAtmoGrid();
+        addTranscript({ speaker: 'system', text: `Atmosphere: ${msg.data.profile}` });
+        break;
+      case 'session:started':
+        addTranscript({ speaker: 'system', text: 'Session started.' });
+        break;
+      case 'session:paused':
+        addTranscript({ speaker: 'system', text: 'Session paused.' });
+        break;
+      case 'session:ended':
+        addTranscript({ speaker: 'system', text: 'Session ended.' });
+        break;
+      case 'player:connected':
+        addTranscript({ speaker: 'system', text: `${msg.data.playerId} connected` });
+        break;
+      case 'player:disconnected':
+        addTranscript({ speaker: 'system', text: `${msg.data.playerId} disconnected` });
+        break;
+      case 'dread:update': {
+        const p = state.players?.[msg.data?.playerId];
+        const pName = p?.character?.name || p?.name || msg.data?.playerId;
+        Earbud.onDreadUpdate(msg.data?.playerId, msg.data?.score, pName);
+        break;
+      }
+      case 'system:ready':
+        if (msg.data?.services) renderServices(msg.data.services);
+        break;
+      case 'story:beat':
+        addTranscript({ speaker: 'system', text: `📖 Beat completed: ${msg.data.name}` });
+        renderBeats();
+        Earbud.onStoryBeat(msg.data);
+        break;
+    }
+
+    // Event log (skip noisy)
+    const evType = msg.event || msg.type;
+    if (!['state:change', 'audio:chunk'].includes(evType)) addEvent(evType);
+  }
+
+  // === UI UPDATES ===
+  function updateAll() {
+    // Session
+    const s = state.session?.status || 'idle';
+    document.getElementById('sess-status').textContent = s.charAt(0).toUpperCase() + s.slice(1);
+    if (state.session?.elapsedMs) document.getElementById('session-timer').textContent = fmtTime(state.session.elapsedMs);
+
+    // Trust
+    ['manual','assisted','autopilot'].forEach(l => {
+      document.getElementById(`t-${l}`).classList.toggle('active', state.session?.aiTrustLevel === l);
+    });
+
+    // Atmosphere
+    currentAtmo = state.atmosphere?.currentProfile || '';
+    updateAtmoGrid();
+
+    // Players
+    renderPlayers();
+
+    // Beats
+    renderBeats();
+
+    // NPCs in selectors
+    updateNpcSelect();
+    updatePlayerSelects();
+  }
+
+  function updateAtmoGrid() {
+    document.querySelectorAll('.atmo-btn').forEach(btn => {
+      const p = btn.dataset.profile;
+      btn.classList.toggle('active', p === currentAtmo || p === currentAtmo.replace(/-/g,'_') || p === currentAtmo.replace(/_/g,'-'));
+    });
+  }
+
+  function renderPlayers() {
+    const c = document.getElementById('players');
+    const players = state.players || {};
+    const ids = Object.keys(players);
+
+    if (ids.length === 0) {
+      c.innerHTML = '<div style="color:var(--text-dim);font-size:11px;text-align:center;padding:12px;">No players connected</div>';
+      return;
+    }
+
+    c.innerHTML = ids.map(id => {
+      const p = players[id];
+      const hp = p.character?.hp || { current: 10, max: 10 };
+      const hpPct = Math.round((hp.current / hp.max) * 100);
+      const hpClass = hpPct <= 25 ? 'critical' : hpPct <= 50 ? 'wounded' : '';
+      const d = p.dread?.score || 0;
+      const dt = p.dread?.threshold || 'calm';
+      const name = p.character?.name || p.name || id;
+
+      return `<div class="p-card">
+        <div class="p-header">
+          <span class="p-name">${esc(name)}</span>
+          <span><span class="dot ${p.connected ? 'green' : 'red'}"></span>${p.connected ? 'on' : 'off'}</span>
+        </div>
+        <div class="bar-label"><span>HP</span><span>${hp.current}/${hp.max}</span></div>
+        <div class="bar"><div class="bar-fill hp ${hpClass}" style="width:${hpPct}%"></div></div>
+        <div class="bar-label"><span>Dread</span><span>${d}/100 (${dt})</span></div>
+        <div class="bar"><div class="bar-fill dread" style="width:${d}%"></div></div>
+        <div class="dread-controls">
+          <button class="sm" onclick="adjDread('${id}',-10)">-10</button>
+          <button class="sm" onclick="adjDread('${id}',-5)">-5</button>
+          <button class="sm" onclick="adjDread('${id}',5)">+5</button>
+          <button class="sm" onclick="adjDread('${id}',10)">+10</button>
+          <button class="sm" onclick="adjDread('${id}',20)">+20</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderBeats() {
+    const c = document.getElementById('beats');
+    const beats = state.story?.beats || [];
+    if (beats.length === 0) {
+      c.innerHTML = '<div style="color:var(--text-dim);font-size:11px;text-align:center;padding:8px;">No beats loaded</div>';
+      return;
+    }
+
+    c.innerHTML = beats.map((b, i) => {
+      const done = b.status === 'completed';
+      return `<div class="beat-item ${done ? 'completed' : ''}" onclick="toggleBeat(${i}, '${b.id}')">
+        <div class="beat-check">${done ? '✓' : ''}</div>
+        <span class="beat-name">${esc(b.name)}</span>
+      </div>`;
+    }).join('');
+  }
+
+  function renderServices(services) {
+    document.getElementById('services').innerHTML = Object.entries(services).map(([n, info]) => {
+      const s = info.status || 'unknown';
+      const d = s === 'running' ? 'green' : s === 'stopped' ? 'red' : 'yellow';
+      return `<div class="svc-item"><span>${n}</span><span><span class="dot ${d}"></span>${s}</span></div>`;
+    }).join('');
+  }
+
+  function updatePlayerSelects() {
+    const players = state.players || {};
+    const ids = Object.keys(players);
+    const options = ids.map(id => {
+      const name = players[id].character?.name || players[id].name || id;
+      return `<option value="${id}">${esc(name)}</option>`;
+    }).join('');
+
+    // Horror target
+    document.getElementById('horror-target').innerHTML = `<option value="all">All Players</option>${options}`;
+    // PM target
+    document.getElementById('pm-target').innerHTML = `<option value="">Select player...</option>${options}`;
+  }
+
+  function updateNpcSelect() {
+    const npcs = state.npcs || {};
+    const options = Object.entries(npcs).map(([id, npc]) =>
+      `<option value="${id}">${esc(npc.name || id)}</option>`
+    ).join('');
+    document.getElementById('npc-select').innerHTML = `<option value="">Select NPC...</option>${options}`;
+  }
+
+  // === ACTIONS ===
+  function setAtmo(profile) {
+    fetch(`/api/atmosphere/${profile}`, { method: 'POST' }).catch(console.error);
+  }
+
+  function setTrust(level) { send('config:trust_level', { level }); }
+
+  function adjDread(playerId, delta) {
+    const current = state.players?.[playerId]?.dread?.score || 0;
+    fetch(`/api/dread/${playerId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ score: current + delta })
+    }).catch(console.error);
+  }
+
+  function sendHorror(effect, payload, durationMs) {
+    const target = document.getElementById('horror-target').value;
+    send('player:horror', { playerId: target, horrorType: effect, payload, durationMs });
+  }
+
+  function sendDreadVision() {
+    const text = document.getElementById('horror-text').value || 'Something stirs in the darkness...';
+    const target = document.getElementById('horror-target').value;
+    send('player:horror', { playerId: target, horrorType: 'dread_vision', payload: { text }, durationMs: 0 });
+    document.getElementById('horror-text').value = '';
+  }
+
+  function sendWhisper() {
+    const text = document.getElementById('horror-text').value || '...';
+    const target = document.getElementById('horror-target').value;
+    send('player:horror', { playerId: target, horrorType: 'whisper', payload: { text }, durationMs: 5000 });
+    document.getElementById('horror-text').value = '';
+  }
+
+  function sendPM() {
+    const target = document.getElementById('pm-target').value;
+    const text = document.getElementById('pm-text').value;
+    if (!target || !text) return;
+    send('player:horror', { playerId: target, horrorType: 'whisper', payload: { text }, durationMs: 15000 });
+    addTranscript({ speaker: 'system', text: `PM → ${target}: ${text}` });
+    document.getElementById('pm-text').value = '';
+  }
+
+  function sendNpcManual() {
+    const npcId = document.getElementById('npc-select').value;
+    const text = document.getElementById('npc-manual-text').value;
+    if (!npcId || !text) return;
+    send('npc:manual', { npc: npcId, text });
+    document.getElementById('npc-manual-text').value = '';
+  }
+
+  function toggleBeat(index, beatId) {
+    const beats = state.story?.beats || [];
+    if (!beats[index]) return;
+    const newStatus = beats[index].status === 'completed' ? 'pending' : 'completed';
+    beats[index].status = newStatus;
+    send('story:mark_beat', { beatId, status: newStatus });
+    renderBeats();
+  }
+
+  // === NPC QUEUE ===
+  function addNpcSuggestion(data) {
+    const c = document.getElementById('npc-queue');
+    if (c.querySelector('div[style]')) c.innerHTML = '';
+
+    const div = document.createElement('div');
+    div.className = 'npc-item';
+    div.id = `npc-${data.id}`;
+    div.innerHTML = `
+      <div class="npc-name">${esc(data.npc)} <span class="npc-countdown" id="npc-countdown-${data.id}">10</span></div>
+      <div class="npc-text">"${esc(data.text)}"</div>
+      <div class="npc-actions">
+        <button class="primary sm" onclick="Earbud.cancelNpcTimer('${data.id}');send('npc:approve',{id:'${data.id}'});this.closest('.npc-item').remove()">✓ Speak</button>
+        <button class="sm" onclick="Earbud.cancelNpcTimer('${data.id}');send('npc:reject',{id:'${data.id}'});this.closest('.npc-item').remove()">✗ Reject</button>
+      </div>`;
+    c.prepend(div);
+  }
+
+  // === TRANSCRIPT ===
+  function addTranscript(seg) {
+    const c = document.getElementById('transcript');
+    const div = document.createElement('div');
+    div.className = 't-entry';
+    const sp = seg.speaker || 'unknown';
+    const cls = sp === 'dm' ? 'dm' : sp === 'system' ? 'system' : sp.startsWith('npc') ? 'npc' : 'player';
+    const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+    div.innerHTML = `<span class="time">${time}</span><div class="speaker ${cls}">${esc(sp)}</div><div class="text">${esc(seg.text)}</div>`;
+    c.appendChild(div);
+    c.scrollTop = c.scrollHeight;
+  }
+
+  function addEvent(name) {
+    if (!name) return;
+    const c = document.getElementById('event-log');
+    const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+    const div = document.createElement('div');
+    div.className = 'ev';
+    div.innerHTML = `<span>${time}</span> <span class="ev-name">${name}</span>`;
+    c.prepend(div);
+    while (c.children.length > 50) c.lastChild.remove();
+  }
+
+  // === HELPERS ===
+  function fmtTime(ms) {
+    const s = Math.floor(ms / 1000);
+    return [Math.floor(s/3600), Math.floor((s%3600)/60), s%60].map(v => String(v).padStart(2,'0')).join(':');
+  }
+
+  function esc(str) {
+    if (!str) return '';
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function setNested(obj, path, val) {
+    const k = path.split('.');
+    const last = k.pop();
+    const t = k.reduce((o, k) => o[k] = o[k] || {}, obj);
+    t[last] = val;
+  }
+
+  // ============================================================
+  // EARBUD TTS ENGINE
+  // Priority queue: 1=critical (dread) → 2=rolls → 3=story/nudges
+  //                 4=atmosphere → 5=npc alert → 6=npc auto-read
+  // ============================================================
+  const Earbud = {
+    enabled: true,
+    volume: 0.9,
+    rate: 1.05,
+    categories: { dread: true, story: true, atmosphere: true, npc: true, rolls: true },
+
+    _queue: [],          // [{ text, priority }]
+    _speaking: false,
+    _currentPriority: 99,
+    _npcTimers: {},      // { [suggestionId]: { countdown, autoread } }
+    _prevDread: {},      // { [playerId]: score }
+
+    speak(text, priority = 5) {
+      if (!this.enabled || !text) return;
+      this._queue.push({ text, priority });
+      this._queue.sort((a, b) => a.priority - b.priority);
+      // Interrupt if something lower priority is currently playing
+      if (this._speaking && priority < this._currentPriority) {
+        window.speechSynthesis.cancel();
+        this._speaking = false;
+      }
+      if (!this._speaking) this._next();
+    },
+
+    _next() {
+      if (!this._queue.length) { this._speaking = false; this._currentPriority = 99; return; }
+      const { text, priority } = this._queue.shift();
+      this._speaking = true;
+      this._currentPriority = priority;
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.volume = this.volume;
+      utt.rate = this.rate;
+      utt.pitch = 0.9;
+      utt.onend = utt.onerror = () => { this._speaking = false; setTimeout(() => this._next(), 150); };
+      window.speechSynthesis.speak(utt);
+    },
+
+    // Called by handleMessage when NPC suggestion arrives
+    onNpcSuggestion(data) {
+      if (!this.enabled || !this.categories.npc) return;
+      const npcName = data.npc || 'NPC';
+      this.speak(`${npcName} has a suggestion`, 5);
+
+      // 10-second countdown then auto-read the full line
+      let remaining = 10;
+      const countdownInterval = setInterval(() => {
+        remaining--;
+        const badge = document.getElementById(`npc-countdown-${data.id}`);
+        if (badge) {
+          badge.textContent = remaining;
+          if (remaining <= 3) badge.style.background = 'var(--red)';
+        }
+        if (remaining <= 0) clearInterval(countdownInterval);
+      }, 1000);
+
+      const autoreadTimer = setTimeout(() => {
+        clearInterval(countdownInterval);
+        const card = document.getElementById(`npc-${data.id}`);
+        if (card) {
+          const badge = card.querySelector('.npc-countdown');
+          if (badge) { badge.textContent = '▶'; badge.classList.add('done'); }
+          this.speak(data.text, 6);
+        }
+        delete this._npcTimers[data.id];
+      }, 10000);
+
+      this._npcTimers[data.id] = { countdownInterval, autoreadTimer };
+    },
+
+    cancelNpcTimer(id) {
+      const t = this._npcTimers[id];
+      if (!t) return;
+      clearInterval(t.countdownInterval);
+      clearTimeout(t.autoreadTimer);
+      delete this._npcTimers[id];
+    },
+
+    onAtmosphereSuggestion(data) {
+      if (!this.enabled || !this.categories.atmosphere) return;
+      const profile = (data.profile || '').replace(/_/g, ' ');
+      const conf = Math.round((data.confidence || 0) * 100);
+      this.speak(`Atmosphere: ${profile}, ${conf}% confidence`, 4);
+    },
+
+    onStoryBeat(data) {
+      if (!this.enabled || !this.categories.story) return;
+      this.speak(`Story beat: ${data.name || data.id}`, 3);
+    },
+
+    onDmSuggestion(data) {
+      if (!this.enabled || !this.categories.story) return;
+      this.speak(data.text, 3);
+    },
+
+    onDreadUpdate(playerId, newScore, playerName) {
+      if (!this.enabled || !this.categories.dread || newScore == null) return;
+      const prev = this._prevDread[playerId] ?? -1;
+      this._prevDread[playerId] = newScore;
+      const labels = { 20: 'unease', 40: 'dread', 60: 'horror', 80: 'terror', 90: 'breaking point' };
+      for (const [t, label] of Object.entries(labels)) {
+        if (prev < +t && newScore >= +t) {
+          this.speak(`${playerName || playerId}: ${label}, dread ${t}`, 1);
+          break;
+        }
+      }
+    },
+
+    toggle() {
+      this.enabled = !this.enabled;
+      if (!this.enabled) { window.speechSynthesis.cancel(); this._queue = []; }
+      const btn = document.getElementById('earbud-toggle');
+      const ind = document.getElementById('earbud-indicator');
+      if (btn) { btn.textContent = this.enabled ? '🎧 Earbud ON' : '🔇 Muted'; btn.className = this.enabled ? 'primary' : 'danger'; }
+      if (ind) { ind.className = `dot ${this.enabled ? 'green' : 'red'}`; }
+    },
+  };
+
+  connect();
+</script>
+</body>
+</html>

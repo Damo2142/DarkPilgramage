@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  co-dm:
+    build: .
+    container_name: dark-pilgrimage-co-dm
+    restart: unless-stopped
+    # Host networking — container shares host network
+    # Required for Hubitat access on 192.168.0.x
+    network_mode: host
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - HUBITAT_TOKEN=${HUBITAT_TOKEN}
+      - SESSION_CONFIG=${SESSION_CONFIG:-}
+      - WHISPER_MODEL=${WHISPER_MODEL:-base.en}
+      - WHISPER_THREADS=${WHISPER_THREADS:-4}
+      - MIN_AUDIO_SECONDS=${MIN_AUDIO_SECONDS:-4.0}
+    volumes:
+      # Persist session logs
+      - ./sessions:/app/sessions
+      # SSL certs
+      - ./cert.pem:/app/cert.pem:ro
+      - ./key.pem:/app/key.pem:ro
+      # Config overrides (edit without rebuilding)
+      - ./config:/app/config
+      # Prompts (edit without rebuilding)
+      - ./prompts:/app/prompts

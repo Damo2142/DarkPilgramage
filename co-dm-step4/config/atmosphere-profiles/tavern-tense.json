@@ -1,0 +1,16 @@
+{
+  "name": "tavern_tense",
+  "description": "Tension rising. Fire dims, wind louder, conversation drops.",
+  "lights": {
+    "color": { "h": 25, "s": 70, "v": 30 },
+    "transition_ms": 5000,
+    "flicker": { "enabled": true, "intensity": 0.3, "speed": "medium" }
+  },
+  "audio": {
+    "ambient": "wind_howling_fire_low",
+    "music": null,
+    "volume": { "ambient": 0.6, "music": 0, "effects": 0.8 }
+  },
+  "horrorLevel": 2,
+  "playerEffects": null
+}

@@ -1,0 +1,15 @@
+{
+  "name": "dawn",
+  "description": "Safety returns. Warm gold light, birds, gentle relief.",
+  "lights": {
+    "color": { "hue": 19, "sat": 60, "level": 70 },
+    "flicker": { "enabled": false }
+  },
+  "audio": {
+    "ambient": "morning_birds_wind",
+    "music": "gentle_resolution",
+    "volume": { "ambient": 0.4, "music": 0.3, "effects": 0.5 }
+  },
+  "horrorLevel": 0,
+  "playerEffects": null
+}

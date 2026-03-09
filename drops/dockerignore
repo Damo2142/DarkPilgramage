@@ -1,7 +1,0 @@
-node_modules
-sessions
-.env
-*.pem
-.git
-.gitignore
-*.tar.gz

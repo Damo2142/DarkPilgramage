@@ -1,0 +1,7 @@
+drops/
+co-dm-step4/
+co-dm/node_modules/
+co-dm/sessions/
+co-dm/cert.pem
+co-dm/key.pem
+*.tar.gz

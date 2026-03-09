@@ -115,6 +115,10 @@ class Orchestrator {
     }
     return report;
   }
+
+  getService(name) {
+    return this.services.get(name) || null;
+  }
 }
 
 module.exports = Orchestrator;

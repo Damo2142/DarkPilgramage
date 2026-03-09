@@ -72,12 +72,65 @@
 
     #session-timer { font-family: monospace; color: var(--accent); font-size: 13px; }
 
+    /* === EARBUD TTS === */
+    .earbud-panel {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .earbud-sliders { display: flex; gap: 8px; margin-bottom: 6px; }
+    .earbud-sliders label { flex: 1; font-size: 10px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; }
+    .earbud-sliders input[type="range"] { flex: 1; accent-color: var(--accent); height: 3px; }
+    .earbud-cats { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+    .earbud-cats label { font-size: 10px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; cursor: pointer; }
+    .earbud-cats input[type="checkbox"] { accent-color: var(--accent); width: 10px; height: 10px; }
+
+    /* NPC countdown badge */
+    .npc-countdown {
+      display: inline-block;
+      min-width: 18px;
+      height: 18px;
+      line-height: 18px;
+      text-align: center;
+      border-radius: 9px;
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      color: #fff;
+      font-size: 10px;
+      font-family: monospace;
+      font-weight: 700;
+      margin-left: 6px;
+      animation: countdown-pulse 1s infinite;
+    }
+    .npc-countdown.done { background: var(--surface3); border-color: var(--border); animation: none; opacity: 0.4; }
+    @keyframes countdown-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    /* Characters panel */
+    .char-row { display: flex; gap: 6px; align-items: center; margin-bottom: 5px; }
+    .char-row select { flex: 1; padding: 3px 6px; background: var(--surface3); border: 1px solid var(--border); border-radius: 3px; color: var(--text); font-size: 11px; font-family: inherit; }
+    .char-row input { width: 90px; padding: 3px 6px; background: var(--surface3); border: 1px solid var(--border); border-radius: 3px; color: var(--text); font-size: 11px; font-family: inherit; }
+    .char-assigned { font-size: 10px; color: var(--green); margin-top: 2px; padding: 0 10px 6px; }
+
     /* === MAIN GRID — 3 columns === */
     .grid {
-      display: grid;
-      grid-template-columns: 1fr 300px 320px;
-      height: calc(100vh - 42px);
-    }
+    display: flex;
+    flex-direction: row;
+    height: calc(100vh - 48px);
+    overflow: hidden;
+    user-select: none;
+  }
+  .transcript-col { flex: 0 0 auto; width: var(--tc-w, 38%); min-width: 180px; max-width: 70%; overflow-y: auto; border-right: 1px solid var(--border); }
+  .controls-col   { flex: 0 0 auto; width: var(--cc-w, 300px); min-width: 200px; max-width: 500px; overflow-y: auto; border-right: 1px solid var(--border); }
+  .players-col    { flex: 1 1 auto; overflow-y: auto; min-width: 240px; }
+  .col-resizer {
+    flex: 0 0 5px; width: 5px; cursor: col-resize;
+    background: var(--border);
+    transition: background 0.2s;
+    position: relative; z-index: 10;
+  }
+  .col-resizer:hover, .col-resizer.dragging { background: var(--accent-dim); }
 
     /* === COLUMN HEADERS === */
     .col-header {
@@ -101,14 +154,73 @@
       text-transform: uppercase;
       letter-spacing: 1px;
       color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
-    /* === LEFT: TRANSCRIPT === */
+    /* Drag-to-reorder panels */
+    .panel-section { position: relative; }
+    .panel-section.dragging { opacity: 0.4; }
+    .panel-section.drag-over { border-top: 2px solid var(--accent); }
+    .drag-handle {
+      cursor: grab; color: var(--border-light); font-size: 11px; line-height: 1;
+      user-select: none; flex-shrink: 0; touch-action: none; padding: 4px 2px;
+    }
+    .drag-handle:hover { color: var(--accent); }
+    .drag-handle:active { cursor: grabbing; }
+
+    /* === LEFT: TRANSCRIPT + MAP === */
     .transcript-col {
       display: flex;
       flex-direction: column;
       border-right: 1px solid var(--border);
     }
+
+    /* Tab switcher */
+    .tab-bar { display: flex; gap: 0; background: var(--surface); border-bottom: 1px solid var(--border); }
+    .tab-btn {
+      flex: 1; padding: 6px 10px; text-align: center; cursor: pointer;
+      font-family: 'Cinzel', serif; font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 2px; color: var(--text-dim);
+      border-bottom: 2px solid transparent; transition: all 0.2s;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-content { display: none; flex: 1; overflow: hidden; position: relative; }
+    .tab-content.active { display: flex; flex-direction: column; }
+
+    /* === MAP CANVAS === */
+    #map-container {
+      flex: 1; position: relative; overflow: hidden; background: #050508;
+      cursor: grab;
+    }
+    #map-container.dragging-token { cursor: grabbing; }
+    #map-canvas { display: block; }
+
+    /* Token inspector */
+    #token-inspector {
+      display: none; position: absolute; top: 10px; right: 10px;
+      width: 220px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 6px; padding: 10px; z-index: 50;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    #token-inspector.visible { display: block; }
+    #token-inspector .ti-name {
+      font-family: 'Cinzel', serif; font-size: 13px; font-weight: 600;
+      color: var(--accent); margin-bottom: 6px;
+    }
+    #token-inspector .ti-row {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 11px; margin-bottom: 4px;
+    }
+    #token-inspector .ti-close {
+      position: absolute; top: 6px; right: 8px; cursor: pointer;
+      color: var(--text-dim); font-size: 14px;
+    }
+    #token-inspector .ti-close:hover { color: var(--text); }
+    #token-inspector .ti-hp-controls { display: flex; gap: 4px; margin-top: 4px; }
+    #token-inspector .ti-hp-controls button { padding: 2px 8px; font-size: 10px; }
 
     #transcript {
       flex: 1;
@@ -347,6 +459,28 @@
     }
     #overlay.connected { display: none; }
 
+    /* Player sheet modal */
+    .sheet-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:500; overflow-y:auto; padding:20px; }
+    .sheet-modal.open { display:block; }
+    .sheet-inner { max-width:700px; margin:0 auto; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:20px; }
+    .sheet-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:10px 0; }
+    .sheet-stat { background:var(--surface2); border-radius:4px; padding:8px; text-align:center; }
+    .sheet-stat .label { font-size:9px; color:var(--text-dim); text-transform:uppercase; }
+    .sheet-stat .value { font-size:20px; font-weight:700; color:var(--accent); }
+    .sheet-stat .mod { font-size:12px; color:var(--text-dim); }
+    .sheet-row { display:flex; justify-content:space-between; padding:3px 0; font-size:11px; border-bottom:1px solid var(--bg); }
+    .sheet-section { font-size:10px; font-weight:700; text-transform:uppercase; color:var(--text-dim); margin:10px 0 4px; letter-spacing:1px; }
+    /* Collapsible panels */
+    .col { display:flex;flex-direction:column;min-height:0; }
+    .col.collapsed > *:not(.col-header) { display:none !important; }
+    .col-header { cursor:pointer;user-select:none; }
+    .col-header .col-toggle { float:right;font-size:11px;color:var(--text-dim); }
+    .panel-resizer {
+      height:5px;background:transparent;cursor:ns-resize;
+      border-top:1px solid var(--border);margin-top:4px;
+    }
+    .panel-resizer:hover { background:var(--accent-dim);opacity:0.5; }
+
     /* Scrollbar */
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -378,6 +512,7 @@
     <h1>⛧ DARK PILGRIMAGE — CO-DM</h1>
     <div class="header-status">
       <span><span class="dot" id="ws-dot"></span><span id="ws-label">—</span></span>
+      <span><span class="dot green" id="earbud-indicator" title="Earbud TTS"></span>🎧</span>
       <span>Session: <strong id="sess-status">Idle</strong></span>
       <span id="session-timer">00:00:00</span>
     </div>
@@ -385,20 +520,77 @@
 
   <div class="grid">
 
-    <!-- LEFT: TRANSCRIPT -->
-    <div class="transcript-col">
-      <div class="col-header">Live Transcript</div>
-      <div id="transcript">
-        <div class="t-entry"><span class="speaker system">System</span><span class="text">Waiting for session to start...</span></div>
+    <!-- LEFT: MAP + TRANSCRIPT (tabbed) -->
+    <div class="transcript-col col" id="col-transcript">
+      <div class="tab-bar">
+        <div class="tab-btn active" onclick="switchTab('map')">Map</div>
+        <div class="tab-btn" onclick="switchTab('transcript')">Transcript</div>
+      </div>
+
+      <div class="tab-content active" id="tab-map">
+        <div id="map-container">
+          <canvas id="map-canvas"></canvas>
+          <div id="token-inspector">
+            <span class="ti-close" onclick="VTT.closeInspector()">&times;</span>
+            <div class="ti-name" id="ti-name"></div>
+            <div class="ti-row"><span>Type</span><span id="ti-type"></span></div>
+            <div class="ti-row"><span>AC</span><span id="ti-ac"></span></div>
+            <div class="ti-row"><span>HP</span><span id="ti-hp"></span></div>
+            <div class="bar" style="margin:2px 0;"><div class="bar-fill hp" id="ti-hp-bar" style="width:100%"></div></div>
+            <div class="ti-hp-controls">
+              <button class="sm" onclick="VTT.inspectorHp(-5)">-5</button>
+              <button class="sm" onclick="VTT.inspectorHp(-1)">-1</button>
+              <button class="sm" onclick="VTT.inspectorHp(1)">+1</button>
+              <button class="sm" onclick="VTT.inspectorHp(5)">+5</button>
+            </div>
+            <div class="ti-row" style="margin-top:6px;"><span>Visible</span>
+              <label style="font-size:11px;"><input type="checkbox" id="ti-visible" onchange="VTT.inspectorVisibility(this.checked)" style="accent-color:var(--accent);"> show</label>
+            </div>
+            <div class="ti-row"><span>Position</span><span id="ti-pos"></span></div>
+          </div>
+        </div>
+        <div style="padding:4px 8px;background:var(--surface);border-top:1px solid var(--border);font-size:10px;color:var(--text-dim);display:flex;justify-content:space-between;">
+          <span id="map-name">No map loaded</span>
+          <span id="map-coords"></span>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-transcript">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:var(--surface);border-bottom:1px solid var(--border);">
+          <span style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;">Live Transcript</span>
+          <button class="sm ghost" onclick="clearTranscript()" style="font-size:10px;">Clear</button>
+        </div>
+        <div id="transcript" style="flex:1;overflow-y:auto;">
+          <div class="t-entry"><span class="speaker system">System</span><span class="text">Waiting for session to start...</span></div>
+        </div>
       </div>
     </div>
 
+    <div class="col-resizer" id="resizer-1"></div>
     <!-- MIDDLE: CONTROLS -->
-    <div class="controls-col">
-      <div class="col-header">Controls</div>
+    <div class="controls-col col" id="col-controls">
+      <div class="col-header" onclick="toggleCol(this)"><span class="col-toggle">▼</span>Controls</div>
 
-      <!-- Session -->
-      <div class="section-header">Session</div>
+      <div class="panel-section" data-panel="earbud">
+      <div class="section-header"><span class="drag-handle">⠿</span>DM Earbud</div>
+      <div class="earbud-panel">
+        <button id="earbud-toggle" class="primary" onclick="Earbud.toggle()" style="width:100%;margin-bottom:7px;">🎧 Earbud ON</button>
+        <div class="earbud-sliders">
+          <label>Vol <input type="range" min="0" max="1" step="0.05" value="0.9" oninput="Earbud.volume=+this.value"></label>
+          <label>Speed <input type="range" min="0.7" max="1.5" step="0.05" value="1.05" oninput="Earbud.rate=+this.value"></label>
+        </div>
+        <div class="earbud-cats">
+          <label><input type="checkbox" checked onchange="Earbud.categories.dread=this.checked"> Dread alerts</label>
+          <label><input type="checkbox" checked onchange="Earbud.categories.story=this.checked"> Story nudges</label>
+          <label><input type="checkbox" checked onchange="Earbud.categories.atmosphere=this.checked"> Atmosphere</label>
+          <label><input type="checkbox" checked onchange="Earbud.categories.npc=this.checked"> NPC dialogue</label>
+        </div>
+        <button onclick="Earbud.speak('Co-DM online, earbud ready', 3)" style="width:100%;margin-top:6px;font-size:10px;">🔊 Test Voice</button>
+      </div>
+      </div>
+
+      <div class="panel-section" data-panel="session">
+      <div class="section-header"><span class="drag-handle">⠿</span>Session</div>
       <div class="session-bar">
         <button class="primary" onclick="send('session:start')">▶ Start</button>
         <button onclick="send('session:pause')">⏸ Pause</button>
@@ -408,17 +600,19 @@
       <div class="session-bar">
         <button class="danger" onclick="if(confirm('PANIC — Kill all effects?')) send('panic')" style="flex:2">🚨 PANIC</button>
       </div>
+      </div>
 
-      <!-- Trust -->
-      <div class="section-header">AI Trust Level</div>
+      <div class="panel-section" data-panel="trust">
+      <div class="section-header"><span class="drag-handle">⠿</span>AI Trust Level</div>
       <div class="session-bar">
         <button id="t-manual" class="active" onclick="setTrust('manual')">Manual</button>
         <button id="t-assisted" onclick="setTrust('assisted')">Assisted</button>
         <button id="t-autopilot" onclick="setTrust('autopilot')">Autopilot</button>
       </div>
+      </div>
 
-      <!-- Atmosphere -->
-      <div class="section-header">Atmosphere</div>
+      <div class="panel-section" data-panel="atmosphere">
+      <div class="section-header"><span class="drag-handle">⠿</span>Atmosphere</div>
       <div class="atmo-grid" id="atmo-grid">
         <div class="atmo-btn" onclick="setAtmo('tavern_warm')" data-profile="tavern_warm"><span class="atmo-dot" style="background:#c9a54e"></span>Warm</div>
         <div class="atmo-btn" onclick="setAtmo('tavern_tense')" data-profile="tavern_tense"><span class="atmo-dot" style="background:#a08030"></span>Tense</div>
@@ -430,9 +624,10 @@
         <div class="atmo-btn" onclick="setAtmo('revelation')" data-profile="revelation"><span class="atmo-dot" style="background:#8080ff"></span>Reveal</div>
         <div class="atmo-btn" onclick="setAtmo('dawn')" data-profile="dawn"><span class="atmo-dot" style="background:#e0c060"></span>Dawn</div>
       </div>
+      </div>
 
-      <!-- Horror Effects -->
-      <div class="section-header">Horror Effects</div>
+      <div class="panel-section" data-panel="horror">
+      <div class="section-header"><span class="drag-handle">⠿</span>Horror Effects</div>
       <div class="horror-controls">
         <select id="horror-target">
           <option value="all">All Players</option>
@@ -449,9 +644,10 @@
         </div>
         <input type="text" id="horror-text" placeholder="Vision or whisper text...">
       </div>
+      </div>
 
-      <!-- Private Message -->
-      <div class="section-header">Private Message</div>
+      <div class="panel-section" data-panel="private-msg">
+      <div class="section-header"><span class="drag-handle">⠿</span>Private Message</div>
       <div class="pm-controls">
         <select id="pm-target">
           <option value="">Select player...</option>
@@ -459,31 +655,57 @@
         <textarea id="pm-text" placeholder="Message only this player sees..."></textarea>
         <button class="primary" onclick="sendPM()" style="width:100%">Send Private Message</button>
       </div>
+      </div>
 
-      <!-- Story Beats -->
-      <div class="section-header">Story Beats</div>
+      <div class="panel-section" data-panel="beats">
+      <div class="section-header"><span class="drag-handle">⠿</span>Story Beats</div>
       <div id="beats"></div>
+      </div>
 
-      <!-- Services -->
-      <div class="section-header">Services</div>
+      <div class="panel-section" data-panel="services">
+      <div class="section-header"><span class="drag-handle">⠿</span>Services</div>
       <div id="services"></div>
+      </div>
 
-      <!-- Event Log -->
-      <div class="section-header">Event Log</div>
+      <div class="panel-section" data-panel="event-log">
+      <div class="section-header"><span class="drag-handle">⠿</span>Event Log</div>
       <div id="event-log"></div>
+      </div>
     </div>
 
     <!-- RIGHT: PLAYERS & NPC -->
     <div class="players-col">
-      <div class="col-header">Players</div>
+      <div class="col-header" onclick="toggleCol(this)"><span class="col-toggle">▼</span>Characters</div>
+      <div class="section-header">DDB Sync</div>
+      <div class="pm-controls">
+        <div id="char-list" style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">No characters synced yet</div>
+        <button class="primary" onclick="syncCharacters()" style="width:100%;margin-bottom:6px;">⟳ Reload from Files</button>
+        <div class="section-header" style="margin:0 -10px 6px;">Assign Player → Character</div>
+        <div id="char-assign-rows">
+          <div style="font-size:10px;color:var(--text-dim);">Connect players first, then assign.</div>
+        </div>
+      </div>
+
+      <div class="col-header" style="display:flex;justify-content:space-between;align-items:center;" onclick="toggleCol(this)"><span class="col-toggle">▼</span>
+        <span>Players</span>
+        <button class="sm" onclick="showAddPlayer()" style="font-size:10px;">+ Add Player</button>
+      </div>
+      <div id="add-player-form" style="display:none;padding:6px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;margin-bottom:6px;">
+        <div style="font-size:10px;color:var(--text-dim);margin-bottom:4px;">Player URL slug (e.g. <em>alice</em> → /player/alice)</div>
+        <div style="display:flex;gap:6px;">
+          <input id="new-player-id" type="text" placeholder="playerId" style="flex:1;padding:5px 8px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:12px;">
+          <button class="sm primary" onclick="addPlayer()">Add</button>
+          <button class="sm ghost" onclick="document.getElementById('add-player-form').style.display='none'">✕</button>
+        </div>
+      </div>
       <div id="players"></div>
 
-      <div class="col-header">NPC Dialogue Queue</div>
+      <div class="col-header" onclick="toggleCol(this)"><span class="col-toggle">▼</span>NPC Dialogue Queue</div>
       <div id="npc-queue">
         <div style="color:var(--text-dim);font-size:11px;text-align:center;padding:12px;">No pending dialogue</div>
       </div>
 
-      <div class="col-header">NPC Manual</div>
+      <div class="col-header" onclick="toggleCol(this)"><span class="col-toggle">▼</span>NPC Manual</div>
       <div class="pm-controls">
         <select id="npc-select">
           <option value="">Select NPC...</option>
@@ -507,6 +729,7 @@
       document.getElementById('overlay').classList.add('connected');
       document.getElementById('ws-dot').className = 'dot green';
       document.getElementById('ws-label').textContent = 'Connected';
+      onConnected();
     };
 
     ws.onmessage = (e) => handleMessage(JSON.parse(e.data));
@@ -515,7 +738,7 @@
       document.getElementById('ws-dot').className = 'dot red';
       document.getElementById('ws-label').textContent = 'Disconnected';
       document.getElementById('overlay').classList.remove('connected');
-      setTimeout(connect, 2000);
+      setTimeout(connect, 5000);
     };
   }
 
@@ -530,22 +753,43 @@
         state = msg.state || {};
         updateAll();
         if (msg.services) renderServices(msg.services);
+        if (state.map?.tokens) { VTT.tokens = state.map.tokens; VTT.render(); }
         break;
       case 'state:change':
         setNested(state, msg.data.path, msg.data.value);
+        if (msg.data.path.startsWith('map.')) VTT.onStateUpdate(msg.data.path, msg.data.value);
         updateAll();
         break;
+      case 'hp:update': {
+        const pid = msg.data.playerId;
+        if (state.players?.[pid]) {
+          if (!state.players[pid].character) state.players[pid].character = {};
+          if (!state.players[pid].character.hp) state.players[pid].character.hp = {};
+          state.players[pid].character.hp.current = msg.data.current;
+          state.players[pid].character.hp.max     = msg.data.max;
+        }
+        // Sync to VTT token
+        if (VTT.tokens[pid]) {
+          VTT.tokens[pid].hp = { current: msg.data.current, max: msg.data.max };
+          VTT.render();
+        }
+        renderPlayers();
+        break;
+      }
       case 'transcript:segment':
         addTranscript(msg.data);
         break;
       case 'ai:npc_dialogue':
         addNpcSuggestion(msg.data);
+        Earbud.onNpcSuggestion(msg.data);
         break;
       case 'ai:atmosphere':
         addTranscript({ speaker: 'system', text: `AI suggests: ${msg.data.profile} (${msg.data.reason}, confidence: ${msg.data.confidence})` });
+        Earbud.onAtmosphereSuggestion(msg.data);
         break;
       case 'ai:dm_suggestion':
         addTranscript({ speaker: 'system', text: `💡 ${msg.data.text}` });
+        Earbud.onDmSuggestion(msg.data);
         break;
       case 'atmo:profile_active':
         currentAtmo = msg.data.profile;
@@ -567,14 +811,37 @@
       case 'player:disconnected':
         addTranscript({ speaker: 'system', text: `${msg.data.playerId} disconnected` });
         break;
-      case 'dread:update':
+      case 'dread:update': {
+        const p = state.players?.[msg.data?.playerId];
+        const pName = p?.character?.name || p?.name || msg.data?.playerId;
+        Earbud.onDreadUpdate(msg.data?.playerId, msg.data?.score, pName);
         break;
+      }
       case 'system:ready':
         if (msg.data?.services) renderServices(msg.data.services);
+        break;
+      case 'map:activated':
+        addTranscript({ speaker: 'system', text: `Map loaded: ${msg.data.name}` });
+        VTT.loadMap();
+        break;
+      case 'map:token_moved':
+        VTT.onStateUpdate(`map.tokens.${msg.data.tokenId}.x`, msg.data.x);
+        VTT.onStateUpdate(`map.tokens.${msg.data.tokenId}.y`, msg.data.y);
+        break;
+      case 'map:token_added':
+        if (msg.data?.token) {
+          VTT.tokens[msg.data.token.id] = msg.data.token;
+          VTT.render();
+        }
+        break;
+      case 'map:token_removed':
+        delete VTT.tokens[msg.data?.tokenId];
+        VTT.render();
         break;
       case 'story:beat':
         addTranscript({ speaker: 'system', text: `📖 Beat completed: ${msg.data.name}` });
         renderBeats();
+        Earbud.onStoryBeat(msg.data);
         break;
     }
 
@@ -624,6 +891,7 @@
 
     if (ids.length === 0) {
       c.innerHTML = '<div style="color:var(--text-dim);font-size:11px;text-align:center;padding:12px;">No players connected</div>';
+      renderAssignRows();
       return;
     }
 
@@ -639,12 +907,16 @@
       return `<div class="p-card">
         <div class="p-header">
           <span class="p-name">${esc(name)}</span>
-          <span><span class="dot ${p.connected ? 'green' : 'red'}"></span>${p.connected ? 'on' : 'off'}</span>
+          <span style="display:flex;align-items:center;gap:6px;">
+            <span><span class="dot ${p.connected ? 'green' : 'red'}"></span>${p.connected ? 'on' : 'off'}</span>
+            <button class="sm ghost" style="padding:1px 5px;font-size:9px;" onclick="removePlayer('${id}')">✕</button>
+          </span>
         </div>
         <div class="bar-label"><span>HP</span><span>${hp.current}/${hp.max}</span></div>
         <div class="bar"><div class="bar-fill hp ${hpClass}" style="width:${hpPct}%"></div></div>
         <div class="bar-label"><span>Dread</span><span>${d}/100 (${dt})</span></div>
         <div class="bar"><div class="bar-fill dread" style="width:${d}%"></div></div>
+        <div style="margin-top:4px;"><button class="sm ghost" onclick="viewSheet('${id}')">📋 Sheet</button></div>
         <div class="dread-controls">
           <button class="sm" onclick="adjDread('${id}',-10)">-10</button>
           <button class="sm" onclick="adjDread('${id}',-5)">-5</button>
@@ -654,6 +926,7 @@
         </div>
       </div>`;
     }).join('');
+    renderAssignRows();
   }
 
   function renderBeats() {
@@ -773,16 +1046,27 @@
     div.className = 'npc-item';
     div.id = `npc-${data.id}`;
     div.innerHTML = `
-      <div class="npc-name">${esc(data.npc)}</div>
+      <div class="npc-name">${esc(data.npc)} <span class="npc-countdown" id="npc-countdown-${data.id}">10</span></div>
       <div class="npc-text">"${esc(data.text)}"</div>
       <div class="npc-actions">
-        <button class="primary sm" onclick="send('npc:approve',{id:'${data.id}'});this.closest('.npc-item').remove()">✓ Speak</button>
-        <button class="sm" onclick="send('npc:reject',{id:'${data.id}'});this.closest('.npc-item').remove()">✗ Reject</button>
+        <button class="primary sm" onclick="Earbud.cancelNpcTimer('${data.id}');send('npc:approve',{id:'${data.id}'});this.closest('.npc-item').remove()">✓ Speak</button>
+        <button class="sm" onclick="Earbud.cancelNpcTimer('${data.id}');send('npc:reject',{id:'${data.id}'});this.closest('.npc-item').remove()">✗ Reject</button>
       </div>`;
     c.prepend(div);
   }
 
   // === TRANSCRIPT ===
+  function toggleCol(header) {
+    const col = header.closest('.col') || header.parentElement;
+    col.classList.toggle('collapsed');
+    const tog = header.querySelector('.col-toggle');
+    if (tog) tog.textContent = col.classList.contains('collapsed') ? '▶' : '▼';
+  }
+
+  function clearTranscript() {
+    document.getElementById('transcript').innerHTML = '';
+  }
+
   function addTranscript(seg) {
     const c = document.getElementById('transcript');
     const div = document.createElement('div');
@@ -826,7 +1110,1147 @@
     t[last] = val;
   }
 
+  // ============================================================
+  // EARBUD TTS ENGINE
+  // Priority queue: 1=critical (dread) → 2=rolls → 3=story/nudges
+  //                 4=atmosphere → 5=npc alert → 6=npc auto-read
+  // ============================================================
+  const Earbud = {
+    enabled: true,
+    volume: 0.9,
+    rate: 1.05,
+    categories: { dread: true, story: true, atmosphere: true, npc: true, rolls: true },
+
+    _queue: [],          // [{ text, priority }]
+    _speaking: false,
+    _currentPriority: 99,
+    _npcTimers: {},      // { [suggestionId]: { countdown, autoread } }
+    _prevDread: {},      // { [playerId]: score }
+
+    speak(text, priority = 5) {
+      if (!this.enabled || !text) return;
+      this._queue.push({ text, priority });
+      this._queue.sort((a, b) => a.priority - b.priority);
+      // Interrupt if something lower priority is currently playing
+      if (this._speaking && priority < this._currentPriority) {
+        window.speechSynthesis.cancel();
+        this._speaking = false;
+      }
+      if (!this._speaking) this._next();
+    },
+
+    _next() {
+      if (!this._queue.length) { this._speaking = false; this._currentPriority = 99; return; }
+      const { text, priority } = this._queue.shift();
+      this._speaking = true;
+      this._currentPriority = priority;
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.volume = this.volume;
+      utt.rate = this.rate;
+      utt.pitch = 0.9;
+      utt.onend = utt.onerror = () => { this._speaking = false; setTimeout(() => this._next(), 150); };
+      window.speechSynthesis.speak(utt);
+    },
+
+    // Called by handleMessage when NPC suggestion arrives
+    onNpcSuggestion(data) {
+      if (!this.enabled || !this.categories.npc) return;
+      const npcName = data.npc || 'NPC';
+      this.speak(`${npcName} has a suggestion`, 5);
+
+      // 10-second countdown then auto-read the full line
+      let remaining = 10;
+      const countdownInterval = setInterval(() => {
+        remaining--;
+        const badge = document.getElementById(`npc-countdown-${data.id}`);
+        if (badge) {
+          badge.textContent = remaining;
+          if (remaining <= 3) badge.style.background = 'var(--red)';
+        }
+        if (remaining <= 0) clearInterval(countdownInterval);
+      }, 1000);
+
+      const autoreadTimer = setTimeout(() => {
+        clearInterval(countdownInterval);
+        const card = document.getElementById(`npc-${data.id}`);
+        if (card) {
+          const badge = card.querySelector('.npc-countdown');
+          if (badge) { badge.textContent = '▶'; badge.classList.add('done'); }
+          this.speak(data.text, 6);
+        }
+        delete this._npcTimers[data.id];
+      }, 10000);
+
+      this._npcTimers[data.id] = { countdownInterval, autoreadTimer };
+    },
+
+    cancelNpcTimer(id) {
+      const t = this._npcTimers[id];
+      if (!t) return;
+      clearInterval(t.countdownInterval);
+      clearTimeout(t.autoreadTimer);
+      delete this._npcTimers[id];
+    },
+
+    onAtmosphereSuggestion(data) {
+      if (!this.enabled || !this.categories.atmosphere) return;
+      const profile = (data.profile || '').replace(/_/g, ' ');
+      const conf = Math.round((data.confidence || 0) * 100);
+      this.speak(`Atmosphere: ${profile}, ${conf}% confidence`, 4);
+    },
+
+    onStoryBeat(data) {
+      if (!this.enabled || !this.categories.story) return;
+      this.speak(`Story beat: ${data.name || data.id}`, 3);
+    },
+
+    onDmSuggestion(data) {
+      if (!this.enabled || !this.categories.story) return;
+      this.speak(data.text, 3);
+    },
+
+    onDreadUpdate(playerId, newScore, playerName) {
+      if (!this.enabled || !this.categories.dread || newScore == null) return;
+      const prev = this._prevDread[playerId] ?? -1;
+      this._prevDread[playerId] = newScore;
+      const labels = { 20: 'unease', 40: 'dread', 60: 'horror', 80: 'terror', 90: 'breaking point' };
+      for (const [t, label] of Object.entries(labels)) {
+        if (prev < +t && newScore >= +t) {
+          this.speak(`${playerName || playerId}: ${label}, dread ${t}`, 1);
+          break;
+        }
+      }
+    },
+
+    toggle() {
+      this.enabled = !this.enabled;
+      if (!this.enabled) { window.speechSynthesis.cancel(); this._queue = []; }
+      const btn = document.getElementById('earbud-toggle');
+      const ind = document.getElementById('earbud-indicator');
+      if (btn) { btn.textContent = this.enabled ? '🎧 Earbud ON' : '🔇 Muted'; btn.className = this.enabled ? 'primary' : 'danger'; }
+      if (ind) { ind.className = `dot ${this.enabled ? 'green' : 'red'}`; }
+    },
+  };
+
+  // === CHARACTERS ===
+  let availableChars = {};
+  let currentAssignments = {};
+
+  function syncCharacters() {
+    fetch('/api/characters/reload', { method: 'POST' })
+      .then(r => r.json())
+      .then(d => {
+        addTranscript({ speaker: 'system', text: `Characters reloaded: ${d.reloaded} assigned` });
+        loadCharacters();
+      })
+      .catch(console.error);
+  }
+
+  function loadCharacters() {
+    fetch('/api/characters')
+      .then(r => r.json())
+      .then(data => {
+        availableChars = {};
+        for (const c of (data.characters || [])) availableChars[c.foundryId || c.foundryId || c.ddbId] = c;
+        currentAssignments = data.assignments || {};
+        renderCharList(data.characters || []);
+        renderAssignRows();
+      })
+      .catch(console.error);
+  }
+
+  function renderCharList(chars) {
+    const el = document.getElementById('char-list');
+    if (!chars.length) { el.textContent = 'No characters synced yet — run ddb-sync.mjs first'; return; }
+    el.innerHTML = chars.map(c =>
+      `<div style="padding:3px 0;border-bottom:1px solid var(--border);">
+        <span style="color:var(--accent);font-weight:600;">${esc(c.name)}</span>
+        <span style="color:var(--text-dim);"> — ${esc(c.race)} ${esc(c.class)} ${c.level}</span>
+        <span style="float:right;font-size:10px;color:var(--text-dim);">#${c.foundryId || c.foundryId || c.ddbId}</span>
+      </div>`
+    ).join('');
+  }
+
+  function renderAssignRows() {
+    const players = state.players || {};
+    const el = document.getElementById('char-assign-rows');
+    // Include players from assignments even if not yet in state
+    const allIds = new Set([...Object.keys(players), ...Object.keys(currentAssignments)]);
+    const playerIds = [...allIds];
+    if (!playerIds.length) {
+      el.innerHTML = '<div style="font-size:10px;color:var(--text-dim);">Add players above, then assign characters.</div>';
+      return;
+    }
+    const charOptions = Object.values(availableChars).map(c =>
+      `<option value="${c.foundryId || c.foundryId || c.ddbId}">${esc(c.name)} (${esc(c.class)} ${c.level})</option>`
+    ).join('');
+
+    el.innerHTML = playerIds.map(pid => {
+      const pname = players[pid]?.character?.name || players[pid]?.name || pid;
+      const assigned = currentAssignments[pid];
+      return `<div class="char-row">
+        <span style="font-size:10px;color:var(--text-dim);min-width:60px;">${esc(pid)}</span>
+        <select id="char-sel-${pid}" onchange="assignChar('${pid}', this.value)">
+          <option value="">— none —</option>
+          ${charOptions}
+          ${assigned ? '' : ''}
+        </select>
+      </div>
+      ${assigned ? `<div class="char-assigned">✓ ${esc(availableChars[assigned]?.name || assigned)}</div>` : ''}`;
+    }).join('');
+
+    // Set current selections
+    for (const [pid, ddbId] of Object.entries(currentAssignments)) {
+      const sel = document.getElementById(`char-sel-${pid}`);
+      if (sel) sel.value = String(ddbId);
+    }
+  }
+
+  function assignChar(playerId, ddbId) {
+    if (!ddbId) {
+      fetch(`/api/characters/assign/${playerId}`, { method: 'DELETE' }).catch(console.error);
+      return;
+    }
+    fetch('/api/characters/assign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ playerId, ddbId: ddbId })
+    })
+    .then(r => r.json())
+    .then(() => {
+      currentAssignments[playerId] = ddbId;
+      const char = availableChars[ddbId];
+      addTranscript({ speaker: 'system', text: `${playerId} → ${char?.name || ddbId}` });
+      loadCharacters();
+    })
+    .catch(console.error);
+  }
+
+
+  // ── VIEW SHEET MODAL ──────────────────────────────────────────────────────
+  function viewSheet(playerId) {
+    const p = state.players && state.players[playerId];
+    const c = p && p.character;
+    if (!c) { alert('No character data for ' + playerId + '.\nExport from Foundry first.'); return; }
+
+    let modal = document.getElementById('sheet-modal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'sheet-modal';
+      modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:500;overflow-y:auto;padding:16px;';
+      modal.addEventListener('click', function(e) { if (e.target === modal) closeSheet(); });
+      document.body.appendChild(modal);
+    }
+
+    const abOrder = ['str','dex','con','int','wis','cha'];
+    const abils = c.abilities || {};
+    const abilHtml = abOrder.map(function(ab) {
+      const a = abils[ab] || { score:10, modifier:0, modifierStr:'+0' };
+      return '<div style="background:#16161d;border:1px solid #252530;border-radius:6px;padding:8px 4px;text-align:center;">'
+        + '<div style="font-size:8px;color:#6b6760;text-transform:uppercase;">' + ab.toUpperCase() + '</div>'
+        + '<div style="font-size:22px;font-weight:700;color:#c9a54e;">' + (a.modifierStr || (a.modifier>=0?'+'+a.modifier:a.modifier)) + '</div>'
+        + '<div style="font-size:11px;color:#6b6760;border:1px solid #252530;border-radius:10px;padding:1px 6px;display:inline-block;">' + a.score + '</div>'
+        + '</div>';
+    }).join('');
+
+    const saves = c.savingThrows || {};
+    const saveHtml = abOrder.map(function(ab) {
+      const s = saves[ab] || {};
+      const mod = typeof s === 'object' ? s.modifier : s;
+      const prof = typeof s === 'object' && s.proficient;
+      return '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px;border-bottom:1px solid #0f0f14;">'
+        + '<span>' + ab.toUpperCase() + (prof ? ' <span style="color:#c9a54e;">●</span>' : '') + '</span>'
+        + '<span style="font-weight:700;">' + (mod>=0?'+'+mod:mod) + '</span></div>';
+    }).join('');
+
+    const skillHtml = Object.entries(c.skills || {}).map(function(kv) {
+      const s = kv[1]; const mod = typeof s==='object' ? s.modifier : s;
+      const p = typeof s==='object' ? s.proficiency : 'none';
+      const dot = p==='expertise' ? ' <span style="color:#c9a54e;">◆</span>' : p==='proficiency' ? ' <span style="color:#c9a54e;">●</span>' : '';
+      return '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;border-bottom:1px solid #0f0f14;">'
+        + '<span>' + kv[0] + dot + '</span>'
+        + '<span style="font-weight:700;">' + (mod>=0?'+'+mod:mod) + '</span></div>';
+    }).join('');
+
+    const hp = c.hp || {};
+    const invHtml = (c.inventory || []).map(function(i) {
+      return '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;border-bottom:1px solid #0f0f14;">'
+        + '<span' + (i.equipped ? ' style="color:#c9a54e;"' : '') + '>' + esc(i.name) + (i.equipped ? ' ⚔' : '') + '</span>'
+        + '<span style="color:#6b6760;">×' + (i.quantity||1) + '</span></div>';
+    }).join('');
+
+    const cur = c.currency || {};
+    const currHtml = [['pp','#b0c4de'],['gp','#f1c40f'],['sp','#bdc3c7'],['cp','#e67e22']].map(function(kc) {
+      return '<div style="text-align:center;background:#16161d;border-radius:4px;padding:5px;">'
+        + '<div style="font-size:8px;color:#6b6760;text-transform:uppercase;">' + kc[0].toUpperCase() + '</div>'
+        + '<div style="font-size:14px;font-weight:700;color:' + kc[1] + ';">' + (cur[kc[0]]||0) + '</div></div>';
+    }).join('');
+
+    const slotHtml = c.spellSlots ? Object.entries(c.spellSlots).map(function(kv) {
+      const s = kv[1]; const rem = s.remaining !== undefined ? s.remaining : s.total || s;
+      const tot = s.total || s;
+      return '<div style="text-align:center;background:#16161d;border:1px solid #252530;border-radius:3px;padding:4px;">'
+        + '<div style="font-size:8px;color:#6b6760;">' + kv[0] + '</div>'
+        + '<div style="font-size:14px;font-weight:700;color:#c9a54e;">' + rem + '/' + tot + '</div></div>';
+    }).join('') : '<span style="color:#6b6760;font-size:11px;">None exported from Foundry yet</span>';
+
+    modal.innerHTML = '<div style="max-width:720px;margin:0 auto;background:#0f0f14;border:1px solid #252530;border-radius:6px;padding:16px;">'
+      // Header
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">'
+      + '<div>'
+      + '<h2 style="font-family:Cinzel,serif;color:#c9a54e;font-size:1.3rem;margin-bottom:2px;">' + esc(c.name||playerId) + '</h2>'
+      + '<div style="font-size:11px;color:#6b6760;">' + esc(c.race||'') + ' ' + esc(c.class||'') + ' ' + (c.level||'') + (c.classes && c.classes[0]?.subclass ? ' · ' + esc(c.classes[0].subclass) : '') + '</div>'
+      + '</div>'
+      + '<button onclick="closeSheet()" style="background:#1e1e28;border:1px solid #252530;color:#ddd9cf;border-radius:4px;padding:5px 10px;cursor:pointer;">✕ Close</button>'
+      + '</div>'
+      // Stats strip
+      + '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;background:#16161d;border:1px solid #252530;border-radius:5px;padding:8px;margin-bottom:10px;font-size:11px;">'
+      + '<div style="text-align:center;"><div style="color:#6b6760;font-size:9px;text-transform:uppercase;">HP</div><div style="font-weight:700;color:#c9a54e;">' + (hp.current||0) + '/' + (hp.max||0) + '</div></div>'
+      + '<div style="text-align:center;"><div style="color:#6b6760;font-size:9px;text-transform:uppercase;">AC</div><div style="font-weight:700;">' + (c.ac||10) + '</div></div>'
+      + '<div style="text-align:center;"><div style="color:#6b6760;font-size:9px;text-transform:uppercase;">Speed</div><div style="font-weight:700;">' + (c.speed||30) + 'ft</div></div>'
+      + '<div style="text-align:center;"><div style="color:#6b6760;font-size:9px;text-transform:uppercase;">Prof</div><div style="font-weight:700;">+' + (c.proficiencyBonus||2) + '</div></div>'
+      + '<div style="text-align:center;"><div style="color:#6b6760;font-size:9px;text-transform:uppercase;">Init</div><div style="font-weight:700;">' + (c.initiative !== undefined ? (c.initiative>=0?'+'+c.initiative:c.initiative) : '+?') + '</div></div>'
+      + '</div>'
+      // Two-column layout
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+      // Left
+      + '<div>'
+      + '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#6b6760;border-bottom:1px solid #252530;padding-bottom:3px;margin-bottom:6px;">Ability Scores</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:10px;">' + abilHtml + '</div>'
+      + '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#6b6760;border-bottom:1px solid #252530;padding-bottom:3px;margin-bottom:4px;">Saving Throws</div>'
+      + saveHtml
+      + '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#6b6760;border-bottom:1px solid #252530;padding-bottom:3px;margin:8px 0 4px;">Spell Slots</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">' + slotHtml + '</div>'
+      + '</div>'
+      // Right
+      + '<div>'
+      + '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#6b6760;border-bottom:1px solid #252530;padding-bottom:3px;margin-bottom:4px;">Skills</div>'
+      + skillHtml
+      + '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#6b6760;border-bottom:1px solid #252530;padding-bottom:3px;margin:8px 0 4px;">Inventory</div>'
+      + invHtml
+      + '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#6b6760;border-bottom:1px solid #252530;padding-bottom:3px;margin:8px 0 4px;">Currency</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">' + currHtml + '</div>'
+      + '</div>'
+      + '</div>'
+      + '</div>';
+
+    modal.style.display = 'block';
+  }
+
+  function closeSheet() {
+    const modal = document.getElementById('sheet-modal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  // Load characters on connect
+  function onConnected() { loadCharacters(); }
+
+  function showAddPlayer() {
+    const f = document.getElementById('add-player-form');
+    f.style.display = f.style.display === 'none' ? 'block' : 'none';
+    if (f.style.display === 'block') document.getElementById('new-player-id').focus();
+  }
+
+  function addPlayer() {
+    const pid = document.getElementById('new-player-id').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'');
+    if (!pid) { alert('Enter a valid player ID (letters, numbers, - _)'); return; }
+    fetch('/api/players/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ playerId: pid })
+    })
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('new-player-id').value = '';
+      document.getElementById('add-player-form').style.display = 'none';
+      addTranscript({ speaker: 'system', text: 'Player added: ' + pid + ' — URL: /player/' + pid });
+      loadCharacters();
+      // Add to local state so they show immediately
+      if (!state.players) state.players = {};
+      if (!state.players[pid]) state.players[pid] = { name: pid, connected: false };
+      renderPlayers();
+    })
+    .catch(e => { console.error(e); alert('Failed to add player'); });
+  }
+
+  function removePlayer(pid) {
+    if (!confirm('Remove player ' + pid + '?')) return;
+    fetch('/api/players/' + pid, { method: 'DELETE' })
+    .then(r => r.json())
+    .then(() => {
+      delete state.players[pid];
+      renderPlayers();
+      loadCharacters();
+      addTranscript({ speaker: 'system', text: 'Player removed: ' + pid });
+    })
+    .catch(console.error);
+  }
+
   connect();
+
+  // === TAB SWITCHING ===
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach((b, i) => {
+      b.classList.toggle('active', (tab === 'map' && i === 0) || (tab === 'transcript' && i === 1));
+    });
+    document.getElementById('tab-map').classList.toggle('active', tab === 'map');
+    document.getElementById('tab-transcript').classList.toggle('active', tab === 'transcript');
+    if (tab === 'map') VTT.resize();
+  }
+
+  // ============================================================
+  // VTT MAP ENGINE — Canvas 2D
+  // ============================================================
+  const VTT = {
+    canvas: null, ctx: null, container: null,
+    mapImage: null, mapData: null, tokens: {},
+    // Camera
+    cam: { x: 0, y: 0, zoom: 1 },
+    // Interaction
+    dragging: null,       // { tokenId, offsetX, offsetY } or null
+    panning: false,
+    panStart: { x: 0, y: 0, camX: 0, camY: 0 },
+    selectedToken: null,
+    // Colors
+    colors: {
+      pc: '#4080c0', npc: '#c9a54e', hidden: '#a03030',
+      hpGreen: '#30a050', hpOrange: '#c07030', hpRed: '#d04040',
+      grid: 'rgba(255,255,255,0.04)',
+      selection: '#c9a54e'
+    },
+
+    init() {
+      this.canvas = document.getElementById('map-canvas');
+      this.ctx = this.canvas.getContext('2d');
+      this.container = document.getElementById('map-container');
+
+      this.resize();
+      window.addEventListener('resize', () => this.resize());
+
+      // Mouse events
+      this.canvas.addEventListener('mousedown', (e) => this._onMouseDown(e));
+      this.canvas.addEventListener('mousemove', (e) => this._onMouseMove(e));
+      this.canvas.addEventListener('mouseup', (e) => this._onMouseUp(e));
+      this.canvas.addEventListener('wheel', (e) => this._onWheel(e), { passive: false });
+      this.canvas.addEventListener('dblclick', (e) => this._onDblClick(e));
+
+      // Touch events
+      this._touches = {};
+      this._lastPinchDist = 0;
+      this.canvas.addEventListener('touchstart', (e) => this._onTouchStart(e), { passive: false });
+      this.canvas.addEventListener('touchmove', (e) => this._onTouchMove(e), { passive: false });
+      this.canvas.addEventListener('touchend', (e) => this._onTouchEnd(e));
+
+      // Context menu (right-click)
+      this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+      // Load map data
+      this.loadMap();
+    },
+
+    resize() {
+      if (!this.container || !this.canvas) return;
+      const rect = this.container.getBoundingClientRect();
+      this.canvas.width = rect.width;
+      this.canvas.height = rect.height;
+      this.render();
+    },
+
+    async loadMap() {
+      try {
+        const res = await fetch('/api/map');
+        const data = await res.json();
+        if (!data.active) {
+          document.getElementById('map-name').textContent = 'No map loaded';
+          return;
+        }
+        this.mapData = data.map;
+        this.tokens = data.tokens || {};
+        document.getElementById('map-name').textContent = data.map.name;
+
+        // Center camera
+        this.cam.x = 0;
+        this.cam.y = 0;
+        this.cam.zoom = Math.min(
+          this.canvas.width / data.map.width,
+          this.canvas.height / data.map.height
+        ) * 0.9;
+
+        // Load map image
+        if (data.map.image) {
+          const img = new Image();
+          img.onload = () => { this.mapImage = img; this.render(); };
+          img.onerror = () => { this.mapImage = null; this.render(); };
+          img.src = '/assets/maps/' + data.map.image;
+        }
+
+        this.render();
+      } catch(e) {
+        console.error('[VTT] Failed to load map:', e);
+      }
+    },
+
+    // ─── RENDERING ───
+    render() {
+      const ctx = this.ctx;
+      if (!ctx || !this.canvas.width) return;
+      const W = this.canvas.width;
+      const H = this.canvas.height;
+
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#050508';
+      ctx.fillRect(0, 0, W, H);
+
+      if (!this.mapData) return;
+
+      ctx.save();
+      ctx.translate(W/2 + this.cam.x, H/2 + this.cam.y);
+      ctx.scale(this.cam.zoom, this.cam.zoom);
+
+      const mw = this.mapData.width;
+      const mh = this.mapData.height;
+
+      // Map image or placeholder
+      if (this.mapImage) {
+        ctx.drawImage(this.mapImage, -mw/2, -mh/2, mw, mh);
+      } else {
+        ctx.fillStyle = '#0a0a12';
+        ctx.fillRect(-mw/2, -mh/2, mw, mh);
+        // Draw zones as subtle rectangles
+        for (const zone of (this.mapData.zones || [])) {
+          ctx.fillStyle = 'rgba(30,30,40,0.8)';
+          ctx.strokeStyle = 'rgba(80,80,100,0.3)';
+          ctx.lineWidth = 1;
+          ctx.fillRect(zone.x - mw/2, zone.y - mh/2, zone.w, zone.h);
+          ctx.strokeRect(zone.x - mw/2, zone.y - mh/2, zone.w, zone.h);
+          // Zone label
+          ctx.fillStyle = 'rgba(150,150,160,0.5)';
+          ctx.font = '10px Source Sans 3, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(zone.name, zone.x - mw/2 + zone.w/2, zone.y - mh/2 + zone.h/2);
+        }
+      }
+
+      // Grid
+      const gs = this.mapData.gridSize;
+      ctx.strokeStyle = this.colors.grid;
+      ctx.lineWidth = 0.5;
+      for (let x = 0; x <= mw; x += gs) {
+        ctx.beginPath(); ctx.moveTo(x - mw/2, -mh/2); ctx.lineTo(x - mw/2, mh/2); ctx.stroke();
+      }
+      for (let y = 0; y <= mh; y += gs) {
+        ctx.beginPath(); ctx.moveTo(-mw/2, y - mh/2); ctx.lineTo(mw/2, y - mh/2); ctx.stroke();
+      }
+
+      // Tokens
+      for (const [id, tok] of Object.entries(this.tokens)) {
+        this._renderToken(ctx, id, tok, mw, mh);
+      }
+
+      ctx.restore();
+    },
+
+    _renderToken(ctx, id, tok, mw, mh) {
+      const gs = this.mapData.gridSize;
+      const x = tok.x - mw/2;
+      const y = tok.y - mh/2;
+      const r = gs * 0.4;
+
+      // Dread aura (for PCs)
+      if (tok.type === 'pc') {
+        const dread = state.players?.[id]?.dread?.score || 0;
+        if (dread > 20) {
+          const auraR = r + 4 + (dread / 100) * 12;
+          const grad = ctx.createRadialGradient(x, y, r, x, y, auraR);
+          const intensity = Math.min(dread / 100, 1);
+          grad.addColorStop(0, `rgba(${Math.round(120 + 80*intensity)}, 30, ${Math.round(120 - 80*intensity)}, ${0.2 + intensity * 0.3})`);
+          grad.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = grad;
+          ctx.beginPath(); ctx.arc(x, y, auraR, 0, Math.PI*2); ctx.fill();
+        }
+      }
+
+      // HP ring
+      const hp = tok.hp || { current: 1, max: 1 };
+      const hpPct = Math.max(0, hp.current / hp.max);
+      const ringR = r + 3;
+      // Background ring
+      ctx.beginPath(); ctx.arc(x, y, ringR, 0, Math.PI*2);
+      ctx.strokeStyle = 'rgba(60,60,70,0.6)'; ctx.lineWidth = 3; ctx.stroke();
+      // HP ring
+      if (hpPct > 0) {
+        const hpColor = hpPct > 0.5 ? this.colors.hpGreen : hpPct > 0.25 ? this.colors.hpOrange : this.colors.hpRed;
+        ctx.beginPath();
+        ctx.arc(x, y, ringR, -Math.PI/2, -Math.PI/2 + Math.PI*2*hpPct);
+        ctx.strokeStyle = hpColor; ctx.lineWidth = 3; ctx.stroke();
+      }
+
+      // Token circle
+      const isHidden = tok.hidden;
+      const isSelected = this.selectedToken === id;
+      let fillColor = tok.type === 'pc' ? this.colors.pc : isHidden ? this.colors.hidden : this.colors.npc;
+
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
+      ctx.fillStyle = fillColor; ctx.fill();
+
+      if (isSelected) {
+        ctx.strokeStyle = this.colors.selection; ctx.lineWidth = 2.5;
+        ctx.stroke();
+      }
+
+      // Hidden indicator (red tint overlay for DM)
+      if (isHidden) {
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
+        ctx.fillStyle = 'rgba(160,48,48,0.3)'; ctx.fill();
+        // Eye-slash icon
+        ctx.fillStyle = '#fff'; ctx.font = `${r*0.7}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('👁', x, y);
+      } else {
+        // Token label (first letter)
+        const label = (tok.name || id).charAt(0).toUpperCase();
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${r*0.9}px Cinzel, serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(label, x, y);
+      }
+
+      // Name label below
+      ctx.fillStyle = isHidden ? 'rgba(200,100,100,0.7)' : 'rgba(200,200,200,0.8)';
+      ctx.font = `${Math.max(9, gs * 0.14)}px Source Sans 3, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText(tok.name || id, x, y + r + 12);
+    },
+
+    // ─── COORDINATE TRANSFORMS ───
+    screenToMap(sx, sy) {
+      const W = this.canvas.width;
+      const H = this.canvas.height;
+      const mx = ((sx - W/2 - this.cam.x) / this.cam.zoom) + this.mapData.width/2;
+      const my = ((sy - H/2 - this.cam.y) / this.cam.zoom) + this.mapData.height/2;
+      return { x: mx, y: my };
+    },
+
+    _getTokenAt(sx, sy) {
+      if (!this.mapData) return null;
+      const { x: mx, y: my } = this.screenToMap(sx, sy);
+      const gs = this.mapData.gridSize;
+      const hitR = gs * 0.45;
+      // Check in reverse order (top tokens first)
+      const ids = Object.keys(this.tokens);
+      for (let i = ids.length - 1; i >= 0; i--) {
+        const id = ids[i];
+        const tok = this.tokens[id];
+        const dx = mx - tok.x;
+        const dy = my - tok.y;
+        if (dx*dx + dy*dy < hitR*hitR) return id;
+      }
+      return null;
+    },
+
+    // ─── MOUSE EVENTS ───
+    _onMouseDown(e) {
+      const rect = this.canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+
+      if (e.button === 0) {
+        const tokenId = this._getTokenAt(sx, sy);
+        if (tokenId) {
+          // Start dragging token
+          const { x: mx, y: my } = this.screenToMap(sx, sy);
+          const tok = this.tokens[tokenId];
+          this.dragging = { tokenId, offsetX: tok.x - mx, offsetY: tok.y - my };
+          this.selectedToken = tokenId;
+          this.container.classList.add('dragging-token');
+          this._showInspector(tokenId);
+        } else {
+          // Start panning
+          this.panning = true;
+          this.panStart = { x: e.clientX, y: e.clientY, camX: this.cam.x, camY: this.cam.y };
+          this.selectedToken = null;
+          this.closeInspector();
+        }
+        this.render();
+      }
+    },
+
+    _onMouseMove(e) {
+      const rect = this.canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+
+      if (this.dragging) {
+        const { x: mx, y: my } = this.screenToMap(sx, sy);
+        const tok = this.tokens[this.dragging.tokenId];
+        if (tok) {
+          tok.x = mx + this.dragging.offsetX;
+          tok.y = my + this.dragging.offsetY;
+          this.render();
+        }
+      } else if (this.panning) {
+        this.cam.x = this.panStart.camX + (e.clientX - this.panStart.x);
+        this.cam.y = this.panStart.camY + (e.clientY - this.panStart.y);
+        this.render();
+      }
+
+      // Update coords display
+      if (this.mapData) {
+        const { x, y } = this.screenToMap(sx, sy);
+        const gs = this.mapData.gridSize;
+        document.getElementById('map-coords').textContent =
+          `${Math.round(x)},${Math.round(y)} [${Math.floor(x/gs)},${Math.floor(y/gs)}]`;
+      }
+    },
+
+    _onMouseUp(e) {
+      if (this.dragging) {
+        // Snap and send to server
+        const tok = this.tokens[this.dragging.tokenId];
+        if (tok) {
+          const gs = this.mapData.gridSize;
+          tok.x = Math.round(tok.x / gs) * gs;
+          tok.y = Math.round(tok.y / gs) * gs;
+          this._sendTokenMove(this.dragging.tokenId, tok.x, tok.y);
+          this._updateInspectorPos();
+        }
+        this.container.classList.remove('dragging-token');
+        this.dragging = null;
+        this.render();
+      }
+      this.panning = false;
+    },
+
+    _onWheel(e) {
+      e.preventDefault();
+      const factor = e.deltaY > 0 ? 0.9 : 1.1;
+      const newZoom = Math.max(0.1, Math.min(5, this.cam.zoom * factor));
+
+      // Zoom toward mouse position
+      const rect = this.canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left - this.canvas.width/2;
+      const my = e.clientY - rect.top - this.canvas.height/2;
+
+      this.cam.x = mx - (mx - this.cam.x) * (newZoom / this.cam.zoom);
+      this.cam.y = my - (my - this.cam.y) * (newZoom / this.cam.zoom);
+      this.cam.zoom = newZoom;
+      this.render();
+    },
+
+    _onDblClick(e) {
+      const rect = this.canvas.getBoundingClientRect();
+      const tokenId = this._getTokenAt(e.clientX - rect.left, e.clientY - rect.top);
+      if (tokenId) {
+        this.selectedToken = tokenId;
+        this._showInspector(tokenId);
+        this.render();
+      }
+    },
+
+    // ─── TOUCH EVENTS ───
+    _onTouchStart(e) {
+      e.preventDefault();
+      if (e.touches.length === 1) {
+        const t = e.touches[0];
+        const rect = this.canvas.getBoundingClientRect();
+        const sx = t.clientX - rect.left;
+        const sy = t.clientY - rect.top;
+        const tokenId = this._getTokenAt(sx, sy);
+        if (tokenId) {
+          const { x: mx, y: my } = this.screenToMap(sx, sy);
+          const tok = this.tokens[tokenId];
+          this.dragging = { tokenId, offsetX: tok.x - mx, offsetY: tok.y - my };
+          this.selectedToken = tokenId;
+          this._showInspector(tokenId);
+        } else {
+          this.panning = true;
+          this.panStart = { x: t.clientX, y: t.clientY, camX: this.cam.x, camY: this.cam.y };
+        }
+        this.render();
+      } else if (e.touches.length === 2) {
+        // Pinch zoom
+        this.panning = false;
+        this.dragging = null;
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        this._lastPinchDist = Math.sqrt(dx*dx + dy*dy);
+      }
+    },
+
+    _onTouchMove(e) {
+      e.preventDefault();
+      if (e.touches.length === 1) {
+        const t = e.touches[0];
+        if (this.dragging) {
+          const rect = this.canvas.getBoundingClientRect();
+          const { x: mx, y: my } = this.screenToMap(t.clientX - rect.left, t.clientY - rect.top);
+          const tok = this.tokens[this.dragging.tokenId];
+          if (tok) { tok.x = mx + this.dragging.offsetX; tok.y = my + this.dragging.offsetY; this.render(); }
+        } else if (this.panning) {
+          this.cam.x = this.panStart.camX + (t.clientX - this.panStart.x);
+          this.cam.y = this.panStart.camY + (t.clientY - this.panStart.y);
+          this.render();
+        }
+      } else if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (this._lastPinchDist) {
+          const factor = dist / this._lastPinchDist;
+          this.cam.zoom = Math.max(0.1, Math.min(5, this.cam.zoom * factor));
+          this.render();
+        }
+        this._lastPinchDist = dist;
+      }
+    },
+
+    _onTouchEnd(e) {
+      if (this.dragging) {
+        const tok = this.tokens[this.dragging.tokenId];
+        if (tok) {
+          const gs = this.mapData.gridSize;
+          tok.x = Math.round(tok.x / gs) * gs;
+          tok.y = Math.round(tok.y / gs) * gs;
+          this._sendTokenMove(this.dragging.tokenId, tok.x, tok.y);
+          this._updateInspectorPos();
+        }
+        this.dragging = null;
+        this.render();
+      }
+      this.panning = false;
+      if (e.touches.length < 2) this._lastPinchDist = 0;
+    },
+
+    // ─── INSPECTOR ───
+    _showInspector(tokenId) {
+      const tok = this.tokens[tokenId];
+      if (!tok) return;
+      const el = document.getElementById('token-inspector');
+      el.classList.add('visible');
+      el.dataset.tokenId = tokenId;
+      document.getElementById('ti-name').textContent = tok.name || tokenId;
+      document.getElementById('ti-type').textContent = tok.type + (tok.hidden ? ' (hidden)' : '');
+      document.getElementById('ti-ac').textContent = tok.ac || '—';
+      this._updateInspectorHp();
+      this._updateInspectorPos();
+      document.getElementById('ti-visible').checked = !tok.hidden;
+    },
+
+    _updateInspectorHp() {
+      const id = document.getElementById('token-inspector').dataset.tokenId;
+      const tok = this.tokens[id];
+      if (!tok) return;
+      const hp = tok.hp || { current: 0, max: 1 };
+      document.getElementById('ti-hp').textContent = `${hp.current} / ${hp.max}`;
+      const pct = Math.max(0, Math.round((hp.current / hp.max) * 100));
+      const bar = document.getElementById('ti-hp-bar');
+      bar.style.width = pct + '%';
+      bar.className = 'bar-fill hp' + (pct <= 25 ? ' critical' : pct <= 50 ? ' wounded' : '');
+    },
+
+    _updateInspectorPos() {
+      const id = document.getElementById('token-inspector').dataset.tokenId;
+      const tok = this.tokens[id];
+      if (!tok) return;
+      const gs = this.mapData?.gridSize || 70;
+      document.getElementById('ti-pos').textContent = `${tok.x},${tok.y} [${Math.floor(tok.x/gs)},${Math.floor(tok.y/gs)}]`;
+    },
+
+    closeInspector() {
+      document.getElementById('token-inspector').classList.remove('visible');
+    },
+
+    inspectorHp(delta) {
+      const id = document.getElementById('token-inspector').dataset.tokenId;
+      const tok = this.tokens[id];
+      if (!tok) return;
+      const hp = tok.hp || { current: 0, max: 1 };
+      const newHp = Math.max(0, Math.min(hp.max, hp.current + delta));
+      tok.hp.current = newHp;
+      this._updateInspectorHp();
+      this.render();
+      // Send to server
+      if (tok.type === 'pc') {
+        fetch(`/api/hp/${id}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ delta })
+        }).catch(console.error);
+      } else {
+        // For NPCs, update via state
+        fetch('/api/state/set', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: `map.tokens.${id}.hp.current`, value: newHp })
+        }).catch(console.error);
+      }
+    },
+
+    inspectorVisibility(visible) {
+      const id = document.getElementById('token-inspector').dataset.tokenId;
+      fetch('/api/map/token/visibility', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tokenId: id, visible })
+      }).then(() => {
+        if (this.tokens[id]) {
+          this.tokens[id].visible = visible;
+          this.tokens[id].hidden = !visible;
+        }
+        this._showInspector(id);
+        this.render();
+      }).catch(console.error);
+    },
+
+    // ─── SERVER COMMUNICATION ───
+    _sendTokenMove(tokenId, x, y) {
+      fetch('/api/map/token/move', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tokenId, x, y })
+      }).then(r => r.json()).then(d => {
+        if (this.tokens[tokenId]) {
+          this.tokens[tokenId].x = d.x;
+          this.tokens[tokenId].y = d.y;
+          this.render();
+        }
+      }).catch(console.error);
+    },
+
+    // Called from handleMessage when map state changes
+    onStateUpdate(path, value) {
+      if (path === 'map.tokens' && typeof value === 'object') {
+        this.tokens = value;
+        this.render();
+      } else if (path.startsWith('map.tokens.')) {
+        const parts = path.replace('map.tokens.', '').split('.');
+        const tokenId = parts[0];
+        if (parts.length === 1) {
+          this.tokens[tokenId] = value;
+        } else {
+          if (!this.tokens[tokenId]) this.tokens[tokenId] = {};
+          let obj = this.tokens[tokenId];
+          for (let i = 1; i < parts.length - 1; i++) {
+            if (!obj[parts[i]]) obj[parts[i]] = {};
+            obj = obj[parts[i]];
+          }
+          obj[parts[parts.length - 1]] = value;
+        }
+        // Update inspector if this token is selected
+        if (this.selectedToken === tokenId) {
+          this._showInspector(tokenId);
+        }
+        this.render();
+      } else if (path === 'map' || path === 'map.id') {
+        this.loadMap();
+      }
+    },
+  };
+
+  // Init VTT on DOM ready
+  document.addEventListener('DOMContentLoaded', () => VTT.init());
+
+  // ── COLUMN RESIZER ──────────────────────────────────────────────────────
+  (function() {
+    function initResizer(resizerId, leftColId, storageKey) {
+      const resizer = document.getElementById(resizerId);
+      const leftCol = document.getElementById(leftColId);
+      if (!resizer || !leftCol) return;
+
+      // Restore saved width
+      const saved = localStorage.getItem(storageKey);
+      if (saved) leftCol.style.width = saved;
+
+      let startX, startW;
+
+      resizer.addEventListener('mousedown', function(e) {
+        startX = e.clientX;
+        startW = leftCol.getBoundingClientRect().width;
+        resizer.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+
+        function onMove(e) {
+          const delta = e.clientX - startX;
+          const newW = Math.max(180, Math.min(window.innerWidth * 0.7, startW + delta));
+          leftCol.style.width = newW + 'px';
+        }
+
+        function onUp() {
+          resizer.classList.remove('dragging');
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+          localStorage.setItem(storageKey, leftCol.style.width);
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+        }
+
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+        e.preventDefault();
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      initResizer('resizer-1', 'col-transcript', 'dp_col_transcript_w');
+      initResizer('resizer-2', 'col-controls', 'dp_col_controls_w');
+    });
+  })();
+
+  /* === PANEL DRAG-TO-REORDER (mouse + touch) === */
+  (function() {
+    const STORAGE_KEY = 'dp_panel_order';
+    let draggedPanel = null;
+    let placeholder = null;
+    let touchOffsetY = 0;
+    let clone = null;
+
+    function getCol() { return document.getElementById('col-controls'); }
+    function getPanels() { return Array.from(getCol().querySelectorAll('.panel-section')); }
+
+    function savePanelOrder() {
+      const order = getPanels().map(p => p.dataset.panel);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
+    }
+
+    function restorePanelOrder() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return;
+      try {
+        const order = JSON.parse(saved);
+        const col = getCol();
+        const panelMap = {};
+        getPanels().forEach(p => { panelMap[p.dataset.panel] = p; });
+        order.forEach(name => { if (panelMap[name]) col.appendChild(panelMap[name]); });
+      } catch(e) { console.warn('[DragReorder] Bad saved order:', e); }
+    }
+
+    function getPanelAtY(y) {
+      for (const p of getPanels()) {
+        if (p === draggedPanel) continue;
+        const r = p.getBoundingClientRect();
+        if (y >= r.top && y <= r.bottom) return p;
+      }
+      return null;
+    }
+
+    function insertAtTarget(target) {
+      if (!target || !draggedPanel || target === draggedPanel) return;
+      const panels = getPanels();
+      const dragIdx = panels.indexOf(draggedPanel);
+      const dropIdx = panels.indexOf(target);
+      if (dragIdx < dropIdx) {
+        target.parentNode.insertBefore(draggedPanel, target.nextSibling);
+      } else {
+        target.parentNode.insertBefore(draggedPanel, target);
+      }
+    }
+
+    function startDrag(panel, clientY) {
+      draggedPanel = panel;
+      panel.classList.add('dragging');
+    }
+
+    function moveDrag(clientY) {
+      if (!draggedPanel) return;
+      const target = getPanelAtY(clientY);
+      getPanels().forEach(p => p.classList.remove('drag-over'));
+      if (target && target !== draggedPanel) target.classList.add('drag-over');
+    }
+
+    function endDrag(clientY) {
+      if (!draggedPanel) return;
+      const target = getPanelAtY(clientY);
+      if (target) insertAtTarget(target);
+      draggedPanel.classList.remove('dragging');
+      getPanels().forEach(p => p.classList.remove('drag-over'));
+      if (target) savePanelOrder();
+      draggedPanel = null;
+      // Remove floating clone if any
+      if (clone) { clone.remove(); clone = null; }
+    }
+
+    function initDragReorder() {
+      const col = getCol();
+      if (!col) return;
+      restorePanelOrder();
+
+      col.querySelectorAll('.drag-handle').forEach(handle => {
+        // --- Mouse: use HTML5 drag API ---
+        handle.addEventListener('mousedown', () => {
+          handle.closest('.panel-section').setAttribute('draggable', 'true');
+        });
+
+        // --- Touch: manual drag ---
+        handle.addEventListener('touchstart', (e) => {
+          const panel = handle.closest('.panel-section');
+          const touch = e.touches[0];
+          startDrag(panel, touch.clientY);
+          touchOffsetY = touch.clientY - panel.getBoundingClientRect().top;
+
+          // Create floating clone for visual feedback
+          clone = panel.cloneNode(true);
+          clone.style.cssText = 'position:fixed;left:0;right:0;z-index:9999;opacity:0.85;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,0.5);';
+          clone.style.top = (touch.clientY - touchOffsetY) + 'px';
+          clone.style.width = panel.offsetWidth + 'px';
+          document.body.appendChild(clone);
+
+          e.preventDefault();
+        }, { passive: false });
+      });
+
+      // Touch move/end on document so it works even if finger leaves handle
+      document.addEventListener('touchmove', (e) => {
+        if (!draggedPanel) return;
+        const touch = e.touches[0];
+        moveDrag(touch.clientY);
+        if (clone) clone.style.top = (touch.clientY - touchOffsetY) + 'px';
+        e.preventDefault();
+      }, { passive: false });
+
+      document.addEventListener('touchend', (e) => {
+        if (!draggedPanel) return;
+        const touch = e.changedTouches[0];
+        endDrag(touch.clientY);
+      });
+
+      // --- HTML5 drag events (mouse on desktop) ---
+      col.addEventListener('dragstart', (e) => {
+        const panel = e.target.closest('.panel-section');
+        if (!panel) return;
+        startDrag(panel, e.clientY);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', panel.dataset.panel);
+      });
+
+      col.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        moveDrag(e.clientY);
+      });
+
+      col.addEventListener('dragleave', (e) => {
+        const target = e.target.closest('.panel-section');
+        if (target) target.classList.remove('drag-over');
+      });
+
+      col.addEventListener('drop', (e) => {
+        e.preventDefault();
+        endDrag(e.clientY);
+      });
+
+      col.addEventListener('dragend', () => {
+        if (draggedPanel) {
+          draggedPanel.classList.remove('dragging');
+          draggedPanel.removeAttribute('draggable');
+          draggedPanel = null;
+        }
+        getPanels().forEach(p => p.classList.remove('drag-over'));
+      });
+
+      document.addEventListener('mouseup', () => {
+        getPanels().forEach(p => p.removeAttribute('draggable'));
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', initDragReorder);
+  })();
+
 </script>
 </body>
 </html>

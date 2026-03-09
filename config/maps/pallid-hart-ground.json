@@ -1,0 +1,97 @@
+{
+  "id": "pallid-hart-ground",
+  "name": "The Pallid Hart — Ground Floor",
+  "image": "pallid-hart-ground.png",
+  "gridSize": 70,
+  "width": 1400,
+  "height": 1050,
+  "zones": [
+    {
+      "id": "common-room",
+      "name": "Common Room",
+      "x": 140, "y": 140, "w": 560, "h": 490,
+      "atmosphere": "tavern_warm"
+    },
+    {
+      "id": "bar",
+      "name": "Bar Area",
+      "x": 700, "y": 140, "w": 280, "h": 280,
+      "atmosphere": "tavern_warm"
+    },
+    {
+      "id": "kitchen",
+      "name": "Kitchen",
+      "x": 700, "y": 420, "w": 280, "h": 210,
+      "atmosphere": "tavern_warm"
+    },
+    {
+      "id": "cellar-stairs",
+      "name": "Cellar Stairs",
+      "x": 980, "y": 420, "w": 140, "h": 210,
+      "type": "transition",
+      "transitionTo": "pallid-hart-cellar",
+      "atmosphere": "tavern_dark"
+    },
+    {
+      "id": "entry",
+      "name": "Entry Hall",
+      "x": 0, "y": 280, "w": 140, "h": 210,
+      "type": "transition",
+      "transitionTo": "exterior",
+      "atmosphere": "tavern_tense"
+    },
+    {
+      "id": "corner-table",
+      "name": "Shadowed Corner",
+      "x": 140, "y": 630, "w": 280, "h": 280,
+      "atmosphere": "tavern_dark",
+      "note": "Where the hooded stranger sits"
+    },
+    {
+      "id": "fireplace",
+      "name": "Fireplace",
+      "x": 420, "y": 630, "w": 280, "h": 280,
+      "atmosphere": "tavern_warm",
+      "note": "Dying fire, main light source"
+    },
+    {
+      "id": "storage",
+      "name": "Storage Room",
+      "x": 980, "y": 140, "w": 280, "h": 280,
+      "atmosphere": "tavern_dark"
+    }
+  ],
+  "tokens": {
+    "marta": {
+      "name": "Marta Kowalski",
+      "type": "npc",
+      "x": 770,
+      "y": 210,
+      "image": "marta.png",
+      "visible": true,
+      "hp": { "current": 8, "max": 8 },
+      "ac": 10
+    },
+    "vladislav": {
+      "name": "Vladislav Dragan",
+      "type": "npc",
+      "x": 210,
+      "y": 700,
+      "image": "vladislav.png",
+      "visible": false,
+      "hidden": true,
+      "hp": { "current": 82, "max": 82 },
+      "ac": 15,
+      "note": "Disguised as hooded stranger"
+    }
+  },
+  "playerSpawns": {
+    "default": { "x": 280, "y": 350 },
+    "spread": [
+      { "x": 210, "y": 280 },
+      { "x": 350, "y": 280 },
+      { "x": 210, "y": 420 },
+      { "x": 350, "y": 420 }
+    ]
+  }
+}

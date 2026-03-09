@@ -64,8 +64,8 @@ class AtmosphereEngine {
     }, 'atmosphere');
 
     this.bus.subscribe('session:ended', async () => {
-      console.log('[Atmosphere] Session ended — restoring lights');
-      await this._panic();
+      console.log('[Atmosphere] Session ended — turning lights off');
+      await this._lightsOff();
     }, 'atmosphere');
 
     if (!this.hubitat.token) {
@@ -261,6 +261,19 @@ async _applyAmbientLights(profile) {
     );
 
     await Promise.allSettled(commands);
+  }
+
+  async _lightsOff() {
+    if (this._flickerInterval) {
+      clearInterval(this._flickerInterval);
+      this._flickerInterval = null;
+    }
+    if (!this.hubitat.token) return;
+    const allDevices = [...this.lights.color, ...this.lights.ambient];
+    console.log('[Atmosphere] Turning off ' + allDevices.length + ' lights');
+    await Promise.allSettled(allDevices.map(id => this._hubitatCommand(id, 'off')));
+    this.state.set('atmosphere.currentProfile', 'off');
+    console.log('[Atmosphere] All lights off');
   }
 
   async _panic() {

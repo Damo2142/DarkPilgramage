@@ -51,6 +51,16 @@ class StateManager {
         round: 0,
         turnOrder: [],
         currentTurn: null
+      },
+      map: {
+        id: null,
+        name: null,
+        image: null,
+        gridSize: 70,
+        width: 0,
+        height: 0,
+        zones: [],
+        tokens: {}
       }
     };
   }

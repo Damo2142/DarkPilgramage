@@ -127,6 +127,93 @@ class DashboardService {
       this.bus.dispatch('atmo:change', { profile, reason: 'DM manual', auto: false });
       res.json({ profile });
     });
+
+    // ── Character / DDB routes ─────────────────────────────────────────────
+    // GET  /api/characters          — list synced characters + assignments
+    this.app.get('/api/characters', (req, res) => {
+      const svc = this.orchestrator.getService('characters');
+      if (!svc) return res.json({ characters: [], assignments: {} });
+      res.json(svc.getStatus());
+    });
+
+    // POST /api/characters/reload   — reload JSON files into game state (no restart)
+    this.app.post('/api/characters/reload', (req, res) => {
+      const svc = this.orchestrator.getService('characters');
+      if (!svc) return res.status(503).json({ error: 'Character service not running' });
+      const count = svc.reload();
+      res.json({ reloaded: count });
+    });
+
+    // POST /api/characters/assign   — assign player → DDB character
+    // body: { playerId, ddbId }
+    this.app.post('/api/characters/assign', (req, res) => {
+      const { playerId, ddbId } = req.body || {};
+      if (!playerId || !ddbId) return res.status(400).json({ error: 'playerId and ddbId required' });
+      const svc = this.orchestrator.getService('characters');
+      if (!svc) return res.status(503).json({ error: 'Character service not running' });
+      const assignments = svc.assign(playerId, ddbId);
+      res.json({ assignments });
+    });
+
+    // DELETE /api/characters/assign/:playerId
+    this.app.delete('/api/characters/assign/:playerId', (req, res) => {
+      const svc = this.orchestrator.getService('characters');
+      if (!svc) return res.status(503).json({ error: 'Character service not running' });
+      const assignments = svc.unassign(req.params.playerId);
+      res.json({ assignments });
+    });
+
+    // POST /api/players/add — add a player slot
+    this.app.post('/api/players/add', (req, res) => {
+      const { playerId } = req.body || {};
+      if (!playerId) return res.status(400).json({ error: 'playerId required' });
+      const svc = this.orchestrator.getService('characters');
+      if (svc) svc.addPlayer(playerId);
+      // Also init in state
+      if (!this.state.get('players.' + playerId)) {
+        this.state.set('players.' + playerId, { name: playerId, connected: false });
+      }
+      console.log('[Dashboard] Player slot added: ' + playerId);
+      res.json({ playerId, url: '/player/' + playerId });
+    });
+
+    // DELETE /api/players/:playerId — remove a player slot
+    this.app.delete('/api/players/:playerId', (req, res) => {
+      const { playerId } = req.params;
+      const svc = this.orchestrator.getService('characters');
+      if (svc) svc.removePlayer(playerId);
+      // Remove from state
+      const players = this.state.get('players') || {};
+      delete players[playerId];
+      this.state.set('players', players);
+      console.log('[Dashboard] Player slot removed: ' + playerId);
+      res.json({ removed: playerId });
+    });
+
+    // POST /api/characters/import  — receive character data pushed from Foundry module
+    // body: { characters: [ { foundryId, name, ... } ] }
+    this.app.post('/api/characters/import', (req, res) => {
+      const { characters } = req.body || {};
+      if (!Array.isArray(characters) || !characters.length) {
+        return res.status(400).json({ error: 'characters array required' });
+      }
+      const svc = this.orchestrator.getService('characters');
+      if (!svc) return res.status(503).json({ error: 'Character service not running' });
+
+      let saved = 0;
+      for (const char of characters) {
+        if (!char.foundryId && !char.name) continue;
+        const id = char.foundryId || char.name.replace(/\s+/g, '-').toLowerCase();
+        svc.saveCharacter(id, char);
+        saved++;
+      }
+
+      // Reload all into game state
+      svc.reload();
+      this.bus.dispatch('characters:imported', { count: saved });
+      console.log(`[Dashboard] Foundry pushed ${saved} character(s)`);
+      res.json({ saved });
+    });
   }
 
   _onConnection(ws) {

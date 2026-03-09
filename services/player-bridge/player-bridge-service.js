@@ -28,9 +28,35 @@ class PlayerBridgeService {
     this.app = express();
     this.app.use(express.json());
     this.app.use(express.static(path.join(__dirname, 'public')));
+    this.app.use('/assets', express.static(path.join(__dirname, '..', '..', 'assets')));
 
     this.app.get('/player/:playerId', (req, res) => {
       res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    });
+
+    // REST endpoint for HP changes (more reliable than WS send)
+    this.app.post('/api/hp/:playerId', (req, res) => {
+      const { playerId } = req.params;
+      const { delta } = req.body || {};
+      if (typeof delta !== 'number') return res.status(400).json({ error: 'delta required' });
+
+      let charHp = this.state.get(`players.${playerId}.character.hp`);
+      if (!charHp || typeof charHp.max !== 'number') {
+        const charData = this._lookupCharacter(playerId);
+        if (charData?.hp) {
+          this.state.set(`players.${playerId}.character`, charData);
+          charHp = charData.hp;
+        } else {
+          charHp = { current: 0, max: 20 };
+        }
+      }
+      const cur = typeof charHp.current === 'number' ? charHp.current : 0;
+      const max = typeof charHp.max === 'number' ? charHp.max : 20;
+      const newHp = Math.max(0, Math.min(max, cur + delta));
+      this.state.set(`players.${playerId}.character.hp.current`, newHp);
+      this.bus.dispatch('hp:update', { playerId, current: newHp, max });
+      console.log(`[PlayerBridge] ${playerId} HP: ${cur} -> ${newHp} (delta ${delta})`);
+      res.json({ current: newHp, max });
     });
 
     this.app.get('/api/players', (req, res) => {
@@ -70,6 +96,31 @@ class PlayerBridgeService {
     });
   }
 
+  _lookupCharacter(playerId) {
+    try {
+      const charSvc = this.orchestrator.getService('characters');
+      if (!charSvc) return null;
+      const assignments = charSvc.getAssignments();
+      const charId = assignments[playerId];
+      if (!charId) return null;
+      return charSvc.getCharacter(charId);
+    } catch(e) {
+      console.warn('[PlayerBridge] Could not load character for ' + playerId + ':', e.message);
+      return null;
+    }
+  }
+
+  _pushCharactersToPlayers() {
+    for (const [playerId] of this.players) {
+      const char = this._lookupCharacter(playerId);
+      if (char) {
+        this.state.set(`players.${playerId}.character`, char);
+        this._sendToPlayer(playerId, { type: 'character:update', character: char });
+        console.log('[PlayerBridge] Pushed character update to ' + playerId + ': ' + char.name);
+      }
+    }
+  }
+
   _setupEventListeners() {
     this.bus.subscribe('player:horror_effect', (env) => {
       const { playerId, type, payload, durationMs } = env.data;
@@ -94,7 +145,16 @@ class PlayerBridgeService {
         });
       }
 
-      if (statePath.startsWith('scene.') || statePath.startsWith('combat.')) {
+      if (statePath.startsWith('scene.') || statePath.startsWith('combat.') || statePath.startsWith('map.')) {
+        // Filter hidden tokens from player view
+        if (statePath === 'map.tokens' && typeof value === 'object') {
+          const filtered = {};
+          for (const [id, tok] of Object.entries(value)) {
+            if (!tok.hidden) filtered[id] = tok;
+          }
+          this._broadcast({ type: 'state:update', path: statePath, value: filtered });
+          return;
+        }
         this._broadcast({ type: 'state:update', path: statePath, value });
       }
     }, 'player-bridge');
@@ -119,6 +179,9 @@ class PlayerBridgeService {
         text: env.data.text
       });
     }, 'player-bridge');
+
+    this.bus.subscribe('characters:imported', () => this._pushCharactersToPlayers(), 'player-bridge');
+    this.bus.subscribe('characters:reloaded', () => this._pushCharactersToPlayers(), 'player-bridge');
   }
 
   _onConnection(ws, req) {
@@ -152,12 +215,36 @@ class PlayerBridgeService {
     const sceneState = this.state.get('scene');
     const combatState = this.state.get('combat');
 
+    const characterData = this._lookupCharacter(playerId);
+    if (characterData) {
+      // Preserve current HP from state if player is reconnecting
+      const existingHp = this.state.get(`players.${playerId}.character.hp`);
+      if (existingHp && typeof existingHp.current === 'number') {
+        characterData.hp = { ...characterData.hp, current: existingHp.current };
+      }
+      this.state.set(`players.${playerId}.character`, characterData);
+      console.log('[PlayerBridge] Sending character ' + characterData.name + ' to ' + playerId);
+    }
+    const initPlayer = Object.assign({}, playerState || {}, characterData ? { character: characterData } : {});
+
+    // Build map state for player (filter hidden tokens)
+    const mapState = this.state.get('map') || {};
+    const playerMapState = { ...mapState };
+    if (mapState.tokens) {
+      const filtered = {};
+      for (const [id, tok] of Object.entries(mapState.tokens)) {
+        if (!tok.hidden) filtered[id] = tok;
+      }
+      playerMapState.tokens = filtered;
+    }
+
     ws.send(JSON.stringify({
       type: 'init',
       playerId,
-      player: playerState || {},
+      player: initPlayer,
       scene: sceneState || {},
-      combat: combatState || {}
+      combat: combatState || {},
+      map: playerMapState
     }));
 
     ws.on('message', (raw) => {
@@ -183,6 +270,7 @@ class PlayerBridgeService {
   }
 
   _handlePlayerMessage(playerId, msg) {
+    console.log(`[PlayerBridge] Message from ${playerId}: ${msg.type}`);
     switch (msg.type) {
       case 'audio:start':
         const player = this.players.get(playerId);
@@ -217,10 +305,37 @@ class PlayerBridgeService {
         });
         break;
 
-      case 'action:hp':
-        const current = this.state.get(`players.${playerId}.character.hp.current`) || 0;
-        this.state.set(`players.${playerId}.character.hp.current`, Math.max(0, current + msg.delta));
+      case 'action:hp': {
+        // Read HP from state; fall back to character service if not yet in state
+        let charHp = this.state.get(`players.${playerId}.character.hp`);
+        if (!charHp || typeof charHp.max !== 'number') {
+          const charData = this._lookupCharacter(playerId);
+          if (charData?.hp) {
+            this.state.set(`players.${playerId}.character`, charData);
+            charHp = charData.hp;
+          } else {
+            charHp = {};
+          }
+        }
+        const cur   = typeof charHp.current === 'number' ? charHp.current : 0;
+        const max   = typeof charHp.max     === 'number' ? charHp.max     : 20;
+        const newHp = Math.max(0, Math.min(max, cur + msg.delta));
+        this.state.set(`players.${playerId}.character.hp.current`, newHp);
+        this.bus.dispatch('hp:update', { playerId, current: newHp, max });
+        console.log(`[PlayerBridge] ${playerId} HP: ${cur} -> ${newHp}`);
         break;
+      }
+
+      case 'map:move_token': {
+        // Players can only move their own token
+        if (msg.tokenId !== playerId) {
+          console.log(`[PlayerBridge] ${playerId} tried to move ${msg.tokenId} — denied`);
+          break;
+        }
+        const mapSvc = this.orchestrator.getService('map');
+        if (mapSvc) mapSvc._moveToken(msg.tokenId, msg.x, msg.y);
+        break;
+      }
 
       case 'ping':
         this._sendToPlayer(playerId, { type: 'pong', ts: Date.now() });

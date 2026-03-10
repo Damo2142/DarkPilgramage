@@ -28,7 +28,13 @@ class DashboardService {
 
     this.app = express();
     this.app.use(express.json());
-    this.app.use(express.static(path.join(__dirname, 'public')));
+    this.app.use(express.static(path.join(__dirname, 'public'), { etag: false, lastModified: false, setHeaders: (res) => res.set('Cache-Control', 'no-store') }));
+
+    // Serve player bridge UI from dashboard port too (avoids separate cert acceptance)
+    this.app.get('/player/:playerId', (req, res) => {
+      res.sendFile(path.join(__dirname, '..', 'player-bridge', 'public', 'index.html'));
+    });
+    this.app.use('/assets', express.static(path.join(__dirname, '..', '..', 'assets')));
 
     this._setupRoutes();
 
@@ -42,8 +48,29 @@ class DashboardService {
       console.log('[Dashboard] Using HTTP (no certs found)');
     }
 
-    this.wss = new WebSocketServer({ server: this.server });
+    this.wss = new WebSocketServer({ noServer: true });
     this.wss.on('connection', (ws) => this._onConnection(ws));
+
+    // Route WS upgrades: ?player= goes to player-bridge, otherwise dashboard
+    this.server.on('upgrade', (req, socket, head) => {
+      const url = new URL(req.url, 'http://localhost');
+      const playerId = url.searchParams.get('player');
+      if (playerId) {
+        // Delegate to player-bridge WSS
+        const playerBridge = this.orchestrator.getService('player-bridge');
+        if (playerBridge && playerBridge.wss) {
+          playerBridge.wss.handleUpgrade(req, socket, head, (ws) => {
+            playerBridge.wss.emit('connection', ws, req);
+          });
+        } else {
+          socket.destroy();
+        }
+      } else {
+        this.wss.handleUpgrade(req, socket, head, (ws) => {
+          this.wss.emit('connection', ws, req);
+        });
+      }
+    });
 
     this.bus.subscribe('*', (envelope) => {
       this._broadcast({ type: envelope.event, ...envelope });
@@ -292,6 +319,53 @@ class DashboardService {
       this.bus.dispatch('characters:imported', { count: saved });
       console.log(`[Dashboard] Foundry pushed ${saved} character(s)`);
       res.json({ saved });
+    });
+
+    // ── Player HP route (so player page works from port 3200) ──────────────
+    this.app.post('/api/hp/:playerId', (req, res) => {
+      const playerBridge = this.orchestrator.getService('player-bridge');
+      if (!playerBridge) return res.status(503).json({ error: 'Player bridge unavailable' });
+      // Forward to player bridge's app
+      playerBridge.app.handle(req, res);
+    });
+
+    // ── Combat attack routes (proxied to combat service) ───────────────────
+    // These are defined here rather than in combat-service to ensure they're
+    // registered before the server starts listening.
+
+    // POST /api/combat/attack — process an attack (check AC, apply damage)
+    this.app.post('/api/combat/attack', (req, res) => {
+      const combatSvc = this.orchestrator.getService('combat');
+      if (!combatSvc) return res.status(503).json({ error: 'Combat service unavailable' });
+      const { attackerId, targetId, attackRoll, damage, damageType, crit } = req.body || {};
+      if (!attackerId || !targetId || typeof attackRoll !== 'number' || typeof damage !== 'number') {
+        return res.status(400).json({ error: 'attackerId, targetId, attackRoll, and damage required' });
+      }
+      const result = combatSvc.processAttack(attackerId, targetId, attackRoll, damage, damageType, crit);
+      if (!result) return res.status(404).json({ error: 'Attacker or target not found in combat' });
+      res.json(result);
+    });
+
+    // POST /api/combat/npc-roll — DM rolls an NPC action (server-side dice)
+    this.app.post('/api/combat/npc-roll', (req, res) => {
+      const combatSvc = this.orchestrator.getService('combat');
+      if (!combatSvc) return res.status(503).json({ error: 'Combat service unavailable' });
+      const { combatantId, actionIndex } = req.body || {};
+      if (!combatantId || typeof actionIndex !== 'number') {
+        return res.status(400).json({ error: 'combatantId and actionIndex required' });
+      }
+      const result = combatSvc.rollNpcAction(combatantId, actionIndex);
+      if (!result) return res.status(404).json({ error: 'Combatant or action not found' });
+      if (result.error) return res.status(400).json(result);
+      res.json(result);
+    });
+
+    // GET /api/combat/actions/:combatantId — get available actions for a combatant
+    this.app.get('/api/combat/actions/:combatantId', (req, res) => {
+      const combatSvc = this.orchestrator.getService('combat');
+      if (!combatSvc) return res.status(503).json({ error: 'Combat service unavailable' });
+      const actions = combatSvc.getActions(req.params.combatantId);
+      res.json(actions);
     });
   }
 

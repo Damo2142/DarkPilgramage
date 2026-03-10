@@ -192,6 +192,35 @@ class MapService {
       res.json({ mapId: req.params.mapId });
     });
 
+    // DELETE /api/map/:mapId — delete a map config and optionally its image
+    app.delete('/api/map/:mapId', (req, res) => {
+      const mapId = req.params.mapId;
+      const mapDef = this.maps.get(mapId);
+      if (!mapDef) return res.status(404).json({ error: 'Map not found' });
+
+      // Remove config file
+      const configPath = path.join(__dirname, '..', '..', 'config', 'maps', `${mapId}.json`);
+      if (fs.existsSync(configPath)) fs.unlinkSync(configPath);
+
+      // Remove image if it exists
+      if (mapDef.image) {
+        const imgPath = path.join(__dirname, '..', '..', 'assets', 'maps', mapDef.image);
+        if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
+      }
+
+      this.maps.delete(mapId);
+
+      // If this was the active map, deactivate
+      if (this.activeMapId === mapId) {
+        this.activeMapId = null;
+        this.state.set('map', null);
+        this.bus.dispatch('map:unloaded', { mapId });
+      }
+
+      console.log(`[MapService] Deleted map: ${mapDef.name} (${mapId})`);
+      res.json({ deleted: mapId, name: mapDef.name });
+    });
+
     // POST /api/map/token/move — move a token
     // body: { tokenId, x, y }
     app.post('/api/map/token/move', (req, res) => {
@@ -282,6 +311,35 @@ class MapService {
       this.bus.dispatch('map:zones_all_revealed', { revealed: revealed !== false });
       console.log(`[MapService] All zones ${revealed !== false ? 'revealed' : 'hidden'}`);
       res.json({ revealed: revealed !== false, count: zones.length });
+    });
+
+    // POST /api/map/zone/add — create a new zone
+    // body: { name, x, y, w, h }
+    app.post('/api/map/zone/add', (req, res) => {
+      const { name, x, y, w, h } = req.body || {};
+      if (!name || x == null || y == null || w == null || h == null) {
+        return res.status(400).json({ error: 'name, x, y, w, h required' });
+      }
+      const zones = this.state.get('map.zones') || [];
+      const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+      const zone = { id, name, x, y, w, h, revealed: false };
+      zones.push(zone);
+      this.state.set('map.zones', zones);
+      this.bus.dispatch('map:zone_added', zone);
+      console.log(`[MapService] Zone added: ${name} (${w}x${h} at ${x},${y})`);
+      res.json(zone);
+    });
+
+    // DELETE /api/map/zone/:zoneId — remove a zone
+    app.delete('/api/map/zone/:zoneId', (req, res) => {
+      const zones = this.state.get('map.zones') || [];
+      const idx = zones.findIndex(z => z.id === req.params.zoneId);
+      if (idx === -1) return res.status(404).json({ error: 'Zone not found' });
+      const removed = zones.splice(idx, 1)[0];
+      this.state.set('map.zones', zones);
+      this.bus.dispatch('map:zone_removed', removed);
+      console.log(`[MapService] Zone removed: ${removed.name}`);
+      res.json({ removed: removed.id });
     });
 
     // POST /api/map/save — save a new or updated map definition
@@ -458,6 +516,166 @@ class MapService {
       this.bus.dispatch('map:token_added', { token });
       console.log(`[MapService] Placed ${actor.name} on map as ${tokenId}`);
       res.json(token);
+    });
+
+    // POST /api/actors/place-all — place all custom actors on map in a grid layout
+    app.post('/api/actors/place-all', (req, res) => {
+      const gs = this.state.get('map.gridSize') || 70;
+      const mapW = this.state.get('map.width') || 1400;
+      const mapH = this.state.get('map.height') || 1050;
+      const existing = this.state.get('map.tokens') || {};
+
+      // Get all custom actors not already on the map
+      const actors = [];
+      for (const [slug, actor] of this.customActors) {
+        const alreadyPlaced = Object.values(existing).some(t => t.actorSlug === slug);
+        if (!alreadyPlaced) actors.push({ slug, actor });
+      }
+
+      if (!actors.length) return res.json({ placed: [], message: 'All actors already on map' });
+
+      // Place in a grid starting from top-left, spaced by grid size
+      const cols = Math.max(1, Math.floor(mapW / gs) - 1);
+      const placed = [];
+      actors.forEach(({ slug, actor }, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const x = (col + 1) * gs + gs / 2;
+        const y = (row + 1) * gs + gs / 2;
+        const tokenId = slug + '-' + Date.now().toString(36) + i;
+        const token = {
+          id: tokenId, name: actor.name, type: 'npc',
+          x, y, image: `${slug}.png`,
+          visible: true, hidden: false,
+          hp: { current: actor.hit_points || 10, max: actor.hit_points || 10 },
+          ac: actor.armor_class || 10,
+          actorSlug: slug
+        };
+        this.state.set(`map.tokens.${tokenId}`, token);
+        this.bus.dispatch('map:token_added', { token });
+        placed.push(token.name);
+      });
+
+      console.log(`[MapService] Placed ${placed.length} actors on map`);
+      res.json({ placed, count: placed.length });
+    });
+
+    // POST /api/map/import-dd2vtt — import a Dungeondraft .dd2vtt (Universal VTT) file
+    // Extracts the embedded PNG, creates map config, and registers the map
+    const importUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
+    app.post('/api/map/import-dd2vtt', importUpload.single('dd2vtt'), (req, res) => {
+      if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+      try {
+        const dd2vtt = JSON.parse(req.file.buffer.toString('utf8'));
+        const resolution = dd2vtt.resolution || {};
+        const mapSize = resolution.map_size || { x: 20, y: 20 };
+        const ppg = resolution.pixels_per_grid || 140;
+
+        // Derive map ID from filename
+        const baseName = path.basename(req.file.originalname, path.extname(req.file.originalname));
+        const mapId = (req.body.mapId || baseName).replace(/[^a-z0-9-]/gi, '-').toLowerCase();
+        const mapName = req.body.mapName || baseName.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+        // Extract and save the embedded PNG image
+        if (!dd2vtt.image) return res.status(400).json({ error: 'No image data in dd2vtt file' });
+        const imgBuffer = Buffer.from(dd2vtt.image, 'base64');
+        const imgFilename = `${mapId}.png`;
+        const imgPath = path.join(__dirname, '..', '..', 'assets', 'maps', imgFilename);
+        fs.mkdirSync(path.dirname(imgPath), { recursive: true });
+        fs.writeFileSync(imgPath, imgBuffer);
+        console.log(`[MapService] Extracted map image: ${imgFilename} (${Math.round(imgBuffer.length / 1024)}KB)`);
+
+        // Build map config
+        const gridSize = ppg;
+        const widthPx = Math.round(mapSize.x * ppg);
+        const heightPx = Math.round(mapSize.y * ppg);
+
+        // Convert line_of_sight walls (grid coords → pixel coords)
+        const walls = [];
+        if (Array.isArray(dd2vtt.line_of_sight)) {
+          for (let i = 0; i < dd2vtt.line_of_sight.length - 1; i += 2) {
+            const p1 = dd2vtt.line_of_sight[i];
+            const p2 = dd2vtt.line_of_sight[i + 1];
+            if (p1 && p2) {
+              walls.push({
+                x1: Math.round(p1.x * ppg), y1: Math.round(p1.y * ppg),
+                x2: Math.round(p2.x * ppg), y2: Math.round(p2.y * ppg)
+              });
+            }
+          }
+        }
+
+        // Convert lights (grid coords → pixel coords)
+        const lights = [];
+        if (Array.isArray(dd2vtt.lights)) {
+          for (const light of dd2vtt.lights) {
+            lights.push({
+              x: Math.round(light.position.x * ppg),
+              y: Math.round(light.position.y * ppg),
+              range: Math.round(light.range * ppg),
+              color: light.color || '#fff5e0'
+            });
+          }
+        }
+
+        // Convert portals/doors (grid coords → pixel coords)
+        const portals = [];
+        if (Array.isArray(dd2vtt.portals)) {
+          for (const portal of dd2vtt.portals) {
+            portals.push({
+              x: Math.round(portal.position.x * ppg),
+              y: Math.round(portal.position.y * ppg),
+              closed: portal.closed || false,
+              bounds: (portal.bounds || []).map(p => ({
+                x: Math.round(p.x * ppg),
+                y: Math.round(p.y * ppg)
+              }))
+            });
+          }
+        }
+
+        const mapDef = {
+          id: mapId,
+          name: mapName,
+          image: imgFilename,
+          gridSize,
+          width: widthPx,
+          height: heightPx,
+          source: 'dungeondraft',
+          dd2vttFormat: dd2vtt.format || null,
+          walls,
+          lights,
+          portals,
+          zones: [],
+          tokens: {},
+          playerSpawns: {
+            default: { x: Math.round(widthPx / 2 / gridSize) * gridSize + gridSize / 2, y: Math.round(heightPx / 2 / gridSize) * gridSize + gridSize / 2 }
+          }
+        };
+
+        // Save map config
+        const mapsDir = path.join(__dirname, '..', '..', 'config', 'maps');
+        fs.mkdirSync(mapsDir, { recursive: true });
+        fs.writeFileSync(path.join(mapsDir, `${mapId}.json`), JSON.stringify(mapDef, null, 2));
+        this.maps.set(mapId, mapDef);
+
+        console.log(`[MapService] Imported dd2vtt: ${mapName} (${mapSize.x}x${mapSize.y} grid, ${walls.length} walls, ${lights.length} lights, ${portals.length} portals)`);
+        res.json({
+          mapId,
+          name: mapName,
+          image: imgFilename,
+          gridSize,
+          width: widthPx,
+          height: heightPx,
+          walls: walls.length,
+          lights: lights.length,
+          portals: portals.length
+        });
+      } catch (e) {
+        console.error(`[MapService] dd2vtt import failed:`, e.message);
+        res.status(400).json({ error: `Import failed: ${e.message}` });
+      }
     });
 
     // Serve map assets

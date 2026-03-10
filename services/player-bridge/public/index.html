@@ -180,6 +180,32 @@
 
     /* Combat result */
     #combatres{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;text-align:center;min-height:52px;}
+    /* YOUR TURN banner */
+    @keyframes your-turn-pulse { 0%,100%{box-shadow:0 0 8px rgba(88,24,13,0.3);} 50%{box-shadow:0 0 20px rgba(88,24,13,0.6);} }
+    #your-turn-banner{display:none;background:linear-gradient(135deg,#58180d,#8b4513);color:#f4ebd0;padding:14px 16px;border-radius:8px;margin-bottom:10px;text-align:center;animation:your-turn-pulse 2s infinite;}
+    #your-turn-banner .ytb-label{font-family:Cinzel,serif;font-size:20px;font-weight:700;letter-spacing:2px;text-transform:uppercase;}
+    #your-turn-banner .ytb-sub{font-size:11px;opacity:0.8;margin-top:2px;}
+    /* Attack target selector */
+    #attack-target-section{display:none;margin-top:8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;}
+    #attack-target-section .ats-label{font-size:10px;color:var(--text-dim);text-transform:uppercase;font-weight:600;letter-spacing:0.5px;margin-bottom:4px;}
+    #attack-target-select{width:100%;padding:8px;font-size:13px;border-radius:4px;margin-bottom:6px;}
+    #apply-damage-btn{display:none;width:100%;padding:10px;background:#8b0000;border:none;color:#f4ebd0;border-radius:4px;font-weight:700;font-size:14px;min-height:44px;}
+    #apply-damage-btn:active{background:#6b0000;}
+    #attack-result-area{text-align:center;padding:8px;min-height:40px;}
+    /* Attack notification */
+    #attack-notification{display:none;background:rgba(139,0,0,0.15);border:1px solid var(--red);border-radius:6px;padding:10px;margin-bottom:8px;text-align:center;font-size:12px;}
+    /* Combat tracker (player) */
+    .ctp-row{display:flex;align-items:center;gap:6px;padding:7px 8px;border-bottom:1px solid var(--surface2);font-size:13px;}
+    .ctp-row.active-turn{background:rgba(88,24,13,0.15);border-left:4px solid var(--accent);font-weight:600;}
+    .ctp-row.is-me{font-weight:700;background:rgba(26,58,90,0.08);}
+    .ctp-row.is-me.active-turn{background:rgba(88,24,13,0.2);}
+    .ctp-row.dead{opacity:0.3;text-decoration:line-through;}
+    .ctp-row .ctp-init{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent);font-family:monospace;font-size:13px;flex-shrink:0;background:var(--surface);border-radius:4px;}
+    .ctp-row .ctp-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ctp-row .ctp-name.pc{color:var(--blue);}
+    .ctp-row .ctp-name.npc{color:var(--accent-dim);}
+    .ctp-row .ctp-hp{font-family:monospace;font-size:11px;flex-shrink:0;}
+    .ctp-cond{font-size:9px;padding:2px 4px;border-radius:3px;background:var(--accent-dim);color:#fff;margin-left:2px;font-weight:600;}
 
     /* Spell info bar */
     .spellbar{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:7px 10px;font-size:11px;margin-bottom:6px;display:flex;gap:16px;}
@@ -248,8 +274,26 @@
   </div>
   <!-- COMBAT -->
   <div class="panel" id="panel-combat">
+    <div id="your-turn-banner">
+      <div class="ytb-label">Your Turn!</div>
+      <div class="ytb-sub">Choose an action below</div>
+    </div>
+    <div id="attack-notification"></div>
+    <div id="combat-tracker-player" style="display:none;margin-bottom:12px;">
+      <div class="st" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Initiative Order</span>
+        <span id="ctp-round" style="font-size:10px;color:var(--accent);font-family:Cinzel,serif;">Round 1</span>
+      </div>
+      <div id="ctp-order" style="max-height:220px;overflow-y:auto;"></div>
+    </div>
     <div class="st">Attacks & Actions</div><div id="atklist"></div>
     <button class="add-btn" onclick="openAddAtk()">+ Add Attack</button>
+    <div id="attack-target-section">
+      <div class="ats-label">Target</div>
+      <select id="attack-target-select"><option value="">Select target...</option></select>
+      <div id="attack-result-area"><span style="color:var(--text-dim);font-size:12px;">Roll an attack above</span></div>
+      <button id="apply-damage-btn" onclick="applyPendingDamage()">Apply Damage</button>
+    </div>
     <div class="st">Last Roll</div>
     <div id="combatres"><span style="color:var(--text-dim);font-size:12px;">No roll yet</span></div>
   </div>
@@ -297,11 +341,11 @@
 
 <script>
 const PID = location.pathname.split('/player/')[1] || 'unknown';
-const WSU = (location.protocol==='https:'?'wss:':'ws:')+'//'+location.hostname+':'+location.port+'?player='+PID;
+const WSU = (location.protocol==='https:'?'wss:':'ws:')+'//'+location.hostname+':3200?player='+PID;
 let ws, char={}, hpC=0, hpM=0, tmpH=0, dread=0;
 let attacks=[], spells=[], feats=[], slotState={};
 let activeConds=new Set(), ds={s:[false,false,false],f:[false,false,false]};
-let editCb=null, rollHist=[];
+let editCb=null, rollHist=[], pendingAttack=null, combatState=null;
 const CONDS=['Blinded','Charmed','Deafened','Frightened','Grappled','Incapacitated','Invisible','Paralyzed','Petrified','Poisoned','Prone','Restrained','Stunned','Unconscious','Exhausted'];
 const SKILL_AB={acrobatics:'dex','animal-handling':'wis',arcana:'int',athletics:'str',deception:'cha',history:'int',insight:'wis',intimidation:'cha',investigation:'int',medicine:'wis',nature:'int',perception:'wis',performance:'cha',persuasion:'cha',religion:'int','sleight-of-hand':'dex',stealth:'dex',survival:'wis'};
 
@@ -326,6 +370,7 @@ function handle(m){
       if(m.player&&m.player.character)loadChar(m.player.character);
       if(m.player&&m.player.dread)updDread(m.player.dread.score||0);
       if(m.map) PlayerMap.loadFromState(m.map);
+      if(m.combat) renderCombatTracker(m.combat);
       showApp(); break;
     case 'character:update':
       if(m.character)loadChar(m.character); showApp(); break;
@@ -338,6 +383,23 @@ function handle(m){
     case 'horror:effect': applyHorror(m.effect,m.payload,m.durationMs); break;
     case 'horror:clear': clearHorror(); break;
     case 'npc:dialogue': addChat(m.npc||'NPC',m.text,'var(--purple)'); break;
+    case 'combat:started':
+    case 'combat:ended':
+    case 'combat:next_turn':
+    case 'combat:prev_turn':
+    case 'combat:hp_changed':
+    case 'combat:initiative_changed':
+    case 'combat:condition_changed':
+    case 'combat:combatant_added':
+    case 'combat:combatant_removed':
+    case 'combat:death_save':
+      if(m.data&&m.data.combat) renderCombatTracker(m.data.combat);
+      if(m.type==='combat:ended') { pendingAttack=null; updateTargetSection(); }
+      break;
+    case 'combat:attack_result':
+      if(m.data&&m.data.combat) renderCombatTracker(m.data.combat);
+      showAttackNotification(m.data);
+      break;
   }
 }
 
@@ -464,10 +526,23 @@ function rollAtk(i){
   }else{dmgN=Math.max(1,a.dmgMod||1);dmgS='<strong>'+dmgN+'</strong>';}
   const col=crit?'#f1c40f':miss?'var(--red)':'var(--text)';
   $('combatres').innerHTML='<div style="font-family:Cinzel,serif;font-size:1.8rem;color:'+col+';font-weight:700;">'+(crit?'20!':miss?'1':d20)+'</div>'
-    +'<div style="font-size:12px;color:var(--text-dim);">'+esc(a.name)+': '+(crit?'⚡ CRITICAL HIT!':miss?'💀 Miss!':fmt(toHit)+' to hit')+'</div>'
+    +'<div style="font-size:12px;color:var(--text-dim);">'+esc(a.name)+': '+(crit?'CRITICAL HIT!':miss?'Miss!':fmt(toHit)+' to hit')+'</div>'
     +(!miss&&dmgS?'<div style="font-size:12px;margin-top:4px;">'+esc(a.dmgType||'')+': '+dmgS+'</div>':'');
   addRH(a.name+': d20='+d20+' → '+(crit?'CRIT':miss?'MISS':toHit)+(miss?'':' / dmg='+dmgN));
   send({type:'roll:result',rollType:'attack',formula:'1d20',result:[d20],total:toHit});
+  // Store pending attack for damage application
+  if(!miss && combatState && combatState.active){
+    pendingAttack={attackRoll:toHit,damage:Math.max(1,dmgN),damageType:a.dmgType||'untyped',crit,attackName:a.name};
+    updateTargetSection();
+    $('attack-result-area').innerHTML='<div style="font-weight:700;font-size:14px;color:'+(crit?'#b8860b':'var(--text)')+';">'+toHit+' to hit'+(crit?' (CRIT!)':'')+'</div>'
+      +'<div style="font-size:13px;margin-top:2px;">'+dmgN+' '+esc(a.dmgType||'')+' damage</div>'
+      +'<div style="font-size:10px;color:var(--text-dim);margin-top:2px;">Select target and apply</div>';
+    $('apply-damage-btn').style.display='';
+    $('apply-damage-btn').textContent='Apply '+dmgN+' '+esc(a.dmgType||'')+' Damage';
+  } else {
+    pendingAttack=null;
+    $('apply-damage-btn').style.display='none';
+  }
 }
 
 function rmAtk(i){attacks.splice(i,1);renderAtks();}
@@ -697,6 +772,122 @@ function saveNotes(){try{localStorage.setItem('dpnotes_'+PID,$('notes-area').val
 function sndChat(){const i=$('chatin'),t=i.value.trim();if(!t)return;i.value='';addChat(char.name||PID,t,'var(--accent)');send({type:'chat:message',text:t});}
 function addChat(who,txt,col){const l=$('chatlog');const d=document.createElement('div');d.className='chentry';d.innerHTML='<span class="chwho" style="color:'+(col||'var(--accent)')+'">'+esc(who)+':</span> '+esc(txt);l.appendChild(d);l.scrollTop=l.scrollHeight;}
 
+// ── COMBAT TRACKER (PLAYER VIEW) ────────────────────────────────────
+function renderCombatTracker(combat){
+  combatState=combat;
+  const wrap=$('combat-tracker-player');
+  const banner=$('your-turn-banner');
+  if(!wrap)return;
+  if(!combat||!combat.active){
+    wrap.style.display='none';
+    if(banner)banner.style.display='none';
+    updateTargetSection();
+    return;
+  }
+  wrap.style.display='';
+  $('ctp-round').textContent='Round '+(combat.round||1);
+  const order=combat.turnOrder||[];
+  const cur=combat.currentTurn??-1;
+  // YOUR TURN banner
+  const isMyTurn=cur>=0&&order[cur]&&order[cur].id===PID;
+  if(banner){
+    banner.style.display=isMyTurn?'':'none';
+    if(isMyTurn)banner.querySelector('.ytb-sub').textContent='Round '+(combat.round||1)+' — Choose an action below';
+  }
+  // Show target section when combat is active
+  updateTargetSection();
+
+  const container=$('ctp-order');
+  container.innerHTML=order.map((c,i)=>{
+    const isCur=i===cur;
+    const isMe=c.id===PID;
+    const dead=!c.isAlive;
+    const hpPct=c.hp.max>0?Math.round(c.hp.current/c.hp.max*100):0;
+    let hpText='';
+    if(c.type==='pc'){
+      hpText=c.hp.current+'/'+c.hp.max;
+    } else {
+      if(hpPct>75)hpText='Healthy';
+      else if(hpPct>50)hpText='Hurt';
+      else if(hpPct>25)hpText='Wounded';
+      else if(hpPct>0)hpText='Critical';
+      else hpText='Down';
+    }
+    const conds=(c.conditions||[]).map(cn=>'<span class="ctp-cond">'+cn+'</span>').join('');
+    return '<div class="ctp-row'+(isCur?' active-turn':'')+(isMe?' is-me':'')+(dead?' dead':'')+'">'
+      +'<span class="ctp-init">'+c.initiative+'</span>'
+      +'<span class="ctp-name '+c.type+'">'+esc(c.name)+(isMe?' (you)':'')+'</span>'
+      +conds
+      +'<span class="ctp-hp">'+hpText+'</span>'
+      +'</div>';
+  }).join('');
+}
+
+function updateTargetSection(){
+  const sec=$('attack-target-section');
+  const sel=$('attack-target-select');
+  if(!sec||!sel)return;
+  if(!combatState||!combatState.active){sec.style.display='none';return;}
+  sec.style.display='';
+  const order=combatState.turnOrder||[];
+  const prevVal=sel.value;
+  sel.innerHTML='<option value="">Select target...</option>';
+  order.filter(c=>c.id!==PID&&c.isAlive).forEach(c=>{
+    const opt=document.createElement('option');opt.value=c.id;
+    opt.textContent=c.name+(c.type==='pc'?'':' (NPC)');
+    sel.appendChild(opt);
+  });
+  if(prevVal&&sel.querySelector('option[value="'+prevVal+'"]'))sel.value=prevVal;
+}
+
+async function applyPendingDamage(){
+  if(!pendingAttack)return;
+  const targetId=$('attack-target-select').value;
+  if(!targetId){alert('Select a target first');return;}
+  try{
+    const resp=await fetch('/api/combat/attack',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({attackerId:PID,targetId,attackRoll:pendingAttack.attackRoll,damage:pendingAttack.damage,damageType:pendingAttack.damageType,crit:pendingAttack.crit})
+    });
+    const result=await resp.json();
+    const hitText=result.hit?'HIT! '+result.damage+' '+esc(result.damageType)+' damage':'MISS (AC '+result.targetAC+')';
+    const hitCol=result.hit?'var(--red)':'var(--text-dim)';
+    $('attack-result-area').innerHTML='<div style="font-weight:700;font-size:14px;color:'+hitCol+';">'+hitText+'</div>'
+      +'<div style="font-size:11px;color:var(--text-dim);margin-top:2px;">'+esc(result.attackerName)+' → '+esc(result.targetName)+'</div>';
+    $('apply-damage-btn').style.display='none';
+    pendingAttack=null;
+  }catch(e){console.error('Apply damage failed:',e);}
+}
+
+function showAttackNotification(data){
+  const el=$('attack-notification');
+  if(!el)return;
+  const isTarget=data.targetId===PID;
+  const isAttacker=data.attackerId===PID;
+  if(!isTarget&&!isAttacker)return;
+  el.style.display='';
+  if(isTarget){
+    if(data.hit){
+      el.style.borderColor='var(--red)';el.style.background='rgba(139,0,0,0.15)';
+      el.innerHTML='<div style="font-weight:700;font-size:14px;color:var(--red);">'+esc(data.attackerName)+' hits you!</div>'
+        +'<div style="font-size:12px;">'+data.damage+' '+esc(data.damageType)+' damage</div>';
+    }else{
+      el.style.borderColor='var(--border)';el.style.background='rgba(0,0,0,0.05)';
+      el.innerHTML='<div style="font-weight:700;">'+esc(data.attackerName)+' misses you!</div>';
+    }
+  }else if(isAttacker){
+    if(data.hit){
+      el.style.borderColor='var(--green)';el.style.background='rgba(26,90,48,0.1)';
+      el.innerHTML='<div style="font-weight:700;color:var(--green);">You hit '+esc(data.targetName)+'!</div>'
+        +'<div style="font-size:12px;">'+data.damage+' '+esc(data.damageType)+' damage dealt</div>';
+    }else{
+      el.style.borderColor='var(--border)';el.style.background='rgba(0,0,0,0.05)';
+      el.innerHTML='<div style="font-weight:700;">You miss '+esc(data.targetName)+'</div>';
+    }
+  }
+  setTimeout(()=>{el.style.display='none';},5000);
+}
+
 // ── DREAD / HORROR ──────────────────────────────────────────────────
 function updDread(s){dread=s;$('dfill').style.width=Math.min(100,s)+'%';$('dval').textContent=s+'/100';}
 function applyHorror(ef,pl,ms){const l=$('horror-layer');if(ef==='screen_tint'){l.style.background=pl.color||'rgba(80,0,0,.2)';if(ms)setTimeout(clearHorror,ms);}else if(ef==='flash'){l.style.background='rgba(255,255,255,.5)';setTimeout(clearHorror,150);}else if(ef==='dread_vision'&&pl.text)addChat('🔮 Vision',pl.text,'var(--purple)');}
@@ -720,7 +911,7 @@ connect();
 // ============================================================
 const PlayerMap = {
   canvas: null, ctx: null,
-  mapData: null, tokens: {}, zones: [],
+  mapData: null, tokens: {}, zones: [], tokenLabels: {},
   cam: { x: 0, y: 0, zoom: 1 },
   dragging: null, panning: false,
   panStart: { x: 0, y: 0, camX: 0, camY: 0 },
@@ -732,6 +923,8 @@ const PlayerMap = {
     if (!this.canvas) return;
     this.ctx = this.canvas.getContext('2d');
     window.addEventListener('resize', () => this.resize());
+
+    try { this.tokenLabels = JSON.parse(localStorage.getItem('tokenLabels')) || {}; } catch(e) {}
 
     this.canvas.addEventListener('touchstart', (e) => this._onTouchStart(e), { passive: false });
     this.canvas.addEventListener('touchmove', (e) => this._onTouchMove(e), { passive: false });
@@ -837,10 +1030,16 @@ const PlayerMap = {
       }
     }
 
-    // Tokens — only show in revealed zones (or if no zones defined)
+    // Grid
     const gs = this.mapData.gridSize;
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = 1;
+    for (let gx = 0; gx <= mw; gx += gs) { ctx.beginPath(); ctx.moveTo(gx-mw/2, -mh/2); ctx.lineTo(gx-mw/2, mh/2); ctx.stroke(); }
+    for (let gy = 0; gy <= mh; gy += gs) { ctx.beginPath(); ctx.moveTo(-mw/2, gy-mh/2); ctx.lineTo(mw/2, gy-mh/2); ctx.stroke(); }
+
+    // Tokens — hide if inside an unrevealed zone, show otherwise
     for (const [id, tok] of Object.entries(this.tokens)) {
-      if (this.zones.length > 0 && !this._isInRevealedZone(tok.x, tok.y)) continue;
+      if (this._isInUnrevealedZone(tok.x, tok.y)) continue;
       const x = tok.x - mw/2, y = tok.y - mh/2, r = gs * 0.4;
       const hp = tok.hp || {current:1,max:1};
       const hpPct = Math.max(0, hp.current/hp.max);
@@ -853,10 +1052,15 @@ const PlayerMap = {
       ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
       ctx.fillStyle = tok.type==='pc' ? (isMe?'#4080c0':'#2a5580') : '#c9a54e'; ctx.fill();
       if (isMe) { ctx.strokeStyle='#c9a54e'; ctx.lineWidth=2; ctx.stroke(); }
+      var displayName = this.tokenLabels[id] || tok.name || id;
+      var letter = displayName === 'Unknown' ? '?' : displayName.charAt(0).toUpperCase();
       ctx.fillStyle='#fff'; ctx.font=`bold ${r*0.9}px Cinzel,serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText((tok.name||id).charAt(0).toUpperCase(), x, y);
-      ctx.fillStyle='rgba(200,200,200,0.8)'; ctx.font=`${Math.max(9,gs*0.14)}px sans-serif`;
-      ctx.fillText(tok.name||id, x, y+r+12);
+      ctx.fillText(letter, x, y);
+      var ns=Math.max(2,gs*0.10); ctx.font=`bold ${ns}px sans-serif`; ctx.textAlign='center';
+      ctx.strokeStyle='rgba(0,0,0,0.9)'; ctx.lineWidth=Math.max(1,ns*0.25); ctx.lineJoin='round';
+      var labelColor = this.tokenLabels[id] ? '#c9e060' : '#f0f0f0';
+      ctx.strokeText(displayName, x, y+r+ns*0.8);
+      ctx.fillStyle=labelColor; ctx.fillText(displayName, x, y+r+ns*0.8);
     }
 
     // Fog of war — black over unrevealed zones
@@ -888,6 +1092,13 @@ const PlayerMap = {
     return false;
   },
 
+  _isInUnrevealedZone(tx, ty) {
+    for (const z of this.zones) {
+      if (!z.revealed && tx >= z.x && tx < z.x + z.w && ty >= z.y && ty < z.y + z.h) return true;
+    }
+    return false;
+  },
+
   screenToMap(sx, sy) {
     const W=this.canvas.width, H=this.canvas.height;
     return { x: ((sx-W/2-this.cam.x)/this.cam.zoom)+this.mapData.width/2, y: ((sy-H/2-this.cam.y)/this.cam.zoom)+this.mapData.height/2 };
@@ -900,6 +1111,30 @@ const PlayerMap = {
     const gs = this.mapData.gridSize;
     const dx=mx-tok.x, dy=my-tok.y;
     return (dx*dx+dy*dy < (gs*0.45)*(gs*0.45)) ? PID : null;
+  },
+
+  _getAnyTokenAt(sx, sy) {
+    if (!this.mapData) return null;
+    const {x:mx,y:my} = this.screenToMap(sx,sy);
+    const gs = this.mapData.gridSize;
+    const hitR = gs*0.45;
+    for (const [id, tok] of Object.entries(this.tokens)) {
+      const dx=mx-tok.x, dy=my-tok.y;
+      if (dx*dx+dy*dy < hitR*hitR) return id;
+    }
+    return null;
+  },
+
+  _labelToken(tokenId) {
+    const tok = this.tokens[tokenId];
+    if (!tok) return;
+    const current = this.tokenLabels[tokenId] || '';
+    const label = prompt('Label for this token:', current);
+    if (label === null) return;
+    if (label) { this.tokenLabels[tokenId] = label; }
+    else { delete this.tokenLabels[tokenId]; }
+    try { localStorage.setItem('tokenLabels', JSON.stringify(this.tokenLabels)); } catch(e) {}
+    this.render();
   },
 
   _onMouseDown(e) { const r=this.canvas.getBoundingClientRect(); this._startInteraction(e.clientX-r.left, e.clientY-r.top, e.clientX, e.clientY); },
@@ -919,6 +1154,7 @@ const PlayerMap = {
   _onTouchEnd(e) { if(e.changedTouches.length){const t=e.changedTouches[0];this._endInteraction(t.clientX,t.clientY);} if(e.touches.length<2)this._lastPinchDist=0; },
 
   _startInteraction(sx, sy, cx, cy) {
+    this._tapStart = { sx, sy, cx, cy, time: Date.now() };
     const tid = this._getMyTokenAt(sx, sy);
     if (tid) {
       const {x:mx,y:my}=this.screenToMap(sx,sy);
@@ -952,8 +1188,13 @@ const PlayerMap = {
         send({type:'map:move_token',tokenId:this.dragging.tokenId,x:tok.x,y:tok.y});
       }
       this.dragging=null; this.render();
+    } else if (this._tapStart && Date.now() - this._tapStart.time < 300) {
+      // Short tap — check if it's on a non-own token for labeling
+      const tid = this._getAnyTokenAt(this._tapStart.sx, this._tapStart.sy);
+      if (tid && tid !== PID) this._labelToken(tid);
     }
     this.panning=false;
+    this._tapStart=null;
   },
 };
 

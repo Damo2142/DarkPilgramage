@@ -3,9 +3,7 @@ services:
     build: .
     restart: "no"
     env_file: ./.env
-    ports:
-      - "3200:3200"
-      - "3202:3202"
+    network_mode: host
     volumes:
       - ./sessions:/app/sessions
       - ./cert.pem:/app/cert.pem:ro

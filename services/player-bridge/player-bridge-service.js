@@ -27,7 +27,7 @@ class PlayerBridgeService {
 
     this.app = express();
     this.app.use(express.json());
-    this.app.use(express.static(path.join(__dirname, 'public')));
+    this.app.use(express.static(path.join(__dirname, 'public'), { etag: false, lastModified: false, setHeaders: (res) => res.set('Cache-Control', 'no-store') }));
     this.app.use('/assets', express.static(path.join(__dirname, '..', '..', 'assets')));
 
     this.app.get('/player/:playerId', (req, res) => {
@@ -59,6 +59,26 @@ class PlayerBridgeService {
       res.json({ current: newHp, max });
     });
 
+    // Proxy combat attack to combat service (so player JS can call same-origin)
+    this.app.post('/api/combat/attack', (req, res) => {
+      const combatSvc = this.orchestrator.getService('combat');
+      if (!combatSvc) return res.status(503).json({ error: 'Combat service unavailable' });
+      const { attackerId, targetId, attackRoll, damage, damageType, crit } = req.body || {};
+      if (!attackerId || !targetId || typeof attackRoll !== 'number' || typeof damage !== 'number') {
+        return res.status(400).json({ error: 'attackerId, targetId, attackRoll, damage required' });
+      }
+      const result = combatSvc.processAttack(attackerId, targetId, attackRoll, damage, damageType, crit);
+      if (!result) return res.status(404).json({ error: 'Attacker or target not found' });
+      res.json(result);
+    });
+
+    // Proxy combat state for player reconnect
+    this.app.get('/api/combat', (req, res) => {
+      const combatSvc = this.orchestrator.getService('combat');
+      if (!combatSvc) return res.status(503).json({ error: 'Combat service unavailable' });
+      res.json(combatSvc._getCombatState());
+    });
+
     this.app.get('/api/players', (req, res) => {
       const roster = {};
       for (const [id, p] of this.players) {
@@ -82,8 +102,16 @@ class PlayerBridgeService {
       console.log('[PlayerBridge] Using HTTP (no certs found)');
     }
 
-    this.wss = new WebSocketServer({ server: this.server });
+    // Use noServer so dashboard can proxy WS upgrades to us on port 3200
+    this.wss = new WebSocketServer({ noServer: true });
     this.wss.on('connection', (ws, req) => this._onConnection(ws, req));
+
+    // Also handle direct connections on our own server (port 3202)
+    this.server.on('upgrade', (req, socket, head) => {
+      this.wss.handleUpgrade(req, socket, head, (ws) => {
+        this.wss.emit('connection', ws, req);
+      });
+    });
 
     this._setupEventListeners();
 
@@ -155,6 +183,21 @@ class PlayerBridgeService {
           this._broadcast({ type: 'state:update', path: statePath, value: filtered });
           return;
         }
+        // Filter individual hidden token updates
+        try {
+          if (statePath.match(/^map\.tokens\.[^.]+$/) && value && value.hidden) return;
+          if (statePath.match(/^map\.tokens\.[^.]+\./)) {
+            const tid = statePath.split('.')[2];
+            const tok = this.state.get(`map.tokens.${tid}`);
+            if (tok && tok.hidden) return;
+          }
+          // Strip NPC names from player view (players see "Unknown" for NPCs)
+          if (statePath.match(/^map\.tokens\.[^.]+$/) && value && value.type === 'npc') {
+            value = Object.assign({}, value, { name: 'Unknown' });
+          }
+        } catch (e) {
+          console.error('[PlayerBridge] Error filtering state update:', e.message);
+        }
         this._broadcast({ type: 'state:update', path: statePath, value });
       }
     }, 'player-bridge');
@@ -182,6 +225,19 @@ class PlayerBridgeService {
 
     this.bus.subscribe('characters:imported', () => this._pushCharactersToPlayers(), 'player-bridge');
     this.bus.subscribe('characters:reloaded', () => this._pushCharactersToPlayers(), 'player-bridge');
+
+    // Forward combat events to all players
+    const combatEvents = [
+      'combat:started', 'combat:ended', 'combat:next_turn', 'combat:prev_turn',
+      'combat:hp_changed', 'combat:initiative_changed', 'combat:condition_changed',
+      'combat:combatant_added', 'combat:combatant_removed', 'combat:death_save',
+      'combat:attack_result'
+    ];
+    for (const evt of combatEvents) {
+      this.bus.subscribe(evt, (env) => {
+        this._broadcast({ type: env.event, data: env.data });
+      }, 'player-bridge');
+    }
   }
 
   _onConnection(ws, req) {
@@ -227,25 +283,39 @@ class PlayerBridgeService {
     }
     const initPlayer = Object.assign({}, playerState || {}, characterData ? { character: characterData } : {});
 
-    // Build map state for player (filter hidden tokens)
-    const mapState = this.state.get('map') || {};
-    const playerMapState = { ...mapState };
-    if (mapState.tokens) {
-      const filtered = {};
-      for (const [id, tok] of Object.entries(mapState.tokens)) {
-        if (!tok.hidden) filtered[id] = tok;
+    // Build map state for player (filter hidden tokens, hide NPC names)
+    let playerMapState = {};
+    try {
+      const mapState = this.state.get('map') || {};
+      playerMapState = { ...mapState };
+      if (mapState.tokens) {
+        const filtered = {};
+        for (const [id, tok] of Object.entries(mapState.tokens)) {
+          if (!tok || tok.hidden) continue;
+          if (tok.type === 'npc') {
+            filtered[id] = Object.assign({}, tok, { name: 'Unknown' });
+          } else {
+            filtered[id] = tok;
+          }
+        }
+        playerMapState.tokens = filtered;
       }
-      playerMapState.tokens = filtered;
+    } catch (e) {
+      console.error('[PlayerBridge] Error building map state:', e.message);
     }
 
-    ws.send(JSON.stringify({
-      type: 'init',
-      playerId,
-      player: initPlayer,
-      scene: sceneState || {},
-      combat: combatState || {},
-      map: playerMapState
-    }));
+    try {
+      ws.send(JSON.stringify({
+        type: 'init',
+        playerId,
+        player: initPlayer,
+        scene: sceneState || {},
+        combat: combatState || {},
+        map: playerMapState
+      }));
+    } catch (e) {
+      console.error('[PlayerBridge] Error sending init:', e.message);
+    }
 
     ws.on('message', (raw) => {
       if (Buffer.isBuffer(raw) || raw instanceof ArrayBuffer) {

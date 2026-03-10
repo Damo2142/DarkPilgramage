@@ -335,6 +335,76 @@
 
     .horror-controls .row button { flex: 1; }
 
+    /* Combat tracker */
+    @keyframes pulse-turn { 0%,100% { box-shadow: inset 0 0 0 transparent; } 50% { box-shadow: inset 0 0 12px rgba(200,160,60,0.15); } }
+    .combat-current-turn { padding: 6px 8px; margin-bottom: 4px; background: var(--surface2); border-radius: 4px; border-left: 3px solid var(--accent); }
+    .combat-current-turn .cct-label { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+    .combat-current-turn .cct-name { font-family: Cinzel,serif; font-size: 14px; color: var(--accent); font-weight: 600; }
+    .combat-row {
+      display: flex; align-items: center; gap: 6px; padding: 6px 8px;
+      border-bottom: 1px solid var(--bg); font-size: 12px; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .combat-row:hover { background: var(--surface2); }
+    .combat-row.active-turn { background: rgba(200,160,60,0.12); border-left: 4px solid var(--accent); animation: pulse-turn 3s infinite; }
+    .combat-row.dead { opacity: 0.3; text-decoration: line-through; }
+    .combat-row .cr-init { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--accent); font-family: monospace; font-size: 13px; flex-shrink: 0; background: var(--surface3); border-radius: 4px; }
+    .combat-row .cr-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+    .combat-row .cr-name.pc { color: var(--blue); }
+    .combat-row .cr-name.npc { color: var(--orange); }
+    .combat-row .cr-hp-wrap { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .combat-row .cr-hp { font-family: monospace; font-size: 11px; }
+    .cr-hp-bar { width: 50px; height: 6px; background: var(--surface3); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+    .cr-hp-bar .cr-hp-fill { height: 100%; border-radius: 3px; transition: width 0.3s, background 0.3s; }
+    .combat-row .cr-conditions { display: flex; gap: 2px; flex-wrap: wrap; }
+    .combat-cond { font-size: 9px; padding: 2px 5px; border-radius: 3px; background: var(--purple); color: #fff; white-space: nowrap; font-weight: 600; }
+    .combat-cond.frightened { background: #a0522d; }
+    .combat-cond.poisoned { background: #2d8040; }
+    .combat-cond.prone { background: #6a6a30; }
+    .combat-cond.stunned { background: #7a4a8a; }
+    .combat-cond.unconscious { background: var(--red); }
+    .combat-cond.concentrating { background: var(--blue-dim); }
+    .combat-cond.dead { background: #444; }
+    .combat-detail { display: none; padding: 8px 10px; background: var(--surface2); border-bottom: 1px solid var(--border); border-left: 2px solid var(--border-light); }
+    .combat-detail.open { display: block; }
+    .combat-detail .cd-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 11px; }
+    .combat-detail .cd-row label { color: var(--text-dim); font-weight: 600; text-transform: uppercase; font-size: 9px; letter-spacing: 0.5px; }
+    .combat-detail .cd-hp-btns { display: flex; gap: 3px; flex-wrap: wrap; }
+    .cd-hp-btns .cd-dmg { padding: 4px 10px; font-size: 11px; font-weight: 700; background: rgba(192,57,43,0.25); border: 1px solid var(--red); color: var(--red-bright); border-radius: 4px; cursor: pointer; }
+    .cd-hp-btns .cd-dmg:hover { background: rgba(192,57,43,0.45); }
+    .cd-hp-btns .cd-heal { padding: 4px 10px; font-size: 11px; font-weight: 700; background: rgba(39,174,96,0.2); border: 1px solid var(--green); color: var(--green); border-radius: 4px; cursor: pointer; }
+    .cd-hp-btns .cd-heal:hover { background: rgba(39,174,96,0.4); }
+    .cd-custom-hp { display: flex; gap: 3px; align-items: center; margin-top: 4px; }
+    .cd-custom-hp input { width: 60px; padding: 4px 6px; font-size: 11px; background: var(--surface3); border: 1px solid var(--border); border-radius: 4px; color: var(--text); text-align: center; }
+    .combat-detail .cd-cond-grid { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+    .combat-detail .cd-cond-btn { padding: 4px 8px; font-size: 10px; border-radius: 4px; cursor: pointer;
+      background: transparent; border: 1px dashed var(--border); color: var(--text-dim); opacity: 0.5; transition: all 0.15s; font-weight: 500; }
+    .combat-detail .cd-cond-btn:hover { opacity: 0.8; border-style: solid; }
+    .combat-detail .cd-cond-btn.on { background: var(--purple); border: 1px solid var(--purple); color: #fff; opacity: 1; box-shadow: 0 0 6px rgba(128,60,180,0.4); }
+    .combat-death-saves { display: flex; gap: 8px; align-items: center; margin-top: 6px; font-size: 11px; }
+    .combat-death-saves .ds-pip { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border); display: inline-block; transition: all 0.15s; }
+    .combat-death-saves .ds-pip.success { background: var(--green); border-color: var(--green); box-shadow: 0 0 4px rgba(39,174,96,0.5); }
+    .combat-death-saves .ds-pip.failure { background: var(--red-bright); border-color: var(--red-bright); box-shadow: 0 0 4px rgba(192,57,43,0.5); }
+    .cd-ds-btns { display: flex; gap: 4px; margin-top: 4px; }
+    .cd-ds-btns button { padding: 4px 10px; font-size: 10px; font-weight: 600; border-radius: 4px; cursor: pointer; }
+    .cd-ds-btns .ds-pass { background: rgba(39,174,96,0.25); border: 1px solid var(--green); color: var(--green); }
+    .cd-ds-btns .ds-fail { background: rgba(192,57,43,0.25); border: 1px solid var(--red); color: var(--red-bright); }
+    .cd-ds-btns .ds-nat { background: var(--surface3); border: 1px solid var(--border-light); color: var(--text); }
+    /* NPC actions */
+    .cd-actions { margin-top: 8px; border-top: 1px solid var(--border); padding-top: 6px; }
+    .cd-actions .cd-action-label { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 4px; }
+    .cd-action-btn { display: flex; align-items: center; gap: 6px; padding: 5px 8px; margin-bottom: 3px; background: var(--surface3); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; font-size: 11px; color: var(--text); transition: all 0.15s; width: 100%; text-align: left; }
+    .cd-action-btn:hover { border-color: var(--accent); background: rgba(200,160,60,0.1); }
+    .cd-action-btn .action-icon { font-size: 14px; }
+    .cd-action-btn .action-name { font-weight: 600; flex: 1; }
+    .cd-action-btn .action-stats { font-size: 10px; color: var(--text-dim); }
+    .cd-npc-roll-result { background: var(--bg); border: 1px solid var(--border-light); border-radius: 4px; padding: 8px; margin-top: 4px; }
+    .cd-npc-roll-result .npc-roll-d20 { font-family: Cinzel,serif; font-size: 22px; font-weight: 700; }
+    .cd-npc-target-row { display: flex; gap: 4px; align-items: center; margin-top: 4px; }
+    .cd-npc-target-row select { flex: 1; padding: 4px 6px; font-size: 11px; background: var(--surface3); border: 1px solid var(--border); border-radius: 4px; color: var(--text); }
+    .cd-npc-target-row .apply-btn { padding: 4px 10px; font-size: 11px; font-weight: 700; background: var(--red); border: none; color: #fff; border-radius: 4px; cursor: pointer; }
+    .cd-npc-target-row .apply-btn:hover { background: var(--red-bright); }
+
     /* Private message */
     .pm-controls {
       padding: 8px 10px;
@@ -637,7 +707,30 @@
           </select>
           <span id="map-coords" style="flex:1;text-align:center;"></span>
           <button class="sm" onclick="saveMapState()" style="font-size:9px;padding:2px 6px;">Save State</button>
-          <button class="sm" onclick="SceneEditor.open()" style="font-size:9px;padding:2px 6px;">+ New Map</button>
+          <button class="sm" onclick="deleteCurrentMap()" style="font-size:9px;padding:2px 6px;color:var(--horror);" title="Delete current map">Del Map</button>
+          <button class="sm" onclick="SceneEditor.open()" style="font-size:9px;padding:2px 6px;">+ New</button>
+          <button class="sm primary" onclick="document.getElementById('dd2vtt-input').click()" style="font-size:9px;padding:2px 6px;">Import .dd2vtt</button>
+          <input type="file" id="dd2vtt-input" accept=".dd2vtt,.uvtt,.df2vtt" style="display:none" onchange="importDd2vtt(this)">
+          <button class="sm" onclick="placeAllNpcs()" style="font-size:9px;padding:2px 6px;" title="Place all named custom actors on map">Place NPCs</button>
+          <button class="sm" onclick="document.getElementById('vtt-settings').style.display=document.getElementById('vtt-settings').style.display==='none'?'flex':'none'" style="font-size:9px;padding:2px 6px;" title="Display settings">&#9881;</button>
+        </div>
+        <div id="vtt-settings" style="display:none;padding:3px 8px;background:var(--surface2);border-top:1px solid var(--border);font-size:9px;color:var(--text-dim);gap:10px;align-items:center;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:3px;">Grid
+            <input type="range" id="vtt-grid-opacity" min="0" max="100" value="35" style="width:60px;height:12px;" oninput="updateVttSettings()">
+            <span id="vtt-grid-opacity-val">35%</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:3px;">Grid Width
+            <input type="range" id="vtt-grid-width" min="1" max="10" value="1" step="0.5" style="width:50px;height:12px;" oninput="updateVttSettings()">
+            <span id="vtt-grid-width-val">1</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:3px;">Names
+            <input type="range" id="vtt-name-size" min="0" max="100" value="10" step="1" style="width:80px;height:14px;" oninput="updateVttSettings()">
+            <span id="vtt-name-size-val">10%</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:3px;">Name Opacity
+            <input type="range" id="vtt-name-opacity" min="0" max="100" value="100" style="width:50px;height:12px;" oninput="updateVttSettings()">
+            <span id="vtt-name-opacity-val">100%</span>
+          </label>
         </div>
       </div>
 
@@ -688,6 +781,41 @@
       </div>
       </div>
 
+      <div class="panel-section" data-panel="combat">
+      <div class="section-header"><span class="drag-handle">⠿</span>Combat Tracker</div>
+      <div id="combat-panel" style="padding:6px 8px;">
+        <div id="combat-inactive">
+          <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">Select tokens on the map, then start combat.</div>
+          <button class="primary" onclick="Combat.startFromTokens()" style="width:100%;margin-bottom:4px;padding:8px;">Start Combat (All Tokens)</button>
+          <button class="sm" onclick="Combat.startFromSelected()" style="width:100%;padding:6px;">Start Combat (Selected Only)</button>
+        </div>
+        <div id="combat-active" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <span style="font-family:Cinzel,serif;font-size:14px;color:var(--accent);font-weight:600;">Round <span id="combat-round">1</span></span>
+            <div style="display:flex;gap:4px;">
+              <button class="sm" onclick="Combat.prevTurn()" title="Previous turn" style="padding:5px 10px;font-size:12px;">&#9664;</button>
+              <button class="sm primary" onclick="Combat.nextTurn()" title="Next turn" style="padding:5px 12px;font-size:12px;font-weight:700;">&#9654; Next</button>
+              <button class="sm danger" onclick="Combat.end()" title="End combat" style="padding:5px 10px;font-size:12px;">End</button>
+            </div>
+          </div>
+          <div id="combat-current-turn-display" class="combat-current-turn" style="display:none;">
+            <div class="cct-label">Current Turn</div>
+            <div class="cct-name" id="combat-current-name">—</div>
+          </div>
+          <div id="combat-turn-order" style="max-height:400px;overflow-y:auto;"></div>
+          <div id="combat-attack-log" style="display:none;margin-top:6px;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;font-size:11px;max-height:80px;overflow-y:auto;"></div>
+          <div style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px;">
+            <div style="display:flex;gap:4px;">
+              <select id="combat-add-token" style="flex:1;padding:4px 6px;background:var(--surface3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;font-family:inherit;">
+                <option value="">+ Add combatant...</option>
+              </select>
+              <button class="sm" onclick="Combat.addFromSelect()" style="padding:4px 10px;">Add</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      </div>
+
       <div class="panel-section" data-panel="trust">
       <div class="section-header"><span class="drag-handle">⠿</span>AI Trust Level</div>
       <div class="session-bar">
@@ -735,6 +863,7 @@
         <div style="display:flex;gap:4px;margin-bottom:6px;">
           <button class="sm primary" onclick="revealAllZones(true)" style="flex:1">Reveal All</button>
           <button class="sm" onclick="revealAllZones(false)" style="flex:1">Hide All</button>
+          <button class="sm" id="draw-zone-btn" onclick="toggleZoneDrawMode()" style="flex:1">Draw Zone</button>
         </div>
         <div id="zone-list" style="font-size:11px;color:var(--text-dim);">No zones loaded</div>
       </div>
@@ -965,6 +1094,40 @@
         renderBeats();
         Earbud.onStoryBeat(msg.data);
         break;
+      case 'combat:started':
+        state.combat = msg.data.combat;
+        Combat.render();
+        addTranscript({ speaker: 'system', text: `Combat started! ${msg.data.combat.turnOrder.length} combatants, Round 1.` });
+        break;
+      case 'combat:ended':
+        state.combat = msg.data.combat;
+        Combat.render();
+        addTranscript({ speaker: 'system', text: 'Combat ended.' });
+        break;
+      case 'combat:next_turn':
+      case 'combat:prev_turn':
+        state.combat = msg.data.combat;
+        Combat.render();
+        if (msg.data.combatant) {
+          addTranscript({ speaker: 'system', text: `Turn: ${msg.data.combatant.name} (Round ${msg.data.round})` });
+        }
+        break;
+      case 'combat:hp_changed':
+      case 'combat:initiative_changed':
+      case 'combat:condition_changed':
+      case 'combat:combatant_added':
+      case 'combat:combatant_removed':
+      case 'combat:death_save':
+        state.combat = msg.data.combat;
+        Combat.render();
+        break;
+      case 'combat:attack_result':
+        state.combat = msg.data.combat;
+        Combat.render();
+        const ar = msg.data;
+        const hitMsg = ar.hit ? `HIT for ${ar.damage} ${ar.damageType}` : 'MISS';
+        addTranscript({ speaker: 'system', text: `${ar.attackerName} → ${ar.targetName}: ${ar.attackRoll} vs AC ${ar.targetAC} — ${hitMsg}` });
+        break;
     }
 
     // Event log (skip noisy)
@@ -993,6 +1156,9 @@
 
     // Beats
     renderBeats();
+
+    // Combat tracker
+    Combat.render();
 
     // NPCs in selectors
     updateNpcSelect();
@@ -1843,7 +2009,7 @@
     colors: {
       pc: '#4080c0', npc: '#c9a54e', hidden: '#a03030',
       hpGreen: '#30a050', hpOrange: '#c07030', hpRed: '#d04040',
-      grid: 'rgba(255,255,255,0.04)',
+      grid: 'rgba(255,255,255,0.35)', gridWidth: 1, nameSize: 10, nameOpacity: 1,
       selection: '#c9a54e'
     },
 
@@ -1962,7 +2128,7 @@
       // Grid
       const gs = this.mapData.gridSize;
       ctx.strokeStyle = this.colors.grid;
-      ctx.lineWidth = 0.5;
+      ctx.lineWidth = this.colors.gridWidth;
       for (let x = 0; x <= mw; x += gs) {
         ctx.beginPath(); ctx.moveTo(x - mw/2, -mh/2); ctx.lineTo(x - mw/2, mh/2); ctx.stroke();
       }
@@ -1980,6 +2146,15 @@
         ctx.strokeStyle = zone.revealed ? 'rgba(48,160,80,0.3)' : 'rgba(160,48,48,0.3)';
         ctx.lineWidth = 1;
         ctx.strokeRect(zone.x - mw/2, zone.y - mh/2, zone.w, zone.h);
+      }
+
+      // Zone drawing preview
+      if (zoneDrawRect && zoneDrawRect.w > 0 && zoneDrawRect.h > 0) {
+        ctx.fillStyle = 'rgba(48,120,220,0.2)';
+        ctx.strokeStyle = 'rgba(48,120,220,0.8)';
+        ctx.lineWidth = 2;
+        ctx.fillRect(zoneDrawRect.x - mw/2, zoneDrawRect.y - mh/2, zoneDrawRect.w, zoneDrawRect.h);
+        ctx.strokeRect(zoneDrawRect.x - mw/2, zoneDrawRect.y - mh/2, zoneDrawRect.w, zoneDrawRect.h);
       }
 
       // Tokens
@@ -2054,11 +2229,22 @@
         ctx.fillText(label, x, y);
       }
 
-      // Name label below
-      ctx.fillStyle = isHidden ? 'rgba(200,100,100,0.7)' : 'rgba(200,200,200,0.8)';
-      ctx.font = `${Math.max(9, gs * 0.14)}px Source Sans 3, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.fillText(tok.name || id, x, y + r + 12);
+      // Name label below (matches player map style)
+      const nameSizePx = Math.max(2, gs * 0.10 * ((this.colors.nameSize ?? 10) / 10));
+      const nameOpacity = this.colors.nameOpacity != null ? this.colors.nameOpacity : 1;
+      if (nameOpacity > 0 && nameSizePx >= 2) {
+        const nameText = tok.name || id;
+        ctx.font = `bold ${nameSizePx}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.globalAlpha = nameOpacity;
+        ctx.strokeStyle = 'rgba(0,0,0,0.9)';
+        ctx.lineWidth = Math.max(1, nameSizePx * 0.25);
+        ctx.lineJoin = 'round';
+        ctx.strokeText(nameText, x, y + r + nameSizePx * 0.8);
+        ctx.fillStyle = isHidden ? '#e06060' : '#f0f0f0';
+        ctx.fillText(nameText, x, y + r + nameSizePx * 0.8);
+        ctx.globalAlpha = 1;
+      }
     },
 
     // ─── COORDINATE TRANSFORMS ───
@@ -2094,6 +2280,13 @@
       const sy = e.clientY - rect.top;
 
       if (e.button === 0) {
+        // Zone drawing mode
+        if (zoneDrawMode) {
+          const { x, y } = this.screenToMap(sx, sy);
+          zoneDrawStart = { x, y };
+          zoneDrawRect = null;
+          return;
+        }
         const tokenId = this._getTokenAt(sx, sy);
         if (tokenId) {
           // Start dragging token
@@ -2119,7 +2312,17 @@
       const sx = e.clientX - rect.left;
       const sy = e.clientY - rect.top;
 
-      if (this.dragging) {
+      // Zone drawing preview
+      if (zoneDrawMode && zoneDrawStart) {
+        const { x, y } = this.screenToMap(sx, sy);
+        const gs = this.mapData?.gridSize || 1;
+        const x1 = Math.round(Math.min(zoneDrawStart.x, x) / gs) * gs;
+        const y1 = Math.round(Math.min(zoneDrawStart.y, y) / gs) * gs;
+        const x2 = Math.round(Math.max(zoneDrawStart.x, x) / gs) * gs;
+        const y2 = Math.round(Math.max(zoneDrawStart.y, y) / gs) * gs;
+        zoneDrawRect = { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
+        this.render();
+      } else if (this.dragging) {
         const { x: mx, y: my } = this.screenToMap(sx, sy);
         const tok = this.tokens[this.dragging.tokenId];
         if (tok) {
@@ -2143,6 +2346,16 @@
     },
 
     _onMouseUp(e) {
+      // Zone drawing complete
+      if (zoneDrawMode && zoneDrawStart && zoneDrawRect && zoneDrawRect.w > 0 && zoneDrawRect.h > 0) {
+        addZoneFromDraw(zoneDrawRect.x, zoneDrawRect.y, zoneDrawRect.w, zoneDrawRect.h);
+        zoneDrawStart = null;
+        zoneDrawRect = null;
+        toggleZoneDrawMode();
+        return;
+      }
+      if (zoneDrawMode) { zoneDrawStart = null; zoneDrawRect = null; return; }
+
       if (this.dragging) {
         // Snap and send to server
         const tok = this.tokens[this.dragging.tokenId];
@@ -2364,7 +2577,7 @@
         viewSheet(id);
       } else {
         // Show NPC/monster stat block — try to find by slug
-        const slug = tok.slug || id.replace(/-\d+$/, '');
+        const slug = tok.actorSlug || tok.slug || id.replace(/-[a-z0-9]+$/, '');
         viewActorSheet(slug);
       }
     },
@@ -2467,6 +2680,21 @@
       .catch(console.error);
   }
 
+  function placeAllNpcs() {
+    fetch('/api/actors/place-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}'
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.message) { addTranscript({ speaker: 'system', text: d.message }); return; }
+        addTranscript({ speaker: 'system', text: 'Placed ' + d.count + ' NPCs: ' + d.placed.join(', ') });
+        VTT.loadMap();
+      })
+      .catch(console.error);
+  }
+
   function saveCustomActor(slug) {
     fetch('/api/actors/' + slug)
       .then(function(r) { return r.json(); })
@@ -2495,10 +2723,12 @@
     const el = document.getElementById('zone-list');
     if (!zones.length) { el.innerHTML = '<span style="color:var(--text-dim)">No zones loaded</span>'; return; }
     el.innerHTML = zones.map(function(z) {
-      return '<div class="zone-item">'
-        + '<span>' + esc(z.name || z.id) + '</span>'
+      return '<div class="zone-item" style="display:flex;align-items:center;gap:4px;">'
+        + '<span style="flex:1">' + esc(z.name || z.id) + '</span>'
         + '<span class="zone-toggle ' + (z.revealed ? 'revealed' : 'hidden') + '" onclick="toggleZone(\'' + z.id + '\',' + !z.revealed + ')">'
-        + (z.revealed ? 'VISIBLE' : 'HIDDEN') + '</span></div>';
+        + (z.revealed ? 'VISIBLE' : 'HIDDEN') + '</span>'
+        + '<span style="cursor:pointer;color:var(--horror);font-size:13px;" onclick="deleteZone(\'' + z.id + '\')" title="Delete zone">&times;</span>'
+        + '</div>';
     }).join('');
   }
 
@@ -2528,6 +2758,84 @@
     }).catch(console.error);
   }
 
+  function deleteZone(zoneId) {
+    fetch('/api/map/zone/' + zoneId, { method: 'DELETE' })
+      .then(function(r) { return r.json(); })
+      .then(function() {
+        var zones = state.map?.zones || [];
+        var idx = zones.findIndex(function(z) { return z.id === zoneId; });
+        if (idx !== -1) zones.splice(idx, 1);
+        renderZoneList();
+        VTT.render();
+      }).catch(console.error);
+  }
+
+  var zoneDrawMode = false;
+  var zoneDrawStart = null;
+  var zoneDrawRect = null;
+
+  function updateVttSettings() {
+    var gridOp = parseInt(document.getElementById('vtt-grid-opacity').value);
+    var gridW = parseFloat(document.getElementById('vtt-grid-width').value);
+    var nameS = parseFloat(document.getElementById('vtt-name-size').value);
+    var nameOp = parseInt(document.getElementById('vtt-name-opacity').value);
+    document.getElementById('vtt-grid-opacity-val').textContent = gridOp + '%';
+    document.getElementById('vtt-grid-width-val').textContent = gridW;
+    document.getElementById('vtt-name-size-val').textContent = nameS + '%';
+    document.getElementById('vtt-name-opacity-val').textContent = nameOp + '%';
+    VTT.colors.grid = 'rgba(255,255,255,' + (gridOp / 100) + ')';
+    VTT.colors.gridWidth = gridW;
+    VTT.colors.nameSize = nameS;
+    VTT.colors.nameOpacity = nameOp / 100;
+    VTT.render();
+    try { localStorage.setItem('vttSettings', JSON.stringify({ gridOp, gridW, nameS, nameOp })); } catch(e) {}
+  }
+
+  function loadVttSettings() {
+    try {
+      var s = JSON.parse(localStorage.getItem('vttSettings'));
+      if (!s) return;
+      document.getElementById('vtt-grid-opacity').value = s.gridOp;
+      document.getElementById('vtt-grid-width').value = s.gridW;
+      document.getElementById('vtt-name-size').value = s.nameS;
+      document.getElementById('vtt-name-opacity').value = s.nameOp;
+      updateVttSettings();
+    } catch(e) {}
+  }
+
+  function toggleZoneDrawMode() {
+    zoneDrawMode = !zoneDrawMode;
+    var btn = document.getElementById('draw-zone-btn');
+    if (zoneDrawMode) {
+      btn.classList.add('primary');
+      btn.textContent = 'Drawing...';
+      VTT.canvas.style.cursor = 'crosshair';
+    } else {
+      btn.classList.remove('primary');
+      btn.textContent = 'Draw Zone';
+      VTT.canvas.style.cursor = '';
+      zoneDrawStart = null;
+      zoneDrawRect = null;
+      VTT.render();
+    }
+  }
+
+  function addZoneFromDraw(x, y, w, h) {
+    var name = prompt('Zone name:');
+    if (!name) { VTT.render(); return; }
+    fetch('/api/map/zone/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, x: x, y: y, w: w, h: h })
+    }).then(function(r) { return r.json(); }).then(function(zone) {
+      if (!state.map) state.map = {};
+      if (!state.map.zones) state.map.zones = [];
+      state.map.zones.push(zone);
+      renderZoneList();
+      VTT.render();
+    }).catch(console.error);
+  }
+
   /* === SCENE MANAGEMENT === */
   function loadSceneList() {
     fetch('/api/map/list')
@@ -2552,12 +2860,93 @@
       .catch(console.error);
   }
 
+  function deleteCurrentMap() {
+    var sel = document.getElementById('scene-select');
+    var mapId = sel.value;
+    if (!mapId) return;
+    var mapName = sel.options[sel.selectedIndex].text;
+    if (!confirm('Delete map "' + mapName + '"? This removes the config and image file.')) return;
+    fetch('/api/map/' + mapId, { method: 'DELETE' })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.error) { addTranscript({ speaker: 'system', text: 'Error: ' + d.error }); return; }
+        addTranscript({ speaker: 'system', text: 'Deleted map: ' + d.name });
+        loadSceneList();
+        VTT.mapData = null; VTT.mapImage = null; VTT.tokens = {}; VTT.render();
+      })
+      .catch(console.error);
+  }
+
   function saveMapState() {
     fetch('/api/map/save-state', { method: 'POST' })
       .then(function(r) { return r.json(); })
       .then(function(d) { addTranscript({ speaker: 'system', text: 'Map state saved: ' + d.saved }); })
       .catch(console.error);
   }
+
+  /* === DD2VTT IMPORT === */
+  function importDd2vtt(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    const fd = new FormData();
+    fd.append('dd2vtt', file);
+    addTranscript({ speaker: 'system', text: 'Importing ' + file.name + '...' });
+    fetch('/api/map/import-dd2vtt', { method: 'POST', body: fd })
+      .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+      .then(function(result) {
+        if (!result.ok) { addTranscript({ speaker: 'system', text: 'Import failed: ' + result.data.error }); return; }
+        var d = result.data;
+        addTranscript({ speaker: 'system', text: 'Imported: ' + d.name + ' (' + d.width + 'x' + d.height + 'px, ' + d.walls + ' walls, ' + d.lights + ' lights)' });
+        loadSceneList();
+        loadScene(d.mapId);
+      })
+      .catch(function(e) { addTranscript({ speaker: 'system', text: 'Import error: ' + e.message }); });
+    input.value = '';
+  }
+
+  function importDd2vttFromEditor(input) {
+    if (!input.files || !input.files[0]) return;
+    var file = input.files[0];
+    var status = document.getElementById('se-import-status');
+    status.textContent = 'Importing ' + file.name + '...';
+    var fd = new FormData();
+    fd.append('dd2vtt', file);
+    var mapId = document.getElementById('se-map-id').value.trim();
+    var mapName = document.getElementById('se-map-name').value.trim();
+    if (mapId) fd.append('mapId', mapId);
+    if (mapName) fd.append('mapName', mapName);
+    fetch('/api/map/import-dd2vtt', { method: 'POST', body: fd })
+      .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+      .then(function(result) {
+        if (!result.ok) { status.textContent = 'Failed: ' + result.data.error; return; }
+        var d = result.data;
+        status.textContent = 'Imported: ' + d.name + ' (' + d.walls + ' walls, ' + d.lights + ' lights, ' + d.portals + ' doors)';
+        addTranscript({ speaker: 'system', text: 'Imported: ' + d.name });
+        loadSceneList();
+        loadScene(d.mapId);
+        setTimeout(function() { SceneEditor.close(); }, 1500);
+      })
+      .catch(function(e) { status.textContent = 'Error: ' + e.message; });
+    input.value = '';
+  }
+
+  // Drag-and-drop support for scene editor
+  document.addEventListener('DOMContentLoaded', function() {
+    var dropZone = document.getElementById('se-drop-zone');
+    if (!dropZone) return;
+    dropZone.addEventListener('dragover', function(e) { e.preventDefault(); dropZone.style.borderColor = 'var(--accent)'; dropZone.style.background = 'rgba(212,175,55,0.05)'; });
+    dropZone.addEventListener('dragleave', function() { dropZone.style.borderColor = 'var(--border)'; dropZone.style.background = ''; });
+    dropZone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      dropZone.style.borderColor = 'var(--border)';
+      dropZone.style.background = '';
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        var input = document.getElementById('se-dd2vtt-input');
+        input.files = e.dataTransfer.files;
+        importDd2vttFromEditor(input);
+      }
+    });
+  });
 
   /* === SCENE EDITOR (minimal) === */
   const SceneEditor = {
@@ -2588,7 +2977,7 @@
   };
 
   // Init VTT on DOM ready
-  document.addEventListener('DOMContentLoaded', () => VTT.init());
+  document.addEventListener('DOMContentLoaded', () => { VTT.init(); loadVttSettings(); });
 
   // ── COLUMN RESIZER ──────────────────────────────────────────────────────
   (function() {
@@ -2796,6 +3185,403 @@
     document.addEventListener('DOMContentLoaded', initDragReorder);
   })();
 
+  // ========================================================================
+  // COMBAT TRACKER
+  // ========================================================================
+  const Combat = {
+    _expandedId: null,
+    _actionsCache: {},
+    _formState: {},
+    _npcRollResult: null,
+    _conditions: ['blinded','charmed','deafened','frightened','grappled','incapacitated','invisible',
+      'paralyzed','petrified','poisoned','prone','restrained','stunned','unconscious','exhaustion','concentrating'],
+
+    render() {
+      const combat = state.combat || {};
+      const inactiveEl = document.getElementById('combat-inactive');
+      const activeEl = document.getElementById('combat-active');
+      if (!combat.active) {
+        inactiveEl.style.display = '';
+        activeEl.style.display = 'none';
+        document.getElementById('combat-current-turn-display').style.display = 'none';
+        return;
+      }
+      inactiveEl.style.display = 'none';
+      activeEl.style.display = '';
+      document.getElementById('combat-round').textContent = combat.round || 1;
+
+      const order = combat.turnOrder || [];
+      const cur = combat.currentTurn ?? -1;
+
+      // Current turn display
+      const cctEl = document.getElementById('combat-current-turn-display');
+      if (cur >= 0 && order[cur]) {
+        cctEl.style.display = '';
+        document.getElementById('combat-current-name').textContent = order[cur].name;
+      } else {
+        cctEl.style.display = 'none';
+      }
+
+      const container = document.getElementById('combat-turn-order');
+      container.innerHTML = order.map((c, i) => {
+        const isCurrent = i === cur;
+        const dead = !c.isAlive;
+        const hpPct = c.hp.max > 0 ? Math.round((c.hp.current / c.hp.max) * 100) : 0;
+        const hpColor = hpPct <= 0 ? 'var(--red-bright)' : hpPct <= 25 ? 'var(--red)' : hpPct <= 50 ? 'var(--orange)' : 'var(--green)';
+        const condHtml = (c.conditions || []).map(cn =>
+          `<span class="combat-cond ${cn}">${cn}</span>`
+        ).join('');
+        const expanded = this._expandedId === c.id;
+
+        let detailHtml = '';
+        if (expanded) {
+          const condBtns = this._conditions.map(cn => {
+            const on = (c.conditions || []).includes(cn);
+            return `<span class="cd-cond-btn ${on?'on':''}" onclick="event.stopPropagation();Combat.toggleCondition('${c.id}','${cn}')">${cn}</span>`;
+          }).join('');
+
+          let deathSaveHtml = '';
+          if (c.type === 'pc' && c.hp.current === 0) {
+            const ds = c.deathSaves || { successes: 0, failures: 0 };
+            const sPips = [0,1,2].map(j => `<span class="ds-pip ${j < ds.successes ? 'success' : ''}"></span>`).join('');
+            const fPips = [0,1,2].map(j => `<span class="ds-pip ${j < ds.failures ? 'failure' : ''}"></span>`).join('');
+            deathSaveHtml = `
+              <div class="cd-row" style="margin-top:8px;"><label>Death Saves</label></div>
+              <div class="combat-death-saves">
+                <span style="color:var(--green);font-weight:600;">Pass:</span> ${sPips}
+                <span style="color:var(--red-bright);margin-left:8px;font-weight:600;">Fail:</span> ${fPips}
+              </div>
+              <div class="cd-ds-btns">
+                <button class="ds-pass" onclick="event.stopPropagation();Combat.deathSave('${c.id}','success')">Pass</button>
+                <button class="ds-fail" onclick="event.stopPropagation();Combat.deathSave('${c.id}','failure')">Fail</button>
+                <button class="ds-nat" onclick="event.stopPropagation();Combat.deathSave('${c.id}','crit_success')">Nat 20</button>
+                <button class="ds-nat" onclick="event.stopPropagation();Combat.deathSave('${c.id}','crit_failure')">Nat 1</button>
+              </div>`;
+          }
+
+          // NPC actions section (with forms, legendary actions, special abilities)
+          let actionsHtml = '';
+          if (c.type !== 'pc' && c.actorSlug) {
+            const cached = this._actionsCache[c.id];
+            if (cached) {
+              const activeForm = this._formState[c.id] || null;
+
+              // Form selector (if creature has multiple forms)
+              let formHtml = '';
+              if (cached.forms && cached.forms.length > 0) {
+                const formOpts = cached.forms.map(f =>
+                  `<option value="${f}" ${activeForm===f?'selected':''}>${f.charAt(0).toUpperCase()+f.slice(1)}</option>`
+                ).join('');
+                formHtml = `<div style="margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+                  <label style="font-size:9px;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Form</label>
+                  <select onchange="event.stopPropagation();Combat.setForm('${c.id}',this.value)" style="flex:1;padding:4px 6px;font-size:11px;background:var(--surface3);border:1px solid var(--border);border-radius:4px;color:var(--text);">
+                    <option value="" ${!activeForm?'selected':''}>All Forms</option>
+                    ${formOpts}
+                  </select>
+                </div>`;
+              }
+
+              // Filter actions by form
+              const filterByForm = (a) => {
+                if (!activeForm || !a.formRestriction) return true;
+                return a.formRestriction.includes(activeForm);
+              };
+
+              // Render action buttons
+              const renderActionBtn = (a, type) => {
+                const icon = type === 'legendary' ? '&#9733;' : '&#9876;';
+                if (!a.canRoll) return `<div class="cd-action-btn" style="opacity:0.7;cursor:default;" title="${esc(a.desc)}"><span class="action-icon">${icon}</span><span class="action-name">${esc(a.name)}</span><span class="action-stats">manual</span></div>`;
+                return `<button class="cd-action-btn" onclick="event.stopPropagation();Combat.npcRoll('${c.id}',${a.index})" title="${esc(a.desc)}">
+                  <span class="action-icon">${icon}</span><span class="action-name">${esc(a.name)}</span>
+                  <span class="action-stats">${a.toHit >= 0 ? '+' : ''}${a.toHit} | ${a.damageDice} ${a.dmgType}</span>
+                </button>`;
+              };
+
+              const filteredActions = (cached.actions || []).filter(filterByForm);
+              const actionBtns = filteredActions.map(a => renderActionBtn(a, 'action')).join('');
+
+              // Legendary actions
+              const filteredLegendary = (cached.legendaryActions || []).filter(filterByForm);
+              const legendaryBtns = filteredLegendary.map(a => renderActionBtn(a, 'legendary')).join('');
+
+              // Special abilities
+              const filteredSpecial = (cached.specialAbilities || []).filter(filterByForm);
+              const specialHtml = filteredSpecial.map(a =>
+                `<div style="font-size:10px;margin-bottom:3px;padding:3px 6px;background:var(--bg);border-radius:3px;" title="${esc(a.desc)}"><strong>${esc(a.name)}</strong></div>`
+              ).join('');
+
+              // Roll result
+              let rollResultHtml = '';
+              if (this._npcRollResult && this._npcRollResult.combatantId === c.id) {
+                const r = this._npcRollResult;
+                const d20Col = r.crit ? '#f1c40f' : r.fumble ? 'var(--red)' : 'var(--text)';
+                const targets = order.filter(t => t.id !== c.id && t.isAlive);
+                const targetOpts = targets.map(t => `<option value="${t.id}">${esc(t.name)} (AC ${t.ac})</option>`).join('');
+                rollResultHtml = `<div class="cd-npc-roll-result">
+                  <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div><span class="npc-roll-d20" style="color:${d20Col}">${r.crit?'20!':r.fumble?'1':r.d20}</span>
+                      <span style="font-size:11px;color:var(--text-dim);margin-left:4px;">(${r.d20}${r.toHitBonus>=0?'+':''}${r.toHitBonus} = ${r.attackRoll} to hit)</span></div>
+                    <div style="font-size:12px;font-weight:700;color:var(--red-bright);">${r.damage} ${r.dmgType}</div>
+                  </div>
+                  <div style="font-size:10px;color:var(--text-dim);margin-top:2px;">${esc(r.actionName)} [${r.damageRolls.join(',')}${r.dmgMod>=0?'+':''}${r.dmgMod}]</div>
+                  <div class="cd-npc-target-row">
+                    <select id="npc-attack-target-${c.id}">${targetOpts}</select>
+                    <button class="apply-btn" onclick="event.stopPropagation();Combat.applyNpcAttack('${c.id}')">Apply Damage</button>
+                  </div>
+                </div>`;
+              }
+
+              actionsHtml = `<div class="cd-actions">${formHtml}`
+                + (actionBtns ? `<div class="cd-action-label">Actions</div>${actionBtns}` : '')
+                + (legendaryBtns ? `<div class="cd-action-label" style="margin-top:6px;">Legendary Actions</div>${legendaryBtns}` : '')
+                + (specialHtml ? `<div class="cd-action-label" style="margin-top:6px;">Special Abilities</div>${specialHtml}` : '')
+                + `${rollResultHtml}</div>`;
+            } else {
+              actionsHtml = `<div class="cd-actions"><div class="cd-action-label">Actions</div><div style="font-size:10px;color:var(--text-dim);">Loading...</div></div>`;
+              this._loadActions(c.id);
+            }
+          }
+
+          detailHtml = `
+            <div class="combat-detail open" onclick="event.stopPropagation()">
+              <div class="cd-row"><label>Initiative</label>
+                <input type="number" value="${c.initiative}" style="width:55px;padding:4px 6px;font-size:11px;background:var(--surface3);border:1px solid var(--border);border-radius:4px;color:var(--text);text-align:center;font-weight:600;"
+                  onchange="Combat.setInit('${c.id}',+this.value)">
+              </div>
+              <div class="cd-row"><label>AC</label><span style="font-weight:700;font-size:14px;">${c.ac}</span></div>
+              <div class="cd-row"><label>HP</label><span style="color:${hpColor};font-weight:700;font-size:14px;">${c.hp.current} / ${c.hp.max}</span></div>
+              <div style="margin-bottom:6px;">
+                <div style="font-size:9px;color:var(--text-dim);margin-bottom:3px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Damage</div>
+                <div class="cd-hp-btns">
+                  <button class="cd-dmg" onclick="event.stopPropagation();Combat.hp('${c.id}',-1)">-1</button>
+                  <button class="cd-dmg" onclick="event.stopPropagation();Combat.hp('${c.id}',-5)">-5</button>
+                  <button class="cd-dmg" onclick="event.stopPropagation();Combat.hp('${c.id}',-10)">-10</button>
+                  <button class="cd-dmg" onclick="event.stopPropagation();Combat.hp('${c.id}',-25)">-25</button>
+                </div>
+              </div>
+              <div style="margin-bottom:6px;">
+                <div style="font-size:9px;color:var(--text-dim);margin-bottom:3px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Healing</div>
+                <div class="cd-hp-btns">
+                  <button class="cd-heal" onclick="event.stopPropagation();Combat.hp('${c.id}',1)">+1</button>
+                  <button class="cd-heal" onclick="event.stopPropagation();Combat.hp('${c.id}',5)">+5</button>
+                  <button class="cd-heal" onclick="event.stopPropagation();Combat.hp('${c.id}',10)">+10</button>
+                  <button class="cd-heal" onclick="event.stopPropagation();Combat.hp('${c.id}',25)">+25</button>
+                </div>
+              </div>
+              <div class="cd-custom-hp">
+                <input type="number" id="combat-hp-custom-${c.id}" placeholder="amount">
+                <button class="cd-dmg" onclick="event.stopPropagation();Combat.hpCustom('${c.id}',false)">Dmg</button>
+                <button class="cd-heal" onclick="event.stopPropagation();Combat.hpCustom('${c.id}',true)">Heal</button>
+              </div>
+              <div class="cd-row" style="margin-top:8px;"><label>Conditions</label></div>
+              <div class="cd-cond-grid">${condBtns}</div>
+              ${deathSaveHtml}
+              ${actionsHtml}
+              <div style="margin-top:8px;display:flex;gap:4px;">
+                <button class="sm danger" onclick="event.stopPropagation();Combat.remove('${c.id}')" style="flex:1;padding:5px 10px;font-size:11px;">Remove from Combat</button>
+              </div>
+            </div>`;
+        }
+
+        return `<div class="combat-row ${isCurrent?'active-turn':''} ${dead?'dead':''}" onclick="Combat.toggleExpand('${c.id}')">
+          <span class="cr-init">${c.initiative}</span>
+          <span class="cr-name ${c.type}">${esc(c.name)}</span>
+          <span class="cr-conditions">${condHtml}</span>
+          <span class="cr-hp-wrap">
+            <span class="cr-hp" style="color:${hpColor}">${c.hp.current}/${c.hp.max}</span>
+            <span class="cr-hp-bar"><span class="cr-hp-fill" style="width:${hpPct}%;background:${hpColor}"></span></span>
+          </span>
+        </div>${detailHtml}`;
+      }).join('');
+
+      this._updateAddSelect(order);
+    },
+
+    async _loadActions(combatantId) {
+      try {
+        const resp = await fetch(`/api/combat/actions/${combatantId}`);
+        const actions = await resp.json();
+        this._actionsCache[combatantId] = actions;
+        this.render();
+      } catch(e) {
+        this._actionsCache[combatantId] = [];
+      }
+    },
+
+    async npcRoll(combatantId, actionIndex) {
+      try {
+        const resp = await fetch('/api/combat/npc-roll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ combatantId, actionIndex })
+        });
+        const result = await resp.json();
+        if (result.error) { alert(result.error); return; }
+        this._npcRollResult = result;
+        this.render();
+      } catch(e) { console.error('NPC roll failed:', e); }
+    },
+
+    async applyNpcAttack(combatantId) {
+      const r = this._npcRollResult;
+      if (!r || r.combatantId !== combatantId) return;
+      const sel = document.getElementById('npc-attack-target-' + combatantId);
+      if (!sel || !sel.value) return;
+      try {
+        const resp = await fetch('/api/combat/attack', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            attackerId: combatantId,
+            targetId: sel.value,
+            attackRoll: r.attackRoll,
+            damage: r.damage,
+            damageType: r.dmgType,
+            crit: r.crit
+          })
+        });
+        const result = await resp.json();
+        this._npcRollResult = null;
+        // Show result in attack log
+        const log = document.getElementById('combat-attack-log');
+        if (log) {
+          const hitText = result.hit ? `<span style="color:var(--red-bright)">HIT</span> for ${result.damage} ${result.damageType}` : `<span style="color:var(--text-dim)">MISS</span>`;
+          log.innerHTML = `<div style="margin-bottom:3px;"><strong>${esc(result.attackerName)}</strong> → <strong>${esc(result.targetName)}</strong> (AC ${result.targetAC}): ${r.attackRoll} ${hitText}</div>` + log.innerHTML;
+          log.style.display = '';
+        }
+      } catch(e) { console.error('Apply attack failed:', e); }
+    },
+
+    _updateAddSelect(order) {
+      const sel = document.getElementById('combat-add-token');
+      if (!sel) return;
+      const tokens = state.map?.tokens || {};
+      const inCombat = new Set(order.map(c => c.id));
+      sel.innerHTML = '<option value="">+ Add combatant...</option>';
+      for (const [id, tok] of Object.entries(tokens)) {
+        if (inCombat.has(id)) continue;
+        sel.innerHTML += `<option value="${id}">${esc(tok.name || id)}</option>`;
+      }
+    },
+
+    toggleExpand(id) {
+      if (this._expandedId !== id) this._npcRollResult = null;
+      this._expandedId = this._expandedId === id ? null : id;
+      this.render();
+    },
+
+    setForm(id, form) {
+      this._formState[id] = form || null;
+      this.render();
+    },
+
+    async startFromTokens() {
+      const tokens = state.map?.tokens || {};
+      const ids = Object.keys(tokens);
+      if (ids.length === 0) { alert('No tokens on the map.'); return; }
+      await fetch('/api/combat/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ combatantIds: ids })
+      });
+    },
+
+    async startFromSelected() {
+      const tokens = state.map?.tokens || {};
+      const ids = Object.keys(tokens);
+      if (ids.length === 0) { alert('No tokens on the map.'); return; }
+      const result = prompt(
+        'Enter token IDs to include (comma-separated), or "all" for all tokens:\n\nAvailable: ' +
+        ids.map(id => `${id} (${tokens[id].name || id})`).join(', '),
+        'all'
+      );
+      if (!result) return;
+      const toStart = result.trim().toLowerCase() === 'all' ? ids : result.split(',').map(s => s.trim()).filter(Boolean);
+      await fetch('/api/combat/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ combatantIds: toStart })
+      });
+    },
+
+    async end() {
+      if (!confirm('End combat?')) return;
+      this._actionsCache = {};
+      this._npcRollResult = null;
+      await fetch('/api/combat/end', { method: 'POST' });
+    },
+
+    async nextTurn() {
+      this._npcRollResult = null;
+      await fetch('/api/combat/next', { method: 'POST' });
+    },
+
+    async prevTurn() {
+      this._npcRollResult = null;
+      await fetch('/api/combat/prev', { method: 'POST' });
+    },
+
+    async hp(id, delta) {
+      await fetch('/api/combat/hp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ combatantId: id, delta })
+      });
+    },
+
+    hpCustom(id, heal) {
+      const input = document.getElementById('combat-hp-custom-' + id);
+      if (!input) return;
+      const val = parseInt(input.value);
+      if (isNaN(val) || val <= 0) return;
+      this.hp(id, heal ? val : -val);
+      input.value = '';
+    },
+
+    async setInit(id, value) {
+      await fetch('/api/combat/initiative', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ combatantId: id, initiative: value })
+      });
+    },
+
+    async toggleCondition(id, condition) {
+      await fetch('/api/combat/condition', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ combatantId: id, condition })
+      });
+    },
+
+    async addFromSelect() {
+      const sel = document.getElementById('combat-add-token');
+      if (!sel || !sel.value) return;
+      await fetch('/api/combat/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tokenId: sel.value })
+      });
+    },
+
+    async remove(id) {
+      if (!confirm(`Remove ${id} from combat?`)) return;
+      await fetch('/api/combat/remove', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ combatantId: id })
+      });
+    },
+
+    async deathSave(id, result) {
+      await fetch('/api/combat/death-save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ combatantId: id, result })
+      });
+    }
+  };
+
 </script>
 
 <!-- STAT BLOCK MODAL -->
@@ -2814,8 +3600,12 @@
       </div>
     </div>
     <div style="display:flex;flex:1;overflow:hidden;">
-      <div class="se-canvas-wrap" style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:12px;">
-        Map image upload and visual editing coming in a future build
+      <div class="se-canvas-wrap" id="se-drop-zone" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-dim);font-size:12px;border:2px dashed var(--border);margin:8px;border-radius:8px;cursor:pointer;transition:border-color 0.2s,background 0.2s;" onclick="document.getElementById('se-dd2vtt-input').click()">
+        <div style="font-size:24px;margin-bottom:8px;opacity:0.5;">&#128506;</div>
+        <div>Drop a <b>.dd2vtt</b> file here or click to browse</div>
+        <div style="font-size:10px;margin-top:4px;opacity:0.6;">Dungeondraft Universal VTT export</div>
+        <div id="se-import-status" style="margin-top:12px;color:var(--accent);font-size:11px;"></div>
+        <input type="file" id="se-dd2vtt-input" accept=".dd2vtt,.uvtt,.df2vtt" style="display:none" onchange="importDd2vttFromEditor(this)">
       </div>
       <div class="se-sidebar">
         <div class="se-section">

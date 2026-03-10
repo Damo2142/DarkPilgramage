@@ -1,0 +1,35 @@
+{
+  "slug": "piotr-kowalski",
+  "name": "Piotr Kowalski (Vampire Spawn)",
+  "custom": true,
+  "size": "Medium",
+  "type": "undead",
+  "subtype": "vampire spawn",
+  "alignment": "neutral evil",
+  "armor_class": 14,
+  "armor_desc": "natural armor",
+  "hit_points": 52,
+  "hit_dice": "7d8+21",
+  "speed": { "walk": 30 },
+  "strength": 14, "dexterity": 14, "constitution": 16,
+  "intelligence": 10, "wisdom": 10, "charisma": 8,
+  "perception": 2,
+  "skills": { "perception": 2, "stealth": 4 },
+  "damage_resistances": "necrotic; bludgeoning, piercing, and slashing from nonmagical attacks",
+  "damage_immunities": "",
+  "damage_vulnerabilities": "",
+  "condition_immunities": "",
+  "senses": "darkvision 60 ft., passive Perception 12",
+  "languages": "Common",
+  "challenge_rating": "3",
+  "special_abilities": [
+    { "name": "Regeneration", "desc": "Regains 10 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water." },
+    { "name": "Spider Climb", "desc": "Can climb difficult surfaces without needing to make an ability check." },
+    { "name": "Sunlight Hypersensitivity", "desc": "Takes 20 radiant damage when it starts its turn in sunlight." },
+    { "name": "Remnant Memory", "desc": "Piotr occasionally mutters Marta's name or hesitates when he sees something familiar. DC 15 Persuasion check can cause him to resist Vladislav's control for 1 round." }
+  ],
+  "actions": [
+    { "name": "Claws", "desc": "Melee Weapon Attack: +4 to hit, reach 5 ft., one creature. Hit: 6 (1d8 + 2) slashing damage. Instead of dealing damage, can grapple the target (escape DC 12).", "attack_bonus": 4, "damage_dice": "1d8", "damage_bonus": 2 },
+    { "name": "Bite", "desc": "Melee Weapon Attack: +4 to hit, reach 5 ft., one willing creature, or a creature that is grappled, incapacitated, or restrained. Hit: 5 (1d6 + 2) piercing damage plus 5 (2d4) necrotic damage. The target's hit point maximum is reduced by the necrotic damage taken.", "attack_bonus": 4, "damage_dice": "1d6", "damage_bonus": 2 }
+  ]
+}

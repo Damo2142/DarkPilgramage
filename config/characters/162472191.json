@@ -1,0 +1,500 @@
+{
+  "ddbId": "162472191",
+  "name": "Spurt the Sorcerer",
+  "class": "Sorcerer",
+  "classes": [
+    {
+      "name": "Sorcerer",
+      "level": 3,
+      "subclass": "Wild Magic Sorcery"
+    }
+  ],
+  "level": 3,
+  "race": "Kobold",
+  "background": "Artisan",
+  "alignment": "CG",
+  "hp": {
+    "current": 14,
+    "max": 14,
+    "temp": 0
+  },
+  "ac": 12,
+  "speed": 30,
+  "initiative": 2,
+  "proficiencyBonus": 2,
+  "abilities": {
+    "str": {
+      "score": 7,
+      "modifier": -2,
+      "modifierStr": "-2"
+    },
+    "dex": {
+      "score": 14,
+      "modifier": 2,
+      "modifierStr": "+2"
+    },
+    "con": {
+      "score": 12,
+      "modifier": 1,
+      "modifierStr": "+1"
+    },
+    "int": {
+      "score": 12,
+      "modifier": 1,
+      "modifierStr": "+1"
+    },
+    "wis": {
+      "score": 10,
+      "modifier": 0,
+      "modifierStr": "+0"
+    },
+    "cha": {
+      "score": 16,
+      "modifier": 3,
+      "modifierStr": "+3"
+    }
+  },
+  "savingThrows": {
+    "str": {
+      "modifier": -2,
+      "proficient": false
+    },
+    "dex": {
+      "modifier": 2,
+      "proficient": false
+    },
+    "con": {
+      "modifier": 1,
+      "proficient": false
+    },
+    "int": {
+      "modifier": 1,
+      "proficient": false
+    },
+    "wis": {
+      "modifier": 0,
+      "proficient": false
+    },
+    "cha": {
+      "modifier": 3,
+      "proficient": false
+    }
+  },
+  "skills": {
+    "acrobatics": {
+      "modifier": 2,
+      "proficiency": "none"
+    },
+    "animal-handling": {
+      "modifier": 0,
+      "proficiency": "none"
+    },
+    "arcana": {
+      "modifier": 3,
+      "proficiency": "proficiency"
+    },
+    "athletics": {
+      "modifier": -2,
+      "proficiency": "none"
+    },
+    "deception": {
+      "modifier": 3,
+      "proficiency": "none"
+    },
+    "history": {
+      "modifier": 1,
+      "proficiency": "none"
+    },
+    "insight": {
+      "modifier": 2,
+      "proficiency": "proficiency"
+    },
+    "intimidation": {
+      "modifier": 3,
+      "proficiency": "none"
+    },
+    "investigation": {
+      "modifier": 3,
+      "proficiency": "proficiency"
+    },
+    "medicine": {
+      "modifier": 0,
+      "proficiency": "none"
+    },
+    "nature": {
+      "modifier": 1,
+      "proficiency": "none"
+    },
+    "perception": {
+      "modifier": 0,
+      "proficiency": "none"
+    },
+    "performance": {
+      "modifier": 3,
+      "proficiency": "none"
+    },
+    "persuasion": {
+      "modifier": 5,
+      "proficiency": "proficiency"
+    },
+    "religion": {
+      "modifier": 1,
+      "proficiency": "none"
+    },
+    "sleight-of-hand": {
+      "modifier": 2,
+      "proficiency": "none"
+    },
+    "stealth": {
+      "modifier": 2,
+      "proficiency": "none"
+    },
+    "survival": {
+      "modifier": 2,
+      "proficiency": "proficiency"
+    }
+  },
+  "spellSlots": null,
+  "spells": [
+    {
+      "name": "Light",
+      "level": 0,
+      "school": "Evocation",
+      "ritual": false,
+      "concentration": false,
+      "prepared": true,
+      "description": "You touch one Large or smaller object that isn’t being worn or carried by someone else. Until the spell ends, the object sheds Bright Light in a 20-foot radius and Dim Light for an additional 20 feet."
+    },
+    {
+      "name": "Prestidigitation",
+      "level": 0,
+      "school": "Transmutation",
+      "ritual": false,
+      "concentration": false,
+      "prepared": true,
+      "description": "You create a magical effect within range. Choose the effect from the options below. If you cast this spell multiple times, you can have up to three of its non-instantaneous effects active at a time.\r\n"
+    },
+    {
+      "name": "Shocking Grasp",
+      "level": 0,
+      "school": "Evocation",
+      "ritual": false,
+      "concentration": false,
+      "prepared": true,
+      "description": "Lightning springs from you to a creature that you try to touch. Make a melee spell attack against the target. On a hit, the target takes 1d8 Lightning damage, and it can’t make Opportunity Attacks unt"
+    },
+    {
+      "name": "Sorcerous Burst",
+      "level": 0,
+      "school": "Evocation",
+      "ritual": false,
+      "concentration": false,
+      "prepared": true,
+      "description": "You cast sorcerous energy at one creature or object within range. Make a ranged spell attack against the target. On a hit, the target takes 1d8 damage of a type you choose: Acid, Cold, Fire, Lightning"
+    },
+    {
+      "name": "Burning Hands",
+      "level": 1,
+      "school": "Evocation",
+      "ritual": false,
+      "concentration": false,
+      "prepared": false,
+      "description": "A thin sheet of flames shoots forth from you. Each creature in a 15-foot Cone makes a Dexterity saving throw, taking 3d6 Fire damage on a failed save or half as much damage on a successful one.\r\nFlamm"
+    },
+    {
+      "name": "Color Spray",
+      "level": 1,
+      "school": "Illusion",
+      "ritual": false,
+      "concentration": false,
+      "prepared": false,
+      "description": "You launch a dazzling array of flashing, colorful light. Each creature in a 15-foot Cone originating from you must succeed on a Constitution saving throw or have the Blinded condition until the end of"
+    },
+    {
+      "name": "Detect Magic",
+      "level": 1,
+      "school": "Divination",
+      "ritual": true,
+      "concentration": true,
+      "prepared": false,
+      "description": "For the duration, you sense the presence of magical effects within 30 feet of yourself. If you sense such effects, you can take the Magic action to see a faint aura around any visible creature or obje"
+    },
+    {
+      "name": "Mage Armor",
+      "level": 1,
+      "school": "Abjuration",
+      "ritual": false,
+      "concentration": false,
+      "prepared": false,
+      "description": "You touch a willing creature who isn’t wearing armor. Until the spell ends, the target’s base AC becomes 13 plus its Dexterity modifier. The spell ends early if the target dons armor."
+    },
+    {
+      "name": "Dragon's Breath",
+      "level": 2,
+      "school": "Transmutation",
+      "ritual": false,
+      "concentration": true,
+      "prepared": false,
+      "description": "You touch one willing creature, and choose Acid, Cold, Fire, Lightning, or Poison. Until the spell ends, the target can take a Magic action to exhale a 15-foot Cone. Each creature in that area makes a"
+    },
+    {
+      "name": "Spider Climb",
+      "level": 2,
+      "school": "Transmutation",
+      "ritual": false,
+      "concentration": true,
+      "prepared": false,
+      "description": "Until the spell ends, one willing creature you touch gains the ability to move up, down, and across vertical surfaces and along ceilings, while leaving its hands free. The target also gains a Climb Sp"
+    }
+  ],
+  "attacks": [
+    {
+      "name": "Scorpion Staff",
+      "toHit": 0,
+      "damage": "1d6-2",
+      "damageType": "Bludgeoning",
+      "range": "5/5"
+    },
+    {
+      "name": "Dagger",
+      "toHit": 4,
+      "damage": "1d4+2",
+      "damageType": "Piercing",
+      "range": "20/60"
+    }
+  ],
+  "features": [
+    {
+      "name": "Draconic",
+      "source": "Language",
+      "description": ""
+    },
+    {
+      "name": "Common",
+      "source": "Language",
+      "description": ""
+    },
+    {
+      "name": "Darkvision",
+      "source": "Set Base",
+      "description": ""
+    },
+    {
+      "name": "Subclass",
+      "source": "Set",
+      "description": ""
+    },
+    {
+      "name": "Poison",
+      "source": "Replace Damage Type",
+      "description": ""
+    },
+    {
+      "name": "Finesse",
+      "source": "Weapon Property",
+      "description": ""
+    },
+    {
+      "name": "Versatile",
+      "source": "Ignore Weapon Property",
+      "description": ""
+    },
+    {
+      "name": "Topple",
+      "source": "Ignore Weapon Property",
+      "description": ""
+    }
+  ],
+  "inventory": [
+    {
+      "name": "Scorpion Staff",
+      "quantity": 1,
+      "equipped": true,
+      "type": "Weapon",
+      "weight": 4
+    },
+    {
+      "name": "Dagger",
+      "quantity": 1,
+      "equipped": true,
+      "type": "Weapon",
+      "weight": 1
+    },
+    {
+      "name": "Alchemist's Supplies",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 8
+    },
+    {
+      "name": "Backpack",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 5
+    },
+    {
+      "name": "Carpenter's Tools",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 6
+    },
+    {
+      "name": "Tinker's Tools",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 10
+    },
+    {
+      "name": "Weaver's Tools",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 5
+    },
+    {
+      "name": "Acid",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 1
+    },
+    {
+      "name": "Alchemist's Fire",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 1
+    },
+    {
+      "name": "Crystal",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 1
+    },
+    {
+      "name": "Bedroll",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 7
+    },
+    {
+      "name": "Mess Kit",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 1
+    },
+    {
+      "name": "Rations (1 day)",
+      "quantity": 10,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 2
+    },
+    {
+      "name": "Rope, Hempen (50 feet)",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 10
+    },
+    {
+      "name": "Tinderbox",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 1
+    },
+    {
+      "name": "Torch",
+      "quantity": 10,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 1
+    },
+    {
+      "name": "Waterskin",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 5
+    },
+    {
+      "name": "Oil",
+      "quantity": 2,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 1
+    },
+    {
+      "name": "Rations",
+      "quantity": 10,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 2
+    },
+    {
+      "name": "Rope",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 5
+    },
+    {
+      "name": "Tinderbox",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 1
+    },
+    {
+      "name": "Torch",
+      "quantity": 10,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 1
+    },
+    {
+      "name": "Waterskin",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 5
+    },
+    {
+      "name": "Caltrops",
+      "quantity": 20,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 2
+    },
+    {
+      "name": "Crowbar",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 5
+    }
+  ],
+  "conditions": [],
+  "currency": {
+    "pp": 0,
+    "gp": 0,
+    "ep": 0,
+    "sp": 4,
+    "cp": 7
+  },
+  "languages": [
+    "Draconic",
+    "Common"
+  ],
+  "_syncedAt": "2026-03-10T00:52:34.860Z",
+  "_source": "ddb",
+  "_ddbUrl": "https://www.dndbeyond.com/characters/162472191"
+}

@@ -502,6 +502,84 @@
       white-space: nowrap;
       z-index: 100;
     }
+
+    /* Zone items */
+    .zone-item { display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:11px;border-bottom:1px solid var(--bg); }
+    .zone-toggle { cursor:pointer;padding:1px 4px;font-size:9px;border-radius:2px; }
+    .zone-toggle.revealed { color:var(--green); }
+    .zone-toggle.hidden { color:var(--red-bright); }
+
+    /* Actor library */
+    .actor-row { display:flex;justify-content:space-between;align-items:center;padding:4px 6px;cursor:pointer;border-bottom:1px solid var(--bg);font-size:11px; }
+    .actor-row:hover { background:var(--surface2); }
+
+    /* Stat block modal */
+    #stat-modal { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:550;overflow-y:auto;padding:20px; }
+    #stat-modal.open { display:block; }
+    .stat-block { max-width:600px;margin:0 auto;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px; }
+    .sb-name { font-family:Cinzel,serif;font-size:1.3rem;color:var(--accent);font-weight:700; }
+    .sb-meta { font-size:11px;color:var(--text-dim);font-style:italic;margin-bottom:4px; }
+    .sb-divider { border-top:2px solid var(--accent-dim);margin:8px 0; }
+    .sb-row { font-size:12px;padding:2px 0; }
+    .sb-label { font-weight:700;color:var(--accent);margin-right:4px; }
+    .sb-abilities { display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:6px 0; }
+    .sb-ab { text-align:center;background:var(--surface2);border-radius:4px;padding:4px; }
+    .sb-ab-name { font-size:8px;color:var(--text-dim);text-transform:uppercase; }
+    .sb-section { font-size:11px;font-weight:700;text-transform:uppercase;color:var(--accent);letter-spacing:1px;margin-bottom:4px; }
+    .sb-action { font-size:12px;margin-bottom:6px;line-height:1.4; }
+    .sb-controls { margin-top:8px; }
+
+    /* 5e Character Sheet Modal */
+    .sheet-5e { max-width:800px;margin:0 auto;background:#f4ebd0;border:3px solid #58180d;border-radius:0;padding:0;color:#1a1a1a;font-family:'Source Sans 3',sans-serif; }
+    .sheet-5e-header { background:#58180d;color:#f4ebd0;padding:12px 16px;display:flex;justify-content:space-between;align-items:flex-start; }
+    .sheet-5e-header h2 { font-family:Cinzel,serif;font-size:1.4rem;margin:0; }
+    .sheet-5e-header .sh-sub { font-size:11px;opacity:0.8; }
+    .sheet-5e-header button { background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#f4ebd0;border-radius:3px;padding:4px 10px;cursor:pointer;font-size:11px; }
+    .sheet-5e-body { display:grid;grid-template-columns:auto 1fr;gap:0; }
+    .sheet-5e-left { width:200px;background:#e8d5a3;border-right:2px solid #c9ad6a;padding:10px; }
+    .sheet-5e-right { padding:10px 14px;min-height:400px; }
+    .sh-vitals { display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px; }
+    .sh-vital-box { text-align:center;background:#e8d5a3;border:2px solid #58180d;border-radius:3px;padding:6px 2px; }
+    .sh-vital-label { font-size:8px;text-transform:uppercase;color:#58180d;font-weight:700;letter-spacing:0.5px; }
+    .sh-vital-val { font-size:20px;font-weight:700;color:#58180d; }
+    .sh-ab-grid { display:grid;gap:6px;margin-bottom:10px; }
+    .sh-ab-box { text-align:center;background:#f4ebd0;border:2px solid #58180d;border-radius:6px;padding:6px 4px;position:relative; }
+    .sh-ab-name { font-size:8px;text-transform:uppercase;color:#58180d;font-weight:700;letter-spacing:1px; }
+    .sh-ab-mod { font-size:24px;font-weight:700;color:#58180d;line-height:1; }
+    .sh-ab-score { font-size:10px;background:#58180d;color:#f4ebd0;border-radius:10px;padding:1px 8px;display:inline-block;margin-top:2px; }
+    .sh-section-title { font-size:9px;font-weight:700;text-transform:uppercase;color:#58180d;border-bottom:2px solid #58180d;padding-bottom:2px;margin:10px 0 4px;letter-spacing:1px; }
+    .sh-save-row, .sh-skill-row { display:flex;align-items:center;gap:4px;padding:2px 0;font-size:11px;color:#1a1a1a;border-bottom:1px solid rgba(88,24,13,0.1); }
+    .sh-save-row:last-child, .sh-skill-row:last-child { border:none; }
+    .sh-prof-dot { width:8px;height:8px;border-radius:50%;border:1px solid #58180d;flex-shrink:0; }
+    .sh-prof-dot.full { background:#58180d; }
+    .sh-prof-dot.exp { background:#58180d;border-radius:2px; }
+    .sh-skill-name { flex:1; }
+    .sh-skill-mod { font-weight:700;min-width:24px;text-align:right; }
+    .sh-hp-bar { height:16px;background:#ccc;border-radius:3px;overflow:hidden;margin:4px 0; }
+    .sh-hp-fill { height:100%;background:linear-gradient(90deg,#8b0000,#cc0000);transition:width 0.3s; }
+    .sh-hp-fill.healthy { background:linear-gradient(90deg,#1a5a30,#27ae60); }
+    .sh-hp-fill.wounded { background:linear-gradient(90deg,#8a5a00,#c07030); }
+    .sh-inv-item { display:flex;justify-content:space-between;padding:2px 0;font-size:11px;border-bottom:1px solid rgba(88,24,13,0.1); }
+    .sh-inv-eq { color:#58180d;font-weight:700; }
+    .sh-coins { display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:4px; }
+    .sh-coin { text-align:center;background:#e8d5a3;border:1px solid #c9ad6a;border-radius:3px;padding:3px; }
+    .sh-coin-label { font-size:7px;text-transform:uppercase;color:#58180d;font-weight:700; }
+    .sh-coin-val { font-size:13px;font-weight:700;color:#58180d; }
+    .sh-slots { display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:4px; }
+    .sh-slot { text-align:center;background:#e8d5a3;border:1px solid #c9ad6a;border-radius:3px;padding:3px; }
+    .sh-slot-lv { font-size:7px;text-transform:uppercase;color:#58180d;font-weight:700; }
+    .sh-slot-val { font-size:12px;font-weight:700;color:#58180d; }
+
+    /* Scene editor modal */
+    #scene-editor { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:600;overflow:hidden; }
+    #scene-editor.open { display:flex; }
+    .se-header { display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--surface);border-bottom:1px solid var(--border); }
+    .se-canvas-wrap { flex:1;position:relative;background:#050508;overflow:hidden; }
+    .se-sidebar { width:260px;background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;padding:8px; }
+    .se-section { margin-bottom:10px; }
+    .se-label { font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-dim);margin-bottom:3px; }
+    .se-section input[type="text"], .se-section input[type="number"] { width:100%;padding:4px 8px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px;margin-bottom:4px; }
+    .se-mode-btn.active { background:var(--accent-dim);border-color:var(--accent);color:#fff; }
   </style>
 </head>
 <body>
@@ -547,11 +625,19 @@
               <label style="font-size:11px;"><input type="checkbox" id="ti-visible" onchange="VTT.inspectorVisibility(this.checked)" style="accent-color:var(--accent);"> show</label>
             </div>
             <div class="ti-row"><span>Position</span><span id="ti-pos"></span></div>
+            <div style="display:flex;gap:4px;margin-top:6px;">
+              <button class="sm" onclick="VTT.viewSheet()" style="flex:1">View Sheet</button>
+              <button class="sm" onclick="VTT.removeToken()" style="flex:1;background:var(--red);border-color:var(--red);">Remove</button>
+            </div>
           </div>
         </div>
-        <div style="padding:4px 8px;background:var(--surface);border-top:1px solid var(--border);font-size:10px;color:var(--text-dim);display:flex;justify-content:space-between;">
-          <span id="map-name">No map loaded</span>
-          <span id="map-coords"></span>
+        <div style="padding:4px 8px;background:var(--surface);border-top:1px solid var(--border);font-size:10px;color:var(--text-dim);display:flex;justify-content:space-between;align-items:center;gap:6px;">
+          <select id="scene-select" onchange="loadScene(this.value)" style="background:var(--surface3);border:1px solid var(--border);color:var(--text);font-size:10px;padding:2px 6px;border-radius:3px;max-width:160px;">
+            <option value="">No map</option>
+          </select>
+          <span id="map-coords" style="flex:1;text-align:center;"></span>
+          <button class="sm" onclick="saveMapState()" style="font-size:9px;padding:2px 6px;">Save State</button>
+          <button class="sm" onclick="SceneEditor.open()" style="font-size:9px;padding:2px 6px;">+ New Map</button>
         </div>
       </div>
 
@@ -626,6 +712,34 @@
       </div>
       </div>
 
+      <div class="panel-section" data-panel="actors">
+      <div class="section-header"><span class="drag-handle">⠿</span>Actor Library</div>
+      <div style="padding:4px 8px;">
+        <div style="display:flex;gap:4px;margin-bottom:6px;">
+          <input type="text" id="actor-search" placeholder="Search monsters..." oninput="searchActors()" style="flex:1;padding:4px 8px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px;">
+          <select id="actor-cr-filter" onchange="searchActors()" style="width:55px;padding:4px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:10px;">
+            <option value="">CR</option>
+            <option value="0">0</option><option value="1/8">1/8</option><option value="1/4">1/4</option><option value="1/2">1/2</option>
+            <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+            <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+            <option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="15">15</option><option value="17">17</option><option value="20">20</option>
+          </select>
+        </div>
+        <div id="actor-results" style="max-height:200px;overflow-y:auto;font-size:11px;color:var(--text-dim);">Type to search SRD monsters + custom actors</div>
+      </div>
+      </div>
+
+      <div class="panel-section" data-panel="zones">
+      <div class="section-header"><span class="drag-handle">⠿</span>Map Zones</div>
+      <div style="padding:4px 8px;">
+        <div style="display:flex;gap:4px;margin-bottom:6px;">
+          <button class="sm primary" onclick="revealAllZones(true)" style="flex:1">Reveal All</button>
+          <button class="sm" onclick="revealAllZones(false)" style="flex:1">Hide All</button>
+        </div>
+        <div id="zone-list" style="font-size:11px;color:var(--text-dim);">No zones loaded</div>
+      </div>
+      </div>
+
       <div class="panel-section" data-panel="horror">
       <div class="section-header"><span class="drag-handle">⠿</span>Horror Effects</div>
       <div class="horror-controls">
@@ -675,11 +789,19 @@
 
     <!-- RIGHT: PLAYERS & NPC -->
     <div class="players-col">
-      <div class="col-header" onclick="toggleCol(this)"><span class="col-toggle">▼</span>Characters</div>
-      <div class="section-header">DDB Sync</div>
+      <div class="col-header" onclick="toggleCol(this)"><span class="col-toggle">▼</span>D&D Beyond Sync</div>
       <div class="pm-controls">
+        <div style="display:flex;gap:4px;margin-bottom:6px;">
+          <button class="primary" onclick="ddbSyncAll()" style="flex:1">Pull from DDB</button>
+          <button onclick="ddbPushAll()" style="flex:1">Push to DDB</button>
+        </div>
+        <div id="ddb-status" style="font-size:10px;color:var(--text-dim);margin-bottom:6px;"></div>
+        <div style="font-size:10px;color:var(--text-dim);margin-bottom:4px;">DDB Character IDs (one per line):</div>
+        <textarea id="ddb-ids" placeholder="Enter DDB character IDs, one per line..." style="width:100%;min-height:40px;padding:4px 8px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px;font-family:monospace;resize:vertical;margin-bottom:4px;"></textarea>
+        <button class="sm" onclick="saveDdbConfig()" style="width:100%;margin-bottom:8px;">Save DDB Config</button>
+        <div class="section-header" style="margin:0 -10px 6px;">Synced Characters</div>
         <div id="char-list" style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">No characters synced yet</div>
-        <button class="primary" onclick="syncCharacters()" style="width:100%;margin-bottom:6px;">⟳ Reload from Files</button>
+        <button onclick="syncCharacters()" style="width:100%;margin-bottom:6px;font-size:10px;">Reload from Files</button>
         <div class="section-header" style="margin:0 -10px 6px;">Assign Player → Character</div>
         <div id="char-assign-rows">
           <div style="font-size:10px;color:var(--text-dim);">Connect players first, then assign.</div>
@@ -1262,13 +1384,17 @@
   function renderCharList(chars) {
     const el = document.getElementById('char-list');
     if (!chars.length) { el.textContent = 'No characters synced yet — run ddb-sync.mjs first'; return; }
-    el.innerHTML = chars.map(c =>
-      `<div style="padding:3px 0;border-bottom:1px solid var(--border);">
-        <span style="color:var(--accent);font-weight:600;">${esc(c.name)}</span>
-        <span style="color:var(--text-dim);"> — ${esc(c.race)} ${esc(c.class)} ${c.level}</span>
-        <span style="float:right;font-size:10px;color:var(--text-dim);">#${c.foundryId || c.foundryId || c.ddbId}</span>
-      </div>`
-    ).join('');
+    el.innerHTML = chars.map(c => {
+      const cid = c.foundryId || c.ddbId;
+      return `<div style="padding:3px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <span style="color:var(--accent);font-weight:600;cursor:pointer;" onclick="viewSheet('${esc(cid)}')">${esc(c.name)}</span>
+          <span style="color:var(--text-dim);"> — ${esc(c.race)} ${esc(c.class)} ${c.level}</span>
+          <span style="font-size:10px;color:var(--text-dim);">#${cid}</span>
+        </div>
+        <span style="cursor:pointer;color:var(--red);font-size:14px;padding:0 4px;" onclick="deleteCharacter('${esc(cid)}','${esc(c.name)}')" title="Delete">✕</span>
+      </div>`;
+    }).join('');
   }
 
   function renderAssignRows() {
@@ -1327,12 +1453,27 @@
   }
 
 
-  // ── VIEW SHEET MODAL ──────────────────────────────────────────────────────
+  function deleteCharacter(charId, charName) {
+    if (!confirm('Delete character "' + charName + '" (#' + charId + ')? This removes the JSON file and any assignments.')) return;
+    fetch('/api/characters/' + charId, { method: 'DELETE' })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.error) { alert(d.error); return; }
+        addTranscript({ speaker: 'system', text: 'Deleted character: ' + charName });
+        loadCharacters();
+      })
+      .catch(console.error);
+  }
+
+  // ── VIEW SHEET MODAL (5e style) ─────────────────────────────────────────
   function viewSheet(playerId) {
     const p = state.players && state.players[playerId];
     const c = p && p.character;
     if (!c) { alert('No character data for ' + playerId + '.\nExport from Foundry first.'); return; }
+    _render5eSheet(c, playerId);
+  }
 
+  function _render5eSheet(c, titleFallback) {
     let modal = document.getElementById('sheet-modal');
     if (!modal) {
       modal = document.createElement('div');
@@ -1343,107 +1484,294 @@
     }
 
     const abOrder = ['str','dex','con','int','wis','cha'];
+    const abNames = ['Strength','Dexterity','Constitution','Intelligence','Wisdom','Charisma'];
     const abils = c.abilities || {};
-    const abilHtml = abOrder.map(function(ab) {
+
+    // Build ability boxes
+    const abilHtml = abOrder.map(function(ab, i) {
       const a = abils[ab] || { score:10, modifier:0, modifierStr:'+0' };
-      return '<div style="background:#16161d;border:1px solid #252530;border-radius:6px;padding:8px 4px;text-align:center;">'
-        + '<div style="font-size:8px;color:#6b6760;text-transform:uppercase;">' + ab.toUpperCase() + '</div>'
-        + '<div style="font-size:22px;font-weight:700;color:#c9a54e;">' + (a.modifierStr || (a.modifier>=0?'+'+a.modifier:a.modifier)) + '</div>'
-        + '<div style="font-size:11px;color:#6b6760;border:1px solid #252530;border-radius:10px;padding:1px 6px;display:inline-block;">' + a.score + '</div>'
+      const modStr = a.modifierStr || (a.modifier>=0 ? '+'+a.modifier : ''+a.modifier);
+      return '<div class="sh-ab-box">'
+        + '<div class="sh-ab-name">' + ab.toUpperCase() + '</div>'
+        + '<div class="sh-ab-mod">' + modStr + '</div>'
+        + '<div class="sh-ab-score">' + a.score + '</div>'
         + '</div>';
     }).join('');
 
+    // Saves
     const saves = c.savingThrows || {};
     const saveHtml = abOrder.map(function(ab) {
       const s = saves[ab] || {};
-      const mod = typeof s === 'object' ? s.modifier : s;
+      const mod = typeof s === 'object' ? s.modifier : (s || 0);
       const prof = typeof s === 'object' && s.proficient;
-      return '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px;border-bottom:1px solid #0f0f14;">'
-        + '<span>' + ab.toUpperCase() + (prof ? ' <span style="color:#c9a54e;">●</span>' : '') + '</span>'
-        + '<span style="font-weight:700;">' + (mod>=0?'+'+mod:mod) + '</span></div>';
+      return '<div class="sh-save-row">'
+        + '<div class="sh-prof-dot' + (prof ? ' full' : '') + '"></div>'
+        + '<span class="sh-skill-name">' + ab.toUpperCase() + '</span>'
+        + '<span class="sh-skill-mod">' + (mod>=0?'+'+mod:mod) + '</span></div>';
     }).join('');
 
-    const skillHtml = Object.entries(c.skills || {}).map(function(kv) {
-      const s = kv[1]; const mod = typeof s==='object' ? s.modifier : s;
-      const p = typeof s==='object' ? s.proficiency : 'none';
-      const dot = p==='expertise' ? ' <span style="color:#c9a54e;">◆</span>' : p==='proficiency' ? ' <span style="color:#c9a54e;">●</span>' : '';
-      return '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;border-bottom:1px solid #0f0f14;">'
-        + '<span>' + kv[0] + dot + '</span>'
-        + '<span style="font-weight:700;">' + (mod>=0?'+'+mod:mod) + '</span></div>';
+    // Skills
+    const skillMap = {
+      'Acrobatics':'dex','Animal Handling':'wis','Arcana':'int','Athletics':'str',
+      'Deception':'cha','History':'int','Insight':'wis','Intimidation':'cha',
+      'Investigation':'int','Medicine':'wis','Nature':'int','Perception':'wis',
+      'Performance':'cha','Persuasion':'cha','Religion':'int','Sleight of Hand':'dex',
+      'Stealth':'dex','Survival':'wis'
+    };
+    const skills = c.skills || {};
+    const skillHtml = Object.entries(skillMap).map(function(kv) {
+      const key = kv[0].toLowerCase().replace(/ /g,'');
+      // Try to find in various key formats
+      const s = skills[key] || skills[kv[0].toLowerCase()] || skills[kv[0]] || {};
+      const mod = typeof s==='object' ? (s.modifier||0) : (s||0);
+      const p = typeof s==='object' ? (s.proficiency||'none') : 'none';
+      const dotCls = p==='expertise' ? ' exp' : p==='proficiency' ? ' full' : '';
+      return '<div class="sh-skill-row">'
+        + '<div class="sh-prof-dot' + dotCls + '"></div>'
+        + '<span class="sh-skill-name">' + kv[0] + ' <span style="opacity:0.5;font-size:9px;">(' + kv[1].toUpperCase() + ')</span></span>'
+        + '<span class="sh-skill-mod">' + (mod>=0?'+'+mod:mod) + '</span></div>';
     }).join('');
 
     const hp = c.hp || {};
+    const hpPct = hp.max > 0 ? Math.round((hp.current / hp.max) * 100) : 0;
+    const hpClass = hpPct > 50 ? 'healthy' : hpPct > 25 ? 'wounded' : '';
+
+    // Inventory
     const invHtml = (c.inventory || []).map(function(i) {
-      return '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;border-bottom:1px solid #0f0f14;">'
-        + '<span' + (i.equipped ? ' style="color:#c9a54e;"' : '') + '>' + esc(i.name) + (i.equipped ? ' ⚔' : '') + '</span>'
-        + '<span style="color:#6b6760;">×' + (i.quantity||1) + '</span></div>';
-    }).join('');
+      return '<div class="sh-inv-item">'
+        + '<span' + (i.equipped ? ' class="sh-inv-eq"' : '') + '>' + esc(i.name) + '</span>'
+        + '<span style="opacity:0.5;">x' + (i.quantity||1) + '</span></div>';
+    }).join('') || '<span style="opacity:0.5;font-size:11px;">No items</span>';
 
+    // Currency
     const cur = c.currency || {};
-    const currHtml = [['pp','#b0c4de'],['gp','#f1c40f'],['sp','#bdc3c7'],['cp','#e67e22']].map(function(kc) {
-      return '<div style="text-align:center;background:#16161d;border-radius:4px;padding:5px;">'
-        + '<div style="font-size:8px;color:#6b6760;text-transform:uppercase;">' + kc[0].toUpperCase() + '</div>'
-        + '<div style="font-size:14px;font-weight:700;color:' + kc[1] + ';">' + (cur[kc[0]]||0) + '</div></div>';
+    const coinHtml = ['pp','gp','ep','sp','cp'].map(function(k) {
+      return '<div class="sh-coin"><div class="sh-coin-label">' + k.toUpperCase() + '</div><div class="sh-coin-val">' + (cur[k]||0) + '</div></div>';
     }).join('');
 
+    // Spell slots
     const slotHtml = c.spellSlots ? Object.entries(c.spellSlots).map(function(kv) {
       const s = kv[1]; const rem = s.remaining !== undefined ? s.remaining : s.total || s;
       const tot = s.total || s;
-      return '<div style="text-align:center;background:#16161d;border:1px solid #252530;border-radius:3px;padding:4px;">'
-        + '<div style="font-size:8px;color:#6b6760;">' + kv[0] + '</div>'
-        + '<div style="font-size:14px;font-weight:700;color:#c9a54e;">' + rem + '/' + tot + '</div></div>';
-    }).join('') : '<span style="color:#6b6760;font-size:11px;">None exported from Foundry yet</span>';
+      const lbl = kv[0].match(/^level(\d+)$/) ? 'Lv ' + kv[0].match(/\d+/)[0] : 'Lv ' + kv[0];
+      return '<div class="sh-slot"><div class="sh-slot-lv">' + lbl + '</div><div class="sh-slot-val">' + rem + '/' + tot + '</div></div>';
+    }).join('') : '<span style="font-size:11px;opacity:0.5;">None</span>';
 
-    modal.innerHTML = '<div style="max-width:720px;margin:0 auto;background:#0f0f14;border:1px solid #252530;border-radius:6px;padding:16px;">'
-      // Header
-      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">'
-      + '<div>'
-      + '<h2 style="font-family:Cinzel,serif;color:#c9a54e;font-size:1.3rem;margin-bottom:2px;">' + esc(c.name||playerId) + '</h2>'
-      + '<div style="font-size:11px;color:#6b6760;">' + esc(c.race||'') + ' ' + esc(c.class||'') + ' ' + (c.level||'') + (c.classes && c.classes[0]?.subclass ? ' · ' + esc(c.classes[0].subclass) : '') + '</div>'
+    // Attacks
+    const atkHtml = (c.attacks || []).map(function(a) {
+      return '<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;border-bottom:1px solid rgba(0,0,0,0.1);">'
+        + '<span style="font-weight:600;">' + esc(a.name) + '</span>'
+        + '<span>' + (a.toHit>=0?'+':'') + a.toHit + ' | ' + esc(a.damage||'') + ' ' + esc(a.damageType||'') + '</span></div>';
+    }).join('') || '<span style="font-size:11px;opacity:0.5;">None</span>';
+
+    // Spells
+    const spellHtml = (c.spells || []).map(function(s) {
+      return '<div style="font-size:11px;padding:1px 0;">'
+        + '<strong>' + esc(s.name) + '</strong> '
+        + '<span style="opacity:0.5;">' + (s.level===0?'Cantrip':'Lv'+s.level) + '</span>'
+        + (s.concentration?' <span style="color:#2980b9;font-size:9px;">C</span>':'')
+        + (s.ritual?' <span style="color:#27ae60;font-size:9px;">R</span>':'')
+        + '</div>';
+    }).join('') || '<span style="font-size:11px;opacity:0.5;">None</span>';
+
+    // Features
+    const featHtml = (c.features || []).map(function(f) {
+      return '<div style="font-size:11px;padding:2px 0;border-bottom:1px solid rgba(0,0,0,0.1);">'
+        + '<strong>' + esc(f.name) + '</strong>'
+        + (f.source?' <span style="opacity:0.5;font-size:9px;">' + esc(f.source) + '</span>':'')
+        + (f.description?'<div style="opacity:0.7;font-size:10px;">' + esc(f.description).substring(0,120) + (f.description.length>120?'…':'') + '</div>':'')
+        + '</div>';
+    }).join('') || '<span style="font-size:11px;opacity:0.5;">None</span>';
+
+    modal.innerHTML = '<div class="sheet-5e">'
+      + '<div class="sheet-5e-header"><div>'
+      + '<h2>' + esc(c.name||titleFallback) + '</h2>'
+      + '<div class="sh-sub">' + esc(c.race||'') + ' ' + esc(c.class||'') + ' ' + (c.level||'') + (c.background ? ' | ' + esc(c.background) : '') + '</div>'
+      + '</div><button onclick="closeSheet()">Close</button></div>'
+      + '<div class="sheet-5e-body">'
+      // Left sidebar
+      + '<div class="sheet-5e-left">'
+      + '<div class="sh-ab-grid">' + abilHtml + '</div>'
+      + '<div class="sh-section-title">Saving Throws</div>' + saveHtml
+      + '<div class="sh-section-title">Skills</div>' + skillHtml
       + '</div>'
-      + '<button onclick="closeSheet()" style="background:#1e1e28;border:1px solid #252530;color:#ddd9cf;border-radius:4px;padding:5px 10px;cursor:pointer;">✕ Close</button>'
+      // Right main area
+      + '<div class="sheet-5e-right">'
+      + '<div class="sh-vitals">'
+      + '<div class="sh-vital-box"><div class="sh-vital-label">AC</div><div class="sh-vital-val">' + (c.ac||10) + '</div></div>'
+      + '<div class="sh-vital-box"><div class="sh-vital-label">Initiative</div><div class="sh-vital-val">' + (c.initiative!==undefined?(c.initiative>=0?'+'+c.initiative:c.initiative):'+?') + '</div></div>'
+      + '<div class="sh-vital-box"><div class="sh-vital-label">Speed</div><div class="sh-vital-val">' + (c.speed||30) + '</div></div>'
+      + '<div class="sh-vital-box"><div class="sh-vital-label">Prof</div><div class="sh-vital-val">+' + (c.proficiencyBonus||2) + '</div></div>'
+      + '<div class="sh-vital-box"><div class="sh-vital-label">Level</div><div class="sh-vital-val">' + (c.level||'?') + '</div></div>'
       + '</div>'
-      // Stats strip
-      + '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;background:#16161d;border:1px solid #252530;border-radius:5px;padding:8px;margin-bottom:10px;font-size:11px;">'
-      + '<div style="text-align:center;"><div style="color:#6b6760;font-size:9px;text-transform:uppercase;">HP</div><div style="font-weight:700;color:#c9a54e;">' + (hp.current||0) + '/' + (hp.max||0) + '</div></div>'
-      + '<div style="text-align:center;"><div style="color:#6b6760;font-size:9px;text-transform:uppercase;">AC</div><div style="font-weight:700;">' + (c.ac||10) + '</div></div>'
-      + '<div style="text-align:center;"><div style="color:#6b6760;font-size:9px;text-transform:uppercase;">Speed</div><div style="font-weight:700;">' + (c.speed||30) + 'ft</div></div>'
-      + '<div style="text-align:center;"><div style="color:#6b6760;font-size:9px;text-transform:uppercase;">Prof</div><div style="font-weight:700;">+' + (c.proficiencyBonus||2) + '</div></div>'
-      + '<div style="text-align:center;"><div style="color:#6b6760;font-size:9px;text-transform:uppercase;">Init</div><div style="font-weight:700;">' + (c.initiative !== undefined ? (c.initiative>=0?'+'+c.initiative:c.initiative) : '+?') + '</div></div>'
-      + '</div>'
-      // Two-column layout
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
-      // Left
-      + '<div>'
-      + '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#6b6760;border-bottom:1px solid #252530;padding-bottom:3px;margin-bottom:6px;">Ability Scores</div>'
-      + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:10px;">' + abilHtml + '</div>'
-      + '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#6b6760;border-bottom:1px solid #252530;padding-bottom:3px;margin-bottom:4px;">Saving Throws</div>'
-      + saveHtml
-      + '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#6b6760;border-bottom:1px solid #252530;padding-bottom:3px;margin:8px 0 4px;">Spell Slots</div>'
-      + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">' + slotHtml + '</div>'
-      + '</div>'
-      // Right
-      + '<div>'
-      + '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#6b6760;border-bottom:1px solid #252530;padding-bottom:3px;margin-bottom:4px;">Skills</div>'
-      + skillHtml
-      + '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#6b6760;border-bottom:1px solid #252530;padding-bottom:3px;margin:8px 0 4px;">Inventory</div>'
-      + invHtml
-      + '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#6b6760;border-bottom:1px solid #252530;padding-bottom:3px;margin:8px 0 4px;">Currency</div>'
-      + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">' + currHtml + '</div>'
-      + '</div>'
-      + '</div>'
-      + '</div>';
+      + '<div class="sh-section-title">Hit Points</div>'
+      + '<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:#58180d;"><span>HP ' + (hp.current||0) + ' / ' + (hp.max||0) + '</span>' + (hp.temp ? '<span style="color:#2980b9;">Temp: ' + hp.temp + '</span>' : '') + '</div>'
+      + '<div class="sh-hp-bar"><div class="sh-hp-fill ' + hpClass + '" style="width:' + hpPct + '%"></div></div>'
+      + '<div class="sh-section-title">Attacks</div>' + atkHtml
+      + '<div class="sh-section-title">Spells</div><div style="max-height:200px;overflow-y:auto;">' + spellHtml + '</div>'
+      + '<div class="sh-section-title">Spell Slots</div><div class="sh-slots">' + slotHtml + '</div>'
+      + '<div class="sh-section-title">Features</div><div style="max-height:200px;overflow-y:auto;">' + featHtml + '</div>'
+      + '<div class="sh-section-title">Inventory</div>' + invHtml
+      + '<div class="sh-section-title">Currency</div><div class="sh-coins">' + coinHtml + '</div>'
+      + '</div></div></div>';
 
     modal.style.display = 'block';
   }
+
+  // View an NPC/actor stat block (from token inspector or actor library)
+  function viewActorSheet(slug) {
+    fetch('/api/actors/' + slug)
+      .then(function(r) { return r.json(); })
+      .then(function(a) {
+        if (a.error) { alert('Actor not found: ' + slug); return; }
+        _renderStatBlockModal(a);
+      })
+      .catch(console.error);
+  }
+
+  function _renderStatBlockModal(a) {
+    const modal = document.getElementById('stat-modal');
+    const abilityNames = ['STR','DEX','CON','INT','WIS','CHA'];
+    const abilityKeys = ['strength','dexterity','constitution','intelligence','wisdom','charisma'];
+    const abHtml = abilityKeys.map(function(k,i) {
+      const v = a[k] || 10;
+      const mod = Math.floor((v-10)/2);
+      return '<div class="sb-ab"><div class="sb-ab-name">' + abilityNames[i] + '</div><div>' + v + ' (' + (mod>=0?'+':'') + mod + ')</div></div>';
+    }).join('');
+
+    var sectionsHtml = '';
+    if (a.special_abilities && a.special_abilities.length) {
+      sectionsHtml += '<div class="sb-divider"></div>';
+      sectionsHtml += a.special_abilities.map(function(s) { return '<div class="sb-action"><strong>' + esc(s.name) + '.</strong> ' + esc(s.desc) + '</div>'; }).join('');
+    }
+    if (a.actions && a.actions.length) {
+      sectionsHtml += '<div class="sb-divider"></div><div class="sb-section">Actions</div>';
+      sectionsHtml += a.actions.map(function(s) { return '<div class="sb-action"><strong>' + esc(s.name) + '.</strong> ' + esc(s.desc) + '</div>'; }).join('');
+    }
+    if (a.legendary_actions && a.legendary_actions.length) {
+      sectionsHtml += '<div class="sb-divider"></div><div class="sb-section">Legendary Actions</div>';
+      if (a.legendary_desc) sectionsHtml += '<div class="sb-action" style="font-style:italic">' + esc(a.legendary_desc) + '</div>';
+      sectionsHtml += a.legendary_actions.map(function(s) { return '<div class="sb-action"><strong>' + esc(s.name) + '.</strong> ' + esc(s.desc) + '</div>'; }).join('');
+    }
+
+    var speedStr = '';
+    if (a.speed) {
+      if (typeof a.speed === 'object') {
+        speedStr = Object.entries(a.speed).map(function(kv) { return kv[0]==='walk' ? kv[1]+'ft.' : kv[0]+' '+kv[1]+'ft.'; }).join(', ');
+      } else { speedStr = a.speed; }
+    }
+
+    modal.querySelector('.stat-block').innerHTML = ''
+      + '<div class="sb-name">' + esc(a.name) + (a.custom ? ' <span style="color:var(--accent);font-size:11px;">[CUSTOM]</span>' : '') + '</div>'
+      + '<div class="sb-meta">' + esc(a.size||'') + ' ' + esc(a.type||'') + (a.subtype ? ' ('+esc(a.subtype)+')' : '') + ', ' + esc(a.alignment||'') + '</div>'
+      + '<div class="sb-divider"></div>'
+      + '<div class="sb-row"><span class="sb-label">AC</span> ' + (a.armor_class||10) + (a.armor_desc ? ' ('+esc(a.armor_desc)+')' : '') + '</div>'
+      + '<div class="sb-row"><span class="sb-label">HP</span> ' + (a.hit_points||0) + (a.hit_dice ? ' ('+a.hit_dice+')' : '') + '</div>'
+      + '<div class="sb-row"><span class="sb-label">Speed</span> ' + speedStr + '</div>'
+      + '<div class="sb-divider"></div>'
+      + '<div class="sb-abilities">' + abHtml + '</div>'
+      + (a.damage_resistances ? '<div class="sb-row"><span class="sb-label">Resistances</span> ' + esc(a.damage_resistances) + '</div>' : '')
+      + (a.damage_immunities ? '<div class="sb-row"><span class="sb-label">Immunities</span> ' + esc(a.damage_immunities) + '</div>' : '')
+      + (a.damage_vulnerabilities ? '<div class="sb-row"><span class="sb-label">Vulnerabilities</span> ' + esc(a.damage_vulnerabilities) + '</div>' : '')
+      + (a.condition_immunities ? '<div class="sb-row"><span class="sb-label">Cond. Immunities</span> ' + esc(a.condition_immunities) + '</div>' : '')
+      + (a.senses ? '<div class="sb-row"><span class="sb-label">Senses</span> ' + esc(a.senses) + '</div>' : '')
+      + (a.languages ? '<div class="sb-row"><span class="sb-label">Languages</span> ' + esc(a.languages) + '</div>' : '')
+      + '<div class="sb-row"><span class="sb-label">Challenge</span> ' + (a.challenge_rating||'?') + '</div>'
+      + sectionsHtml
+      + '<div class="sb-divider"></div>'
+      + '<div class="sb-controls">'
+      + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">'
+      + '<span class="sb-label">HP Override:</span>'
+      + '<input type="number" id="sb-hp-override" value="' + (a.hit_points||10) + '" min="1" style="width:60px;padding:3px 6px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:12px;">'
+      + '</div>'
+      + '<div style="display:flex;gap:6px;">'
+      + '<button class="sm primary" onclick="placeActor(\'' + esc(a.slug) + '\')">Place on Map</button>'
+      + '<button class="sm" onclick="saveCustomActor(\'' + esc(a.slug) + '\')">Save as Custom</button>'
+      + '<button class="sm" onclick="closeStatModal()">Close</button>'
+      + '</div></div>';
+
+    modal.dataset.slug = a.slug;
+    modal.classList.add('open');
+  }
+
+  function closeStatModal() { document.getElementById('stat-modal').classList.remove('open'); }
 
   function closeSheet() {
     const modal = document.getElementById('sheet-modal');
     if (modal) modal.style.display = 'none';
   }
 
+  /* === DDB SYNC === */
+  function loadDdbConfig() {
+    fetch('/api/ddb/config')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        var el = document.getElementById('ddb-ids');
+        if (el && d.characterIds) el.value = d.characterIds.join('\n');
+        var status = document.getElementById('ddb-status');
+        if (status) {
+          var parts = [];
+          if (d.hasCookie) parts.push('Cookie: OK');
+          else parts.push('Cookie: MISSING — set COBALT_COOKIE in .env');
+          if (d.lastSync) parts.push('Last sync: ' + new Date(d.lastSync.time).toLocaleTimeString() + ' (' + d.lastSync.synced + ' ok, ' + d.lastSync.failed + ' failed)');
+          status.innerHTML = parts.join('<br>');
+        }
+      })
+      .catch(console.error);
+  }
+
+  function saveDdbConfig() {
+    var el = document.getElementById('ddb-ids');
+    var ids = el.value.split(/[\n,]+/).map(function(s) { return s.trim(); }).filter(Boolean);
+    fetch('/api/ddb/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ characterIds: ids })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(d) { addTranscript({ speaker: 'system', text: 'DDB config saved: ' + ids.length + ' character ID(s)' }); })
+      .catch(console.error);
+  }
+
+  function ddbSyncAll() {
+    addTranscript({ speaker: 'system', text: 'Syncing from D&D Beyond...' });
+    document.getElementById('ddb-status').textContent = 'Syncing...';
+    fetch('/api/ddb/sync', { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.error) { addTranscript({ speaker: 'system', text: 'DDB sync error: ' + d.error }); return; }
+        var msg = 'DDB sync: ' + d.synced + ' synced, ' + d.failed + ' failed';
+        addTranscript({ speaker: 'system', text: msg });
+        document.getElementById('ddb-status').textContent = msg;
+        if (d.results) {
+          d.results.forEach(function(r) {
+            if (r.success) addTranscript({ speaker: 'system', text: '  -> ' + r.name });
+            else addTranscript({ speaker: 'system', text: '  FAIL ' + r.id + ': ' + r.error });
+          });
+        }
+        loadCharacters();
+      })
+      .catch(function(e) { addTranscript({ speaker: 'system', text: 'DDB sync failed: ' + e.message }); });
+  }
+
+  function ddbPushAll() {
+    addTranscript({ speaker: 'system', text: 'Pushing to D&D Beyond...' });
+    fetch('/api/ddb/push', { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.error) { addTranscript({ speaker: 'system', text: 'DDB push error: ' + d.error }); return; }
+        addTranscript({ speaker: 'system', text: 'DDB push complete' });
+        for (var pid in (d.results || {})) {
+          var r = d.results[pid];
+          if (r.error) addTranscript({ speaker: 'system', text: '  ' + pid + ': FAIL ' + r.error });
+          else addTranscript({ speaker: 'system', text: '  ' + pid + ': HP pushed' + (r.spellSlots?.pushed ? ', slots pushed' : '') });
+        }
+      })
+      .catch(function(e) { addTranscript({ speaker: 'system', text: 'DDB push failed: ' + e.message }); });
+  }
+
   // Load characters on connect
-  function onConnected() { loadCharacters(); }
+  function onConnected() { loadCharacters(); loadSceneList(); loadDdbConfig(); }
 
   function showAddPlayer() {
     const f = document.getElementById('add-player-form');
@@ -1561,12 +1889,12 @@
         const res = await fetch('/api/map');
         const data = await res.json();
         if (!data.active) {
-          document.getElementById('map-name').textContent = 'No map loaded';
           return;
         }
         this.mapData = data.map;
         this.tokens = data.tokens || {};
-        document.getElementById('map-name').textContent = data.map.name;
+        if (state.map) { state.map.zones = data.map.zones || []; }
+        renderZoneList();
 
         // Center camera
         this.cam.x = 0;
@@ -1640,6 +1968,18 @@
       }
       for (let y = 0; y <= mh; y += gs) {
         ctx.beginPath(); ctx.moveTo(-mw/2, y - mh/2); ctx.lineTo(mw/2, y - mh/2); ctx.stroke();
+      }
+
+      // Fog of war (DM sees dimmed overlay for unrevealed zones)
+      for (const zone of (this.mapData.zones || [])) {
+        if (!zone.revealed) {
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.fillRect(zone.x - mw/2, zone.y - mh/2, zone.w, zone.h);
+        }
+        // Zone border
+        ctx.strokeStyle = zone.revealed ? 'rgba(48,160,80,0.3)' : 'rgba(160,48,48,0.3)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(zone.x - mw/2, zone.y - mh/2, zone.w, zone.h);
       }
 
       // Tokens
@@ -1998,6 +2338,37 @@
       }).catch(console.error);
     },
 
+    removeToken() {
+      const id = document.getElementById('token-inspector').dataset.tokenId;
+      if (!id) return;
+      const tok = this.tokens[id];
+      if (!confirm('Remove ' + (tok?.name || id) + ' from map?')) return;
+      fetch('/api/map/token/' + id, { method: 'DELETE' })
+        .then(function(r) { return r.json(); })
+        .then(function() {
+          delete VTT.tokens[id];
+          VTT.closeInspector();
+          VTT.selectedToken = null;
+          VTT.render();
+          addTranscript({ speaker: 'system', text: 'Removed token: ' + (tok?.name || id) });
+        })
+        .catch(console.error);
+    },
+
+    viewSheet() {
+      const id = document.getElementById('token-inspector').dataset.tokenId;
+      const tok = this.tokens[id];
+      if (!tok) return;
+      if (tok.type === 'pc') {
+        // Show player character sheet
+        viewSheet(id);
+      } else {
+        // Show NPC/monster stat block — try to find by slug
+        const slug = tok.slug || id.replace(/-\d+$/, '');
+        viewActorSheet(slug);
+      }
+    },
+
     // ─── SERVER COMMUNICATION ───
     _sendTokenMove(tokenId, x, y) {
       fetch('/api/map/token/move', {
@@ -2036,10 +2407,184 @@
           this._showInspector(tokenId);
         }
         this.render();
+      } else if (path === 'map.zones') {
+        if (state.map) state.map.zones = value;
+        this.mapData.zones = value;
+        renderZoneList();
+        this.render();
       } else if (path === 'map' || path === 'map.id') {
         this.loadMap();
       }
     },
+  };
+
+  /* === ACTOR LIBRARY === */
+  let _searchTimer = null;
+  function searchActors() {
+    clearTimeout(_searchTimer);
+    _searchTimer = setTimeout(_doSearch, 250);
+  }
+  function _doSearch() {
+    const q = document.getElementById('actor-search').value.trim();
+    const cr = document.getElementById('actor-cr-filter').value;
+    if (!q && !cr) {
+      document.getElementById('actor-results').innerHTML = '<span style="color:var(--text-dim)">Type to search SRD monsters + custom actors</span>';
+      return;
+    }
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (cr) params.set('cr', cr);
+    fetch('/api/actors/search?' + params)
+      .then(function(r) { return r.json(); })
+      .then(function(actors) {
+        const el = document.getElementById('actor-results');
+        if (!actors.length) { el.innerHTML = '<span style="color:var(--text-dim)">No results</span>'; return; }
+        el.innerHTML = actors.map(function(a) {
+          return '<div class="actor-row" onclick="viewActorSheet(\'' + a.slug + '\')">'
+            + '<span>' + (a.custom ? '* ' : '') + esc(a.name) + '</span>'
+            + '<span style="color:var(--text-dim)">CR ' + a.challenge_rating + '</span></div>';
+        }).join('');
+      })
+      .catch(console.error);
+  }
+
+  function placeActor(slug) {
+    const hpOverride = parseInt(document.getElementById('sb-hp-override')?.value);
+    const body = { slug: slug };
+    if (hpOverride && !isNaN(hpOverride)) body.hpOverride = hpOverride;
+    fetch('/api/actors/place', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.error) { addTranscript({ speaker: 'system', text: 'Error: ' + d.error }); return; }
+        addTranscript({ speaker: 'system', text: 'Placed ' + d.token.name + ' on map' });
+        closeStatModal();
+        VTT.loadMap();
+      })
+      .catch(console.error);
+  }
+
+  function saveCustomActor(slug) {
+    fetch('/api/actors/' + slug)
+      .then(function(r) { return r.json(); })
+      .then(function(a) {
+        const hpOverride = parseInt(document.getElementById('sb-hp-override')?.value);
+        if (hpOverride && !isNaN(hpOverride)) a.hit_points = hpOverride;
+        a.custom = true;
+        return fetch('/api/actors/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(a)
+        });
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.error) { addTranscript({ speaker: 'system', text: 'Error: ' + d.error }); return; }
+        addTranscript({ speaker: 'system', text: 'Saved custom actor: ' + d.saved });
+        closeStatModal();
+      })
+      .catch(console.error);
+  }
+
+  /* === MAP ZONES === */
+  function renderZoneList() {
+    const zones = state.map?.zones || [];
+    const el = document.getElementById('zone-list');
+    if (!zones.length) { el.innerHTML = '<span style="color:var(--text-dim)">No zones loaded</span>'; return; }
+    el.innerHTML = zones.map(function(z) {
+      return '<div class="zone-item">'
+        + '<span>' + esc(z.name || z.id) + '</span>'
+        + '<span class="zone-toggle ' + (z.revealed ? 'revealed' : 'hidden') + '" onclick="toggleZone(\'' + z.id + '\',' + !z.revealed + ')">'
+        + (z.revealed ? 'VISIBLE' : 'HIDDEN') + '</span></div>';
+    }).join('');
+  }
+
+  function toggleZone(zoneId, revealed) {
+    fetch('/api/map/zone/reveal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ zoneId: zoneId, revealed: revealed })
+    }).then(function(r) { return r.json(); }).then(function() {
+      const zones = state.map?.zones || [];
+      var z = zones.find(function(z) { return z.id === zoneId; });
+      if (z) z.revealed = revealed;
+      renderZoneList();
+      VTT.render();
+    }).catch(console.error);
+  }
+
+  function revealAllZones(revealed) {
+    fetch('/api/map/zone/reveal-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ revealed: revealed })
+    }).then(function(r) { return r.json(); }).then(function() {
+      (state.map?.zones || []).forEach(function(z) { z.revealed = revealed; });
+      renderZoneList();
+      VTT.render();
+    }).catch(console.error);
+  }
+
+  /* === SCENE MANAGEMENT === */
+  function loadSceneList() {
+    fetch('/api/map/list')
+      .then(function(r) { return r.json(); })
+      .then(function(maps) {
+        const sel = document.getElementById('scene-select');
+        sel.innerHTML = '<option value="">No map</option>' + maps.map(function(m) {
+          return '<option value="' + m.id + '"' + (m.active ? ' selected' : '') + '>' + esc(m.name) + '</option>';
+        }).join('');
+      })
+      .catch(console.error);
+  }
+
+  function loadScene(mapId) {
+    if (!mapId) return;
+    fetch('/api/map/load/' + mapId, { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function() {
+        VTT.loadMap();
+        addTranscript({ speaker: 'system', text: 'Scene loaded: ' + mapId });
+      })
+      .catch(console.error);
+  }
+
+  function saveMapState() {
+    fetch('/api/map/save-state', { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function(d) { addTranscript({ speaker: 'system', text: 'Map state saved: ' + d.saved }); })
+      .catch(console.error);
+  }
+
+  /* === SCENE EDITOR (minimal) === */
+  const SceneEditor = {
+    open() {
+      document.getElementById('scene-editor').classList.add('open');
+    },
+    close() {
+      document.getElementById('scene-editor').classList.remove('open');
+    },
+    save() {
+      const id = document.getElementById('se-map-id').value.trim();
+      const name = document.getElementById('se-map-name').value.trim();
+      const gs = parseInt(document.getElementById('se-grid-size').value) || 70;
+      if (!id || !name) { alert('Map ID and Name required'); return; }
+      fetch('/api/map/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id, name: name, gridSize: gs, width: gs*20, height: gs*15, zones: [], tokens: {} })
+      })
+        .then(function(r) { return r.json(); })
+        .then(function() {
+          addTranscript({ speaker: 'system', text: 'Map saved: ' + name });
+          SceneEditor.close();
+          loadSceneList();
+        })
+        .catch(console.error);
+    }
   };
 
   // Init VTT on DOM ready
@@ -2252,5 +2797,39 @@
   })();
 
 </script>
+
+<!-- STAT BLOCK MODAL -->
+<div id="stat-modal" onclick="if(event.target===this)closeStatModal()">
+  <div class="stat-block"></div>
+</div>
+
+<!-- SCENE EDITOR MODAL -->
+<div id="scene-editor">
+  <div style="display:flex;flex-direction:column;width:100%;height:100%;">
+    <div class="se-header">
+      <span style="font-family:Cinzel,serif;color:var(--accent);font-size:13px;">Scene Editor</span>
+      <div style="display:flex;gap:6px;">
+        <button class="sm primary" onclick="SceneEditor.save()">Save Map</button>
+        <button class="sm" onclick="SceneEditor.close()">Close</button>
+      </div>
+    </div>
+    <div style="display:flex;flex:1;overflow:hidden;">
+      <div class="se-canvas-wrap" style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:12px;">
+        Map image upload and visual editing coming in a future build
+      </div>
+      <div class="se-sidebar">
+        <div class="se-section">
+          <div class="se-label">Map ID</div>
+          <input type="text" id="se-map-id" placeholder="pallid-hart-ground">
+          <div class="se-label">Map Name</div>
+          <input type="text" id="se-map-name" placeholder="The Pallid Hart — Ground Floor">
+          <div class="se-label">Grid Size (px)</div>
+          <input type="number" id="se-grid-size" value="70" min="20" max="200">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

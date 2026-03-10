@@ -1,12 +1,27 @@
 {
   "scene": {
-    "id": "pallid-hart-common-room",
-    "name": "The Pallid Hart — Common Room",
-    "atmosphereProfile": "tavern_warm",
+    "id": "mountain-road-blizzard",
+    "name": "Mountain Road — Blizzard",
+    "atmosphereProfile": "blizzard_dark",
     "weather": "blizzard",
-    "timeOfDay": "night",
-    "description": "A cramped common room lit by a dying fire. Snow hammers the shuttered windows. The wind screams. A bar runs along the back wall where a nervous woman polishes the same glass over and over. A hooded figure sits motionless in the far corner. The door to the cellar is closed, a cloth draped over its handle. This is The Pallid Hart — the last shelter on a road that leads nowhere good."
+    "timeOfDay": "sunset",
+    "description": "A narrow mountain road through dense forest. A blizzard has descended with terrifying speed — visibility is barely thirty feet. The sun bleeds its last light through the snow, turning the world a bruised purple. Each of you has been traveling alone through these mountains, and each has heard the stories: travelers who vanish on these roads, animals found drained of blood, lights that move through the trees at night. The cold is killing. You need shelter. Ahead, through the hammering snow, you catch a faint orange glow.",
+    "arrivalNotes": "Each PC arrives alone at random intervals over the last hour before sunset. They do not know each other. Each has their own reason for being on this road. Run each arrival individually — a brief solo scene on the road (Perception checks, strange sounds, shadows between trees) before they reach the inn door."
   },
+  "scenes": [
+    {
+      "id": "mountain-road-blizzard",
+      "name": "Mountain Road — Blizzard",
+      "map": "mountain-road-blizzard",
+      "description": "The approach. Each PC travels alone through the blizzard. Strange sounds, shadows, a dead deer drained of blood. The road leads to a faint warm glow."
+    },
+    {
+      "id": "pallid-hart-common-room",
+      "name": "The Pallid Hart — Common Room",
+      "map": "pallid-hart-ground",
+      "description": "A cramped common room lit by a dying fire. Snow hammers the shuttered windows. The wind screams. A bar runs along the back wall where a nervous woman polishes the same glass over and over. A hooded figure sits motionless in the far corner. The door to the cellar is closed, a cloth draped over its handle."
+    }
+  ],
 
   "npcs": {
     "marta": {
@@ -22,6 +37,30 @@
         "Scratching sounds from the cellar at night",
         "A dead animal drained of blood found behind the inn",
         "The hooded stranger arrived two days ago and barely speaks"
+      ],
+      "dialogueHistory": []
+    },
+    "tomas": {
+      "name": "Tomas Birkov",
+      "trueIdentity": "Werewolf (cursed trapper)",
+      "role": "Nervous trapper sitting near the door",
+      "status": "alive",
+      "disposition": "agitated",
+      "location": "near the entry door",
+      "voiceProfile": "trapper_tomas",
+      "knowledge": [
+        "He is a werewolf, cursed two years ago",
+        "The full moon rises tonight — he cannot control the transformation",
+        "He came to the inn hoping to lock himself in the cellar before moonrise",
+        "He can smell something unnatural in the inn but doesn't know it's a vampire",
+        "He knows these mountain woods intimately — every trail, cave, and den",
+        "The scratches on his arms are self-inflicted from his last transformation"
+      ],
+      "revealTriggers": [
+        "The full moon becomes visible through a broken shutter or opened door",
+        "He is badly wounded and the beast takes over",
+        "Someone examines his wounds closely (DC 14 Medicine/Nature)",
+        "Midnight approaches and he becomes desperate to reach the cellar"
       ],
       "dialogueHistory": []
     },
@@ -55,13 +94,18 @@
     "currentAct": "act1_arrival",
     "beats": [
       {
-        "id": "arrival",
-        "name": "Strangers arrive at the inn and take shelter from the blizzard",
+        "id": "road_arrival",
+        "name": "Each PC arrives alone on the mountain road — solo scenes with Perception checks, strange sounds, shadows in the trees, a dead bloodless deer",
+        "status": "pending"
+      },
+      {
+        "id": "enter_inn",
+        "name": "PCs reach the Pallid Hart one by one, shaking snow from their cloaks. Marta greets them nervously. The warmth is a relief but the inn feels wrong.",
         "status": "pending"
       },
       {
         "id": "introductions",
-        "name": "Characters introduce themselves to each other and to Marta",
+        "name": "Characters introduce themselves to each other and to the patrons — Henryk the merchant, Brother Aldric the pilgrim, Katya the minstrel, Old Gregor the farmer. And the hooded stranger who says nothing.",
         "status": "pending"
       },
       {

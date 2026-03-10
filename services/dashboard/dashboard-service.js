@@ -136,6 +136,15 @@ class DashboardService {
       res.json(svc.getStatus());
     });
 
+    // DELETE /api/characters/:charId — delete a character from the system
+    this.app.delete('/api/characters/:charId', (req, res) => {
+      const svc = this.orchestrator.getService('characters');
+      if (!svc) return res.status(503).json({ error: 'Character service not running' });
+      const deleted = svc.deleteCharacter(req.params.charId);
+      if (!deleted) return res.status(404).json({ error: 'Character not found' });
+      res.json({ deleted: req.params.charId });
+    });
+
     // POST /api/characters/reload   — reload JSON files into game state (no restart)
     this.app.post('/api/characters/reload', (req, res) => {
       const svc = this.orchestrator.getService('characters');
@@ -188,6 +197,76 @@ class DashboardService {
       this.state.set('players', players);
       console.log('[Dashboard] Player slot removed: ' + playerId);
       res.json({ removed: playerId });
+    });
+
+    // ── DDB Sync routes ─────────────────────────────────────────────────
+
+    // GET /api/ddb/config — get DDB sync configuration
+    this.app.get('/api/ddb/config', (req, res) => {
+      const svc = this.orchestrator.getService('characters');
+      if (!svc) return res.status(503).json({ error: 'Character service not running' });
+      const conf = svc._readDdbConfig();
+      res.json({ ...conf, hasCookie: !!process.env.COBALT_COOKIE, lastSync: svc._lastSync });
+    });
+
+    // POST /api/ddb/config — save DDB sync configuration
+    // body: { characterIds: ['12345', '67890'] }
+    this.app.post('/api/ddb/config', (req, res) => {
+      const svc = this.orchestrator.getService('characters');
+      if (!svc) return res.status(503).json({ error: 'Character service not running' });
+      const { characterIds } = req.body || {};
+      if (!Array.isArray(characterIds)) return res.status(400).json({ error: 'characterIds array required' });
+      svc.saveDdbConfig({ characterIds: characterIds.map(String).filter(Boolean) });
+      res.json({ saved: true, characterIds });
+    });
+
+    // POST /api/ddb/sync — sync ALL configured characters from DDB
+    this.app.post('/api/ddb/sync', async (req, res) => {
+      const svc = this.orchestrator.getService('characters');
+      if (!svc) return res.status(503).json({ error: 'Character service not running' });
+      try {
+        const result = await svc.ddbSyncAll();
+        res.json(result);
+      } catch (e) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // POST /api/ddb/sync/:ddbId — sync ONE character from DDB
+    this.app.post('/api/ddb/sync/:ddbId', async (req, res) => {
+      const svc = this.orchestrator.getService('characters');
+      if (!svc) return res.status(503).json({ error: 'Character service not running' });
+      try {
+        const char = await svc.ddbSyncOne(req.params.ddbId);
+        svc.reload();
+        res.json({ synced: char.name, character: { name: char.name, class: char.class, level: char.level, race: char.race } });
+      } catch (e) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // POST /api/ddb/push — push HP/slots back to DDB for ALL players
+    this.app.post('/api/ddb/push', async (req, res) => {
+      const svc = this.orchestrator.getService('characters');
+      if (!svc) return res.status(503).json({ error: 'Character service not running' });
+      try {
+        const results = await svc.ddbPushAll();
+        res.json({ pushed: true, results });
+      } catch (e) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // POST /api/ddb/push/:playerId — push HP/slots back to DDB for one player
+    this.app.post('/api/ddb/push/:playerId', async (req, res) => {
+      const svc = this.orchestrator.getService('characters');
+      if (!svc) return res.status(503).json({ error: 'Character service not running' });
+      try {
+        const result = await svc.ddbPushPlayer(req.params.playerId);
+        res.json({ pushed: true, result });
+      } catch (e) {
+        res.status(500).json({ error: e.message });
+      }
     });
 
     // POST /api/characters/import  — receive character data pushed from Foundry module

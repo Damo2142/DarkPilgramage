@@ -407,6 +407,21 @@ class PlayerBridgeService {
         break;
       }
 
+      case 'inventory:update':
+        this.state.set(`players.${playerId}.character.inventory`, msg.inventory || []);
+        if (msg.currency) this.state.set(`players.${playerId}.character.currency`, msg.currency);
+        this.bus.dispatch('player:inventory_update', { playerId });
+        break;
+
+      case 'spells:update':
+        this.state.set(`players.${playerId}.character.spells`, msg.spells || []);
+        this.bus.dispatch('player:spells_update', { playerId });
+        break;
+
+      case 'spell:aoe':
+        this.bus.dispatch('player:spell_aoe', { playerId, spell: msg.spell, aoe: msg.aoe, x: msg.x, y: msg.y, damageType: msg.damageType });
+        break;
+
       case 'ping':
         this._sendToPlayer(playerId, { type: 'pong', ts: Date.now() });
         break;

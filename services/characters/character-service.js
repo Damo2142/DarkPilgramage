@@ -56,6 +56,9 @@ class CharacterService {
       console.log('[Characters] Auto-syncing ' + ddbConf.characterIds.length + ' character(s) from D&D Beyond...');
       this.ddbSyncAll().catch(e => console.warn('[Characters] Auto-sync failed:', e.message));
     }
+    // Listen for player inventory/spell updates and persist to disk
+    this.bus.subscribe('player:inventory_update', (env) => this._persistPlayerCharacter(env.data.playerId), 'characters');
+    this.bus.subscribe('player:spells_update', (env) => this._persistPlayerCharacter(env.data.playerId), 'characters');
   }
 
   async stop() {}
@@ -202,6 +205,15 @@ class CharacterService {
       ddbConfig: this._readDdbConfig(),
       lastSync: this._lastSync
     };
+  }
+
+  // Save player's current character state back to disk
+  _persistPlayerCharacter(playerId) {
+    const charData = this.state.get('players.' + playerId + '.character');
+    if (!charData) return;
+    const id = charData.ddbId || charData.foundryId;
+    if (!id) return;
+    this.saveCharacter(String(id), charData);
   }
 
   // ══════════════════════════════════════════════════════════════════════════

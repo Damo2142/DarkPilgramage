@@ -119,6 +119,8 @@
     .inv-item{display:flex;align-items:center;gap:6px;padding:5px 6px;background:var(--surface2);border-radius:4px;margin-bottom:3px;font-size:12px;}
     .eqdot{width:8px;height:8px;border-radius:50%;border:1px solid var(--border);cursor:pointer;flex-shrink:0;}
     .eqdot.eq{background:var(--green);border-color:var(--green);}
+    .attdot{font-size:8px;color:var(--border);cursor:pointer;flex-shrink:0;line-height:1;}
+    .attdot.att{color:var(--accent);text-shadow:0 0 4px var(--accent);}
     .iname{flex:1;}
     .iqty{color:var(--text-dim);font-size:11px;}
     .currow{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:6px;}
@@ -299,19 +301,42 @@
   </div>
   <!-- SPELLS -->
   <div class="panel" id="panel-spells">
+    <div id="cast-result" style="display:none;background:var(--surface3);border:1px solid var(--accent-dim);border-radius:6px;padding:10px;margin-bottom:8px;">
+      <div id="cast-result-name" style="font-family:Cinzel,serif;color:var(--accent);font-size:14px;margin-bottom:4px;"></div>
+      <div id="cast-result-details" style="font-size:12px;line-height:1.6;"></div>
+      <div id="cast-result-total" style="font-size:28px;font-weight:700;color:var(--accent);text-align:center;margin:6px 0;"></div>
+      <div id="cast-result-breakdown" style="font-size:11px;color:var(--text-dim);text-align:center;"></div>
+      <button style="width:100%;margin-top:8px;padding:6px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text-dim);font-size:11px;cursor:pointer;" onclick="$('cast-result').style.display='none'">Dismiss</button>
+    </div>
     <div class="spellbar" id="spellbar"></div>
     <div class="st">Spell Slots</div><div id="slotarea"></div>
     <div class="st">Cantrips</div><div id="cantrips"></div>
     <div class="st">Spells</div><div id="spelllist"></div>
-    <button class="add-btn" onclick="openAddSpell()">+ Add Spell</button>
+    <div style="display:flex;gap:4px;">
+      <button class="add-btn" style="flex:1;" onclick="openAddSpell()">+ Manual</button>
+      <button class="add-btn" style="flex:1;" onclick="openSrdSpellSearch()">+ SRD Spell</button>
+    </div>
+    <div id="srd-spell-search" style="display:none;margin-top:6px;">
+      <input id="srd-spell-q" type="text" placeholder="Search SRD spells..." style="width:100%;padding:4px 8px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px;" oninput="searchSrdSpells()">
+      <div id="srd-spell-results" style="max-height:200px;overflow-y:auto;font-size:11px;margin-top:4px;"></div>
+    </div>
   </div>
   <!-- SKILLS -->
   <div class="panel" id="panel-skills"><div id="sklist"></div></div>
   <!-- INVENTORY -->
   <div class="panel" id="panel-inventory">
+    <div id="inv-attune" style="font-size:10px;color:var(--text-dim);margin-bottom:4px;"></div>
+    <div id="inv-weight" style="font-size:10px;color:var(--text-dim);margin-bottom:6px;"></div>
     <div id="invlist"></div>
     <div class="st">Currency</div><div class="currow" id="currow"></div>
-    <button class="add-btn" style="margin-top:8px;" onclick="openAddItem()">+ Add Item</button>
+    <div style="display:flex;gap:4px;margin-top:8px;">
+      <button class="add-btn" style="flex:1;" onclick="openAddItem()">+ Manual</button>
+      <button class="add-btn" style="flex:1;" onclick="openSrdItemSearch()">+ SRD Item</button>
+    </div>
+    <div id="srd-item-search" style="display:none;margin-top:6px;">
+      <input id="srd-item-q" type="text" placeholder="Search SRD items..." style="width:100%;padding:4px 8px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px;" oninput="searchSrdItems()">
+      <div id="srd-item-results" style="max-height:200px;overflow-y:auto;font-size:11px;margin-top:4px;"></div>
+    </div>
   </div>
   <!-- FEATURES -->
   <div class="panel" id="panel-features"><div id="featlist"></div><button class="add-btn" onclick="openAddFeat()">+ Add Feature / Trait</button></div>
@@ -423,12 +448,14 @@ function loadChar(c){
       return{name:a.name,toHit:a.toHit||0,dmgDice,dmgMod,dmgType:a.damageType||'',range:a.range||'5ft'};
     });
   }
-  // Populate spells from DDB sync data
-  if(c.spells&&c.spells.length){spells=c.spells.map(s=>({name:s.name,level:s.level||0,concentration:!!s.concentration,ritual:!!s.ritual,school:s.school||'',description:s.description||''}));}
+  // Populate spells from DDB sync data — keep all fields
+  if(c.spells&&c.spells.length){spells=c.spells.map(s=>({...s, level:s.level||0, concentration:!!s.concentration, ritual:!!s.ritual, school:s.school||'', description:s.description||''}));}
   // Populate features from DDB sync data (format: {name,source,description})
   if(c.features&&c.features.length){feats=c.features.map(f=>({name:f.name,src:f.source||'',desc:f.description||''}));}
   renderHp(); renderAbil(); renderSaves(); renderSkills(); renderAtks(); renderSpells(); renderInv(); renderFeats(); renderConds();
   $('notes-area').value=localStorage.getItem('dpnotes_'+PID)||'';
+  // Enrich spells with SRD data (damage, save, AOE, etc.)
+  enrichSpellsFromSRD();
 }
 
 function abilMod(ab){return char.abilities&&char.abilities[ab]?char.abilities[ab].modifier:0;}
@@ -437,7 +464,7 @@ function abilMod(ab){return char.abilities&&char.abilities[ab]?char.abilities[ab
 function renderAbil(){
   $('abgrid').innerHTML=['str','dex','con','int','wis','cha'].map(ab=>{
     const a=(char.abilities||{})[ab]||{score:10,modifier:0,modifierStr:'+0'};
-    return '<div class="abbox"><div class="abn">'+ab.toUpperCase()+'</div><div class="abm">'+(a.modifierStr||fmt(a.modifier))+'</div><div class="abs" onclick="editAbil(\''+ab+'\','+a.score+')">'+a.score+'</div></div>';
+    return '<div class="abbox"><div class="abn">'+ab.toUpperCase()+'</div><div class="abm" onclick="rollCheck(\''+ab.toUpperCase()+' Check\','+a.modifier+',\'ability\')" style="cursor:pointer;" title="Roll '+ab.toUpperCase()+' check">'+(a.modifierStr||fmt(a.modifier))+'</div><div class="abs" onclick="editAbil(\''+ab+'\','+a.score+')">'+a.score+'</div></div>';
   }).join('');
 }
 
@@ -445,7 +472,7 @@ function renderSaves(){
   $('savelist').innerHTML=['str','dex','con','int','wis','cha'].map(ab=>{
     const s=(char.savingThrows||{})[ab]||{modifier:abilMod(ab),proficient:false};
     const mod=typeof s==='object'?s.modifier:s, prof=typeof s==='object'&&s.proficient;
-    return '<div class="skr"><div class="pdot '+(prof?'full':'')+'" onclick="toggleSave(\''+ab+'\')"></div><span class="skn">'+ab.toUpperCase()+'</span><span class="skmod">'+fmt(mod)+'</span></div>';
+    return '<div class="skr"><div class="pdot '+(prof?'full':'')+'" onclick="toggleSave(\''+ab+'\')"></div><span class="skn">'+ab.toUpperCase()+'</span><span class="skmod" onclick="rollCheck(\''+ab.toUpperCase()+' Save\','+mod+',\'save\')" style="cursor:pointer;" title="Roll save">'+fmt(mod)+'</span></div>';
   }).join('');
 }
 
@@ -455,7 +482,8 @@ function renderSkills(){
     const mod=typeof s==='object'?s.modifier:s, p=typeof s==='object'?s.proficiency:'none';
     const dc=p==='expertise'?'exp':p==='proficiency'?'full':'';
     const abl='('+ab.substring(0,3).toUpperCase()+')';
-    return '<div class="skr"><div class="pdot '+dc+'" onclick="cycleSk(\''+sk+'\')"></div><span class="skn">'+cap(sk.replace(/-/g,' '))+' <span style="color:var(--text-dim);font-size:10px;">'+abl+'</span></span><span class="skmod">'+fmt(mod)+'</span></div>';
+    const label=cap(sk.replace(/-/g,' '));
+    return '<div class="skr"><div class="pdot '+dc+'" onclick="cycleSk(\''+sk+'\')"></div><span class="skn">'+label+' <span style="color:var(--text-dim);font-size:10px;">'+abl+'</span></span><span class="skmod" onclick="rollCheck(\''+label+'\','+mod+',\'skill\')" style="cursor:pointer;" title="Roll '+label+'">'+fmt(mod)+'</span></div>';
   }).join('');
 }
 
@@ -586,15 +614,42 @@ function renderSpells(){
 }
 
 function spRow(s,i){
-  return '<div class="sp-item" onclick="togSpDesc(this)"><div style="flex:1"><strong>'+esc(s.name)+'</strong>'
+  let badges='';
+  if(s.castingTime&&s.castingTime!=='1 action') badges+='<span style="font-size:9px;color:var(--orange);background:rgba(192,112,48,.12);border-radius:2px;padding:0 3px;">'+esc(s.castingTime)+'</span> ';
+  if(s.range&&s.range!=='Self'&&s.range!=='Touch') badges+='<span style="font-size:9px;color:var(--text-dim);">'+esc(s.range)+'</span> ';
+  if(s.damage) badges+='<span style="font-size:9px;color:var(--red);background:rgba(160,48,48,.12);border-radius:2px;padding:0 3px;">'+esc(s.damage)+' '+(s.damageType||'')+'</span> ';
+  if(s.healing) badges+='<span style="font-size:9px;color:var(--green);background:rgba(48,160,80,.12);border-radius:2px;padding:0 3px;">heal '+esc(s.healing)+'</span> ';
+  if(s.save) badges+='<span style="font-size:9px;color:var(--purple);background:rgba(112,80,160,.12);border-radius:2px;padding:0 3px;">'+s.save+' save</span> ';
+  if(s.areaOfEffect) badges+='<span style="font-size:9px;color:var(--blue);background:rgba(64,128,192,.12);border-radius:2px;padding:0 3px;">'+s.areaOfEffect.size+'ft '+s.areaOfEffect.type+'</span> ';
+
+  let descHtml='';
+  if(s.description){
+    descHtml='<div class="sp-desc" style="display:none;font-size:11px;color:var(--text-dim);padding:2px 8px 6px;line-height:1.4;">'+esc(s.description);
+    if(s.components) descHtml+='<br><strong>Components:</strong> '+esc(s.components);
+    if(s.duration) descHtml+='<br><strong>Duration:</strong> '+esc(s.duration);
+    if(s.higherLevel) descHtml+='<br><strong>Higher Levels:</strong> '+esc(s.higherLevel);
+    descHtml+='</div>';
+  }
+
+  return '<div class="sp-item"><div style="flex:1;cursor:pointer;" onclick="togSpDesc(this.parentElement)"><strong>'+esc(s.name)+'</strong>'
     +(s.level===0?' <span style="font-size:9px;color:var(--text-dim);">Cantrip</span>':' <span style="font-size:9px;color:var(--text-dim);">Lv'+s.level+'</span>')
     +(s.school?' <span style="font-size:9px;color:var(--text-dim);">'+esc(s.school)+'</span>':'')
     +(s.concentration?' <span style="font-size:9px;color:var(--blue);background:rgba(41,128,185,.15);border-radius:2px;padding:1px 4px;">C</span>':'')
     +(s.ritual?' <span style="font-size:9px;color:var(--green);background:rgba(39,174,96,.15);border-radius:2px;padding:1px 4px;">R</span>':'')
-    +'</div><span style="cursor:pointer;color:var(--text-dim);font-size:11px;" onclick="event.stopPropagation();rmSpell('+i+')">✕</span></div>'
-    +(s.description?'<div class="sp-desc" style="display:none;font-size:11px;color:var(--text-dim);padding:2px 8px 6px;line-height:1.4;">'+esc(s.description)+'</div>':'');
+    +'</div>'
+    +'<button style="font-size:10px;padding:2px 8px;background:var(--accent-dim);color:#fff;border:none;border-radius:3px;cursor:pointer;white-space:nowrap;" onclick="event.stopPropagation();castSpell('+i+')">⚡ Cast</button>'
+    +'<span style="cursor:pointer;color:var(--text-dim);font-size:11px;margin-left:4px;" onclick="event.stopPropagation();rmSpell('+i+')">✕</span></div>'
+    +(badges?'<div style="padding:0 8px 2px;">'+badges+'</div>':'')
+    +descHtml;
 }
-function togSpDesc(el){const d=el.nextElementSibling;if(d&&d.classList.contains('sp-desc'))d.style.display=d.style.display==='none'?'block':'none';}
+function togSpDesc(el){
+  // Walk siblings of the sp-item to find the sp-desc div
+  let node=el.nextElementSibling;
+  while(node){
+    if(node.classList&&node.classList.contains('sp-desc')){node.style.display=node.style.display==='none'?'block':'none';return;}
+    node=node.nextElementSibling;
+  }
+}
 
 function useSlot(lvl,idx,total){
   const cur=slotState[lvl]!==undefined?slotState[lvl]:total;
@@ -602,7 +657,10 @@ function useSlot(lvl,idx,total){
   renderSpells();
 }
 
-function rmSpell(i){spells.splice(i,1);renderSpells();}
+function rmSpell(i){
+  if(!confirm('Remove '+spells[i].name+'?'))return;
+  spells.splice(i,1);renderSpells();syncSpells();
+}
 
 function openAddSpell(){
   openEdit('Add Spell',[
@@ -610,7 +668,332 @@ function openAddSpell(){
     {id:'level',lbl:'Level (0=cantrip)',val:'1',type:'number'},
     {id:'concentration',lbl:'Concentration (yes/no)',val:'no'},
     {id:'ritual',lbl:'Ritual (yes/no)',val:'no'}
-  ],()=>{const v=getEV();if(!v.name)return;spells.push({name:v.name,level:+v.level,concentration:v.concentration==='yes',ritual:v.ritual==='yes'});renderSpells();});
+  ],()=>{const v=getEV();if(!v.name)return;spells.push({name:v.name,level:+v.level,concentration:v.concentration==='yes',ritual:v.ritual==='yes'});renderSpells();syncSpells();});
+}
+
+function openSrdSpellSearch(){
+  const el=$('srd-spell-search');
+  el.style.display=el.style.display==='none'?'block':'none';
+  if(el.style.display==='block'){$('srd-spell-q').value='';$('srd-spell-results').innerHTML='';$('srd-spell-q').focus();}
+}
+
+var _srdSpellTimer=null;
+function searchSrdSpells(){
+  clearTimeout(_srdSpellTimer);
+  _srdSpellTimer=setTimeout(()=>{
+    const q=$('srd-spell-q').value.trim();
+    if(q.length<2){$('srd-spell-results').innerHTML='<div style="color:var(--text-dim);">Type 2+ chars...</div>';return;}
+    fetch('/api/spells/search?q='+encodeURIComponent(q)+'&limit=20')
+      .then(r=>r.json())
+      .then(items=>{
+        if(!items.length){$('srd-spell-results').innerHTML='<div style="color:var(--text-dim);">No matches</div>';return;}
+        $('srd-spell-results').innerHTML=items.map(sp=>{
+          const lvl=sp.level===0?'Cantrip':'Level '+sp.level;
+          let info=lvl+' · '+sp.school;
+          if(sp.concentration) info+=' · C';
+          if(sp.ritual) info+=' · R';
+          if(sp.damage) info+=' · '+sp.damage+' '+sp.damageType;
+          if(sp.healing) info+=' · heal '+sp.healing;
+          return '<div style="padding:3px 4px;border-bottom:1px solid var(--border);cursor:pointer;" onclick=\'addSrdSpell('+JSON.stringify(sp).replace(/'/g,"\\'")+')\' title="'+esc(sp.description||'')+'">'
+            +'<div style="display:flex;justify-content:space-between;"><span style="color:var(--accent);">'+esc(sp.name)+'</span>'
+            +'<span style="color:var(--text-dim);font-size:10px;">'+esc(info)+'</span></div>'
+            +(sp.description?'<div style="font-size:10px;color:var(--text-dim);line-height:1.3;margin-top:1px;">'+esc(sp.description.slice(0,120))+(sp.description.length>120?'...':'')+'</div>':'')
+            +'</div>';
+        }).join('');
+      })
+      .catch(e=>{$('srd-spell-results').innerHTML='<div style="color:var(--red);">Error: '+esc(e.message)+'</div>';});
+  },300);
+}
+
+function addSrdSpell(sp){
+  // Check if already known
+  if(spells.some(s=>s.name===sp.name)){alert(sp.name+' already in spellbook!');return;}
+  spells.push({
+    name:sp.name,
+    level:sp.level||0,
+    school:sp.school||'',
+    concentration:!!sp.concentration,
+    ritual:!!sp.ritual,
+    description:sp.description||'',
+    castingTime:sp.castingTime||'1 action',
+    range:sp.range||'',
+    components:sp.components||'',
+    duration:sp.duration||'',
+    damage:sp.damage||null,
+    damageType:sp.damageType||null,
+    healing:sp.healing||null,
+    areaOfEffect:sp.areaOfEffect||null,
+    save:sp.save||null,
+    classes:sp.classes||[],
+    higherLevel:sp.higherLevel||null
+  });
+  renderSpells();
+  syncSpells();
+  $('srd-spell-search').style.display='none';
+}
+
+function syncSpells(){
+  send({type:'spells:update', spells:spells});
+}
+
+// Auto-enrich spells that are missing SRD data (damage, save, AOE, etc.)
+function enrichSpellsFromSRD(){
+  // Find spells missing key combat data
+  const needsEnrich = spells.filter(s => !s._enriched && (!s.damage && !s.save && !s.healing && !s.castingTime));
+  if(!needsEnrich.length) return;
+
+  // Batch fetch — search for each spell name
+  const names = needsEnrich.map(s => s.name);
+  let fetched = 0;
+  for(const name of names){
+    fetch('/api/spells/search?q='+encodeURIComponent(name)+'&limit=5')
+      .then(r=>r.json())
+      .then(results=>{
+        // Find exact match
+        const match = results.find(r => r.name.toLowerCase() === name.toLowerCase());
+        if(match){
+          const sp = spells.find(s => s.name === name);
+          if(sp){
+            // Merge SRD data into existing spell — don't overwrite what's already there
+            if(match.damage && !sp.damage) sp.damage = match.damage;
+            if(match.damageType && !sp.damageType) sp.damageType = match.damageType;
+            if(match.save && !sp.save) sp.save = match.save;
+            if(match.healing && !sp.healing) sp.healing = match.healing;
+            if(match.areaOfEffect && !sp.areaOfEffect) sp.areaOfEffect = match.areaOfEffect;
+            if(match.castingTime && !sp.castingTime) sp.castingTime = match.castingTime;
+            if(match.range && !sp.range) sp.range = match.range;
+            if(match.components && !sp.components) sp.components = match.components;
+            if(match.duration && !sp.duration) sp.duration = match.duration;
+            if(match.classes && !sp.classes) sp.classes = match.classes;
+            if(match.higherLevel && !sp.higherLevel) sp.higherLevel = match.higherLevel;
+            if(match.description && (!sp.description || sp.description.length < match.description.length)) sp.description = match.description;
+            sp._enriched = true;
+          }
+        }
+        fetched++;
+        // Re-render once all done
+        if(fetched >= names.length){
+          renderSpells();
+          syncSpells(); // Save enriched data
+        }
+      })
+      .catch(()=>{ fetched++; });
+  }
+}
+
+function castSpell(idx){
+  const s=spells[idx];if(!s)return;
+  const sa=char.spellcastingAbility||'cha', sm=abilMod(sa), prof=char.proficiencyBonus||2;
+  const saveDC=8+sm+prof, atkMod=sm+prof;
+
+  // For leveled spells, consume a slot
+  if(s.level>0){
+    const slotKey='level'+s.level;
+    const sl=(char.spellSlots||{})[slotKey];
+    if(sl){
+      const rem=slotState[slotKey]!==undefined?slotState[slotKey]:(sl.remaining||sl.total||0);
+      if(rem<=0){
+        if(!confirm('No Level '+s.level+' slots remaining! Cast anyway?'))return;
+      } else {
+        slotState[slotKey]=rem-1;
+      }
+    }
+  }
+
+  // Build result lines
+  var lines=[], bigNum='', bigColor='var(--accent)', summary='';
+
+  // ── Spell attack (damage, no save) ──
+  if(s.damage && !s.save){
+    const d20=Math.floor(Math.random()*20)+1;
+    const total=d20+atkMod;
+    const crit=d20===20, fumble=d20===1;
+    bigNum=String(total);
+    bigColor=crit?'#c9a54e':fumble?'#8b0000':'var(--accent)';
+    lines.push('<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim);">Attack Roll</span><span>d20(<strong>'+d20+'</strong>) '+fmt(atkMod)+' = <strong style="color:'+(crit?'#c9a54e':fumble?'#8b0000':'#fff')+'">'+total+'</strong>'+(crit?' <span style="color:#c9a54e;">CRITICAL!</span>':'')+(fumble?' <span style="color:#8b0000;">MISS!</span>':'')+'</span></div>');
+    const dr=rollDiceStr(s.damage, crit);
+    lines.push('<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim);">Damage</span><span><strong style="color:var(--red);">'+dr.total+'</strong> '+(s.damageType||'')+' <span style="color:var(--text-dim);font-size:10px;">('+dr.formula+')</span></span></div>');
+    summary='Attack: '+total+(crit?' CRIT':'')+ ' | '+dr.total+' '+(s.damageType||'')+' dmg';
+  }
+  // ── Save-based spell ──
+  else if(s.save){
+    lines.push('<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim);">Save Required</span><span><strong style="color:var(--purple);">'+s.save+' DC '+saveDC+'</strong></span></div>');
+    if(s.damage){
+      const dr=rollDiceStr(s.damage, false);
+      bigNum=String(dr.total);
+      bigColor='var(--red)';
+      lines.push('<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim);">Damage (on fail)</span><span><strong style="color:var(--red);">'+dr.total+'</strong> '+(s.damageType||'')+' <span style="color:var(--text-dim);font-size:10px;">('+dr.formula+')</span></span></div>');
+      summary=s.save+' DC '+saveDC+' | '+dr.total+' '+(s.damageType||'')+' dmg';
+    } else {
+      bigNum='DC '+saveDC;
+      summary=s.save+' Save DC '+saveDC;
+    }
+  }
+  // ── Healing spell ──
+  else if(s.healing){
+    const hStr=s.healing.replace(/modifier/gi,String(sm));
+    const hr=rollDiceStr(hStr, false);
+    bigNum=String(hr.total);
+    bigColor='var(--green)';
+    lines.push('<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim);">Healing</span><span><strong style="color:var(--green);">'+hr.total+' HP</strong> <span style="color:var(--text-dim);font-size:10px;">('+hr.formula+')</span></span></div>');
+    summary='Heal '+hr.total+' HP';
+  }
+  // ── Utility spell ──
+  else {
+    bigNum='✓';
+    bigColor='var(--green)';
+    summary='Cast';
+  }
+
+  // Common info lines
+  if(s.range) lines.push('<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim);">Range</span><span>'+esc(s.range)+'</span></div>');
+  if(s.duration) lines.push('<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim);">Duration</span><span>'+esc(s.duration)+'</span></div>');
+  if(s.areaOfEffect) lines.push('<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim);">Area</span><span style="color:var(--blue);">'+s.areaOfEffect.size+'ft '+s.areaOfEffect.type+'</span></div>');
+  if(s.concentration) lines.push('<div style="color:var(--blue);font-size:11px;text-align:center;margin-top:2px;">⚠ Concentration</div>');
+  if(s.level>0){
+    const slotKey='level'+s.level;
+    const sl=(char.spellSlots||{})[slotKey];
+    const rem=slotState[slotKey]!==undefined?slotState[slotKey]:(sl?sl.remaining||0:0);
+    const tot=sl?sl.total||0:0;
+    lines.push('<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim);">Slot Used</span><span>Level '+s.level+' ('+rem+'/'+tot+' remaining)</span></div>');
+  }
+
+  // Show inline result
+  $('cast-result').style.display='block';
+  $('cast-result-name').textContent='⚡ '+s.name+(s.level>0?' (Level '+s.level+')':' (Cantrip)');
+  $('cast-result-total').textContent=bigNum;
+  $('cast-result-total').style.color=bigColor;
+  $('cast-result-details').innerHTML=lines.join('');
+  $('cast-result-breakdown').textContent='';
+
+  // Scroll to see result
+  $('cast-result').scrollIntoView({behavior:'smooth',block:'start'});
+
+  // Log to roll history
+  addRH(s.name+' → '+summary);
+  send({type:'roll:result',rollType:'spell',formula:s.name,label:s.name+': '+summary,total:0,details:summary});
+
+  // Show AOE on map if applicable
+  if(s.areaOfEffect && PlayerMap && PlayerMap.mapData){
+    showTab('map');
+    var selfRange = (s.range||'').toLowerCase()==='self' || (s.range||'').toLowerCase()==='touch';
+    var aoeType = s.areaOfEffect.type;
+    // Self-range sphere/cube: auto-place centered on caster, no targeting needed
+    if(selfRange && (aoeType==='sphere' || aoeType==='cube')){
+      var tok = PlayerMap.tokens[PID];
+      if(tok){
+        var gs = PlayerMap.mapData.gridSize;
+        var sizeInPx = (s.areaOfEffect.size / 5) * gs;
+        _spellAOE = {type:aoeType, size:sizeInPx, x:tok.x, y:tok.y, name:s.name, damageType:s.damageType||'', angle:0};
+        PlayerMap.render();
+        clearTimeout(_spellAOETimeout);
+        _spellAOETimeout = setTimeout(function(){ _spellAOE=null; PlayerMap.render(); }, 12000);
+        send({type:'spell:aoe', spell:s.name, aoe:s.areaOfEffect, x:tok.x, y:tok.y, damageType:s.damageType||'', angle:0});
+      }
+    } else {
+      startAOETargeting(s);
+    }
+  }
+
+  renderSpells();
+}
+
+// ── SPELL AOE VISUALIZATION ─────────────────────────────────────────
+var _spellAOE = null;
+var _spellAOETimeout = null;
+var _aoeTargeting = null; // {spell, sizeInPx, type, name, damageType} while placing
+
+function startAOETargeting(spell){
+  if(!spell.areaOfEffect || !PlayerMap.mapData) return;
+  const gs = PlayerMap.mapData.gridSize;
+  const sizeInPx = (spell.areaOfEffect.size / 5) * gs;
+
+  _aoeTargeting = {
+    spell: spell,
+    type: spell.areaOfEffect.type,
+    size: sizeInPx,
+    name: spell.name,
+    damageType: spell.damageType || '',
+    // For self-originating spells (cone, line, or self-range), anchor at caster
+    selfOrigin: (spell.areaOfEffect.type === 'cone' || spell.areaOfEffect.type === 'line' || (spell.range||'').toLowerCase()==='self')
+  };
+
+  // Show banner
+  var banner = $('zone-banner');
+  $('zone-banner-text').textContent = '🎯 Click map to place ' + spell.name + ' (' + spell.areaOfEffect.size + 'ft ' + spell.areaOfEffect.type + ')';
+  banner.style.display = 'block';
+  PlayerMap.canvas.style.cursor = 'crosshair';
+
+  // For cone/line from self, place immediately at caster position
+  if(_aoeTargeting.selfOrigin){
+    var tok = PlayerMap.tokens[PID];
+    if(tok) {
+      _aoeTargeting._previewX = tok.x;
+      _aoeTargeting._previewY = tok.y;
+    }
+  }
+
+  PlayerMap.render();
+}
+
+function placeAOE(mapX, mapY){
+  if(!_aoeTargeting) return;
+  var t = _aoeTargeting;
+  _aoeTargeting = null;
+
+  // For cone/line: origin is caster, mapX/mapY is direction
+  var ox = mapX, oy = mapY;
+  if(t.selfOrigin){
+    var tok = PlayerMap.tokens[PID];
+    if(tok){ ox = tok.x; oy = tok.y; }
+  }
+
+  _spellAOE = {
+    type: t.type,
+    size: t.size,
+    x: ox,
+    y: oy,
+    name: t.name,
+    damageType: t.damageType,
+    // For cone/line, store angle toward click point
+    angle: t.selfOrigin ? Math.atan2(mapY - oy, mapX - ox) : 0
+  };
+
+  // Hide targeting banner
+  $('zone-banner').style.display = 'none';
+  PlayerMap.canvas.style.cursor = '';
+  PlayerMap.render();
+
+  // Auto-clear AOE after 12 seconds
+  clearTimeout(_spellAOETimeout);
+  _spellAOETimeout = setTimeout(function(){ _spellAOE=null; PlayerMap.render(); }, 12000);
+
+  // Send to server so DM sees it
+  send({type:'spell:aoe', spell: t.name, aoe: t.spell.areaOfEffect, x: ox, y: oy, damageType: t.damageType, angle: _spellAOE.angle});
+
+  // Clear after 15 seconds
+  clearTimeout(_spellAOETimeout);
+  _spellAOETimeout = setTimeout(function(){ _spellAOE = null; PlayerMap.render(); }, 15000);
+}
+
+function cancelAOETargeting(){
+  _aoeTargeting = null;
+  $('zone-banner').style.display = 'none';
+  PlayerMap.canvas.style.cursor = '';
+  PlayerMap.render();
+}
+
+// Parse and roll dice string like "2d6+3"
+function rollDiceStr(str, crit){
+  const parts=str.match(/(\d+)d(\d+)([+-]\d+)?/);
+  if(!parts) return {formula:str,total:0};
+  let count=parseInt(parts[1])*(crit?2:1);
+  const sides=parseInt(parts[2]);
+  const bonus=parseInt(parts[3]||'0');
+  let total=0,rolls=[];
+  for(let i=0;i<count;i++){const r=Math.floor(Math.random()*sides)+1;rolls.push(r);total+=r;}
+  total+=bonus;
+  return {formula:count+'d'+sides+(bonus>=0?'+'+bonus:bonus)+' ['+rolls.join(',')+']',total:total};
 }
 
 function openAddSlot(){
@@ -621,29 +1004,219 @@ function openAddSlot(){
 }
 
 // ── INVENTORY ───────────────────────────────────────────────────────
+var MAX_ATTUNE = 3;
+
 function renderInv(){
   const inv=char.inventory||[], cats={};
-  for(const it of inv){const c=it.type||'other';if(!cats[c])cats[c]=[];cats[c].push(it);}
-  const order=['weapon','equipment','tool','consumable','container','other'];
-  let h='';
-  for(const c of order){
-    const its=cats[c];if(!its||!its.length)continue;
-    h+='<div class="st">'+cap(c)+'s</div>';
-    h+=its.map(it=>'<div class="inv-item"><div class="eqdot '+(it.equipped?'eq':'')+'" onclick="togEq(\''+esc(it.name)+'\')" title="'+(it.equipped?'Equipped':'Unequipped')+'"></div><span class="iname">'+esc(it.name)+'</span><span class="iqty">×'+(it.quantity||1)+'</span></div>').join('');
+  // Normalize types for sorting
+  const typeMap = {'Weapon':'weapon','Armor':'armor','Shield':'armor','weapon':'weapon','armor':'armor',
+    'magic-weapon':'weapon','magic-armor':'armor','wondrous':'wondrous','consumable':'consumable',
+    'gear':'gear','Other Gear':'gear','tool':'gear','upgrade':'gear'};
+  for(const it of inv){
+    const c=typeMap[(it.type||'').toLowerCase()]||typeMap[it.type]||'gear';
+    if(!cats[c])cats[c]=[];cats[c].push(it);
   }
-  $('invlist').innerHTML=h;
+  const order=[['weapon','Weapons'],['armor','Armor & Shields'],['wondrous','Wondrous Items'],['consumable','Consumables'],['gear','Gear & Tools']];
+  let h='';
+  for(const [key,label] of order){
+    const its=cats[key];if(!its||!its.length)continue;
+    h+='<div class="st">'+label+'</div>';
+    h+=its.map((it,idx)=>{
+      const ii=inv.indexOf(it);
+      const eqClass=it.equipped?'eq':'';
+      const attClass=it.attuned?'att':'';
+      const needsAttune=it.attunement||it.requiresAttunement;
+      let badges='';
+      if(it.damage) badges+='<span style="font-size:9px;color:var(--red);background:rgba(160,48,48,.15);border-radius:2px;padding:0 3px;">'+esc(it.damage)+' '+esc(it.damageType||'')+'</span> ';
+      if(it.ac) badges+='<span style="font-size:9px;color:var(--blue);background:rgba(64,128,192,.15);border-radius:2px;padding:0 3px;">AC '+it.ac+'</span> ';
+      if(it.modifiers) {
+        if(it.modifiers.acBonus) badges+='<span style="font-size:9px;color:var(--blue);background:rgba(64,128,192,.15);border-radius:2px;padding:0 3px;">+'+it.modifiers.acBonus+' AC</span> ';
+        if(it.modifiers.attackBonus) badges+='<span style="font-size:9px;color:var(--red);background:rgba(160,48,48,.15);border-radius:2px;padding:0 3px;">+'+it.modifiers.attackBonus+' atk/dmg</span> ';
+        if(it.modifiers.saveBonus) badges+='<span style="font-size:9px;color:var(--green);background:rgba(48,160,80,.15);border-radius:2px;padding:0 3px;">+'+it.modifiers.saveBonus+' saves</span> ';
+      }
+      if(it.properties&&it.properties.length) badges+='<span style="font-size:9px;color:var(--text-dim);">['+it.properties.join(', ')+']</span> ';
+      return '<div class="inv-item">'
+        +'<div class="eqdot '+eqClass+'" onclick="togEq('+ii+')" title="'+(it.equipped?'Equipped':'Unequipped')+'"></div>'
+        +(needsAttune?'<div class="attdot '+attClass+'" onclick="togAttune('+ii+')" title="'+(it.attuned?'Attuned':'Not attuned')+'">◆</div>':'')
+        +'<span class="iname" style="flex:1;">'+esc(it.name)+'</span>'
+        +badges
+        +'<span class="iqty">×'+(it.quantity||1)+'</span>'
+        +'<span style="font-size:9px;color:var(--text-dim);margin-left:2px;">'+(it.weight?(it.weight*(it.quantity||1))+'lb':'')+'</span>'
+        +'<span style="cursor:pointer;color:var(--red);font-size:12px;margin-left:4px;" onclick="rmItem('+ii+')" title="Remove">✕</span>'
+        +'</div>';
+    }).join('');
+  }
+  $('invlist').innerHTML=h||'<div style="color:var(--text-dim);font-size:11px;">No items</div>';
+
+  // Attunement counter
+  const attuned=inv.filter(i=>i.attuned).length;
+  $('inv-attune').textContent='Attunement: '+attuned+'/'+MAX_ATTUNE;
+
+  // Weight
+  const totalWeight=inv.reduce((s,i)=>{return s+(i.weight||0)*(i.quantity||1);},0);
+  const strScore=(char.abilities||{}).str?.score||10;
+  const carry=strScore*15;
+  $('inv-weight').textContent='Weight: '+Math.round(totalWeight*10)/10+' / '+carry+' lbs';
+  $('inv-weight').style.color=totalWeight>carry?'var(--red)':'var(--text-dim)';
+
+  // Currency
   const cu=char.currency||{};
-  $('currow').innerHTML=[['pp','#b0c4de'],['gp','#f1c40f'],['ep','#95a5a6'],['sp','#bdc3c7'],['cp','#e67e22']].map(([k,c])=>'<div class="coinbox"><div class="coinl">'+k.toUpperCase()+'</div><div class="coinv" style="color:'+c+';">'+(cu[k]||0)+'</div></div>').join('');
+  $('currow').innerHTML=[['pp','#b0c4de'],['gp','#f1c40f'],['ep','#95a5a6'],['sp','#bdc3c7'],['cp','#e67e22']].map(([k,c])=>'<div class="coinbox"><div class="coinl">'+k.toUpperCase()+'</div><div class="coinv" style="color:'+c+'" onclick="editCurrency(\''+k+'\')">'+(cu[k]||0)+'</div></div>').join('');
+
+  // Recalculate equipment-affected stats
+  recalcEquipAC();
 }
 
-function togEq(name){const it=(char.inventory||[]).find(i=>i.name===name);if(it){it.equipped=!it.equipped;renderInv();}}
+function togEq(idx){
+  const it=(char.inventory||[])[idx];
+  if(!it)return;
+  it.equipped=!it.equipped;
+  if(!it.equipped) it.attuned=false;
+  renderInv();
+  syncInventory();
+}
+
+function togAttune(idx){
+  const it=(char.inventory||[])[idx];
+  if(!it)return;
+  const inv=char.inventory||[];
+  const attuned=inv.filter(i=>i.attuned).length;
+  if(!it.attuned && attuned>=MAX_ATTUNE){alert('Maximum '+MAX_ATTUNE+' attuned items!');return;}
+  it.attuned=!it.attuned;
+  if(it.attuned && !it.equipped) it.equipped=true;
+  renderInv();
+  syncInventory();
+}
+
+function rmItem(idx){
+  const inv=char.inventory||[];
+  if(idx<0||idx>=inv.length)return;
+  const name=inv[idx].name;
+  if(!confirm('Remove '+name+'?'))return;
+  inv.splice(idx,1);
+  renderInv();
+  syncInventory();
+}
+
+function editCurrency(k){
+  const cu=char.currency||{};
+  openEdit('Edit '+k.toUpperCase(),[{id:'val',lbl:k.toUpperCase()+' amount',val:String(cu[k]||0),type:'number'}],()=>{
+    if(!char.currency)char.currency={};
+    char.currency[k]=Math.max(0,+getEV().val);
+    renderInv();
+    syncInventory();
+  });
+}
+
+function recalcEquipAC(){
+  const inv=char.inventory||[];
+  const equipped=inv.filter(i=>i.equipped);
+  // Find best armor
+  let baseAC=10+abilMod('dex');
+  const armor=equipped.find(i=>i.acType&&i.acType!=='shield');
+  if(armor){
+    if(armor.acType==='light') baseAC=armor.ac+abilMod('dex');
+    else if(armor.acType==='medium') baseAC=armor.ac+Math.min(2,abilMod('dex'));
+    else if(armor.acType==='heavy') baseAC=armor.ac;
+  }
+  // Shield
+  const shield=equipped.find(i=>i.acType==='shield');
+  if(shield) baseAC+=shield.ac||2;
+  // Magic bonuses from equipped+attuned items
+  for(const it of equipped){
+    if(!it.modifiers)continue;
+    if(it.modifiers.acBonus && (it.attuned || !it.attunement)){
+      if(it.modifiers.acCondition==='unarmored' && armor) continue;
+      baseAC+=it.modifiers.acBonus;
+    }
+  }
+  // Only auto-update if we have real equipment data
+  if(armor||shield||equipped.some(i=>i.modifiers?.acBonus)){
+    char.ac=baseAC;
+    $('vac').textContent=baseAC;
+  }
+}
 
 function openAddItem(){
   openEdit('Add Item',[
     {id:'name',lbl:'Item Name',val:''},
     {id:'quantity',lbl:'Quantity',val:'1',type:'number'},
-    {id:'type',lbl:'Type (weapon/equipment/consumable/tool)',val:'equipment'}
-  ],()=>{const v=getEV();if(!v.name)return;if(!char.inventory)char.inventory=[];char.inventory.push({name:v.name,quantity:+v.quantity,type:v.type,equipped:false});renderInv();});
+    {id:'type',lbl:'Type (weapon/armor/gear/consumable)',val:'gear'}
+  ],()=>{const v=getEV();if(!v.name)return;if(!char.inventory)char.inventory=[];char.inventory.push({name:v.name,quantity:+v.quantity,type:v.type,equipped:false});renderInv();syncInventory();});
+}
+
+function openSrdItemSearch(){
+  const el=$('srd-item-search');
+  el.style.display=el.style.display==='none'?'block':'none';
+  if(el.style.display==='block'){$('srd-item-q').value='';$('srd-item-results').innerHTML='';$('srd-item-q').focus();}
+}
+
+var _srdItemTimer=null;
+function searchSrdItems(){
+  clearTimeout(_srdItemTimer);
+  _srdItemTimer=setTimeout(()=>{
+    const q=$('srd-item-q').value.trim();
+    if(q.length<2){$('srd-item-results').innerHTML='<div style="color:var(--text-dim);">Type 2+ chars...</div>';return;}
+    fetch('/api/equipment/search?q='+encodeURIComponent(q)+'&limit=20')
+      .then(r=>r.json())
+      .then(items=>{
+        if(!items.length){$('srd-item-results').innerHTML='<div style="color:var(--text-dim);">No matches</div>';return;}
+        $('srd-item-results').innerHTML=items.map((it,i)=>{
+          let info=it.type;
+          if(it.damage) info+=' · '+it.damage+' '+it.damageType;
+          if(it.ac) info+=' · AC '+it.ac;
+          if(it.cost) info+=' · '+it.cost;
+          if(it.attunement) info+=' · (A)';
+          return '<div style="padding:3px 4px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;justify-content:space-between;" onclick=\'addSrdItem('+JSON.stringify(it).replace(/'/g,"\\'")+')\'>'
+            +'<span style="color:var(--accent);">'+esc(it.name)+'</span>'
+            +'<span style="color:var(--text-dim);font-size:10px;">'+esc(info)+'</span></div>';
+        }).join('');
+      })
+      .catch(e=>{$('srd-item-results').innerHTML='<div style="color:var(--red);">Error: '+esc(e.message)+'</div>';});
+  },300);
+}
+
+function addSrdItem(srdItem){
+  if(!char.inventory)char.inventory=[];
+  const item={
+    name:srdItem.name,
+    quantity:1,
+    type:srdItem.type,
+    subtype:srdItem.subtype||'',
+    equipped:false,
+    weight:srdItem.weight||0,
+    cost:srdItem.cost||''
+  };
+  // Copy weapon properties
+  if(srdItem.damage){item.damage=srdItem.damage;item.damageType=srdItem.damageType;item.properties=srdItem.properties||[];item.range=srdItem.range||'5ft';}
+  // Copy armor properties
+  if(srdItem.ac){item.ac=srdItem.ac;item.acType=srdItem.acType;item.stealthDisadvantage=srdItem.stealthDisadvantage;if(srdItem.strReq)item.strReq=srdItem.strReq;}
+  // Copy magic item properties
+  if(srdItem.attunement)item.attunement=true;
+  if(srdItem.modifiers)item.modifiers=srdItem.modifiers;
+  if(srdItem.description)item.description=srdItem.description;
+  if(srdItem.rarity)item.rarity=srdItem.rarity;
+  if(srdItem.healDice)item.healDice=srdItem.healDice;
+
+  char.inventory.push(item);
+  renderInv();
+  syncInventory();
+  $('srd-item-search').style.display='none';
+  // Auto-generate attack for weapons
+  if(srdItem.damage && srdItem.type==='weapon'){
+    const fin=(srdItem.properties||[]).includes('finesse');
+    const ranged=(srdItem.subtype||'').includes('ranged');
+    const statKey=ranged?'dex':(fin?(abilMod('dex')>=abilMod('str')?'dex':'str'):'str');
+    const prof=char.proficiencyBonus||2;
+    const mod=abilMod(statKey);
+    attacks.push({name:srdItem.name,toHit:mod+prof,dmgDice:srdItem.damage,dmgMod:mod,dmgType:srdItem.damageType||'',range:srdItem.range||'5ft'});
+    renderAtks();
+  }
+}
+
+// Sync inventory changes to server
+function syncInventory(){
+  send({type:'inventory:update', inventory:char.inventory, currency:char.currency});
 }
 
 // ── FEATURES ────────────────────────────────────────────────────────
@@ -715,6 +1288,21 @@ function rollX(){
 function addRH(txt){
   rollHist.unshift(txt);if(rollHist.length>15)rollHist.pop();
   $('rollhist').innerHTML=rollHist.map(r=>'<div class="rhi">'+esc(r)+'</div>').join('');
+}
+
+// ── ROLL CHECK (ability/save/skill) ─────────────────────────────────
+function rollCheck(label, modifier, type) {
+  const d20 = Math.floor(Math.random()*20)+1;
+  const total = d20 + modifier;
+  const crit = d20 === 20, fumble = d20 === 1;
+  const color = crit ? '#c9a54e' : fumble ? '#8b0000' : '#58180d';
+  $('rollnum').textContent = total;
+  $('rollnum').style.color = color;
+  $('rolldtl').textContent = label + ': d20(' + d20 + ') ' + fmt(modifier) + ' = ' + total + (crit?' CRIT!':'') + (fumble?' FUMBLE':'');
+  const txt = label + ' → ' + total + ' [d20:' + d20 + fmt(modifier) + ']' + (crit?' CRIT!':'') + (fumble?' FUMBLE':'');
+  addRH(txt);
+  send({type:'roll:result', rollType: type || 'check', formula: 'd20' + fmt(modifier), result: [d20], total: total, label: label});
+  showTab('dice');
 }
 
 // ── EDIT MODAL ──────────────────────────────────────────────────────
@@ -1078,8 +1666,95 @@ const PlayerMap = {
       }
       if (fogAlpha > 0) {
         ctx.fillStyle = `rgba(5,5,8,${fogAlpha})`;
-        ctx.fillRect(zone.x - mw/2, zone.y - mh/2, zone.w, zone.h);
+        const pts = zone.points;
+        if (pts && pts.length >= 3) {
+          ctx.beginPath();
+          ctx.moveTo(pts[0].x - mw/2, pts[0].y - mh/2);
+          for (let pi = 1; pi < pts.length; pi++) ctx.lineTo(pts[pi].x - mw/2, pts[pi].y - mh/2);
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          ctx.fillRect(zone.x - mw/2, zone.y - mh/2, zone.w, zone.h);
+        }
       }
+    }
+
+    // Spell AOE visualization (placed or targeting preview)
+    var aoeData = _spellAOE;
+    var aoePreview = false;
+    if(!aoeData && _aoeTargeting && _aoeTargeting._previewX != null){
+      // Show preview while targeting
+      var t=_aoeTargeting;
+      var px=t._previewX, py=t._previewY;
+      if(t.selfOrigin){
+        var ptok=this.tokens[PID];
+        if(ptok){px=ptok.x; py=ptok.y;}
+      }
+      aoeData={type:t.type,size:t.size,x:px,y:py,name:t.name,damageType:t.damageType,
+        angle:t.selfOrigin&&t._previewX?Math.atan2(t._previewY-py,t._previewX-px):0};
+      aoePreview=true;
+    }
+    if(aoeData){
+      var aoe=aoeData;
+      var ax=aoe.x-mw/2, ay=aoe.y-mh/2;
+      var colors={fire:'rgba(255,80,20,',cold:'rgba(80,160,255,',lightning:'rgba(200,200,60,',thunder:'rgba(160,120,255,',radiant:'rgba(255,255,120,',necrotic:'rgba(100,20,100,',poison:'rgba(80,200,40,',psychic:'rgba(200,60,200,',acid:'rgba(80,220,60,',force:'rgba(140,80,255,'};
+      var baseColor=colors[(aoe.damageType||'').toLowerCase()]||'rgba(200,160,60,';
+      var fillAlpha=aoePreview?'0.2)':'0.35)';
+      var strokeAlpha=aoePreview?'0.6)':'0.9)';
+
+      ctx.save();
+
+      if(aoe.type==='sphere'||aoe.type==='cylinder'){
+        ctx.beginPath();
+        ctx.arc(ax,ay,aoe.size,0,Math.PI*2);
+        ctx.fillStyle=baseColor+fillAlpha;
+        ctx.fill();
+        ctx.strokeStyle=baseColor+strokeAlpha;
+        ctx.lineWidth=aoePreview?1:3;
+        if(aoePreview) ctx.setLineDash([6,4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else if(aoe.type==='cone'){
+        var ang=aoe.angle||0;
+        ctx.beginPath();
+        ctx.moveTo(ax,ay);
+        ctx.arc(ax,ay,aoe.size,ang-Math.PI/4,ang+Math.PI/4);
+        ctx.closePath();
+        ctx.fillStyle=baseColor+fillAlpha;
+        ctx.fill();
+        ctx.strokeStyle=baseColor+strokeAlpha;
+        ctx.lineWidth=aoePreview?1:3;
+        if(aoePreview) ctx.setLineDash([6,4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else if(aoe.type==='line'){
+        var ang=aoe.angle||0;
+        ctx.beginPath();
+        ctx.moveTo(ax,ay);
+        ctx.lineTo(ax+Math.cos(ang)*aoe.size, ay+Math.sin(ang)*aoe.size);
+        ctx.strokeStyle=baseColor+strokeAlpha;
+        ctx.lineWidth=gs*0.3;
+        ctx.lineCap='round';
+        if(aoePreview) ctx.setLineDash([6,4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else if(aoe.type==='cube'){
+        ctx.fillStyle=baseColor+fillAlpha;
+        ctx.fillRect(ax-aoe.size/2,ay-aoe.size/2,aoe.size,aoe.size);
+        ctx.strokeStyle=baseColor+strokeAlpha;
+        ctx.lineWidth=aoePreview?1:3;
+        if(aoePreview) ctx.setLineDash([6,4]);
+        ctx.strokeRect(ax-aoe.size/2,ay-aoe.size/2,aoe.size,aoe.size);
+        ctx.setLineDash([]);
+      }
+
+      // Label
+      ctx.fillStyle=baseColor+strokeAlpha;
+      ctx.font='bold '+Math.max(12,gs*0.25)+'px sans-serif';
+      ctx.textAlign='center';
+      ctx.fillText(aoe.name+(aoePreview?' (click to place)':''),ax,ay-aoe.size-8);
+
+      ctx.restore();
     }
 
     ctx.restore();
@@ -1087,16 +1762,36 @@ const PlayerMap = {
 
   _isInRevealedZone(tx, ty) {
     for (const z of this.zones) {
-      if (z.revealed && tx >= z.x && tx < z.x + z.w && ty >= z.y && ty < z.y + z.h) return true;
+      if (!z.revealed) continue;
+      if (z.points && z.points.length >= 3) {
+        if (this._pointInPolygon(tx, ty, z.points)) return true;
+      } else {
+        if (tx >= z.x && tx < z.x + z.w && ty >= z.y && ty < z.y + z.h) return true;
+      }
     }
     return false;
   },
 
   _isInUnrevealedZone(tx, ty) {
     for (const z of this.zones) {
-      if (!z.revealed && tx >= z.x && tx < z.x + z.w && ty >= z.y && ty < z.y + z.h) return true;
+      if (z.revealed) continue;
+      if (z.points && z.points.length >= 3) {
+        if (this._pointInPolygon(tx, ty, z.points)) return true;
+      } else {
+        if (!z.revealed && tx >= z.x && tx < z.x + z.w && ty >= z.y && ty < z.y + z.h) return true;
+      }
     }
     return false;
+  },
+
+  _pointInPolygon(px, py, pts) {
+    let inside = false;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const xi = pts[i].x, yi = pts[i].y;
+      const xj = pts[j].x, yj = pts[j].y;
+      if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
   },
 
   screenToMap(sx, sy) {
@@ -1154,6 +1849,12 @@ const PlayerMap = {
   _onTouchEnd(e) { if(e.changedTouches.length){const t=e.changedTouches[0];this._endInteraction(t.clientX,t.clientY);} if(e.touches.length<2)this._lastPinchDist=0; },
 
   _startInteraction(sx, sy, cx, cy) {
+    // AOE targeting mode — click to place
+    if (_aoeTargeting) {
+      const {x:mx, y:my} = this.screenToMap(sx, sy);
+      placeAOE(mx, my);
+      return;
+    }
     this._tapStart = { sx, sy, cx, cy, time: Date.now() };
     const tid = this._getMyTokenAt(sx, sy);
     if (tid) {
@@ -1168,6 +1869,14 @@ const PlayerMap = {
   },
 
   _moveInteraction(cx, cy, sx, sy) {
+    // AOE targeting preview
+    if (_aoeTargeting) {
+      const {x:mx, y:my} = this.screenToMap(sx, sy);
+      _aoeTargeting._previewX = mx;
+      _aoeTargeting._previewY = my;
+      this.render();
+      return;
+    }
     if (this.dragging) {
       const {x:mx,y:my}=this.screenToMap(sx,sy);
       const tok=this.tokens[this.dragging.tokenId];
@@ -1180,11 +1889,12 @@ const PlayerMap = {
   },
 
   _endInteraction(cx, cy) {
+    if (_aoeTargeting) return; // handled in _startInteraction
     if (this.dragging) {
       const tok=this.tokens[this.dragging.tokenId];
       if(tok){
         const gs=this.mapData.gridSize;
-        tok.x=Math.round(tok.x/gs)*gs; tok.y=Math.round(tok.y/gs)*gs;
+        tok.x=Math.floor(tok.x/gs)*gs+gs/2; tok.y=Math.floor(tok.y/gs)*gs+gs/2;
         send({type:'map:move_token',tokenId:this.dragging.tokenId,x:tok.x,y:tok.y});
       }
       this.dragging=null; this.render();

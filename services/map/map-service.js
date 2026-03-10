@@ -8,6 +8,8 @@ class MapService {
     this.maps = new Map();       // mapId -> map definition
     this.activeMapId = null;
     this.srdMonsters = [];       // SRD compendium
+    this.srdEquipment = [];      // SRD equipment
+    this.srdSpells = [];         // SRD spells
     this.customActors = new Map(); // slug -> actor data
   }
 
@@ -21,6 +23,8 @@ class MapService {
   async start() {
     this._loadMaps();
     this._loadCompendium();
+    this._loadEquipment();
+    this._loadSpells();
     this._loadCustomActors();
     this._setupRoutes();
     this._setupEventListeners();
@@ -70,6 +74,24 @@ class MapService {
       this.srdMonsters = JSON.parse(fs.readFileSync(filePath, 'utf8'));
       console.log(`[MapService] SRD compendium: ${this.srdMonsters.length} monsters`);
     } catch(e) { console.warn('[MapService] Failed to load SRD compendium:', e.message); }
+  }
+
+  _loadEquipment() {
+    const filePath = path.join(__dirname, '..', '..', 'config', 'srd-equipment.json');
+    if (!fs.existsSync(filePath)) { console.log('[MapService] No SRD equipment found'); return; }
+    try {
+      this.srdEquipment = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      console.log(`[MapService] SRD equipment: ${this.srdEquipment.length} items`);
+    } catch(e) { console.warn('[MapService] Failed to load SRD equipment:', e.message); }
+  }
+
+  _loadSpells() {
+    const filePath = path.join(__dirname, '..', '..', 'config', 'srd-spells.json');
+    if (!fs.existsSync(filePath)) { console.log('[MapService] No SRD spells found'); return; }
+    try {
+      this.srdSpells = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      console.log(`[MapService] SRD spells: ${this.srdSpells.length} spells`);
+    } catch(e) { console.warn('[MapService] Failed to load SRD spells:', e.message); }
   }
 
   _loadCustomActors() {
@@ -313,20 +335,27 @@ class MapService {
       res.json({ revealed: revealed !== false, count: zones.length });
     });
 
-    // POST /api/map/zone/add — create a new zone
-    // body: { name, x, y, w, h }
+    // POST /api/map/zone/add — create a new zone (rect or polygon)
+    // body: { name, x, y, w, h } for rect OR { name, points: [{x,y},...] } for polygon
     app.post('/api/map/zone/add', (req, res) => {
-      const { name, x, y, w, h } = req.body || {};
-      if (!name || x == null || y == null || w == null || h == null) {
-        return res.status(400).json({ error: 'name, x, y, w, h required' });
+      const { name, x, y, w, h, points } = req.body || {};
+      if (!name) return res.status(400).json({ error: 'name required' });
+      if (!points && (x == null || y == null || w == null || h == null)) {
+        return res.status(400).json({ error: 'name + (x,y,w,h) or (points) required' });
       }
       const zones = this.state.get('map.zones') || [];
       const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
-      const zone = { id, name, x, y, w, h, revealed: false };
+      let zone;
+      if (points && Array.isArray(points) && points.length >= 3) {
+        zone = { id, name, points, revealed: false };
+        console.log(`[MapService] Polygon zone added: ${name} (${points.length} vertices)`);
+      } else {
+        zone = { id, name, x, y, w, h, revealed: false };
+        console.log(`[MapService] Zone added: ${name} (${w}x${h} at ${x},${y})`);
+      }
       zones.push(zone);
       this.state.set('map.zones', zones);
       this.bus.dispatch('map:zone_added', zone);
-      console.log(`[MapService] Zone added: ${name} (${w}x${h} at ${x},${y})`);
       res.json(zone);
     });
 
@@ -426,6 +455,16 @@ class MapService {
     });
 
     // === ACTOR / COMPENDIUM ROUTES ===
+
+    // GET /api/actors/named — list all custom/named NPC actors
+    app.get('/api/actors/named', (req, res) => {
+      const actors = [];
+      for (const [slug, actor] of this.customActors) {
+        actors.push({ slug, name: actor.name, challenge_rating: actor.challenge_rating, type: actor.type || '', custom: true });
+      }
+      actors.sort((a, b) => a.name.localeCompare(b.name));
+      res.json(actors);
+    });
 
     // GET /api/actors/search?q=werewolf&cr=3&type=beast
     app.get('/api/actors/search', (req, res) => {
@@ -678,6 +717,58 @@ class MapService {
       }
     });
 
+    // === EQUIPMENT / SRD ITEM ROUTES ===
+
+    // GET /api/equipment/search?q=longsword&type=weapon
+    app.get('/api/equipment/search', (req, res) => {
+      const q = (req.query.q || '').toLowerCase();
+      const type = (req.query.type || '').toLowerCase();
+      const limit = parseInt(req.query.limit) || 50;
+
+      let results = this.srdEquipment.filter(item => {
+        if (q && !item.name.toLowerCase().includes(q)) return false;
+        if (type && item.type !== type && item.subtype !== type) return false;
+        return true;
+      });
+
+      res.json(results.slice(0, limit));
+    });
+
+    // GET /api/equipment/:name — get full item data by exact name
+    app.get('/api/equipment/:name', (req, res) => {
+      const name = decodeURIComponent(req.params.name).toLowerCase();
+      const item = this.srdEquipment.find(i => i.name.toLowerCase() === name);
+      if (!item) return res.status(404).json({ error: 'Item not found' });
+      res.json(item);
+    });
+
+    // === SPELL ROUTES ===
+
+    // GET /api/spells/search?q=fireball&level=3&class=Wizard
+    app.get('/api/spells/search', (req, res) => {
+      const q = (req.query.q || '').toLowerCase();
+      const level = req.query.level != null ? parseInt(req.query.level) : null;
+      const cls = (req.query.class || '').toLowerCase();
+      const limit = parseInt(req.query.limit) || 50;
+
+      let results = this.srdSpells.filter(spell => {
+        if (q && !spell.name.toLowerCase().includes(q)) return false;
+        if (level !== null && !isNaN(level) && spell.level !== level) return false;
+        if (cls && !(spell.classes || []).some(c => c.toLowerCase().includes(cls))) return false;
+        return true;
+      });
+
+      res.json(results.slice(0, limit));
+    });
+
+    // GET /api/spells/:name — get full spell data
+    app.get('/api/spells/:name', (req, res) => {
+      const name = decodeURIComponent(req.params.name).toLowerCase();
+      const spell = this.srdSpells.find(s => s.name.toLowerCase() === name);
+      if (!spell) return res.status(404).json({ error: 'Spell not found' });
+      res.json(spell);
+    });
+
     // Serve map assets
     const assetsDir = path.join(__dirname, '..', '..', 'assets');
     const express = require('express');
@@ -727,11 +818,26 @@ class MapService {
     const mapDef = this.maps.get(this.activeMapId);
     if (!mapDef?.zones) return null;
     for (const zone of mapDef.zones) {
-      if (x >= zone.x && x < zone.x + zone.w && y >= zone.y && y < zone.y + zone.h) {
-        return zone;
+      if (zone.points && zone.points.length >= 3) {
+        // Point-in-polygon (ray casting)
+        if (this._pointInPolygon(x, y, zone.points)) return zone;
+      } else {
+        if (x >= zone.x && x < zone.x + zone.w && y >= zone.y && y < zone.y + zone.h) return zone;
       }
     }
     return null;
+  }
+
+  _pointInPolygon(px, py, pts) {
+    let inside = false;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const xi = pts[i].x, yi = pts[i].y;
+      const xj = pts[j].x, yj = pts[j].y;
+      if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) {
+        inside = !inside;
+      }
+    }
+    return inside;
   }
 
   _setupEventListeners() {

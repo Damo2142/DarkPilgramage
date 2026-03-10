@@ -731,6 +731,10 @@
             <input type="range" id="vtt-name-opacity" min="0" max="100" value="100" style="width:50px;height:12px;" oninput="updateVttSettings()">
             <span id="vtt-name-opacity-val">100%</span>
           </label>
+          <label style="display:flex;align-items:center;gap:3px;">Fog
+            <input type="range" id="vtt-fog-opacity" min="0" max="100" value="40" style="width:60px;height:12px;" oninput="updateVttSettings()">
+            <span id="vtt-fog-opacity-val">40%</span>
+          </label>
         </div>
       </div>
 
@@ -853,6 +857,7 @@
             <option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="15">15</option><option value="17">17</option><option value="20">20</option>
           </select>
         </div>
+        <div id="named-npcs" style="max-height:140px;overflow-y:auto;font-size:11px;margin-bottom:6px;"></div>
         <div id="actor-results" style="max-height:200px;overflow-y:auto;font-size:11px;color:var(--text-dim);">Type to search SRD monsters + custom actors</div>
       </div>
       </div>
@@ -864,6 +869,7 @@
           <button class="sm primary" onclick="revealAllZones(true)" style="flex:1">Reveal All</button>
           <button class="sm" onclick="revealAllZones(false)" style="flex:1">Hide All</button>
           <button class="sm" id="draw-zone-btn" onclick="toggleZoneDrawMode()" style="flex:1">Draw Zone</button>
+          <button class="sm" id="draw-poly-btn" onclick="togglePolyDrawMode()" style="flex:1">Draw Poly</button>
         </div>
         <div id="zone-list" style="font-size:11px;color:var(--text-dim);">No zones loaded</div>
       </div>
@@ -1088,6 +1094,12 @@
       case 'map:token_removed':
         delete VTT.tokens[msg.data?.tokenId];
         VTT.render();
+        break;
+      case 'player:spell_aoe':
+        if (msg.data) {
+          VTT.showSpellAOE(msg.data);
+          addTranscript({ speaker: msg.data.playerId || 'player', text: '⚡ Casts ' + (msg.data.spell || 'spell') + (msg.data.aoe ? ' (' + msg.data.aoe.size + 'ft ' + msg.data.aoe.type + ')' : '') });
+        }
         break;
       case 'story:beat':
         addTranscript({ speaker: 'system', text: `📖 Beat completed: ${msg.data.name}` });
@@ -1937,7 +1949,7 @@
   }
 
   // Load characters on connect
-  function onConnected() { loadCharacters(); loadSceneList(); loadDdbConfig(); }
+  function onConnected() { loadCharacters(); loadSceneList(); loadDdbConfig(); loadNamedNPCs(); }
 
   function showAddPlayer() {
     const f = document.getElementById('add-player-form');
@@ -2009,7 +2021,7 @@
     colors: {
       pc: '#4080c0', npc: '#c9a54e', hidden: '#a03030',
       hpGreen: '#30a050', hpOrange: '#c07030', hpRed: '#d04040',
-      grid: 'rgba(255,255,255,0.35)', gridWidth: 1, nameSize: 10, nameOpacity: 1,
+      grid: 'rgba(255,255,255,0.35)', gridWidth: 1, nameSize: 10, nameOpacity: 1, fogOpacity: 0.4,
       selection: '#c9a54e'
     },
 
@@ -2137,18 +2149,31 @@
       }
 
       // Fog of war (DM sees dimmed overlay for unrevealed zones)
+      const fogAlpha = this.colors.fogOpacity ?? 0.4;
       for (const zone of (this.mapData.zones || [])) {
-        if (!zone.revealed) {
-          ctx.fillStyle = 'rgba(0,0,0,0.4)';
-          ctx.fillRect(zone.x - mw/2, zone.y - mh/2, zone.w, zone.h);
+        const pts = zone.points;  // polygon zones have points array
+        if (pts && pts.length >= 3) {
+          // Polygon zone
+          ctx.beginPath();
+          ctx.moveTo(pts[0].x - mw/2, pts[0].y - mh/2);
+          for (let pi = 1; pi < pts.length; pi++) ctx.lineTo(pts[pi].x - mw/2, pts[pi].y - mh/2);
+          ctx.closePath();
+          if (!zone.revealed) { ctx.fillStyle = `rgba(0,0,0,${fogAlpha})`; ctx.fill(); }
+          ctx.strokeStyle = zone.revealed ? 'rgba(48,160,80,0.3)' : 'rgba(160,48,48,0.3)';
+          ctx.lineWidth = 1; ctx.stroke();
+        } else {
+          // Rectangle zone
+          if (!zone.revealed) {
+            ctx.fillStyle = `rgba(0,0,0,${fogAlpha})`;
+            ctx.fillRect(zone.x - mw/2, zone.y - mh/2, zone.w, zone.h);
+          }
+          ctx.strokeStyle = zone.revealed ? 'rgba(48,160,80,0.3)' : 'rgba(160,48,48,0.3)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(zone.x - mw/2, zone.y - mh/2, zone.w, zone.h);
         }
-        // Zone border
-        ctx.strokeStyle = zone.revealed ? 'rgba(48,160,80,0.3)' : 'rgba(160,48,48,0.3)';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(zone.x - mw/2, zone.y - mh/2, zone.w, zone.h);
       }
 
-      // Zone drawing preview
+      // Zone drawing preview (rectangle)
       if (zoneDrawRect && zoneDrawRect.w > 0 && zoneDrawRect.h > 0) {
         ctx.fillStyle = 'rgba(48,120,220,0.2)';
         ctx.strokeStyle = 'rgba(48,120,220,0.8)';
@@ -2157,9 +2182,72 @@
         ctx.strokeRect(zoneDrawRect.x - mw/2, zoneDrawRect.y - mh/2, zoneDrawRect.w, zoneDrawRect.h);
       }
 
+      // Polygon drawing preview
+      if (polyDrawPoints.length > 0) {
+        ctx.beginPath();
+        ctx.moveTo(polyDrawPoints[0].x - mw/2, polyDrawPoints[0].y - mh/2);
+        for (let pi = 1; pi < polyDrawPoints.length; pi++) {
+          ctx.lineTo(polyDrawPoints[pi].x - mw/2, polyDrawPoints[pi].y - mh/2);
+        }
+        ctx.strokeStyle = 'rgba(220,120,48,0.8)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // Draw vertices
+        for (const pt of polyDrawPoints) {
+          ctx.beginPath();
+          ctx.arc(pt.x - mw/2, pt.y - mh/2, 4, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(220,120,48,0.9)';
+          ctx.fill();
+        }
+        // Fill preview if 3+ points
+        if (polyDrawPoints.length >= 3) {
+          ctx.beginPath();
+          ctx.moveTo(polyDrawPoints[0].x - mw/2, polyDrawPoints[0].y - mh/2);
+          for (let pi = 1; pi < polyDrawPoints.length; pi++) ctx.lineTo(polyDrawPoints[pi].x - mw/2, polyDrawPoints[pi].y - mh/2);
+          ctx.closePath();
+          ctx.fillStyle = 'rgba(220,120,48,0.15)';
+          ctx.fill();
+        }
+      }
+
       // Tokens
       for (const [id, tok] of Object.entries(this.tokens)) {
         this._renderToken(ctx, id, tok, mw, mh);
+      }
+
+      // Spell AOE overlay
+      if (this._spellAOE) {
+        const aoe = this._spellAOE;
+        const ax = aoe.x - mw/2, ay = aoe.y - mh/2;
+        const colors = {fire:'rgba(255,80,20,',cold:'rgba(80,160,255,',lightning:'rgba(200,200,60,',thunder:'rgba(160,120,255,',radiant:'rgba(255,255,120,',necrotic:'rgba(100,20,100,',poison:'rgba(80,200,40,',psychic:'rgba(200,60,200,',acid:'rgba(80,220,60,',force:'rgba(140,80,255,'};
+        const baseColor = colors[(aoe.damageType||'').toLowerCase()] || 'rgba(200,160,60,';
+
+        ctx.save();
+        if (aoe.type === 'sphere' || aoe.type === 'cylinder') {
+          ctx.beginPath(); ctx.arc(ax, ay, aoe.size, 0, Math.PI*2);
+          ctx.fillStyle = baseColor + '0.25)'; ctx.fill();
+          ctx.strokeStyle = baseColor + '0.8)'; ctx.lineWidth = 2; ctx.stroke();
+        } else if (aoe.type === 'cone') {
+          ctx.beginPath(); ctx.moveTo(ax, ay);
+          ctx.arc(ax, ay, aoe.size, -Math.PI/4, Math.PI/4);
+          ctx.closePath();
+          ctx.fillStyle = baseColor + '0.25)'; ctx.fill();
+          ctx.strokeStyle = baseColor + '0.8)'; ctx.lineWidth = 2; ctx.stroke();
+        } else if (aoe.type === 'line') {
+          ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax + aoe.size, ay);
+          ctx.strokeStyle = baseColor + '0.8)'; ctx.lineWidth = gs * 0.4; ctx.lineCap = 'round'; ctx.stroke();
+        } else if (aoe.type === 'cube') {
+          ctx.fillStyle = baseColor + '0.25)';
+          ctx.fillRect(ax - aoe.size/2, ay - aoe.size/2, aoe.size, aoe.size);
+          ctx.strokeStyle = baseColor + '0.8)'; ctx.lineWidth = 2;
+          ctx.strokeRect(ax - aoe.size/2, ay - aoe.size/2, aoe.size, aoe.size);
+        }
+        // Label
+        ctx.fillStyle = baseColor + '0.9)';
+        ctx.font = 'bold ' + Math.max(10, gs * 0.25) + 'px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(aoe.name + (aoe.caster ? ' (' + aoe.caster + ')' : ''), ax, ay - aoe.size - 8);
+        ctx.restore();
       }
 
       ctx.restore();
@@ -2280,6 +2368,15 @@
       const sy = e.clientY - rect.top;
 
       if (e.button === 0) {
+        // Polygon drawing mode — click to add vertex
+        if (polyDrawMode) {
+          const { x, y } = this.screenToMap(sx, sy);
+          const gs = this.mapData?.gridSize || 1;
+          const snapped = { x: Math.round(x / gs) * gs, y: Math.round(y / gs) * gs };
+          polyDrawPoints.push(snapped);
+          this.render();
+          return;
+        }
         // Zone drawing mode
         if (zoneDrawMode) {
           const { x, y } = this.screenToMap(sx, sy);
@@ -2390,6 +2487,14 @@
     },
 
     _onDblClick(e) {
+      // Double-click closes polygon drawing
+      if (polyDrawMode && polyDrawPoints.length >= 3) {
+        const pts = polyDrawPoints.slice();
+        polyDrawPoints = [];
+        togglePolyDrawMode();
+        addPolyZoneFromDraw(pts);
+        return;
+      }
       const rect = this.canvas.getBoundingClientRect();
       const tokenId = this._getTokenAt(e.clientX - rect.left, e.clientY - rect.top);
       if (tokenId) {
@@ -2629,9 +2734,47 @@
         this.loadMap();
       }
     },
+
+    // Spell AOE overlay
+    _spellAOE: null,
+    _spellAOETimer: null,
+
+    showSpellAOE(data) {
+      if (!data.aoe || !this.mapData) return;
+      const gs = this.mapData.gridSize;
+      const feetPerSquare = 5;
+      const sizeInPx = (data.aoe.size / feetPerSquare) * gs;
+      this._spellAOE = {
+        type: data.aoe.type,
+        size: sizeInPx,
+        x: data.x,
+        y: data.y,
+        name: data.spell || 'Spell',
+        damageType: data.damageType || '',
+        caster: data.playerId || ''
+      };
+      this.render();
+      clearTimeout(this._spellAOETimer);
+      this._spellAOETimer = setTimeout(() => { this._spellAOE = null; this.render(); }, 12000);
+    },
   };
 
   /* === ACTOR LIBRARY === */
+  function loadNamedNPCs() {
+    fetch('/api/actors/named')
+      .then(function(r) { return r.json(); })
+      .then(function(npcs) {
+        const el = document.getElementById('named-npcs');
+        if (!npcs.length) { el.style.display = 'none'; return; }
+        el.innerHTML = '<div style="font-size:9px;color:var(--text-dim);margin-bottom:3px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;">Named NPCs</div>'
+          + npcs.map(function(a) {
+            return '<div class="actor-row" onclick="viewActorSheet(\'' + a.slug + '\')">'
+              + '<span style="color:var(--accent);">★ ' + esc(a.name) + '</span>'
+              + '<span style="color:var(--text-dim)">CR ' + (a.challenge_rating || '—') + '</span></div>';
+          }).join('');
+      })
+      .catch(console.error);
+  }
   let _searchTimer = null;
   function searchActors() {
     clearTimeout(_searchTimer);
@@ -2723,8 +2866,9 @@
     const el = document.getElementById('zone-list');
     if (!zones.length) { el.innerHTML = '<span style="color:var(--text-dim)">No zones loaded</span>'; return; }
     el.innerHTML = zones.map(function(z) {
+      var typeTag = z.points ? ' <span style="color:var(--orange);font-size:9px;">[poly]</span>' : '';
       return '<div class="zone-item" style="display:flex;align-items:center;gap:4px;">'
-        + '<span style="flex:1">' + esc(z.name || z.id) + '</span>'
+        + '<span style="flex:1">' + esc(z.name || z.id) + typeTag + '</span>'
         + '<span class="zone-toggle ' + (z.revealed ? 'revealed' : 'hidden') + '" onclick="toggleZone(\'' + z.id + '\',' + !z.revealed + ')">'
         + (z.revealed ? 'VISIBLE' : 'HIDDEN') + '</span>'
         + '<span style="cursor:pointer;color:var(--horror);font-size:13px;" onclick="deleteZone(\'' + z.id + '\')" title="Delete zone">&times;</span>'
@@ -2773,22 +2917,27 @@
   var zoneDrawMode = false;
   var zoneDrawStart = null;
   var zoneDrawRect = null;
+  var polyDrawMode = false;
+  var polyDrawPoints = [];
 
   function updateVttSettings() {
     var gridOp = parseInt(document.getElementById('vtt-grid-opacity').value);
     var gridW = parseFloat(document.getElementById('vtt-grid-width').value);
     var nameS = parseFloat(document.getElementById('vtt-name-size').value);
     var nameOp = parseInt(document.getElementById('vtt-name-opacity').value);
+    var fogOp = parseInt(document.getElementById('vtt-fog-opacity').value);
     document.getElementById('vtt-grid-opacity-val').textContent = gridOp + '%';
     document.getElementById('vtt-grid-width-val').textContent = gridW;
     document.getElementById('vtt-name-size-val').textContent = nameS + '%';
     document.getElementById('vtt-name-opacity-val').textContent = nameOp + '%';
+    document.getElementById('vtt-fog-opacity-val').textContent = fogOp + '%';
     VTT.colors.grid = 'rgba(255,255,255,' + (gridOp / 100) + ')';
     VTT.colors.gridWidth = gridW;
     VTT.colors.nameSize = nameS;
     VTT.colors.nameOpacity = nameOp / 100;
+    VTT.colors.fogOpacity = fogOp / 100;
     VTT.render();
-    try { localStorage.setItem('vttSettings', JSON.stringify({ gridOp, gridW, nameS, nameOp })); } catch(e) {}
+    try { localStorage.setItem('vttSettings', JSON.stringify({ gridOp, gridW, nameS, nameOp, fogOp })); } catch(e) {}
   }
 
   function loadVttSettings() {
@@ -2799,6 +2948,7 @@
       document.getElementById('vtt-grid-width').value = s.gridW;
       document.getElementById('vtt-name-size').value = s.nameS;
       document.getElementById('vtt-name-opacity').value = s.nameOp;
+      if (s.fogOp != null) document.getElementById('vtt-fog-opacity').value = s.fogOp;
       updateVttSettings();
     } catch(e) {}
   }
@@ -2827,6 +2977,41 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: name, x: x, y: y, w: w, h: h })
+    }).then(function(r) { return r.json(); }).then(function(zone) {
+      if (!state.map) state.map = {};
+      if (!state.map.zones) state.map.zones = [];
+      state.map.zones.push(zone);
+      renderZoneList();
+      VTT.render();
+    }).catch(console.error);
+  }
+
+  function togglePolyDrawMode() {
+    polyDrawMode = !polyDrawMode;
+    var btn = document.getElementById('draw-poly-btn');
+    if (polyDrawMode) {
+      // Turn off rect draw mode if active
+      if (zoneDrawMode) toggleZoneDrawMode();
+      btn.classList.add('primary');
+      btn.textContent = 'Drawing Poly...';
+      VTT.canvas.style.cursor = 'crosshair';
+      polyDrawPoints = [];
+    } else {
+      btn.classList.remove('primary');
+      btn.textContent = 'Draw Poly';
+      VTT.canvas.style.cursor = '';
+      polyDrawPoints = [];
+      VTT.render();
+    }
+  }
+
+  function addPolyZoneFromDraw(points) {
+    var name = prompt('Zone name:');
+    if (!name) { polyDrawPoints = []; VTT.render(); return; }
+    fetch('/api/map/zone/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, points: points })
     }).then(function(r) { return r.json(); }).then(function(zone) {
       if (!state.map) state.map = {};
       if (!state.map.zones) state.map.zones = [];

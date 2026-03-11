@@ -267,8 +267,9 @@
       "image": "dave.webp",
       "visible": true,
       "hp": {
-        "current": 11,
-        "max": 14
+        "current": 14,
+        "max": 14,
+        "temp": 0
       },
       "ac": 12
     },

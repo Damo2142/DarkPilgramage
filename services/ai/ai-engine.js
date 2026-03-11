@@ -8,6 +8,8 @@ const ContextBuilder = require('./context-builder');
 const NpcHandler = require('./npc-handler');
 const AtmosphereAdvisor = require('./atmosphere-advisor');
 const StoryTracker = require('./story-tracker');
+const DmAdvisor = require('./dm-advisor');
+const NpcAutonomy = require('./npc-autonomy');
 
 class AIEngine {
   constructor() {
@@ -18,6 +20,8 @@ class AIEngine {
     this.npc = null;
     this.atmosphere = null;
     this.story = null;
+    this.advisor = null;
+    this.autonomy = null;
   }
 
   async init(orchestrator) {
@@ -39,6 +43,8 @@ class AIEngine {
     this.npc = new NpcHandler(this.gemini, this.context, this.bus, this.state, this.config);
     this.atmosphere = new AtmosphereAdvisor(this.gemini, this.context, this.bus, this.state, this.config);
     this.story = new StoryTracker(this.gemini, this.context, this.bus, this.state, this.config);
+    this.advisor = new DmAdvisor(this.gemini, this.context, this.bus, this.state, this.config);
+    this.autonomy = new NpcAutonomy(this.gemini, this.context, this.bus, this.state, this.config);
   }
 
   async start() {
@@ -57,7 +63,8 @@ class AIEngine {
         await Promise.allSettled([
           this.npc.evaluateTranscript(segment),
           this.atmosphere.onTranscript(segment),
-          this.story.onTranscript(segment)
+          this.story.onTranscript(segment),
+          this.advisor.onTranscript(segment)
         ]);
       } catch (err) {
         console.error('[AIEngine] Analysis error:', err.message);
@@ -94,13 +101,26 @@ class AIEngine {
       });
     }, 'ai-engine');
 
-    // Player dice rolls add context
-    this.bus.subscribe('player:roll', (env) => {
+    // Player dice rolls add context and trigger roll interpretation
+    this.bus.subscribe('player:roll', async (env) => {
       this.context.addTranscript({
         speaker: env.data.playerId,
         text: `[Rolled ${env.data.formula} = ${env.data.total}]`,
         timestamp: Date.now()
       });
+
+      // Auto-interpret skill/ability checks if session is active
+      if (this.state.get('session.status') === 'active' && env.data.rollType === 'check') {
+        try {
+          await this.advisor.interpretRoll(
+            env.data.formula || 'unknown',
+            env.data.total,
+            env.data.playerId
+          );
+        } catch (err) {
+          console.error('[AIEngine] Roll interpretation error:', err.message);
+        }
+      }
     }, 'ai-engine');
 
     // Story beat manual controls
@@ -116,11 +136,21 @@ class AIEngine {
       this.story.addDecision(env.data.decision);
     }, 'ai-engine');
 
+    // DM approves an autonomous NPC action from the queue
+    this.bus.subscribe('npc:execute_action', async (env) => {
+      const { npcId, npc: npcName, action, dialogue, moveTo } = env.data;
+      const npcState = this.state.get(`npcs.${npcId}`) || { name: npcName };
+      await this.autonomy._executeNpcAction(npcId, npcState, env.data);
+    }, 'ai-engine');
+
+    // Start NPC autonomy engine
+    this.autonomy.start();
+
     console.log(`[AIEngine] Gemini: ${this.gemini.available ? 'connected' : 'disabled'}`);
   }
 
   async stop() {
-    // Nothing to clean up
+    this.autonomy.stop();
   }
 
   getStatus() {
@@ -131,7 +161,8 @@ class AIEngine {
       context: this.context.getStats(),
       npc: this.npc.getStats(),
       atmosphere: this.atmosphere.getStats(),
-      story: this.story.getStats()
+      story: this.story.getStats(),
+      autonomy: this.autonomy.getStats()
     };
   }
 }

@@ -72,6 +72,24 @@
 
     #session-timer { font-family: monospace; color: var(--accent); font-size: 13px; }
 
+    /* Panel layout manager */
+    #panel-menu-btn { background:none;border:1px solid var(--border);color:var(--text-dim);padding:2px 8px;border-radius:3px;cursor:pointer;font-size:14px;line-height:1; }
+    #panel-menu-btn:hover { color:var(--accent);border-color:var(--accent); }
+    #panel-menu { display:none;position:fixed;top:42px;right:10px;z-index:800;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 0;min-width:220px;max-height:80vh;overflow-y:auto;box-shadow:0 8px 30px rgba(0,0,0,0.6); }
+    #panel-menu.open { display:block; }
+    #panel-menu .pm-title { font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);padding:4px 12px;font-weight:700; }
+    #panel-menu label { display:flex;align-items:center;gap:8px;padding:4px 12px;font-size:11px;cursor:pointer;transition:background 0.1s; }
+    #panel-menu label:hover { background:var(--surface3); }
+    #panel-menu label input { accent-color:var(--accent); }
+    #panel-menu .pm-divider { border-top:1px solid var(--border);margin:4px 0; }
+    .panel-section.panel-hidden { display:none !important; }
+    .panel-section .panel-hide-btn { position:absolute;top:3px;right:6px;background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;padding:2px 4px;opacity:0;transition:opacity 0.15s;z-index:2; }
+    .panel-section:hover .panel-hide-btn { opacity:1; }
+    .panel-section .panel-hide-btn:hover { color:var(--red-bright); }
+    .panel-section.panel-collapsed > *:not(.section-header) { display:none !important; }
+    .panel-section.panel-collapsed .section-header .panel-collapse-icon { transform:rotate(-90deg); }
+    .section-header .panel-collapse-icon { display:inline-block;font-size:8px;color:var(--text-dim);transition:transform 0.15s;margin-right:2px; }
+
     /* === EARBUD TTS === */
     .earbud-panel {
       padding: 8px 10px;
@@ -471,7 +489,7 @@
     .bar-fill.hp.critical { background: var(--red-bright); }
     .bar-fill.dread { background: linear-gradient(90deg, var(--accent-dim), var(--red-bright)); }
 
-    .bar-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); }
+    .bar-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--text); }
 
     .p-card .dread-controls {
       display: flex;
@@ -663,8 +681,10 @@
       <span><span class="dot green" id="earbud-indicator" title="Earbud TTS"></span>🎧</span>
       <span>Session: <strong id="sess-status">Idle</strong></span>
       <span id="session-timer">00:00:00</span>
+      <button id="panel-menu-btn" onclick="PanelLayout.toggleMenu()" title="Show/hide panels">&#9776;</button>
     </div>
   </header>
+  <div id="panel-menu"></div>
 
   <div class="grid">
 
@@ -785,6 +805,65 @@
       </div>
       </div>
 
+      <div class="panel-section" data-panel="transcript-input">
+      <div class="section-header"><span class="drag-handle">⠿</span>Co-DM Input</div>
+      <div style="padding:6px 8px;">
+        <div style="display:flex;gap:4px;margin-bottom:4px;">
+          <select id="transcript-speaker" style="width:70px;padding:3px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:10px;">
+            <option value="dm">DM</option>
+            <option value="player">Player</option>
+            <option value="narration">Narration</option>
+          </select>
+          <input type="text" id="transcript-text" placeholder="Type what's happening... (Enter to send)" style="flex:1;padding:4px 8px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px;" onkeydown="if(event.key==='Enter')submitTranscript()">
+          <button class="sm primary" onclick="submitTranscript()" style="font-size:10px;padding:3px 8px;">Send</button>
+        </div>
+        <div style="display:flex;gap:4px;">
+          <input type="text" id="ask-codm" placeholder="Ask Co-DM anything... (rules, description, advice)" style="flex:1;padding:4px 8px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px;" onkeydown="if(event.key==='Enter')askCoDM()">
+          <button class="sm" onclick="askCoDM()" style="font-size:10px;padding:3px 8px;">Ask</button>
+        </div>
+      </div>
+      </div>
+
+      <div class="panel-section" data-panel="world-clock">
+      <div class="section-header"><span class="drag-handle">⠿</span>World Clock</div>
+      <div style="padding:6px 8px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span id="game-time" style="font-size:18px;font-weight:bold;font-family:monospace;color:var(--accent);">--:--</span>
+          <span id="game-date" style="font-size:10px;color:var(--text-dim);"></span>
+          <span id="game-period" style="font-size:9px;padding:2px 5px;border-radius:3px;background:var(--surface3);color:var(--text-dim);"></span>
+        </div>
+        <div style="display:flex;gap:4px;margin-bottom:6px;">
+          <label style="font-size:9px;color:var(--text-dim);display:flex;align-items:center;gap:3px;">Speed
+            <select id="time-scale" onchange="setTimeScale(this.value)" style="padding:2px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:10px;">
+              <option value="0">Paused</option>
+              <option value="1" selected>1x Real</option>
+              <option value="5">5x</option>
+              <option value="10">10x</option>
+              <option value="30">30x</option>
+              <option value="60">60x</option>
+            </select>
+          </label>
+          <button class="sm" onclick="advanceTime(5)" style="font-size:9px;padding:2px 6px;">+5m</button>
+          <button class="sm" onclick="advanceTime(15)" style="font-size:9px;padding:2px 6px;">+15m</button>
+          <button class="sm" onclick="advanceTime(60)" style="font-size:9px;padding:2px 6px;">+1h</button>
+        </div>
+        <div id="timed-events-list" style="max-height:100px;overflow-y:auto;font-size:10px;color:var(--text-dim);"></div>
+      </div>
+      </div>
+
+      <div class="panel-section" data-panel="secrets">
+      <div class="section-header"><span class="drag-handle">⠿</span>Secrets & Clues</div>
+      <div style="padding:6px 8px;">
+        <div style="display:flex;gap:4px;margin-bottom:6px;">
+          <button class="sm" onclick="toggleSecretView('secrets')" style="flex:1;font-size:9px;" id="btn-show-secrets">Secrets</button>
+          <button class="sm" onclick="toggleSecretView('clues')" style="flex:1;font-size:9px;" id="btn-show-clues">Clues</button>
+          <button class="sm" onclick="toggleSecretView('goals')" style="flex:1;font-size:9px;" id="btn-show-goals">NPC Goals</button>
+          <button class="sm" onclick="toggleSecretView('chains')" style="flex:1;font-size:9px;" id="btn-show-chains">Chains</button>
+        </div>
+        <div id="secrets-panel" style="max-height:200px;overflow-y:auto;font-size:10px;"></div>
+      </div>
+      </div>
+
       <div class="panel-section" data-panel="combat">
       <div class="section-header"><span class="drag-handle">⠿</span>Combat Tracker</div>
       <div id="combat-panel" style="padding:6px 8px;">
@@ -817,6 +896,29 @@
             </div>
           </div>
         </div>
+      </div>
+      </div>
+
+      <div class="panel-section" data-panel="dice">
+      <div class="section-header"><span class="drag-handle">⠿</span>Dice Roller</div>
+      <div style="padding:6px 8px;">
+        <div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:6px;">
+          <button class="sm" onclick="DicePanel.roll(4)">d4</button>
+          <button class="sm" onclick="DicePanel.roll(6)">d6</button>
+          <button class="sm" onclick="DicePanel.roll(8)">d8</button>
+          <button class="sm" onclick="DicePanel.roll(10)">d10</button>
+          <button class="sm" onclick="DicePanel.roll(12)">d12</button>
+          <button class="sm primary" onclick="DicePanel.roll(20)" style="font-weight:700;">d20</button>
+          <button class="sm" onclick="DicePanel.roll(100)">d%</button>
+        </div>
+        <div style="display:flex;gap:4px;margin-bottom:6px;">
+          <input type="text" id="dice-formula" placeholder="2d6+3, 4d8, 1d20+5..." style="flex:1;padding:4px 8px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px;font-family:monospace;" onkeydown="if(event.key==='Enter')DicePanel.rollFormula()">
+          <button class="sm primary" onclick="DicePanel.rollFormula()">Roll</button>
+        </div>
+        <div id="dice-result" style="text-align:center;padding:4px;font-family:Cinzel,serif;font-size:20px;color:var(--accent);font-weight:700;min-height:28px;"></div>
+        <div id="dice-detail" style="text-align:center;font-size:10px;color:var(--text-dim);margin-bottom:6px;"></div>
+        <div style="display:flex;justify-content:flex-end;"><button class="sm ghost" onclick="DicePanel.clear()" style="font-size:9px;">Clear</button></div>
+        <div id="dice-log" style="max-height:120px;overflow-y:auto;font-size:10px;border-top:1px solid var(--border);padding-top:4px;"></div>
       </div>
       </div>
 
@@ -895,14 +997,18 @@
       </div>
       </div>
 
-      <div class="panel-section" data-panel="private-msg">
-      <div class="section-header"><span class="drag-handle">⠿</span>Private Message</div>
-      <div class="pm-controls">
-        <select id="pm-target">
-          <option value="">Select player...</option>
-        </select>
-        <textarea id="pm-text" placeholder="Message only this player sees..."></textarea>
-        <button class="primary" onclick="sendPM()" style="width:100%">Send Private Message</button>
+      <div class="panel-section" data-panel="player-chat">
+      <div class="section-header"><span class="drag-handle">⠿</span>Player Chat</div>
+      <div style="padding:6px;">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:2px;"><button class="sm ghost" onclick="DmChat.clear()" style="font-size:9px;">Clear</button></div>
+        <div id="dm-chatlog" style="height:170px;overflow-y:auto;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:6px;font-size:11px;"></div>
+        <div style="display:flex;gap:4px;margin-bottom:4px;">
+          <select id="dm-chat-target" style="flex:0 0 auto;padding:4px 6px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px;">
+            <option value="all">All Players</option>
+          </select>
+          <input type="text" id="dm-chat-input" placeholder="Message to players..." style="flex:1;padding:4px 8px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px;font-family:inherit;" onkeydown="if(event.key==='Enter')DmChat.send()">
+          <button class="primary sm" onclick="DmChat.send()">Send</button>
+        </div>
       </div>
       </div>
 
@@ -922,9 +1028,11 @@
       </div>
     </div>
 
+    <div class="col-resizer" id="resizer-2"></div>
     <!-- RIGHT: PLAYERS & NPC -->
-    <div class="players-col">
-      <div class="col-header" onclick="toggleCol(this)"><span class="col-toggle">▼</span>D&D Beyond Sync</div>
+    <div class="players-col" id="col-players">
+      <div class="panel-section" data-panel="ddb-sync">
+      <div class="section-header"><span class="drag-handle">⠿</span>D&D Beyond Sync</div>
       <div class="pm-controls">
         <div style="display:flex;gap:4px;margin-bottom:6px;">
           <button class="primary" onclick="ddbSyncAll()" style="flex:1">Pull from DDB</button>
@@ -934,41 +1042,52 @@
         <div style="font-size:10px;color:var(--text-dim);margin-bottom:4px;">DDB Character IDs (one per line):</div>
         <textarea id="ddb-ids" placeholder="Enter DDB character IDs, one per line..." style="width:100%;min-height:40px;padding:4px 8px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px;font-family:monospace;resize:vertical;margin-bottom:4px;"></textarea>
         <button class="sm" onclick="saveDdbConfig()" style="width:100%;margin-bottom:8px;">Save DDB Config</button>
-        <div class="section-header" style="margin:0 -10px 6px;">Synced Characters</div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-dim);padding:5px 0;letter-spacing:1px;">Synced Characters</div>
         <div id="char-list" style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">No characters synced yet</div>
         <button onclick="syncCharacters()" style="width:100%;margin-bottom:6px;font-size:10px;">Reload from Files</button>
-        <div class="section-header" style="margin:0 -10px 6px;">Assign Player → Character</div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-dim);padding:5px 0;letter-spacing:1px;">Assign Player &rarr; Character</div>
         <div id="char-assign-rows">
           <div style="font-size:10px;color:var(--text-dim);">Connect players first, then assign.</div>
         </div>
       </div>
-
-      <div class="col-header" style="display:flex;justify-content:space-between;align-items:center;" onclick="toggleCol(this)"><span class="col-toggle">▼</span>
-        <span>Players</span>
-        <button class="sm" onclick="showAddPlayer()" style="font-size:10px;">+ Add Player</button>
       </div>
+
+      <div class="panel-section" data-panel="players">
+      <div class="section-header"><span class="drag-handle">⠿</span>Players <button class="sm" onclick="showAddPlayer()" style="font-size:10px;margin-left:auto;">+ Add Player</button></div>
       <div id="add-player-form" style="display:none;padding:6px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;margin-bottom:6px;">
-        <div style="font-size:10px;color:var(--text-dim);margin-bottom:4px;">Player URL slug (e.g. <em>alice</em> → /player/alice)</div>
+        <div style="font-size:10px;color:var(--text-dim);margin-bottom:4px;">Player URL slug (e.g. <em>alice</em> &rarr; /player/alice)</div>
         <div style="display:flex;gap:6px;">
           <input id="new-player-id" type="text" placeholder="playerId" style="flex:1;padding:5px 8px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:12px;">
           <button class="sm primary" onclick="addPlayer()">Add</button>
-          <button class="sm ghost" onclick="document.getElementById('add-player-form').style.display='none'">✕</button>
+          <button class="sm ghost" onclick="document.getElementById('add-player-form').style.display='none'">&times;</button>
         </div>
       </div>
       <div id="players"></div>
+      </div>
 
-      <div class="col-header" onclick="toggleCol(this)"><span class="col-toggle">▼</span>NPC Dialogue Queue</div>
+      <div class="panel-section" data-panel="npc-dialogue">
+      <div class="section-header"><span class="drag-handle">⠿</span>NPC Dialogue Queue</div>
       <div id="npc-queue">
         <div style="color:var(--text-dim);font-size:11px;text-align:center;padding:12px;">No pending dialogue</div>
       </div>
+      </div>
 
-      <div class="col-header" onclick="toggleCol(this)"><span class="col-toggle">▼</span>NPC Manual</div>
+      <div class="panel-section" data-panel="npc-actions">
+      <div class="section-header"><span class="drag-handle">⠿</span>NPC Autonomous Actions</div>
+      <div id="npc-action-queue">
+        <div style="color:var(--text-dim);font-size:11px;text-align:center;padding:12px;">No pending actions</div>
+      </div>
+      </div>
+
+      <div class="panel-section" data-panel="npc-manual">
+      <div class="section-header"><span class="drag-handle">⠿</span>NPC Manual</div>
       <div class="pm-controls">
         <select id="npc-select">
           <option value="">Select NPC...</option>
         </select>
         <input type="text" id="npc-manual-text" placeholder="What should the NPC say about..." style="width:100%;padding:4px 8px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:12px;font-family:inherit;margin-bottom:6px;">
         <button class="primary" onclick="sendNpcManual()" style="width:100%">Generate Dialogue</button>
+      </div>
       </div>
     </div>
   </div>
@@ -1106,6 +1225,99 @@
         renderBeats();
         Earbud.onStoryBeat(msg.data);
         break;
+      case 'world:time_update':
+        if (msg.data) {
+          document.getElementById('game-time').textContent = msg.data.formatted || '--:--';
+        }
+        break;
+      case 'world:timed_event':
+        addTranscript({ speaker: 'world', text: '⏱ ' + (msg.data.data?.description || msg.data.id) });
+        loadWorldState();
+        break;
+      case 'world:clue_found':
+        addTranscript({ speaker: 'world', text: '🔍 Clue found: ' + (msg.data.clue?.description || msg.data.clueId) });
+        loadWorldState();
+        break;
+      case 'world:secret_revealed':
+        addTranscript({ speaker: 'world', text: '🔓 SECRET: ' + (msg.data.description || msg.data.secretId) });
+        loadWorldState();
+        break;
+      case 'world:npc_goal_activated':
+        addTranscript({ speaker: 'world', text: '🎯 NPC goal: ' + msg.data.npcId + ' — ' + msg.data.goal });
+        loadWorldState();
+        break;
+      case 'world:branch_activated':
+        addTranscript({ speaker: 'world', text: '⚡ Branch: ' + (msg.data.description || msg.data.branchId) });
+        loadWorldState();
+        break;
+      case 'world:environmental_cue':
+        addTranscript({ speaker: 'world', text: '🌿 ' + msg.data.text });
+        break;
+      case 'dm:whisper':
+        if (msg.data) {
+          Earbud.speak(msg.data.text, msg.data.priority || 3);
+          addTranscript({ speaker: 'co-dm', text: '🎧 ' + msg.data.text });
+        }
+        break;
+      case 'ai:npc_action':
+        if (msg.data) {
+          NpcActions.add(msg.data);
+          addTranscript({ speaker: 'co-dm', text: `🤖 ${msg.data.npc} wants to ${msg.data.action}: ${msg.data.intent}` });
+        }
+        break;
+      case 'npc:disposition_change':
+        if (msg.data) {
+          const dir = msg.data.delta > 0 ? '📈' : '📉';
+          addTranscript({ speaker: 'co-dm', text: `${dir} ${msg.data.npcId} → ${msg.data.playerId}: ${msg.data.newValue > 0 ? '+' : ''}${msg.data.newValue} (${msg.data.reason})` });
+        }
+        break;
+      case 'chat:party':
+        if (msg.data) {
+          DmChat.addMessage(msg.data.fromName || msg.data.from, msg.data.text, 'party');
+          addTranscript({ speaker: msg.data.fromName || msg.data.from, text: `[Party] ${msg.data.text}` });
+          Earbud.speak(`${msg.data.fromName || msg.data.from} says to party: ${msg.data.text}`, 3);
+        }
+        break;
+      case 'chat:to_dm':
+        if (msg.data) {
+          DmChat.addMessage(msg.data.fromName || msg.data.from, msg.data.text, 'dm-in');
+          addTranscript({ speaker: msg.data.fromName || msg.data.from, text: `[to DM] ${msg.data.text}` });
+          Earbud.speak(`${msg.data.fromName || msg.data.from} says: ${msg.data.text}`, 3);
+        }
+        break;
+      case 'player:roll':
+        if (msg.data) {
+          const rd = msg.data;
+          const playerName = state.players?.[rd.playerId]?.character?.name || rd.playerId;
+          const rollLabel = `${rd.formula || '?'}${rd.rollType ? ' ('+rd.rollType+')' : ''}`;
+          addTranscript({ speaker: playerName, text: `🎲 ${rollLabel} = ${rd.total}` });
+          DicePanel.addPlayerRoll(playerName, rollLabel, rd.total);
+          Earbud.speak(`${playerName} rolled ${rd.rollType || rd.formula || 'dice'}: ${rd.total}`, 2);
+        }
+        break;
+      case 'player:chat':
+        break;
+      case 'hp:update':
+        if (msg.data) {
+          const hp = msg.data;
+          const pName = state.players?.[hp.playerId]?.character?.name || hp.playerId;
+          addTranscript({ speaker: pName, text: `HP: ${hp.current}/${hp.max}` });
+          renderPlayers();
+        }
+        break;
+      case 'player:connected':
+      case 'player:disconnected':
+        // Refresh player list for chat targets
+        try {
+          fetch('/api/state').then(r=>r.json()).then(s => {
+            const players = [];
+            for (const [id, p] of Object.entries(s.players || {})) {
+              if (p.connected) players.push({ id, name: p.character?.name || id });
+            }
+            DmChat.updateTargets(players);
+          });
+        } catch(e) {}
+        break;
       case 'combat:started':
         state.combat = msg.data.combat;
         Combat.render();
@@ -1239,10 +1451,15 @@
 
     c.innerHTML = beats.map((b, i) => {
       const done = b.status === 'completed';
-      return `<div class="beat-item ${done ? 'completed' : ''}" onclick="toggleBeat(${i}, '${b.id}')">
-        <div class="beat-check">${done ? '✓' : ''}</div>
-        <span class="beat-name">${esc(b.name)}</span>
-      </div>`;
+      let html = `<div class="beat-item ${done ? 'completed' : ''}">
+        <div class="beat-check" onclick="toggleBeat(${i}, '${b.id}')">${done ? '✓' : ''}</div>
+        <span class="beat-name" onclick="toggleBeat(${i}, '${b.id}')">${esc(b.name)}</span>
+        <button class="sm" onclick="event.stopPropagation();beatReadAloud('${esc(b.id)}','${esc(b.name)}')" style="font-size:8px;padding:1px 4px;margin-left:4px;" title="Generate read-aloud">🎧</button>`;
+      if (b.readAloud) {
+        html += `<button class="sm" onclick="event.stopPropagation();Earbud.speak(state.story.beats[${i}].readAloud,2);addTranscript({speaker:'co-dm',text:'🎧 '+state.story.beats[${i}].readAloud})" style="font-size:8px;padding:1px 4px;" title="Read stored text">📖</button>`;
+      }
+      html += `</div>`;
+      return html;
     }).join('');
   }
 
@@ -1264,8 +1481,9 @@
 
     // Horror target
     document.getElementById('horror-target').innerHTML = `<option value="all">All Players</option>${options}`;
-    // PM target
-    document.getElementById('pm-target').innerHTML = `<option value="">Select player...</option>${options}`;
+    // Chat target
+    const chatPlayers = ids.map(id => ({ id, name: players[id].character?.name || id }));
+    DmChat.updateTargets(chatPlayers);
   }
 
   function updateNpcSelect() {
@@ -1311,14 +1529,7 @@
     document.getElementById('horror-text').value = '';
   }
 
-  function sendPM() {
-    const target = document.getElementById('pm-target').value;
-    const text = document.getElementById('pm-text').value;
-    if (!target || !text) return;
-    send('player:horror', { playerId: target, horrorType: 'whisper', payload: { text }, durationMs: 15000 });
-    addTranscript({ speaker: 'system', text: `PM → ${target}: ${text}` });
-    document.getElementById('pm-text').value = '';
-  }
+  // sendPM removed — replaced by DmChat.send()
 
   function sendNpcManual() {
     const npcId = document.getElementById('npc-select').value;
@@ -1354,6 +1565,169 @@
       </div>`;
     c.prepend(div);
   }
+
+  // === DICE ROLLER ===
+  const DicePanel = {
+    log: [],
+
+    roll(sides) {
+      const result = Math.floor(Math.random() * sides) + 1;
+      this._showResult(`1d${sides}`, [result], result, 0);
+    },
+
+    rollFormula() {
+      const input = document.getElementById('dice-formula').value.trim();
+      if (!input) return;
+      // Parse: NdS+M or NdS-M or NdS
+      const match = input.match(/^(\d+)?d(\d+)\s*([+-]\s*\d+)?$/i);
+      if (!match) {
+        document.getElementById('dice-result').textContent = '?';
+        document.getElementById('dice-detail').textContent = 'Invalid formula. Use NdS+M (e.g. 2d6+3)';
+        return;
+      }
+      const count = parseInt(match[1] || '1');
+      const sides = parseInt(match[2]);
+      const mod = match[3] ? parseInt(match[3].replace(/\s/g, '')) : 0;
+      const rolls = [];
+      for (let i = 0; i < Math.min(count, 100); i++) {
+        rolls.push(Math.floor(Math.random() * sides) + 1);
+      }
+      const total = rolls.reduce((a, b) => a + b, 0) + mod;
+      this._showResult(input, rolls, total, mod);
+    },
+
+    _showResult(formula, rolls, total, mod) {
+      document.getElementById('dice-result').textContent = total;
+      const modStr = mod > 0 ? ` + ${mod}` : mod < 0 ? ` - ${Math.abs(mod)}` : '';
+      document.getElementById('dice-detail').textContent = `[${rolls.join(', ')}]${modStr} = ${total}`;
+
+      // Add to log
+      const time = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      this.log.unshift({ time, formula, total, detail: rolls.join('+') + (mod ? (mod>0?'+':'') + mod : '') });
+      if (this.log.length > 20) this.log.pop();
+      this._renderLog();
+
+      // Show in transcript
+      addTranscript({ speaker: 'DM', text: `🎲 ${formula} = ${total}` });
+    },
+
+    _renderLog() {
+      const el = document.getElementById('dice-log');
+      el.innerHTML = this.log.map(r =>
+        `<div style="display:flex;justify-content:space-between;padding:1px 0;border-bottom:1px solid var(--bg);">` +
+        `<span style="color:var(--text-dim);">${r.time}</span>` +
+        `<span>${r.formula}</span>` +
+        `<span style="color:var(--accent);font-weight:700;">${r.total}</span></div>`
+      ).join('');
+    },
+
+    clear() {
+      this.log = [];
+      document.getElementById('dice-result').textContent = '';
+      document.getElementById('dice-detail').textContent = '';
+      document.getElementById('dice-log').innerHTML = '';
+    },
+
+    addPlayerRoll(playerName, formula, total) {
+      const time = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      this.log.unshift({ time, formula: `${playerName}: ${formula}`, total });
+      if (this.log.length > 20) this.log.pop();
+      this._renderLog();
+    }
+  };
+
+  // === DM CHAT PANEL ===
+  const DmChat = {
+    messages: [],
+    addMessage(from, text, type) {
+      this.messages.push({ from, text, type, time: Date.now() });
+      if (this.messages.length > 100) this.messages.shift();
+      this.render();
+    },
+    render() {
+      const el = document.getElementById('dm-chatlog');
+      if (!el) return;
+      el.innerHTML = this.messages.map(m => {
+        let color = 'var(--text-dim)';
+        let prefix = '';
+        if (m.type === 'party') { color = 'var(--accent)'; prefix = '[Party] '; }
+        else if (m.type === 'dm-in') { color = '#c9a54e'; prefix = '[to DM] '; }
+        else if (m.type === 'dm-out') { color = 'var(--green)'; prefix = '[DM→] '; }
+        else if (m.type === 'whisper') { color = 'var(--purple)'; prefix = '[Whisper] '; }
+        const time = new Date(m.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+        return `<div style="margin-bottom:3px;"><span style="color:var(--text-dim);font-size:9px;">${time}</span> <span style="color:${color};font-weight:600;">${prefix}${esc(m.from)}:</span> ${esc(m.text)}</div>`;
+      }).join('');
+      el.scrollTop = el.scrollHeight;
+    },
+    send() {
+      const target = document.getElementById('dm-chat-target').value;
+      const input = document.getElementById('dm-chat-input');
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+
+      if (target === 'all') {
+        send('dm:broadcast_chat', { text });
+        this.addMessage('DM', text, 'dm-out');
+      } else {
+        send('dm:private_message', { playerId: target, text });
+        this.addMessage('DM → ' + target, text, 'dm-out');
+      }
+    },
+    clear() {
+      this.messages = [];
+      this.render();
+    },
+    updateTargets(players) {
+      const sel = document.getElementById('dm-chat-target');
+      const current = sel.value;
+      sel.innerHTML = '<option value="all">All Players</option>';
+      (players || []).forEach(p => {
+        sel.innerHTML += `<option value="${esc(p.id)}">${esc(p.name || p.id)}</option>`;
+      });
+      sel.value = current || 'all';
+    }
+  };
+
+  // === NPC AUTONOMOUS ACTIONS ===
+  const NpcActions = {
+    queue: [],
+    add(data) {
+      this.queue.push(data);
+      this.render();
+    },
+    render() {
+      const c = document.getElementById('npc-action-queue');
+      if (this.queue.length === 0) {
+        c.innerHTML = '<div style="color:var(--text-dim);font-size:11px;text-align:center;padding:12px;">No pending actions</div>';
+        return;
+      }
+      c.innerHTML = this.queue.map((a, i) => `
+        <div class="npc-item">
+          <div class="npc-name">${esc(a.npc)} <span style="color:${a.urgency >= 7 ? 'var(--hp-low)' : 'var(--text-dim)'};font-size:10px;">urgency ${a.urgency}/10</span></div>
+          <div class="npc-text" style="font-style:italic;">${esc(a.action)}: ${esc(a.intent || '')}</div>
+          ${a.dialogue ? `<div class="npc-text">"${esc(a.dialogue)}"</div>` : ''}
+          ${a.moveTo ? `<div class="npc-text" style="color:var(--text-dim);">→ Move to: ${esc(a.moveTo)}</div>` : ''}
+          <div class="npc-actions">
+            <button class="primary sm" onclick="NpcActions.approve(${i})">✓ Approve</button>
+            <button class="sm" onclick="NpcActions.dismiss(${i})">✗ Dismiss</button>
+          </div>
+        </div>
+      `).join('');
+    },
+    approve(index) {
+      const a = this.queue[index];
+      if (!a) return;
+      // Execute via bus events
+      send('npc:execute_action', { npcId: a.npcId, npc: a.npc, action: a.action, dialogue: a.dialogue, moveTo: a.moveTo, intent: a.intent });
+      this.queue.splice(index, 1);
+      this.render();
+    },
+    dismiss(index) {
+      this.queue.splice(index, 1);
+      this.render();
+    }
+  };
 
   // === TRANSCRIPT ===
   function toggleCol(header) {
@@ -1949,7 +2323,17 @@
   }
 
   // Load characters on connect
-  function onConnected() { loadCharacters(); loadSceneList(); loadDdbConfig(); loadNamedNPCs(); }
+  function onConnected() {
+    loadCharacters(); loadSceneList(); loadDdbConfig(); loadNamedNPCs(); loadWorldState();
+    // Load connected players for chat targets
+    fetch('/api/state').then(r=>r.json()).then(s => {
+      const players = [];
+      for (const [id, p] of Object.entries(s.players || {})) {
+        if (p.connected) players.push({ id, name: p.character?.name || id });
+      }
+      DmChat.updateTargets(players);
+    }).catch(()=>{});
+  }
 
   function showAddPlayer() {
     const f = document.getElementById('add-player-form');
@@ -2759,6 +3143,216 @@
     },
   };
 
+  /* === BEAT READ-ALOUD === */
+  function beatReadAloud(beatId, beatName) {
+    addTranscript({ speaker: 'dm', text: '🎧 Generating read-aloud for: ' + beatName });
+    fetch('/api/codm/read-aloud', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic: beatName })
+    }).then(function(r) { return r.json(); })
+     .then(function(data) {
+       if (data.text) {
+         addTranscript({ speaker: 'co-dm', text: '📖 ' + data.text });
+       }
+     })
+     .catch(console.error);
+  }
+
+  /* === TRANSCRIPT INPUT & CO-DM === */
+  function submitTranscript() {
+    var el = document.getElementById('transcript-text');
+    var text = el.value.trim();
+    if (!text) return;
+    var speaker = document.getElementById('transcript-speaker').value;
+    el.value = '';
+
+    fetch('/api/transcript', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ speaker: speaker, text: text })
+    }).catch(console.error);
+
+    addTranscript({ speaker: speaker, text: text });
+  }
+
+  function askCoDM() {
+    var el = document.getElementById('ask-codm');
+    var text = el.value.trim();
+    if (!text) return;
+    el.value = '';
+
+    addTranscript({ speaker: 'dm', text: '❓ ' + text });
+
+    fetch('/api/codm/ask', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: text })
+    }).then(function(r) { return r.json(); })
+     .then(function(data) {
+       if (data.answer) {
+         addTranscript({ speaker: 'co-dm', text: '🎧 ' + data.answer });
+         Earbud.speak(data.answer, 2);
+       }
+       if (data.error) {
+         addTranscript({ speaker: 'system', text: 'Co-DM error: ' + data.error });
+       }
+     })
+     .catch(console.error);
+  }
+
+  /* === WORLD CLOCK === */
+  var _worldData = null;
+  var _secretView = 'secrets';
+
+  function loadWorldState() {
+    fetch('/api/world')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        _worldData = data;
+        updateWorldClockUI(data);
+        renderSecretView();
+      })
+      .catch(console.error);
+  }
+
+  function updateWorldClockUI(data) {
+    if (!data || !data.clock) return;
+    document.getElementById('game-time').textContent = data.clock.time || '--:--';
+    document.getElementById('game-date').textContent = data.clock.date || '';
+    document.getElementById('game-period').textContent = data.clock.period || '';
+    document.getElementById('time-scale').value = String(data.timeScale || 1);
+
+    // Timed events
+    var el = document.getElementById('timed-events-list');
+    if (!data.timedEvents || !data.timedEvents.length) {
+      el.innerHTML = '<span style="color:var(--text-dim)">No timed events</span>';
+      return;
+    }
+    el.innerHTML = data.timedEvents.map(function(e) {
+      var style = e.fired ? 'text-decoration:line-through;opacity:0.5;' : '';
+      var icon = e.fired ? '✓' : '⏱';
+      return '<div style="padding:2px 0;' + style + '">' + icon + ' ' + esc(e.description) + '</div>';
+    }).join('');
+  }
+
+  function setTimeScale(val) {
+    fetch('/api/world/time-scale', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scale: parseFloat(val) })
+    }).catch(console.error);
+  }
+
+  function advanceTime(mins) {
+    fetch('/api/world/advance-time', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ minutes: mins })
+    }).then(function(r) { return r.json(); })
+     .then(function(d) { loadWorldState(); })
+     .catch(console.error);
+  }
+
+  function toggleSecretView(view) {
+    _secretView = view;
+    ['secrets','clues','goals','chains'].forEach(function(v) {
+      var btn = document.getElementById('btn-show-' + v);
+      if (btn) btn.className = v === view ? 'sm primary' : 'sm';
+    });
+    renderSecretView();
+  }
+
+  function renderSecretView() {
+    var el = document.getElementById('secrets-panel');
+    if (!_worldData) { el.innerHTML = '<span style="color:var(--text-dim)">Loading...</span>'; return; }
+
+    if (_secretView === 'secrets') {
+      var secrets = _worldData.secrets || [];
+      if (!secrets.length) { el.innerHTML = '<span style="color:var(--text-dim)">No secrets defined</span>'; return; }
+      el.innerHTML = secrets.map(function(s) {
+        var revealed = s.revealed;
+        var icon = revealed ? '🔓' : '🔒';
+        var style = revealed ? 'opacity:0.6;' : '';
+        var known = s.knownBy.length ? ' <span style="color:var(--text-dim)">(known by: ' + s.knownBy.join(', ') + ')</span>' : '';
+        var disc = s.discoveredBy.length ? ' <span style="color:var(--accent);">Found by: ' + s.discoveredBy.join(', ') + '</span>' : '';
+        return '<div style="padding:3px 0;border-bottom:1px solid var(--bg);' + style + '">'
+          + icon + ' <strong>' + esc(s.id) + '</strong>: ' + esc(s.description) + known + disc
+          + (!revealed ? ' <button class="sm" onclick="revealSecret(\'' + s.id + '\')" style="font-size:8px;padding:1px 4px;margin-left:4px;">Reveal</button>' : '')
+          + '</div>';
+      }).join('');
+    }
+
+    if (_secretView === 'clues') {
+      var clues = _worldData.clues || [];
+      if (!clues.length) { el.innerHTML = '<span style="color:var(--text-dim)">No clues defined</span>'; return; }
+      el.innerHTML = clues.map(function(c) {
+        var found = c.found;
+        var icon = found ? '✓' : '○';
+        var style = found ? 'color:var(--accent);' : '';
+        var dc = c.dc ? ' DC' + c.dc : '';
+        var loc = c.location ? ' [' + c.location + ']' : '';
+        return '<div style="padding:3px 0;border-bottom:1px solid var(--bg);' + style + '">'
+          + icon + ' <strong>' + esc(c.id) + '</strong>' + dc + loc + ': ' + esc(c.description)
+          + (found ? ' <span style="color:var(--text-dim)">— found by ' + esc(c.foundBy || '?') + '</span>' : ' <button class="sm" onclick="markClueFound(\'' + c.id + '\')" style="font-size:8px;padding:1px 4px;margin-left:4px;">Found</button>')
+          + '</div>';
+      }).join('');
+    }
+
+    if (_secretView === 'goals') {
+      var goals = _worldData.npcGoals || {};
+      var html = '';
+      for (var npcId in goals) {
+        html += '<div style="margin-bottom:6px;"><strong style="color:var(--accent);">' + esc(npcId) + '</strong>';
+        html += goals[npcId].map(function(g) {
+          var color = g.status === 'completed' ? 'var(--accent)' : g.status === 'active' ? '#ffa' : g.status === 'failed' ? '#f66' : 'var(--text-dim)';
+          return '<div style="padding:2px 0 2px 10px;color:' + color + ';">[' + g.status + '] P' + g.priority + ' ' + esc(g.goal)
+            + (g.status === 'pending' ? ' <button class="sm" onclick="npcGoalAction(\'' + npcId + '\',\'' + g.id + '\',\'activate\')" style="font-size:8px;padding:1px 4px;">Activate</button>' : '')
+            + (g.status === 'active' ? ' <button class="sm" onclick="npcGoalAction(\'' + npcId + '\',\'' + g.id + '\',\'complete\')" style="font-size:8px;padding:1px 4px;">✓</button><button class="sm" onclick="npcGoalAction(\'' + npcId + '\',\'' + g.id + '\',\'fail\')" style="font-size:8px;padding:1px 4px;">✗</button>' : '')
+            + '</div>';
+        }).join('');
+        html += '</div>';
+      }
+      el.innerHTML = html || '<span style="color:var(--text-dim)">No NPC goals defined</span>';
+    }
+
+    if (_secretView === 'chains') {
+      var chains = _worldData.discoveries || [];
+      var branches = _worldData.branches || [];
+      var html = '<div style="margin-bottom:6px;font-weight:bold;">Discovery Chains</div>';
+      html += chains.map(function(d) {
+        var icon = d.completed ? '✓' : '◎';
+        return '<div style="padding:2px 0;">' + icon + ' ' + esc(d.id) + ' [' + d.progress + '] ' + esc(d.description) + '</div>';
+      }).join('');
+      html += '<div style="margin:6px 0 6px 0;font-weight:bold;">Story Branches</div>';
+      html += branches.map(function(b) {
+        var icon = b.active ? '⚡' : '○';
+        return '<div style="padding:2px 0;">' + icon + ' ' + esc(b.id) + ': ' + esc(b.description) + '</div>';
+      }).join('');
+      el.innerHTML = html;
+    }
+  }
+
+  function revealSecret(secretId) {
+    fetch('/api/world/secret', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secretId: secretId, method: 'dm_override' })
+    }).then(function() { loadWorldState(); }).catch(console.error);
+  }
+
+  function markClueFound(clueId) {
+    var pid = prompt('Which player found this clue? (leave blank for DM)') || 'dm';
+    fetch('/api/world/clue', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clueId: clueId, playerId: pid })
+    }).then(function() { loadWorldState(); }).catch(console.error);
+  }
+
+  function npcGoalAction(npcId, goalId, action) {
+    fetch('/api/world/npc-goal', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ npcId: npcId, goalId: goalId, action: action })
+    }).then(function() { loadWorldState(); }).catch(console.error);
+  }
+
+  // Refresh world state periodically
+  setInterval(loadWorldState, 10000);
+
   /* === ACTOR LIBRARY === */
   function loadNamedNPCs() {
     fetch('/api/actors/named')
@@ -3211,164 +3805,327 @@
     });
   })();
 
-  /* === PANEL DRAG-TO-REORDER (mouse + touch) === */
-  (function() {
-    const STORAGE_KEY = 'dp_panel_order';
-    let draggedPanel = null;
-    let placeholder = null;
-    let touchOffsetY = 0;
-    let clone = null;
+  /* === PANEL LAYOUT MANAGER — drag, hide, collapse, cross-column === */
+  const PanelLayout = {
+    STORAGE_KEY: 'dp_panel_layout',
+    draggedPanel: null,
+    clone: null,
+    touchOffsetY: 0,
 
-    function getCol() { return document.getElementById('col-controls'); }
-    function getPanels() { return Array.from(getCol().querySelectorAll('.panel-section')); }
+    // All panel containers that accept panels
+    getDropTargets() {
+      return [document.getElementById('col-controls'), document.querySelector('.players-col')];
+    },
 
-    function savePanelOrder() {
-      const order = getPanels().map(p => p.dataset.panel);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
-    }
+    getAllPanels() {
+      const panels = [];
+      this.getDropTargets().forEach(col => {
+        if (col) col.querySelectorAll('.panel-section').forEach(p => panels.push(p));
+      });
+      return panels;
+    },
 
-    function restorePanelOrder() {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) return;
+    save() {
+      const layout = {};
+      this.getDropTargets().forEach((col, ci) => {
+        const colId = ci === 0 ? 'controls' : 'players';
+        col.querySelectorAll('.panel-section').forEach(p => {
+          layout[p.dataset.panel] = {
+            col: colId,
+            hidden: p.classList.contains('panel-hidden'),
+            collapsed: p.classList.contains('panel-collapsed')
+          };
+        });
+      });
+      // Save order per column
+      layout._order = {};
+      this.getDropTargets().forEach((col, ci) => {
+        const colId = ci === 0 ? 'controls' : 'players';
+        layout._order[colId] = Array.from(col.querySelectorAll('.panel-section')).map(p => p.dataset.panel);
+      });
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(layout));
+    },
+
+    restore() {
+      const raw = localStorage.getItem(this.STORAGE_KEY);
+      if (!raw) return;
       try {
-        const order = JSON.parse(saved);
-        const col = getCol();
-        const panelMap = {};
-        getPanels().forEach(p => { panelMap[p.dataset.panel] = p; });
-        order.forEach(name => { if (panelMap[name]) col.appendChild(panelMap[name]); });
-      } catch(e) { console.warn('[DragReorder] Bad saved order:', e); }
-    }
+        const layout = JSON.parse(raw);
+        const cols = { controls: this.getDropTargets()[0], players: this.getDropTargets()[1] };
 
-    function getPanelAtY(y) {
-      for (const p of getPanels()) {
-        if (p === draggedPanel) continue;
+        // Apply visibility and collapse state
+        this.getAllPanels().forEach(p => {
+          const cfg = layout[p.dataset.panel];
+          if (!cfg) return;
+          if (cfg.hidden) p.classList.add('panel-hidden');
+          else p.classList.remove('panel-hidden');
+          if (cfg.collapsed) p.classList.add('panel-collapsed');
+          else p.classList.remove('panel-collapsed');
+        });
+
+        // Apply column assignment and order
+        if (layout._order) {
+          for (const [colId, order] of Object.entries(layout._order)) {
+            const col = cols[colId];
+            if (!col) continue;
+            // Find the anchor — first non-panel child (col-header etc)
+            const anchor = col.querySelector('.panel-section');
+            order.forEach(panelId => {
+              const panel = document.querySelector(`.panel-section[data-panel="${panelId}"]`);
+              if (panel) col.appendChild(panel);
+            });
+          }
+        }
+      } catch(e) { console.warn('[PanelLayout] restore error:', e); }
+    },
+
+    togglePanel(panelId) {
+      const panel = document.querySelector(`.panel-section[data-panel="${panelId}"]`);
+      if (!panel) return;
+      panel.classList.toggle('panel-hidden');
+      this.save();
+      this.renderMenu();
+    },
+
+    collapsePanel(panelId) {
+      const panel = document.querySelector(`.panel-section[data-panel="${panelId}"]`);
+      if (!panel) return;
+      panel.classList.toggle('panel-collapsed');
+      this.save();
+    },
+
+    hidePanel(panelId) {
+      const panel = document.querySelector(`.panel-section[data-panel="${panelId}"]`);
+      if (!panel) return;
+      panel.classList.add('panel-hidden');
+      this.save();
+      this.renderMenu();
+    },
+
+    showAll() {
+      this.getAllPanels().forEach(p => p.classList.remove('panel-hidden'));
+      this.save();
+      this.renderMenu();
+    },
+
+    toggleMenu() {
+      const menu = document.getElementById('panel-menu');
+      menu.classList.toggle('open');
+      if (menu.classList.contains('open')) this.renderMenu();
+    },
+
+    renderMenu() {
+      const menu = document.getElementById('panel-menu');
+      const panels = this.getAllPanels();
+      let html = '<div class="pm-title">Panel Visibility</div>';
+      html += '<label style="padding:4px 12px;"><a href="#" onclick="PanelLayout.showAll();return false;" style="color:var(--accent);font-size:10px;text-decoration:none;">Show All</a></label>';
+      html += '<div class="pm-divider"></div>';
+
+      panels.forEach(p => {
+        const name = p.querySelector('.section-header')?.textContent?.replace('⠿','').trim() || p.dataset.panel;
+        const hidden = p.classList.contains('panel-hidden');
+        html += `<label><input type="checkbox" ${hidden ? '' : 'checked'} onchange="PanelLayout.togglePanel('${p.dataset.panel}')"> ${name}</label>`;
+      });
+      menu.innerHTML = html;
+    },
+
+    // Inject hide button and collapse icon into all panel section-headers
+    enhancePanelHeaders() {
+      this.getAllPanels().forEach(p => {
+        const header = p.querySelector('.section-header');
+        if (!header || header.dataset.enhanced) return;
+        header.dataset.enhanced = '1';
+
+        // Add collapse icon after drag handle
+        const dragHandle = header.querySelector('.drag-handle');
+        if (dragHandle) {
+          const icon = document.createElement('span');
+          icon.className = 'panel-collapse-icon';
+          icon.textContent = '▼';
+          dragHandle.after(icon);
+        }
+
+        // Make header clickable to collapse (but not on drag handle)
+        header.addEventListener('click', (e) => {
+          if (e.target.closest('.drag-handle') || e.target.closest('.panel-hide-btn')) return;
+          this.collapsePanel(p.dataset.panel);
+          // Update icon
+          const ico = header.querySelector('.panel-collapse-icon');
+          if (ico) ico.style.transform = p.classList.contains('panel-collapsed') ? 'rotate(-90deg)' : '';
+        });
+
+        // Add hide button
+        const hideBtn = document.createElement('button');
+        hideBtn.className = 'panel-hide-btn';
+        hideBtn.innerHTML = '&times;';
+        hideBtn.title = 'Hide panel';
+        hideBtn.onclick = (e) => { e.stopPropagation(); this.hidePanel(p.dataset.panel); };
+        p.appendChild(hideBtn);
+      });
+    },
+
+    // === DRAG REORDER (within and across columns) ===
+    savePanelOrder() { this.save(); },
+
+    getPanelAtPoint(x, y) {
+      for (const p of this.getAllPanels()) {
+        if (p === this.draggedPanel) continue;
         const r = p.getBoundingClientRect();
         if (y >= r.top && y <= r.bottom) return p;
       }
       return null;
-    }
+    },
 
-    function insertAtTarget(target) {
-      if (!target || !draggedPanel || target === draggedPanel) return;
-      const panels = getPanels();
-      const dragIdx = panels.indexOf(draggedPanel);
-      const dropIdx = panels.indexOf(target);
-      if (dragIdx < dropIdx) {
-        target.parentNode.insertBefore(draggedPanel, target.nextSibling);
-      } else {
-        target.parentNode.insertBefore(draggedPanel, target);
+    getColumnAtPoint(x) {
+      for (const col of this.getDropTargets()) {
+        const r = col.getBoundingClientRect();
+        if (x >= r.left && x <= r.right) return col;
       }
-    }
+      return null;
+    },
 
-    function startDrag(panel, clientY) {
-      draggedPanel = panel;
+    insertAtTarget(target, sourcePanel) {
+      if (!target || !sourcePanel || target === sourcePanel) return;
+      const targetCol = target.closest('.controls-col, .players-col');
+      if (!targetCol) return;
+      const rect = target.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      // We don't have mouse Y here, so insert before target
+      targetCol.insertBefore(sourcePanel, target);
+    },
+
+    startDrag(panel) {
+      this.draggedPanel = panel;
       panel.classList.add('dragging');
-    }
+    },
 
-    function moveDrag(clientY) {
-      if (!draggedPanel) return;
-      const target = getPanelAtY(clientY);
-      getPanels().forEach(p => p.classList.remove('drag-over'));
-      if (target && target !== draggedPanel) target.classList.add('drag-over');
-    }
+    moveDrag(clientX, clientY) {
+      if (!this.draggedPanel) return;
+      const target = this.getPanelAtPoint(clientX, clientY);
+      this.getAllPanels().forEach(p => p.classList.remove('drag-over'));
+      if (target && target !== this.draggedPanel) target.classList.add('drag-over');
 
-    function endDrag(clientY) {
-      if (!draggedPanel) return;
-      const target = getPanelAtY(clientY);
-      if (target) insertAtTarget(target);
-      draggedPanel.classList.remove('dragging');
-      getPanels().forEach(p => p.classList.remove('drag-over'));
-      if (target) savePanelOrder();
-      draggedPanel = null;
-      // Remove floating clone if any
-      if (clone) { clone.remove(); clone = null; }
-    }
+      // Highlight drop column
+      this.getDropTargets().forEach(c => c.style.outline = '');
+      const col = this.getColumnAtPoint(clientX);
+      if (col) col.style.outline = '1px solid var(--accent-dim)';
+    },
 
-    function initDragReorder() {
-      const col = getCol();
-      if (!col) return;
-      restorePanelOrder();
+    endDrag(clientX, clientY) {
+      if (!this.draggedPanel) return;
+      const target = this.getPanelAtPoint(clientX, clientY);
+      const col = this.getColumnAtPoint(clientX);
 
-      col.querySelectorAll('.drag-handle').forEach(handle => {
-        // --- Mouse: use HTML5 drag API ---
+      if (target) {
+        this.insertAtTarget(target, this.draggedPanel);
+      } else if (col) {
+        // Drop at end of column
+        col.appendChild(this.draggedPanel);
+      }
+
+      this.draggedPanel.classList.remove('dragging');
+      this.getAllPanels().forEach(p => p.classList.remove('drag-over'));
+      this.getDropTargets().forEach(c => c.style.outline = '');
+      this.save();
+      this.draggedPanel = null;
+      if (this.clone) { this.clone.remove(); this.clone = null; }
+    },
+
+    initDrag() {
+      // Restore saved layout
+      this.restore();
+      this.enhancePanelHeaders();
+
+      const self = this;
+
+      // Set up drag handles on all panels
+      document.querySelectorAll('.drag-handle').forEach(handle => {
         handle.addEventListener('mousedown', () => {
           handle.closest('.panel-section').setAttribute('draggable', 'true');
         });
 
-        // --- Touch: manual drag ---
         handle.addEventListener('touchstart', (e) => {
           const panel = handle.closest('.panel-section');
           const touch = e.touches[0];
-          startDrag(panel, touch.clientY);
-          touchOffsetY = touch.clientY - panel.getBoundingClientRect().top;
+          self.startDrag(panel);
+          self.touchOffsetY = touch.clientY - panel.getBoundingClientRect().top;
 
-          // Create floating clone for visual feedback
-          clone = panel.cloneNode(true);
-          clone.style.cssText = 'position:fixed;left:0;right:0;z-index:9999;opacity:0.85;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,0.5);';
-          clone.style.top = (touch.clientY - touchOffsetY) + 'px';
-          clone.style.width = panel.offsetWidth + 'px';
-          document.body.appendChild(clone);
-
+          self.clone = panel.cloneNode(true);
+          self.clone.style.cssText = 'position:fixed;left:0;right:0;z-index:9999;opacity:0.85;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,0.5);';
+          self.clone.style.top = (touch.clientY - self.touchOffsetY) + 'px';
+          self.clone.style.width = panel.offsetWidth + 'px';
+          document.body.appendChild(self.clone);
           e.preventDefault();
         }, { passive: false });
       });
 
-      // Touch move/end on document so it works even if finger leaves handle
+      // Touch events
       document.addEventListener('touchmove', (e) => {
-        if (!draggedPanel) return;
+        if (!self.draggedPanel) return;
         const touch = e.touches[0];
-        moveDrag(touch.clientY);
-        if (clone) clone.style.top = (touch.clientY - touchOffsetY) + 'px';
+        self.moveDrag(touch.clientX, touch.clientY);
+        if (self.clone) self.clone.style.top = (touch.clientY - self.touchOffsetY) + 'px';
         e.preventDefault();
       }, { passive: false });
 
       document.addEventListener('touchend', (e) => {
-        if (!draggedPanel) return;
+        if (!self.draggedPanel) return;
         const touch = e.changedTouches[0];
-        endDrag(touch.clientY);
+        self.endDrag(touch.clientX, touch.clientY);
       });
 
-      // --- HTML5 drag events (mouse on desktop) ---
-      col.addEventListener('dragstart', (e) => {
-        const panel = e.target.closest('.panel-section');
-        if (!panel) return;
-        startDrag(panel, e.clientY);
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', panel.dataset.panel);
-      });
+      // HTML5 drag events on each drop target column
+      self.getDropTargets().forEach(col => {
+        col.addEventListener('dragstart', (e) => {
+          const panel = e.target.closest('.panel-section');
+          if (!panel) return;
+          self.startDrag(panel);
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', panel.dataset.panel);
+        });
 
-      col.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        moveDrag(e.clientY);
-      });
+        col.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          self.moveDrag(e.clientX, e.clientY);
+        });
 
-      col.addEventListener('dragleave', (e) => {
-        const target = e.target.closest('.panel-section');
-        if (target) target.classList.remove('drag-over');
-      });
+        col.addEventListener('dragleave', (e) => {
+          const target = e.target.closest('.panel-section');
+          if (target) target.classList.remove('drag-over');
+        });
 
-      col.addEventListener('drop', (e) => {
-        e.preventDefault();
-        endDrag(e.clientY);
-      });
+        col.addEventListener('drop', (e) => {
+          e.preventDefault();
+          self.endDrag(e.clientX, e.clientY);
+        });
 
-      col.addEventListener('dragend', () => {
-        if (draggedPanel) {
-          draggedPanel.classList.remove('dragging');
-          draggedPanel.removeAttribute('draggable');
-          draggedPanel = null;
-        }
-        getPanels().forEach(p => p.classList.remove('drag-over'));
+        col.addEventListener('dragend', () => {
+          if (self.draggedPanel) {
+            self.draggedPanel.classList.remove('dragging');
+            self.draggedPanel.removeAttribute('draggable');
+            self.draggedPanel = null;
+          }
+          self.getAllPanels().forEach(p => p.classList.remove('drag-over'));
+          self.getDropTargets().forEach(c => c.style.outline = '');
+        });
       });
 
       document.addEventListener('mouseup', () => {
-        getPanels().forEach(p => p.removeAttribute('draggable'));
+        self.getAllPanels().forEach(p => p.removeAttribute('draggable'));
+      });
+
+      // Close panel menu on outside click
+      document.addEventListener('click', (e) => {
+        const menu = document.getElementById('panel-menu');
+        if (menu.classList.contains('open') && !menu.contains(e.target) && e.target.id !== 'panel-menu-btn') {
+          menu.classList.remove('open');
+        }
       });
     }
+  };
 
-    document.addEventListener('DOMContentLoaded', initDragReorder);
-  })();
+  document.addEventListener('DOMContentLoaded', () => PanelLayout.initDrag());
 
   // ========================================================================
   // COMBAT TRACKER

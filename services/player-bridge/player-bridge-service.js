@@ -215,6 +215,15 @@ class PlayerBridgeService {
       this._broadcast({ type: 'horror:clear' });
     }, 'player-bridge');
 
+    this.bus.subscribe('dm:private_message', (env) => {
+      const { playerId, text, durationMs } = env.data;
+      if (playerId === 'all') {
+        this._broadcast({ type: 'dm:private_message', text, durationMs });
+      } else {
+        this._sendToPlayer(playerId, { type: 'dm:private_message', text, durationMs });
+      }
+    }, 'player-bridge');
+
     this.bus.subscribe('npc:approved', (env) => {
       this._broadcast({
         type: 'npc:dialogue',
@@ -267,6 +276,9 @@ class PlayerBridgeService {
     console.log(`[PlayerBridge] ${playerId} connected (${this.players.size} players online)`);
     this.bus.dispatch('player:connected', { playerId });
 
+    // Broadcast updated player list to all players after a short delay
+    setTimeout(() => this._broadcastPlayerList(), 500);
+
     const playerState = this.state.get(`players.${playerId}`);
     const sceneState = this.state.get('scene');
     const combatState = this.state.get('combat');
@@ -317,14 +329,17 @@ class PlayerBridgeService {
       console.error('[PlayerBridge] Error sending init:', e.message);
     }
 
-    ws.on('message', (raw) => {
-      if (Buffer.isBuffer(raw) || raw instanceof ArrayBuffer) {
+    ws.on('message', (raw, isBinary) => {
+      // Binary messages are audio chunks
+      if (isBinary) {
         this._handleAudioChunk(playerId, raw);
         return;
       }
 
+      // Text messages are JSON
       try {
-        const msg = JSON.parse(raw.toString());
+        const str = Buffer.isBuffer(raw) ? raw.toString('utf8') : String(raw);
+        const msg = JSON.parse(str);
         this._handlePlayerMessage(playerId, msg);
       } catch (err) {
         console.error(`[PlayerBridge] Bad message from ${playerId}:`, err.message);
@@ -335,6 +350,7 @@ class PlayerBridgeService {
       this.state.set(`players.${playerId}.connected`, false);
       this.players.delete(playerId);
       console.log(`[PlayerBridge] ${playerId} disconnected (${this.players.size} players online)`);
+      this._broadcastPlayerList();
       this.bus.dispatch('player:disconnected', { playerId });
     });
   }
@@ -367,13 +383,50 @@ class PlayerBridgeService {
         });
         break;
 
-      case 'chat:message':
+      case 'chat:message': {
+        const channel = msg.channel || 'party';
+        const fromName = msg.fromName || playerId;
+        console.log(`[PlayerBridge] Chat from ${playerId}: channel=${channel} text="${msg.text}"`);
+
+        // Always feed to AI context
         this.bus.dispatch('player:chat', {
           playerId,
           text: msg.text,
-          whisperTo: msg.whisperTo || null
+          channel
         });
+
+        if (channel === 'party') {
+          // Broadcast to all players (including sender for confirmation)
+          this._broadcast({
+            type: 'chat:party',
+            from: playerId,
+            fromName,
+            text: msg.text
+          });
+          // Also show on DM dashboard
+          this.bus.dispatch('chat:party', {
+            from: playerId,
+            fromName,
+            text: msg.text
+          });
+        } else if (channel === 'dm') {
+          // Send to DM dashboard only
+          this.bus.dispatch('chat:to_dm', {
+            from: playerId,
+            fromName,
+            text: msg.text
+          });
+        } else {
+          // Whisper to specific player
+          this._sendToPlayer(channel, {
+            type: 'chat:whisper',
+            from: playerId,
+            fromName,
+            text: msg.text
+          });
+        }
         break;
+      }
 
       case 'action:hp': {
         // Read HP from state; fall back to character service if not yet in state
@@ -453,6 +506,15 @@ class PlayerBridgeService {
         player.ws.send(json);
       }
     }
+  }
+
+  _broadcastPlayerList() {
+    const players = [];
+    for (const [id, player] of this.players) {
+      const charName = this.state.get(`players.${id}.character.name`);
+      players.push({ id, name: charName || id });
+    }
+    this._broadcast({ type: 'player:list', players });
   }
 
   async stop() {

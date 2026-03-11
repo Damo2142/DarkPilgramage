@@ -42,6 +42,8 @@ class ContextBuilder {
       scene: this._formatScene(scene),
       npc: this._formatNpc(npcId, npc),
       players: this._formatPlayers(players),
+      mapState: this._formatMapState(),
+      worldState: this._formatWorldState(),
       recentDialogue: this._formatTranscript(),
       storyContext: this._formatStory(story),
       atmosphere: atmosphere.currentProfile || 'default',
@@ -72,6 +74,8 @@ class ContextBuilder {
       playerDread: Object.fromEntries(
         Object.entries(players).map(([id, p]) => [id, p.dread?.score || 0])
       ),
+      mapState: this._formatMapState(),
+      worldState: this._formatWorldState(),
       storyContext: this._formatStory(story),
       timestamp: new Date().toISOString()
     };
@@ -94,6 +98,8 @@ class ContextBuilder {
       })),
       cluesDiscovered: story.cluesDiscovered || [],
       decisions: story.decisions || [],
+      mapState: this._formatMapState(),
+      worldState: this._formatWorldState(),
       recentDialogue: this._formatTranscript(),
       timestamp: new Date().toISOString()
     };
@@ -120,6 +126,12 @@ class ContextBuilder {
     if (context.recentDialogue) {
       parts.push(`## Recent Dialogue\n${context.recentDialogue}`);
     }
+    if (context.mapState) {
+      parts.push(`## Map & Positions\n${context.mapState}`);
+    }
+    if (context.worldState) {
+      parts.push(`## World State\n${context.worldState}`);
+    }
     if (context.atmosphere) {
       parts.push(`## Atmosphere: ${context.atmosphere}`);
     }
@@ -139,6 +151,100 @@ class ContextBuilder {
     if (scene.weather) parts.push(`Weather: ${scene.weather}`);
     if (scene.timeOfDay) parts.push(`Time: ${scene.timeOfDay}`);
     return parts.join('\n') || 'Unknown location';
+  }
+
+  _formatMapState() {
+    const map = this.state.get('map') || {};
+    if (!map.id) return 'No map loaded';
+
+    const tokens = map.tokens || {};
+    const zones = map.zones || [];
+    const gs = map.gridSize || 70;
+    const parts = [`Map: ${map.name || map.id} (${Math.round(map.width/gs)}x${Math.round(map.height/gs)} grid)`];
+
+    // Token positions — convert pixel coords to grid squares
+    const tokenList = Object.entries(tokens);
+    if (tokenList.length) {
+      parts.push('Token positions (grid x,y):');
+      for (const [id, tok] of tokenList) {
+        const gx = Math.round((tok.x || 0) / gs);
+        const gy = Math.round((tok.y || 0) / gs);
+        const hp = tok.hp ? ` HP:${tok.hp.current}/${tok.hp.max}` : '';
+        const hidden = tok.hidden ? ' [HIDDEN]' : '';
+        // Check which zone the token is in
+        let inZone = '';
+        for (const z of zones) {
+          if (z.points) {
+            // Polygon zone — skip for now (complex)
+          } else if (z.x != null && z.width != null) {
+            if (tok.x >= z.x && tok.x <= z.x + z.width && tok.y >= z.y && tok.y <= z.y + z.height) {
+              inZone = ` in "${z.name || z.id}"`;
+              break;
+            }
+          }
+        }
+        parts.push(`  ${tok.name || id}: (${gx},${gy})${hp}${hidden}${inZone}`);
+      }
+    }
+
+    // Zones
+    if (zones.length) {
+      parts.push('Map zones: ' + zones.map(z => z.name || z.id).join(', '));
+    }
+
+    return parts.join('\n');
+  }
+
+  _formatWorldState() {
+    const world = this.state.get('world') || {};
+    const parts = [];
+
+    // Game time
+    if (world.gameTime) {
+      const gt = new Date(world.gameTime);
+      const h = gt.getHours().toString().padStart(2, '0');
+      const m = gt.getMinutes().toString().padStart(2, '0');
+      parts.push(`Game time: ${h}:${m}`);
+    }
+
+    // Secrets — what's revealed and what isn't
+    const secrets = world.secrets || {};
+    const unrevealed = [];
+    const revealed = [];
+    for (const [id, s] of Object.entries(secrets)) {
+      if (s.revealed) {
+        revealed.push(`${id}: ${s.description} (discovered by: ${s.discoveredBy?.join(', ') || 'unknown'})`);
+      } else {
+        unrevealed.push(`${id}: ${s.description} (known by NPCs: ${s.knownBy?.join(', ') || 'none'})`);
+      }
+    }
+    if (unrevealed.length) parts.push(`UNREVEALED secrets:\n  ${unrevealed.join('\n  ')}`);
+    if (revealed.length) parts.push(`Revealed secrets:\n  ${revealed.join('\n  ')}`);
+
+    // Clues
+    const clues = world.clues || {};
+    const foundClues = [];
+    const unfoundClues = [];
+    for (const [id, c] of Object.entries(clues)) {
+      if (c.found) {
+        foundClues.push(`${id}: ${c.description}`);
+      } else {
+        unfoundClues.push(`${id}: ${c.description} (${c.location || 'somewhere'})`);
+      }
+    }
+    if (foundClues.length) parts.push(`Clues found: ${foundClues.join('; ')}`);
+    if (unfoundClues.length) parts.push(`Clues NOT found: ${unfoundClues.join('; ')}`);
+
+    // NPC goals
+    const goals = world.npcGoals || {};
+    for (const [npcId, goalList] of Object.entries(goals)) {
+      const active = (goalList || []).filter(g => g.status === 'active' || g.status === 'pending');
+      if (active.length) {
+        parts.push(`${npcId} goals: ${active.map(g => `[${g.status}] ${g.goal}`).join('; ')}`);
+      }
+    }
+
+    return parts.join('\n') || 'No world state';
   }
 
   _formatNpc(id, npc) {

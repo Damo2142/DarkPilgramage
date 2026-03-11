@@ -163,7 +163,18 @@
       "ritual": false,
       "concentration": false,
       "prepared": true,
-      "description": "You touch one Large or smaller object that isn’t being worn or carried by someone else. Until the spell ends, the object sheds Bright Light in a 20-foot radius and Dim Light for an additional 20 feet."
+      "description": "You touch one Large or smaller object that isn’t being worn or carried by someone else. Until the spell ends, the object sheds Bright Light in a 20-foot radius and Dim Light for an additional 20 feet.",
+      "castingTime": "1 action",
+      "range": "Touch",
+      "components": "V, M (a firefly or phosphorescent moss)",
+      "duration": "1 hour",
+      "classes": [
+        "Bard",
+        "Cleric",
+        "Sorcerer",
+        "Wizard"
+      ],
+      "_enriched": true
     },
     {
       "name": "Prestidigitation",
@@ -172,7 +183,18 @@
       "ritual": false,
       "concentration": false,
       "prepared": true,
-      "description": "You create a magical effect within range. Choose the effect from the options below. If you cast this spell multiple times, you can have up to three of its non-instantaneous effects active at a time.\r\n"
+      "description": "You create a magical effect within range. Choose the effect from the options below. If you cast this spell multiple times, you can have up to three of its non-instantaneous effects active at a time.\r\n",
+      "castingTime": "1 action",
+      "range": "10 feet",
+      "components": "V, S",
+      "duration": "Up to 1 hour",
+      "classes": [
+        "Bard",
+        "Sorcerer",
+        "Warlock",
+        "Wizard"
+      ],
+      "_enriched": true
     },
     {
       "name": "Shocking Grasp",
@@ -181,7 +203,19 @@
       "ritual": false,
       "concentration": false,
       "prepared": true,
-      "description": "Lightning springs from you to a creature that you try to touch. Make a melee spell attack against the target. On a hit, the target takes 1d8 Lightning damage, and it can’t make Opportunity Attacks unt"
+      "description": "Lightning springs from you to a creature that you try to touch. Make a melee spell attack against the target. On a hit, the target takes 1d8 Lightning damage, and it can’t make Opportunity Attacks unt",
+      "damage": "1d8",
+      "damageType": "lightning",
+      "castingTime": "1 action",
+      "range": "Touch",
+      "components": "V, S",
+      "duration": "Instantaneous",
+      "classes": [
+        "Sorcerer",
+        "Wizard"
+      ],
+      "higherLevel": "Damage increases by 1d8 at 5th, 11th, and 17th level.",
+      "_enriched": true
     },
     {
       "name": "Sorcerous Burst",
@@ -190,7 +224,18 @@
       "ritual": false,
       "concentration": false,
       "prepared": true,
-      "description": "You cast sorcerous energy at one creature or object within range. Make a ranged spell attack against the target. On a hit, the target takes 1d8 damage of a type you choose: Acid, Cold, Fire, Lightning"
+      "description": "You cast sorcerous energy at one creature or object within range. Make a ranged spell attack against the target. On a hit, the target takes 1d8 damage of a type you choose: Acid, Cold, Fire, Lightning",
+      "damage": "1d8",
+      "damageType": "varies",
+      "castingTime": "1 action",
+      "range": "120 feet",
+      "components": "V, S",
+      "duration": "Instantaneous",
+      "classes": [
+        "Sorcerer"
+      ],
+      "higherLevel": "Damage increases by 1d8 at 5th, 11th, and 17th level.",
+      "_enriched": true
     },
     {
       "name": "Burning Hands",
@@ -199,7 +244,24 @@
       "ritual": false,
       "concentration": false,
       "prepared": false,
-      "description": "A thin sheet of flames shoots forth from you. Each creature in a 15-foot Cone makes a Dexterity saving throw, taking 3d6 Fire damage on a failed save or half as much damage on a successful one.\r\nFlamm"
+      "description": "A thin sheet of flames shoots forth from you. Each creature in a 15-foot Cone makes a Dexterity saving throw, taking 3d6 Fire damage on a failed save or half as much damage on a successful one.\r\nFlamm",
+      "damage": "3d6",
+      "damageType": "fire",
+      "save": "DEX",
+      "areaOfEffect": {
+        "type": "cone",
+        "size": 15
+      },
+      "castingTime": "1 action",
+      "range": "Self",
+      "components": "V, S",
+      "duration": "Instantaneous",
+      "classes": [
+        "Sorcerer",
+        "Wizard"
+      ],
+      "higherLevel": "Damage increases by 1d6 per slot level above 1st.",
+      "_enriched": true
     },
     {
       "name": "Color Spray",
@@ -208,7 +270,21 @@
       "ritual": false,
       "concentration": false,
       "prepared": false,
-      "description": "You launch a dazzling array of flashing, colorful light. Each creature in a 15-foot Cone originating from you must succeed on a Constitution saving throw or have the Blinded condition until the end of"
+      "description": "You launch a dazzling array of flashing, colorful light. Each creature in a 15-foot Cone originating from you must succeed on a Constitution saving throw or have the Blinded condition until the end of",
+      "areaOfEffect": {
+        "type": "cone",
+        "size": 15
+      },
+      "castingTime": "1 action",
+      "range": "Self",
+      "components": "V, S, M (a pinch of powder or sand, colored red, yellow, and blue)",
+      "duration": "1 round",
+      "classes": [
+        "Sorcerer",
+        "Wizard"
+      ],
+      "higherLevel": "Roll an additional 2d10 per slot level above 1st.",
+      "_enriched": true
     },
     {
       "name": "Detect Magic",
@@ -217,7 +293,21 @@
       "ritual": true,
       "concentration": true,
       "prepared": false,
-      "description": "For the duration, you sense the presence of magical effects within 30 feet of yourself. If you sense such effects, you can take the Magic action to see a faint aura around any visible creature or obje"
+      "description": "For the duration, you sense the presence of magical effects within 30 feet of yourself. If you sense such effects, you can take the Magic action to see a faint aura around any visible creature or obje",
+      "castingTime": "1 action",
+      "range": "Self",
+      "components": "V, S",
+      "duration": "Concentration, up to 10 minutes",
+      "classes": [
+        "Bard",
+        "Cleric",
+        "Druid",
+        "Paladin",
+        "Ranger",
+        "Sorcerer",
+        "Wizard"
+      ],
+      "_enriched": true
     },
     {
       "name": "Mage Armor",
@@ -226,7 +316,16 @@
       "ritual": false,
       "concentration": false,
       "prepared": false,
-      "description": "You touch a willing creature who isn’t wearing armor. Until the spell ends, the target’s base AC becomes 13 plus its Dexterity modifier. The spell ends early if the target dons armor."
+      "description": "You touch a willing creature who isn’t wearing armor. Until the spell ends, the target’s base AC becomes 13 plus its Dexterity modifier. The spell ends early if the target dons armor.",
+      "castingTime": "1 action",
+      "range": "Touch",
+      "components": "V, S, M (a piece of cured leather)",
+      "duration": "8 hours",
+      "classes": [
+        "Sorcerer",
+        "Wizard"
+      ],
+      "_enriched": true
     },
     {
       "name": "Dragon's Breath",
@@ -235,7 +334,24 @@
       "ritual": false,
       "concentration": true,
       "prepared": false,
-      "description": "You touch one willing creature, and choose Acid, Cold, Fire, Lightning, or Poison. Until the spell ends, the target can take a Magic action to exhale a 15-foot Cone. Each creature in that area makes a"
+      "description": "You touch one willing creature, and choose Acid, Cold, Fire, Lightning, or Poison. Until the spell ends, the target can take a Magic action to exhale a 15-foot Cone. Each creature in that area makes a",
+      "damage": "3d6",
+      "damageType": "varies",
+      "save": "DEX",
+      "areaOfEffect": {
+        "type": "cone",
+        "size": 15
+      },
+      "castingTime": "1 bonus action",
+      "range": "Touch",
+      "components": "V, S, M (a hot pepper)",
+      "duration": "Concentration, up to 1 minute",
+      "classes": [
+        "Sorcerer",
+        "Wizard"
+      ],
+      "higherLevel": "Damage increases by 1d6 per slot level above 2nd.",
+      "_enriched": true
     },
     {
       "name": "Spider Climb",
@@ -244,7 +360,17 @@
       "ritual": false,
       "concentration": true,
       "prepared": false,
-      "description": "Until the spell ends, one willing creature you touch gains the ability to move up, down, and across vertical surfaces and along ceilings, while leaving its hands free. The target also gains a Climb Sp"
+      "description": "Until the spell ends, one willing creature you touch gains the ability to move up, down, and across vertical surfaces and along ceilings, while leaving its hands free. The target also gains a Climb Sp",
+      "castingTime": "1 action",
+      "range": "Touch",
+      "components": "V, S, M (a drop of bitumen and a spider)",
+      "duration": "Concentration, up to 1 hour",
+      "classes": [
+        "Sorcerer",
+        "Warlock",
+        "Wizard"
+      ],
+      "_enriched": true
     }
   ],
   "attacks": [
@@ -494,7 +620,7 @@
     "Draconic",
     "Common"
   ],
-  "_syncedAt": "2026-03-10T23:14:10.655Z",
+  "_syncedAt": "2026-03-11T14:49:01.408Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/162472191"
 }

@@ -13,15 +13,353 @@
       "id": "mountain-road-blizzard",
       "name": "Mountain Road — Blizzard",
       "map": "mountain-road-blizzard",
-      "description": "The approach. Each PC travels alone through the blizzard. Strange sounds, shadows, a dead deer drained of blood. The road leads to a faint warm glow."
+      "description": "The approach. Each PC travels alone through the blizzard. Strange sounds, shadows, a dead deer drained of blood. The road leads to a faint warm glow.",
+      "readAloud": "The wind cuts through your cloak like a knife made of ice. Snow hammers your face until you can barely see ten feet ahead. The mountain road is a guess now — a memory of packed earth beneath the drifts. The trees press close on either side, their branches creaking and groaning. And then — ahead, barely visible through the white curtain — a warm orange glow. A building. An inn.",
+      "atmosphere": "blizzard_dark"
     },
     {
       "id": "pallid-hart-common-room",
       "name": "The Pallid Hart — Common Room",
       "map": "pallid-hart-ground",
-      "description": "A cramped common room lit by a dying fire. Snow hammers the shuttered windows. The wind screams. A bar runs along the back wall where a nervous woman polishes the same glass over and over. A hooded figure sits motionless in the far corner. The door to the cellar is closed, a cloth draped over its handle."
+      "description": "A cramped common room lit by a dying fire. Snow hammers the shuttered windows. The wind screams. A bar runs along the back wall where a nervous woman polishes the same glass over and over. A hooded figure sits motionless in the far corner. The door to the cellar is closed, a cloth draped over its handle.",
+      "readAloud": "The door fights you as you push it open, the wind howling behind you like something alive. Inside — warmth. Not much, but enough. A cramped common room, low-ceilinged, dark wood. A fire crackles in a stone hearth but it's burning low. A bar runs along the far wall. Behind it, a woman — thin, dark-haired, gripping a glass she's been polishing for too long. Her eyes snap to you the moment you enter. In the far corner, almost lost in shadow, a hooded figure sits motionless at a table. They don't look up.",
+      "atmosphere": "tavern_warm"
     }
   ],
+
+  "world": {
+    "clock": {
+      "startTime": "1274-10-15T17:30:00",
+      "timeScale": 1
+    },
+
+    "timedEvents": [
+      {
+        "id": "sunset_complete",
+        "gameTime": "1274-10-15T18:00:00",
+        "event": "world:atmosphere_shift",
+        "data": {
+          "description": "The last light dies. Full darkness outside.",
+          "profile": "tavern_tense"
+        }
+      },
+      {
+        "id": "fire_burns_low",
+        "offsetMinutes": 45,
+        "event": "dm:whisper",
+        "data": {
+          "description": "The fire burns lower. The room grows colder. Shadows stretch.",
+          "text": "The fire is burning low — describe the room growing darker and colder. Marta hasn't added wood.",
+          "priority": 3,
+          "category": "atmosphere"
+        }
+      },
+      {
+        "id": "moonrise",
+        "gameTime": "1274-10-15T19:45:00",
+        "event": "world:moonrise",
+        "data": {
+          "description": "The full moon rises behind the storm clouds. Tomas feels it.",
+          "effects": ["tomas_agitation_increase"]
+        }
+      },
+      {
+        "id": "tomas_sweating",
+        "gameTime": "1274-10-15T20:00:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "Tomas is visibly sweating despite the cold. His hands are shaking.",
+          "text": "Tomas is sweating heavily now. His hands tremble. If any player is watching him, they notice. Perception DC 10 to see the scratches on his forearms.",
+          "priority": 3,
+          "category": "story"
+        }
+      },
+      {
+        "id": "scratching_sounds",
+        "gameTime": "1274-10-15T20:30:00",
+        "event": "world:environmental",
+        "data": {
+          "description": "Scratching sounds from beneath the floor. The cellar.",
+          "readAloud": "A sound. From below. Scritch. Scritch-scritch. Like nails on wood. Everyone hears it. Marta freezes.",
+          "checks": [{ "skill": "Perception", "dc": 12, "success": "It's coming from directly under the bar — the cellar." }]
+        },
+        "repeating": true,
+        "intervalMinutes": 20
+      },
+      {
+        "id": "vladislav_watches",
+        "gameTime": "1274-10-15T19:00:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "Vladislav studies the party from the shadows",
+          "text": "The hooded stranger shifts slightly. For the first time, you catch the glint of eyes beneath the hood — watching. Not the room. Watching one specific player. The one who seems most isolated or frightened. Which player is that right now?",
+          "priority": 2,
+          "category": "story"
+        }
+      },
+      {
+        "id": "midnight_approaches",
+        "gameTime": "1274-10-15T23:30:00",
+        "event": "world:midnight_warning",
+        "data": {
+          "description": "Midnight approaches. Tomas is desperate. Vladislav is hungry.",
+          "text": "It's nearly midnight. Tomas MUST get to the cellar or he transforms in front of everyone. Vladislav is growing bold — he's been patient long enough. Both will act within the hour.",
+          "priority": 1,
+          "category": "story"
+        }
+      },
+      {
+        "id": "tomas_breaks",
+        "gameTime": "1274-10-16T00:00:00",
+        "event": "world:tomas_transformation",
+        "data": {
+          "description": "Midnight. Tomas can no longer resist. He transforms.",
+          "condition": "npc:tomas:status:alive"
+        }
+      },
+      {
+        "id": "dawn",
+        "gameTime": "1274-10-16T06:00:00",
+        "event": "world:dawn",
+        "data": {
+          "description": "Dawn breaks. The blizzard subsides. Vladislav must retreat or die.",
+          "profile": "dawn"
+        }
+      }
+    ],
+
+    "environmentalCues": [
+      {
+        "id": "blizzard_road",
+        "intervalMinutes": 5,
+        "scene": "mountain-road-blizzard",
+        "cues": [
+          "The wind shifts direction suddenly. For a moment you hear something in it — was that a voice?",
+          "A branch cracks somewhere in the darkness to your left. Something heavy.",
+          "Your boot catches on something in the snow. A dead bird. Frozen solid. Its eyes are open.",
+          "The trees thin for a moment and you see the sky — bruised purple, the last light bleeding away. You need shelter. Now.",
+          "You smell iron. Blood. It's faint but unmistakable. The snow ahead has a dark stain that the fresh fall hasn't quite covered."
+        ]
+      },
+      {
+        "id": "common_room_tension",
+        "intervalMinutes": 12,
+        "scene": "pallid-hart-common-room",
+        "random": true,
+        "cues": [
+          "The fire pops and everyone flinches. Marta drops the glass she was holding. It doesn't break but the sound is too loud in the silence.",
+          "A gust of wind finds its way through the shutters. The candles on the bar gutter and almost die. For a moment, the stranger's face is visible — pale, angular, wrong somehow.",
+          "Something creaks upstairs. Footsteps? But no one has gone up.",
+          "Marta glances at the cellar door again. She does this every few minutes. She doesn't seem to realize she's doing it.",
+          "The wind screams and the front door rattles in its frame. For a moment it sounds like something is trying the handle from outside.",
+          "Old Gregor coughs — a wet, rattling sound. He looks worse than when the evening started. Paler.",
+          "Katya the minstrel stops humming mid-note. She stares at a spot on the wall for a long moment, then shakes her head and looks away.",
+          "The shadows in the corner where the stranger sits seem deeper than they should be. The firelight doesn't reach there. It should.",
+          "A draft from somewhere carries a smell — earth, damp stone, something sweet and rotting. From below.",
+          "Tomas drops his drink. His hands are shaking badly now. He doesn't pick it up."
+        ]
+      }
+    ],
+
+    "secrets": [
+      {
+        "id": "vladislav_is_vampire",
+        "description": "The hooded stranger is Vladislav Dragan, a vampire. He is responsible for the disappearances.",
+        "knownBy": ["hooded-stranger"],
+        "discoveryMethods": ["Find his coffin in the cellar", "Catch him feeding", "Holy symbol test", "See him avoid the fire/mirrors"],
+        "revealConsequences": "Vladislav drops pretense. He is either confronted directly or begins openly hunting. Atmosphere shifts to terror_peak.",
+        "linkedClues": ["cellar_coffin", "no_reflection", "avoids_fire"],
+        "linkedBeats": ["discovery"]
+      },
+      {
+        "id": "tomas_is_werewolf",
+        "description": "Tomas Birkov is a werewolf. He transforms at the full moon, which is tonight.",
+        "knownBy": ["tomas"],
+        "discoveryMethods": ["Examine his wounds (DC14 Medicine/Nature)", "Catch him trying to lock himself away", "See the full moon trigger him"],
+        "revealConsequences": "If revealed early, Tomas begs for help. If transformation happens publicly, panic — possible combat. He is not evil, just cursed.",
+        "linkedClues": ["tomas_scratches", "tomas_cellar_desperation"],
+        "linkedBeats": ["escalation"]
+      },
+      {
+        "id": "piotr_is_spawn",
+        "description": "Marta's husband Piotr was turned into a vampire spawn by Vladislav. He is in the cellar.",
+        "knownBy": ["hooded-stranger"],
+        "discoveryMethods": ["Enter the cellar and find him", "Marta breaks down and reveals she heard his voice", "Vladislav taunts Marta with it"],
+        "revealConsequences": "Marta is devastated. The spawn may attack. This is the emotional core of the session.",
+        "linkedClues": ["cellar_sounds", "marta_husband_missing"],
+        "linkedBeats": ["discovery", "confrontation"]
+      },
+      {
+        "id": "cellar_contents",
+        "description": "The cellar contains Vladislav's coffin, Piotr as a vampire spawn, and the drained bodies of two missing travelers.",
+        "knownBy": ["hooded-stranger"],
+        "discoveryMethods": ["Open the cellar door and go down", "Break through the floor"],
+        "revealConsequences": "Everything becomes clear. The full horror of what has been happening. Multiple secrets may reveal at once.",
+        "linkedClues": ["cellar_coffin", "cellar_bodies", "cellar_spawn"],
+        "linkedBeats": ["discovery"]
+      },
+      {
+        "id": "both_want_cellar",
+        "description": "Both Tomas (to lock himself in before transformation) and Vladislav (to protect his coffin) want access to the cellar. They are in silent competition.",
+        "knownBy": ["tomas", "hooded-stranger"],
+        "discoveryMethods": ["Watch both NPCs' behavior toward the cellar", "Ask Tomas why he keeps looking at the cellar door"],
+        "revealConsequences": "Players realize the cellar is the key to everything. Increases tension dramatically.",
+        "linkedClues": ["tomas_cellar_desperation", "vladislav_cellar_interest"]
+      }
+    ],
+
+    "clues": [
+      {
+        "id": "dead_deer",
+        "description": "A deer carcass on the road, completely drained of blood. No visible wounds.",
+        "location": "mountain-road-blizzard",
+        "method": "perception",
+        "dc": 10,
+        "revealsSecret": null,
+        "readAloud": "Half-buried in the snow beside the road — a deer. Or what's left of one. The body is shrunken, dried, like a wineskin emptied and discarded. There's no blood. None at all. Not in the snow around it, not in the animal. And you can't find a wound."
+      },
+      {
+        "id": "marta_husband_missing",
+        "description": "Marta's husband Piotr disappeared three weeks ago. She believes he's dead.",
+        "location": "pallid-hart-common-room",
+        "method": "conversation",
+        "dc": null,
+        "revealsSecret": null,
+        "readAloud": "Marta's eyes go hollow when you ask. 'Piotr. My husband.' Her voice is barely a whisper. 'Three weeks. He went down to the cellar to get more wine and he... he didn't come back. I looked. I looked everywhere. The cellar was empty. He was just... gone.'"
+      },
+      {
+        "id": "cellar_sounds",
+        "description": "Scratching and scraping sounds from the cellar. Regular, rhythmic, like something pacing.",
+        "location": "pallid-hart-common-room",
+        "method": "perception",
+        "dc": 12,
+        "revealsSecret": null,
+        "prerequisite": null,
+        "readAloud": "There. Again. From below your feet — a scratching sound. Rhythmic. Patient. Like something down there is pacing. Back and forth. Back and forth."
+      },
+      {
+        "id": "tomas_scratches",
+        "description": "Deep scratches on Tomas's forearms, self-inflicted during his last transformation.",
+        "location": "pallid-hart-common-room",
+        "method": "perception",
+        "dc": 14,
+        "revealsSecret": "tomas_is_werewolf",
+        "readAloud": "As Tomas reaches for his drink, his sleeve rides up. Deep gouges run along his forearm — not cuts, but scratches. Like claws. And they're not old. The skin around them is still angry red."
+      },
+      {
+        "id": "tomas_cellar_desperation",
+        "description": "Tomas keeps glancing at the cellar door with increasing desperation.",
+        "location": "pallid-hart-common-room",
+        "method": "perception",
+        "dc": 10,
+        "revealsSecret": "both_want_cellar",
+        "readAloud": "You notice Tomas staring at the cellar door. Not casually — with a desperate, haunted intensity. His jaw is clenched. His knuckles are white around his mug."
+      },
+      {
+        "id": "vladislav_cellar_interest",
+        "description": "The stranger also watches the cellar door, but with cold possessiveness.",
+        "location": "pallid-hart-common-room",
+        "method": "perception",
+        "dc": 15,
+        "revealsSecret": "both_want_cellar",
+        "readAloud": "The stranger's head turns — slowly, deliberately — toward the cellar door. Not with curiosity. With ownership. Like someone checking a lock on their own front door."
+      },
+      {
+        "id": "no_reflection",
+        "description": "The stranger casts no reflection in the bar's polished copper or any reflective surface.",
+        "location": "pallid-hart-common-room",
+        "method": "investigation",
+        "dc": 16,
+        "revealsSecret": "vladislav_is_vampire",
+        "readAloud": "The copper pans behind the bar are polished enough to catch reflections. You can see Marta. You can see yourself. But the corner where the stranger sits — it's empty in the copper. As if no one is there at all."
+      },
+      {
+        "id": "avoids_fire",
+        "description": "The stranger always positions himself as far from the fire as possible and flinches from flame.",
+        "location": "pallid-hart-common-room",
+        "method": "perception",
+        "dc": 13,
+        "revealsSecret": null,
+        "readAloud": "When Marta passes with a candle, the stranger leans away — sharply, instinctively, like someone avoiding a hot brand. His chair scrapes. He catches himself and goes still again."
+      },
+      {
+        "id": "cellar_coffin",
+        "description": "An ornate coffin in the cellar, soil from a distant land packed inside.",
+        "location": "cellar",
+        "method": "search",
+        "dc": null,
+        "revealsSecret": "vladislav_is_vampire",
+        "prerequisite": null,
+        "readAloud": "The cellar is cold. Not winter cold — something else. Something wrong. And there, against the far wall, draped in shadow — a coffin. Dark wood, brass fittings, packed with black soil. It doesn't belong here. It belongs in a crypt."
+      },
+      {
+        "id": "cellar_bodies",
+        "description": "Two shriveled corpses in the cellar — the missing travelers.",
+        "location": "cellar",
+        "method": "search",
+        "dc": null,
+        "revealsSecret": "cellar_contents",
+        "readAloud": "Behind the wine barrels. Two shapes. Two people. What's left of two people. They're dried husks — like the deer on the road. Drained. Discarded."
+      },
+      {
+        "id": "cellar_spawn",
+        "description": "Piotr Kowalski, now a vampire spawn, chained in the cellar shadows.",
+        "location": "cellar",
+        "method": "search",
+        "dc": null,
+        "revealsSecret": "piotr_is_spawn",
+        "readAloud": "A rattling. Chains. Something moves in the darkest corner. A man — or what was a man. He's chained to the wall, emaciated, but his eyes burn red in the darkness. His mouth opens and you see fangs. 'Help... me...' The voice is a rasp. 'He... made me... this...'"
+      }
+    ],
+
+    "discoveryChains": [
+      {
+        "id": "vampire_investigation",
+        "description": "The chain of evidence leading to the vampire reveal",
+        "clueChain": ["dead_deer", "cellar_sounds", "no_reflection", "cellar_coffin"],
+        "revealsSecret": "vladislav_is_vampire"
+      },
+      {
+        "id": "missing_husband",
+        "description": "The trail from Marta's grief to Piotr's fate",
+        "clueChain": ["marta_husband_missing", "cellar_sounds", "cellar_spawn"],
+        "revealsSecret": "piotr_is_spawn"
+      }
+    ],
+
+    "branches": [
+      {
+        "id": "cellar_before_confrontation",
+        "description": "Players find the cellar before Vladislav reveals himself — they have evidence and initiative",
+        "triggeredBy": "discovery",
+        "conditions": ["secret:vladislav_is_vampire:revealed"],
+        "effects": [
+          { "event": "dm:whisper", "data": { "text": "Players found the evidence first. Vladislav knows they know — he must act. He can try to flee, fight, or negotiate. His disposition determines which.", "priority": 1, "category": "story" } }
+        ],
+        "convergeTo": "climax"
+      },
+      {
+        "id": "vladislav_reveals_first",
+        "description": "Vladislav strikes before players find the cellar — they are blindsided",
+        "triggeredBy": "escalation",
+        "conditions": ["secret:vladislav_is_vampire:unrevealed"],
+        "effects": [
+          { "event": "dm:whisper", "data": { "text": "Vladislav acts first. The players don't know what he is yet. This is a horror reveal, not a confrontation. Play it for maximum dread.", "priority": 1, "category": "story" } }
+        ],
+        "convergeTo": "climax"
+      },
+      {
+        "id": "tomas_transforms_public",
+        "description": "Tomas transforms in the common room — chaos erupts, two monsters in the inn",
+        "triggeredBy": "escalation",
+        "conditions": ["time:after:23:30", "npc:tomas:status:alive"],
+        "effects": [
+          { "event": "dm:whisper", "data": { "text": "Tomas transforms. Two monsters in one inn. This is the worst-case scenario and the most dramatic. Vladislav may use the chaos to feed or escape.", "priority": 1, "category": "story" } }
+        ],
+        "convergeTo": "climax"
+      }
+    ]
+  },
 
   "npcs": {
     "marta": {
@@ -38,6 +376,29 @@
         "A dead animal drained of blood found behind the inn",
         "The hooded stranger arrived two days ago and barely speaks"
       ],
+      "goals": [
+        {
+          "id": "survive_the_night",
+          "goal": "Keep everyone calm and survive until morning",
+          "priority": 1,
+          "conditions": [],
+          "actions": ["Serve drinks", "Avoid the cellar", "Keep the fire going"]
+        },
+        {
+          "id": "protect_guests",
+          "goal": "Warn guests if danger becomes undeniable",
+          "priority": 2,
+          "conditions": [{ "type": "beat_completed", "beatId": "escalation" }],
+          "actions": ["Breaks down crying", "Reveals everything she knows about the cellar sounds and missing husband"]
+        }
+      ],
+      "dialogueHints": {
+        "husband": "Deflects at first, tears up, eventually admits he vanished going to the cellar",
+        "cellar": "Visibly frightened. 'Don't go down there. Please. Just... don't.'",
+        "stranger": "'He came two days ago. Paid in coin. Doesn't eat. Doesn't drink. Just... sits.'",
+        "sounds": "'You hear them too? I thought I was going mad. Every night. From below.'",
+        "blood": "'The goat behind the inn. Drained dry. Like something sucked the life from it.'"
+      },
       "dialogueHistory": []
     },
     "tomas": {
@@ -56,6 +417,33 @@
         "He knows these mountain woods intimately — every trail, cave, and den",
         "The scratches on his arms are self-inflicted from his last transformation"
       ],
+      "goals": [
+        {
+          "id": "reach_cellar",
+          "goal": "Get into the cellar and lock himself in before the moon rises",
+          "priority": 1,
+          "conditions": [],
+          "timerMinutes": 90,
+          "actions": ["Ask Marta about the cellar casually", "Offer to fetch wine as excuse", "If blocked, become desperate"],
+          "onComplete": { "event": "dm:whisper", "data": { "text": "Tomas has reached the cellar. If Vladislav's coffin is there, they will encounter each other.", "priority": 1, "category": "story" } },
+          "onFail": { "event": "world:tomas_transformation", "data": { "description": "Tomas transforms in the common room" } }
+        },
+        {
+          "id": "hide_nature",
+          "goal": "Keep his lycanthropy secret from everyone",
+          "priority": 2,
+          "conditions": [],
+          "actions": ["Keep sleeves down", "Deflect questions about the scratches", "Claim he's just cold"]
+        }
+      ],
+      "dialogueHints": {
+        "scratches": "Pulls sleeve down quickly. 'Wolf. On the road. It's nothing.' (lie)",
+        "cellar": "'Is there a cellar? I thought I might... fetch some wine. Help out.' (desperate)",
+        "nervousness": "'The storm. Just the storm. I don't like being trapped.' (half-truth)",
+        "stranger": "'Something about him. Something wrong. I can... I just don't trust him.' (he can smell the undead)",
+        "woods": "Opens up here — knows every trail, every cave. This is genuine and helpful.",
+        "moonrise": "Goes pale. Changes subject immediately. If pressed: 'I need air. I need to— I need to go somewhere.'"
+      },
       "revealTriggers": [
         "The full moon becomes visible through a broken shutter or opened door",
         "He is badly wounded and the beast takes over",
@@ -79,6 +467,40 @@
         "He senses which players are most vulnerable",
         "Dawn will force him to retreat"
       ],
+      "goals": [
+        {
+          "id": "protect_lair",
+          "goal": "Prevent anyone from entering the cellar and discovering his coffin",
+          "priority": 1,
+          "conditions": [],
+          "actions": ["Watch the cellar door", "Subtly redirect anyone who approaches it", "If necessary, cause a distraction"]
+        },
+        {
+          "id": "feed_tonight",
+          "goal": "Feed on an isolated guest before dawn",
+          "priority": 2,
+          "conditions": [{ "type": "beat_completed", "beatId": "unease" }],
+          "timerMinutes": 120,
+          "actions": ["Identify the weakest or most isolated guest", "Create an opportunity for isolation", "Strike when alone"],
+          "onComplete": { "event": "dm:whisper", "data": { "text": "Vladislav has fed. A patron or PC has been attacked. If not discovered, he will be emboldened.", "priority": 1, "category": "story" } }
+        },
+        {
+          "id": "eliminate_threat",
+          "goal": "Eliminate anyone who discovers his true nature",
+          "priority": 0,
+          "conditions": [{ "type": "secret_revealed", "secretId": "vladislav_is_vampire" }],
+          "actions": ["Drop all pretense", "Attack or attempt to flee to cellar", "Call Piotr spawn to assist"]
+        }
+      ],
+      "dialogueHints": {
+        "name": "'...You may call me Vladislav.' Pause. As if he had to remember his own name.",
+        "purpose": "'Traveling. Like you.' His voice is cultured. Old. Wrong for these mountains.",
+        "food": "'I have already eaten.' He has not touched the plate Marta set before him.",
+        "cellar": "Goes very still. 'I wouldn't go down there. Old buildings. Unstable floors.' (threatening undertone)",
+        "weather": "'The storm will pass. They always do. The question is what survives the night.'",
+        "missing_people": "'People go missing in the mountains all the time. The cold. The wolves.' A faint smile.",
+        "direct_accusation": "Stands slowly. The shadows seem to deepen around him. 'You should be very careful what you accuse a stranger of.'"
+      },
       "revealTriggers": [
         "Directly confronted with evidence",
         "Caught attempting to feed",
@@ -96,12 +518,19 @@
       {
         "id": "road_arrival",
         "name": "Each PC arrives alone on the mountain road — solo scenes with Perception checks, strange sounds, shadows in the trees, a dead bloodless deer",
-        "status": "pending"
+        "status": "pending",
+        "readAloud": "You're alone on a mountain road in a blizzard. The light is dying. The cold is killing.",
+        "checks": [
+          { "skill": "Perception", "dc": 12, "success": "You hear movement in the trees — too heavy for wind. Something is pacing you, matching your stride.", "fail": "The wind is all you hear. But the feeling of being watched doesn't fade." },
+          { "skill": "Perception", "dc": 15, "success": "Between the trees, barely visible — a shape. Tall. Thin. Standing still. Watching. Then the snow shifts and it's gone." }
+        ],
+        "atmosphere": "blizzard_dark"
       },
       {
         "id": "enter_inn",
         "name": "PCs reach the Pallid Hart one by one, shaking snow from their cloaks. Marta greets them nervously. The warmth is a relief but the inn feels wrong.",
-        "status": "pending"
+        "status": "pending",
+        "atmosphere": "tavern_warm"
       },
       {
         "id": "introductions",
@@ -111,7 +540,8 @@
       {
         "id": "unease",
         "name": "Players notice something off — the stranger, Marta's nervousness, odd details",
-        "status": "pending"
+        "status": "pending",
+        "atmosphere": "tavern_tense"
       },
       {
         "id": "first_clue",
@@ -121,32 +551,38 @@
       {
         "id": "investigation",
         "name": "Players actively search for answers — questioning NPCs, exploring the inn",
-        "status": "pending"
+        "status": "pending",
+        "atmosphere": "investigation"
       },
       {
         "id": "escalation",
         "name": "Something frightening happens — lights go out, someone screams, blood is found",
-        "status": "pending"
+        "status": "pending",
+        "atmosphere": "dread_rising"
       },
       {
         "id": "discovery",
         "name": "Players discover definitive evidence of the vampire (coffin, feeding, supernatural event)",
-        "status": "pending"
+        "status": "pending",
+        "atmosphere": "revelation"
       },
       {
         "id": "confrontation",
         "name": "The vampire is confronted or reveals himself",
-        "status": "pending"
+        "status": "pending",
+        "atmosphere": "terror_peak"
       },
       {
         "id": "climax",
         "name": "Final battle or desperate survival until dawn",
-        "status": "pending"
+        "status": "pending",
+        "atmosphere": "combat"
       },
       {
         "id": "resolution",
         "name": "Dawn breaks. Survivors emerge. The party is forged in shared trauma.",
-        "status": "pending"
+        "status": "pending",
+        "atmosphere": "dawn"
       }
     ],
     "cluesDiscovered": [],

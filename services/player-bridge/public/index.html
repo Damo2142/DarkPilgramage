@@ -22,6 +22,11 @@
     #overlay h1{font-family:Cinzel,serif;color:#c9a54e;font-size:1.5rem;margin-bottom:10px;}
     #overlay p{color:#8a7a5a;}
     #horror-layer{position:fixed;inset:0;pointer-events:none;z-index:100;transition:background .4s;}
+    #toast-layer{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:150;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:6px;max-width:90vw;}
+    .toast{background:rgba(15,15,20,0.92);border:1px solid #c9a54e;border-radius:6px;padding:8px 14px;color:#ddd9cf;font-size:13px;max-width:80vw;animation:toast-in .4s ease-out;pointer-events:auto;box-shadow:0 4px 20px rgba(0,0,0,0.6);}
+    .toast .toast-who{color:#c9a54e;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}
+    .toast.fading{opacity:0;transition:opacity .5s;}
+    @keyframes toast-in{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:translateY(0);}}
     #app{display:none;flex-direction:column;min-height:100vh;}
     #app.visible{display:flex;}
 
@@ -218,6 +223,7 @@
 <body>
 <div id="overlay"><h1>⛧ Dark Pilgrimage</h1><p id="ovmsg">Connecting to Co-DM...</p></div>
 <div id="horror-layer"></div>
+<div id="toast-layer"></div>
 <div id="app">
   <div id="topbar">
     <div><div class="char-title" id="cname">—</div><div class="char-sub" id="csub">—</div></div>
@@ -253,6 +259,7 @@
     <div class="tab" onclick="showTab('inventory')">Items</div>
     <div class="tab" onclick="showTab('features')">Features</div>
     <div class="tab" onclick="showTab('dice')">Dice</div>
+    <div class="tab" onclick="showTab('chat')">Chat</div>
     <div class="tab" onclick="showTab('notes')">Notes</div>
   </div>
   <!-- MAP -->
@@ -351,14 +358,23 @@
     <div id="rollres"><div id="rollnum">—</div><div id="rolldtl">Roll a die</div></div>
     <div id="rollhist"></div>
   </div>
+  <!-- CHAT -->
+  <div class="panel" id="panel-chat">
+    <div style="display:flex;gap:4px;padding:4px 0;">
+      <button class="hbtn" id="chat-ch-party" onclick="setChatChannel('party')" style="flex:1;padding:6px;font-size:11px;background:var(--accent-dim);color:#fff;">Party</button>
+      <button class="hbtn" id="chat-ch-dm" onclick="setChatChannel('dm')" style="flex:1;padding:6px;font-size:11px;">DM</button>
+      <select id="chat-ch-player" onchange="setChatChannel(this.value)" style="flex:1;padding:6px;font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);">
+        <option value="">Whisper to...</option>
+      </select>
+    </div>
+    <div id="chatlog" style="height:calc(100% - 80px);"></div>
+    <div id="chatr"><input id="chatin" type="text" placeholder="Say something..." onkeydown="if(event.key==='Enter')sndChat()"><button class="sendbtn" onclick="sndChat()">→</button></div>
+  </div>
   <!-- NOTES -->
   <div class="panel" id="panel-notes">
     <div class="st">Notes</div>
     <textarea id="notes-area" placeholder="Session notes, reminders, lore..."></textarea>
     <button class="hbtn" style="width:100%;padding:8px;margin-top:6px;" onclick="saveNotes()">Save Notes</button>
-    <div class="st">Chat</div>
-    <div id="chatlog"></div>
-    <div id="chatr"><input id="chatin" type="text" placeholder="Say something..." onkeydown="if(event.key==='Enter')sndChat()"><button class="sendbtn" onclick="sndChat()">→</button></div>
   </div>
 </div>
 <!-- Edit modal -->
@@ -407,7 +423,12 @@ function handle(m){
     case 'dread:update': updDread(m.score||0); break;
     case 'horror:effect': applyHorror(m.effect,m.payload,m.durationMs); break;
     case 'horror:clear': clearHorror(); break;
-    case 'npc:dialogue': addChat(m.npc||'NPC',m.text,'var(--purple)'); break;
+    case 'npc:dialogue': showToast(m.npc||'NPC',m.text,8000); break;
+    case 'dm:private_message': showToast('DM',m.text,m.durationMs||8000); break;
+    case 'chat:party': addChat(m.fromName||m.from,'[Party] '+m.text,'var(--accent)'); if(m.from!==PID) showToast(m.fromName||m.from,m.text,4000); break;
+    case 'chat:whisper': addChat(m.fromName||m.from,'[Whisper] '+m.text,'#c9a54e'); showToast(m.fromName||m.from,'(whisper) '+m.text,5000); break;
+    case 'chat:dm_reply': addChat('DM',m.text,'#c9a54e'); showToast('DM',m.text,5000); break;
+    case 'player:list': updatePlayerList(m.players||[]); break;
     case 'combat:started':
     case 'combat:ended':
     case 'combat:next_turn':
@@ -1356,8 +1377,45 @@ function cycleSk(sk){
 }
 
 // ── NOTES / CHAT ────────────────────────────────────────────────────
-function saveNotes(){try{localStorage.setItem('dpnotes_'+PID,$('notes-area').value);}catch(e){}addChat('System','Notes saved','var(--text-dim)');}
-function sndChat(){const i=$('chatin'),t=i.value.trim();if(!t)return;i.value='';addChat(char.name||PID,t,'var(--accent)');send({type:'chat:message',text:t});}
+function saveNotes(){try{localStorage.setItem('dpnotes_'+PID,$('notes-area').value);}catch(e){}showToast('System','Notes saved',2000);}
+
+function updatePlayerList(players){
+  var sel=$('chat-ch-player');
+  sel.innerHTML='<option value="">Whisper to...</option>';
+  players.forEach(function(p){
+    if(p.id!==PID){
+      var opt=document.createElement('option');
+      opt.value=p.id;
+      opt.textContent=p.name||p.id;
+      sel.appendChild(opt);
+    }
+  });
+}
+
+var chatChannel='party';
+function setChatChannel(ch){
+  if(!ch)return;
+  chatChannel=ch;
+  // Highlight active channel button
+  $('chat-ch-party').style.background=ch==='party'?'var(--accent-dim)':'';
+  $('chat-ch-party').style.color=ch==='party'?'#fff':'';
+  $('chat-ch-dm').style.background=ch==='dm'?'var(--accent-dim)':'';
+  $('chat-ch-dm').style.color=ch==='dm'?'#fff':'';
+  if(ch!=='party'&&ch!=='dm')$('chat-ch-player').value=ch;
+  else $('chat-ch-player').value='';
+  // Update placeholder
+  var label=ch==='party'?'Party':ch==='dm'?'DM':ch;
+  $('chatin').placeholder='Message '+label+'...';
+}
+
+function sndChat(){
+  const i=$('chatin'),t=i.value.trim();
+  if(!t)return;
+  i.value='';
+  const name=char.name||PID;
+  addChat(name,t,'var(--accent)');
+  send({type:'chat:message',text:t,channel:chatChannel,from:PID,fromName:name});
+}
 function addChat(who,txt,col){const l=$('chatlog');const d=document.createElement('div');d.className='chentry';d.innerHTML='<span class="chwho" style="color:'+(col||'var(--accent)')+'">'+esc(who)+':</span> '+esc(txt);l.appendChild(d);l.scrollTop=l.scrollHeight;}
 
 // ── COMBAT TRACKER (PLAYER VIEW) ────────────────────────────────────
@@ -1478,12 +1536,94 @@ function showAttackNotification(data){
 
 // ── DREAD / HORROR ──────────────────────────────────────────────────
 function updDread(s){dread=s;$('dfill').style.width=Math.min(100,s)+'%';$('dval').textContent=s+'/100';}
-function applyHorror(ef,pl,ms){const l=$('horror-layer');if(ef==='screen_tint'){l.style.background=pl.color||'rgba(80,0,0,.2)';if(ms)setTimeout(clearHorror,ms);}else if(ef==='flash'){l.style.background='rgba(255,255,255,.5)';setTimeout(clearHorror,150);}else if(ef==='dread_vision'&&pl.text)addChat('🔮 Vision',pl.text,'var(--purple)');}
-function clearHorror(){$('horror-layer').style.background='transparent';}
+var _horrorPulseInterval=null;
+function applyHorror(ef,pl,ms){
+  pl=pl||{};
+  var l=$('horror-layer');
+  if(ef==='screen_tint'){
+    // Clear any existing pulse
+    if(_horrorPulseInterval){clearInterval(_horrorPulseInterval);_horrorPulseInterval=null;}
+    var color=pl.color||'rgba(80,0,0,.2)';
+    l.style.background=color;
+    l.style.transition='background .4s';
+    // Pulse effect: fade in and out
+    if(pl.pulse){
+      var pulseSpeed=(pl.pulseSpeed||3)*1000;
+      var on=true;
+      _horrorPulseInterval=setInterval(function(){
+        l.style.background=on?'transparent':color;
+        on=!on;
+      },pulseSpeed/2);
+    }
+    if(ms)setTimeout(clearHorror,ms);
+  } else if(ef==='screen_flash'||ef==='flash'){
+    l.style.transition='none';
+    l.style.background=pl.color||'rgba(255,255,255,.5)';
+    setTimeout(function(){l.style.transition='background .3s';clearHorror();},ms||150);
+  } else if(ef==='glitch'){
+    l.style.transition='none';
+    l.style.background='rgba(0,255,0,.08)';
+    l.style.filter='hue-rotate(90deg)';
+    document.body.style.transform='translateX('+(Math.random()*6-3)+'px)';
+    setTimeout(function(){
+      l.style.background='transparent';
+      l.style.filter='';
+      document.body.style.transform='';
+      // Second glitch
+      setTimeout(function(){
+        l.style.background='rgba(255,0,0,.06)';
+        document.body.style.transform='translateX('+(Math.random()*4-2)+'px)';
+        setTimeout(function(){
+          l.style.background='transparent';
+          l.style.filter='';
+          document.body.style.transform='';
+        },80);
+      },100);
+    },ms||200);
+  } else if(ef==='dread_vision'){
+    if(pl.text) showToast('Vision',pl.text,5000);
+    l.style.transition='none';
+    l.style.background='rgba(60,0,80,.15)';
+    setTimeout(function(){l.style.transition='background 2s';l.style.background='transparent';},3000);
+  } else if(ef==='damage_flash'){
+    l.style.transition='none';
+    l.style.background='rgba(180,0,0,.25)';
+    setTimeout(function(){l.style.transition='background .5s';l.style.background='transparent';},200);
+  } else if(ef==='shake'){
+    var intensity=pl.intensity||0.03;
+    var dur=ms||800;
+    var shakeInterval=setInterval(function(){
+      document.body.style.transform='translate('+(Math.random()*intensity*200-intensity*100)+'px,'+(Math.random()*intensity*200-intensity*100)+'px)';
+    },50);
+    setTimeout(function(){clearInterval(shakeInterval);document.body.style.transform='';},dur);
+  } else if(ef==='whisper'){
+    var text=pl.text||'...';
+    showToast('DM Whisper',text,ms||5000);
+  }
+}
+function clearHorror(){
+  if(_horrorPulseInterval){clearInterval(_horrorPulseInterval);_horrorPulseInterval=null;}
+  var l=$('horror-layer');
+  l.style.background='transparent';
+  l.style.filter='';
+  document.body.style.transform='';
+}
+
+function showToast(who,text,dur){
+  dur=dur||5000;
+  var layer=$('toast-layer');
+  var t=document.createElement('div');
+  t.className='toast';
+  t.innerHTML='<div class="toast-who">'+esc(who)+'</div>'+esc(text);
+  layer.appendChild(t);
+  setTimeout(function(){t.classList.add('fading');setTimeout(function(){t.remove();},500);},dur);
+  // Also add to chat log
+  addChat(who,text,who==='DM Whisper'?'#c9a54e':'var(--purple)');
+}
 
 // ── TABS ────────────────────────────────────────────────────────────
 function showTab(n){
-  const tabs=['stats','map','combat','spells','skills','inventory','features','dice','notes'];
+  const tabs=['stats','map','combat','spells','skills','inventory','features','dice','chat','notes'];
   document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',tabs[i]===n));
   document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+n));
   if(n==='map') PlayerMap.resize();

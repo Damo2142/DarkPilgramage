@@ -142,6 +142,107 @@ class DashboardService {
       res.json({ trustLevel: level });
     });
 
+    // POST /api/transcript — manual transcript input (feeds AI like mic would)
+    this.app.post('/api/transcript', (req, res) => {
+      const { speaker, text } = req.body;
+      if (!text) return res.status(400).json({ error: 'text required' });
+
+      // Dispatch as transcript:segment — same event Whisper STT produces
+      this.bus.dispatch('transcript:segment', {
+        speaker: speaker || 'dm',
+        text: text,
+        timestamp: Date.now(),
+        confidence: 1.0,
+        source: 'manual'
+      });
+
+      res.json({ ok: true });
+    });
+
+    // POST /api/codm/ask — ask the Co-DM a question (rules, description, advice)
+    this.app.post('/api/codm/ask', async (req, res) => {
+      const { question } = req.body;
+      if (!question) return res.status(400).json({ error: 'question required' });
+
+      const aiEngine = this.orchestrator.getService('ai-engine');
+      if (!aiEngine || !aiEngine.gemini || !aiEngine.gemini.available) {
+        return res.json({ error: 'AI not available — check GEMINI_API_KEY' });
+      }
+
+      try {
+        // Build context for the question
+        const context = aiEngine.context.buildNpcContext('dm') || {};
+        const contextStr = aiEngine.context.toPromptString({
+          scene: context.scene,
+          players: context.players,
+          storyContext: context.storyContext,
+          mapState: context.mapState,
+          worldState: context.worldState,
+          atmosphere: context.atmosphere
+        });
+
+        const prompt = `You are the Co-DM — an AI assistant helping a human DM run a gothic horror D&D 5e game set in 1274 Central Europe.
+
+${contextStr}
+
+The DM asks: "${question}"
+
+Answer concisely (2-4 sentences). If it's a rules question, give the D&D 5e rule. If it's a description request, write atmospheric read-aloud text. If it's advice, suggest what to do based on the current game state. Be direct and useful — this will be spoken into the DM's earbud.`;
+
+        const answer = await aiEngine.gemini.generate(prompt);
+        if (answer) {
+          // Also whisper the answer
+          this.bus.dispatch('dm:whisper', {
+            text: answer,
+            priority: 2,
+            category: 'story'
+          });
+          res.json({ answer });
+        } else {
+          res.json({ error: 'No response from AI' });
+        }
+      } catch (err) {
+        console.error('[Dashboard] Co-DM ask error:', err.message);
+        res.json({ error: err.message });
+      }
+    });
+
+    // POST /api/codm/read-aloud — generate a read-aloud description
+    this.app.post('/api/codm/read-aloud', async (req, res) => {
+      const { topic, context: additionalContext } = req.body;
+      if (!topic) return res.status(400).json({ error: 'topic required' });
+
+      const aiEngine = this.orchestrator.getService('ai-engine');
+      if (!aiEngine?.advisor) return res.json({ error: 'AI not available' });
+
+      const result = await aiEngine.advisor.generateReadAloud(topic, additionalContext);
+      res.json({ text: result || 'No description generated' });
+    });
+
+    // POST /api/codm/interpret-roll — interpret a roll result
+    this.app.post('/api/codm/interpret-roll', async (req, res) => {
+      const { skill, total, playerId, location } = req.body;
+      if (!skill || total == null) return res.status(400).json({ error: 'skill and total required' });
+
+      const aiEngine = this.orchestrator.getService('ai-engine');
+      if (!aiEngine?.advisor) return res.json({ error: 'AI not available' });
+
+      const result = await aiEngine.advisor.interpretRoll(skill, parseInt(total), playerId, location);
+      res.json({ text: result || 'No interpretation generated' });
+    });
+
+    // POST /api/codm/rule — look up a D&D rule
+    this.app.post('/api/codm/rule', async (req, res) => {
+      const { query } = req.body;
+      if (!query) return res.status(400).json({ error: 'query required' });
+
+      const aiEngine = this.orchestrator.getService('ai-engine');
+      if (!aiEngine?.advisor) return res.json({ error: 'AI not available' });
+
+      const result = await aiEngine.advisor.lookupRule(query);
+      res.json({ text: result || 'No rule found' });
+    });
+
     this.app.post('/api/dread/:playerId', (req, res) => {
       const { playerId } = req.params;
       const { score } = req.body;
@@ -441,6 +542,23 @@ class DashboardService {
         break;
       case 'story:add_clue':
         this.bus.dispatch('story:add_clue', { clue: msg.clue });
+        break;
+      case 'dm:private_message':
+        this.bus.dispatch('dm:private_message', {
+          playerId: msg.playerId,
+          text: msg.text,
+          durationMs: msg.durationMs || 8000
+        });
+        break;
+      case 'dm:broadcast_chat':
+        this.bus.dispatch('dm:private_message', {
+          playerId: 'all',
+          text: msg.text,
+          durationMs: 8000
+        });
+        break;
+      case 'npc:execute_action':
+        this.bus.dispatch('npc:execute_action', msg);
         break;
       default:
         console.log(`[Dashboard] Unknown message type: ${msg.type}`);

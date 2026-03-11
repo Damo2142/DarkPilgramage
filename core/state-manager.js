@@ -46,6 +46,15 @@ class StateManager {
         },
         activeEffects: []
       },
+      world: {
+        gameTime: null,
+        timeScale: 1,
+        paused: true,
+        secrets: {},
+        clues: {},
+        npcGoals: {},
+        discoveries: {}
+      },
       combat: {
         active: false,
         round: 0,

@@ -183,6 +183,9 @@ class StateManager {
 
   endSession() {
     this.set('session.status', 'ended');
+
+    // Save final session state for resume
+    this._saveSessionState();
     this._saveSnapshot();
 
     if (this._elapsedInterval) clearInterval(this._elapsedInterval);
@@ -193,6 +196,143 @@ class StateManager {
       duration: this.get('session.elapsedMs')
     });
     console.log(`[StateManager] Session ended: ${this.get('session.id')}`);
+  }
+
+  /**
+   * Save full session state for resume next time
+   * Saves: story progress, secrets, clues, NPC dispositions, dread, world state
+   */
+  _saveSessionState() {
+    const logDir = this.config?.session?.logDir || './sessions';
+    const saveDir = path.join(logDir, 'saves');
+
+    try {
+      fs.mkdirSync(saveDir, { recursive: true });
+
+      const saveData = {
+        savedAt: new Date().toISOString(),
+        sessionId: this.get('session.id'),
+        elapsedMs: this.get('session.elapsedMs'),
+        story: this.get('story'),
+        world: this.get('world'),
+        scene: this.get('scene'),
+        atmosphere: this.get('atmosphere'),
+        players: this._stripPlayerTransients(this.get('players')),
+        npcs: this.get('npcs'),
+        combat: { active: false, round: 0, turnOrder: [], currentTurn: null }
+      };
+
+      // Save timestamped version
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      fs.writeFileSync(
+        path.join(saveDir, `save-${timestamp}.json`),
+        JSON.stringify(saveData, null, 2)
+      );
+
+      // Save as "latest" for easy resume
+      fs.writeFileSync(
+        path.join(saveDir, 'latest-save.json'),
+        JSON.stringify(saveData, null, 2)
+      );
+
+      console.log(`[StateManager] Session state saved to ${saveDir}/latest-save.json`);
+    } catch (err) {
+      console.error('[StateManager] Session save failed:', err.message);
+    }
+  }
+
+  /**
+   * Strip transient data from players (connected status, deviceId)
+   * Keep: dread, character data, inventory, spells
+   */
+  _stripPlayerTransients(players) {
+    if (!players) return {};
+    const cleaned = {};
+    for (const [id, p] of Object.entries(players)) {
+      cleaned[id] = {
+        name: p.name,
+        character: p.character,
+        dread: p.dread,
+        connected: false,
+        deviceId: null
+      };
+    }
+    return cleaned;
+  }
+
+  /**
+   * Resume from a saved session state
+   * Loads story progress, secrets, dread, NPC state from save file
+   */
+  resumeFromSave(savePath) {
+    try {
+      const saveData = JSON.parse(fs.readFileSync(savePath, 'utf-8'));
+      console.log(`[StateManager] Resuming from save: ${saveData.savedAt} (session: ${saveData.sessionId})`);
+
+      if (saveData.story) this._state.story = saveData.story;
+      if (saveData.world) this._state.world = saveData.world;
+      if (saveData.scene) this._state.scene = { ...this._state.scene, ...saveData.scene };
+      if (saveData.atmosphere) this._state.atmosphere = { ...this._state.atmosphere, ...saveData.atmosphere };
+      if (saveData.npcs) this._state.npcs = saveData.npcs;
+
+      // Restore player dread and character data (not connection state)
+      if (saveData.players) {
+        for (const [id, p] of Object.entries(saveData.players)) {
+          if (this._state.players[id]) {
+            if (p.dread) this._state.players[id].dread = p.dread;
+            if (p.character) this._state.players[id].character = p.character;
+          } else {
+            this._state.players[id] = { ...p, connected: false };
+          }
+        }
+      }
+
+      this.bus.dispatch('state:session_resumed', { savePath, savedAt: saveData.savedAt });
+      console.log('[StateManager] Session state restored');
+      return saveData;
+    } catch (err) {
+      console.error('[StateManager] Resume failed:', err.message);
+      return null;
+    }
+  }
+
+  /**
+   * Reset session to pristine state from original config
+   * Clears all runtime progress — story beats, secrets, dread, etc.
+   */
+  resetSession(sessionConfig) {
+    console.log('[StateManager] Resetting session to pristine state...');
+
+    // Stop timers
+    if (this._elapsedInterval) clearInterval(this._elapsedInterval);
+    if (this._snapshotTimer) clearInterval(this._snapshotTimer);
+
+    // Reset to defaults
+    this._state = this._defaultState();
+
+    // Reload session config
+    if (sessionConfig) {
+      this.loadSession(sessionConfig);
+    }
+
+    this.bus.dispatch('state:session_reset', {});
+    console.log('[StateManager] Session reset complete');
+  }
+
+  /**
+   * List available save files
+   */
+  listSaves() {
+    const logDir = this.config?.session?.logDir || './sessions';
+    const saveDir = path.join(logDir, 'saves');
+    try {
+      return fs.readdirSync(saveDir)
+        .filter(f => f.endsWith('.json') && f !== 'latest-save.json')
+        .sort()
+        .reverse();
+    } catch {
+      return [];
+    }
   }
 
   /**

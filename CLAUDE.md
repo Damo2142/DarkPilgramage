@@ -6,8 +6,10 @@ When starting a new session, read these memory files first:
 2. `~/.claude/projects/-home-dave-dark-pilgrimage/memory/build-plan.md` — 79 features, 17 phases
 3. `~/.claude/projects/-home-dave-dark-pilgrimage/memory/session-resume.md` — exact pickup point
 
-## Current Task: Phase A — Session Schema Foundation
-Build generic session JSON schema + world clock engine. See session-resume.md for full details.
+## Current Task: Phase I — Atmosphere Automation
+Beat-linked lighting, dynamic weather, world clock transitions. See session-resume.md for full details.
+
+## Completed: Phases A, B, C, D, E, F, G, H, L + session save/resume + panel pop-out + audio routing
 
 ## Rules
 - This is a PERSONAL project — no product abstraction, no Shroud, no multi-platform

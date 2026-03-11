@@ -215,6 +215,31 @@ class PlayerBridgeService {
       this._broadcast({ type: 'horror:clear' });
     }, 'player-bridge');
 
+    // Revelation flash when secrets are revealed (Phase H feature 38)
+    this.bus.subscribe('world:secret_revealed', (env) => {
+      this._broadcast({
+        type: 'horror:effect',
+        effect: 'revelation_flash',
+        payload: { text: env.data.description || 'A dark truth is revealed...' },
+        durationMs: 2500
+      });
+    }, 'player-bridge');
+
+    // Damage flash on HP loss (Phase H feature 41)
+    this.bus.subscribe('combat:attack_result', (env) => {
+      const { targetId, hit, damage } = env.data;
+      if (hit && damage > 0) {
+        const intensity = Math.min(0.5, 0.1 + (damage / 40));
+        const shake = Math.min(8, 1 + Math.round(damage / 5));
+        this._sendToPlayer(targetId, {
+          type: 'horror:effect',
+          effect: 'damage_flash',
+          payload: { intensity, shake },
+          durationMs: 300
+        });
+      }
+    }, 'player-bridge');
+
     this.bus.subscribe('dm:private_message', (env) => {
       const { playerId, text, durationMs } = env.data;
       if (playerId === 'all') {

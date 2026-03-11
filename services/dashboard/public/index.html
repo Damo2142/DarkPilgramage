@@ -86,6 +86,23 @@
     .panel-section .panel-hide-btn { position:absolute;top:3px;right:6px;background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;padding:2px 4px;opacity:0;transition:opacity 0.15s;z-index:2; }
     .panel-section:hover .panel-hide-btn { opacity:1; }
     .panel-section .panel-hide-btn:hover { color:var(--red-bright); }
+    .panel-section .panel-popout-btn { position:absolute;top:3px;right:24px;background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:10px;padding:2px 4px;opacity:0;transition:opacity 0.15s;z-index:2; }
+    .panel-section:hover .panel-popout-btn { opacity:1; }
+    .panel-section .panel-popout-btn:hover { color:var(--accent); }
+
+    /* Pop-out single panel mode */
+    body.popout-mode { overflow:auto; }
+    body.popout-mode header { display:none; }
+    body.popout-mode #panel-menu { display:none !important; }
+    body.popout-mode .main-layout { display:block; height:auto; overflow:auto; }
+    body.popout-mode .controls-col,
+    body.popout-mode .players-col { display:none; }
+    body.popout-mode .panel-section { display:none !important; }
+    body.popout-mode .panel-section.popout-active { display:block !important; border:none; }
+    body.popout-mode .panel-section.popout-active .panel-hide-btn,
+    body.popout-mode .panel-section.popout-active .panel-popout-btn { display:none; }
+    body.popout-mode .panel-section.popout-active .section-header { font-size:13px; padding:8px 12px; }
+    body.popout-mode .panel-section.popout-active > *:not(.section-header) { display:block !important; padding:8px; font-size:13px; }
     .panel-section.panel-collapsed > *:not(.section-header) { display:none !important; }
     .panel-section.panel-collapsed .section-header .panel-collapse-icon { transform:rotate(-90deg); }
     .section-header .panel-collapse-icon { display:inline-block;font-size:8px;color:var(--text-dim);transition:transform 0.15s;margin-right:2px; }
@@ -801,6 +818,11 @@
         <button onclick="send('session:end')">⏹ End</button>
       </div>
       <div class="session-bar">
+        <button onclick="SessionMgr.resumeLatest()" title="Resume from last save">Resume Save</button>
+        <button onclick="if(confirm('Reset ALL session progress to starting state?')) SessionMgr.reset()" class="danger" title="Reset to pristine session-0 state">Reset</button>
+      </div>
+      <div id="session-save-info" style="font-size:9px;color:var(--text-dim);padding:2px 4px;"></div>
+      <div class="session-bar">
         <button class="danger" onclick="if(confirm('PANIC — Kill all effects?')) send('panic')" style="flex:2">🚨 PANIC</button>
       </div>
       </div>
@@ -906,6 +928,129 @@
           <canvas id="tension-canvas" width="280" height="60" style="width:100%;height:60px;background:var(--surface3);border-radius:3px;"></canvas>
         </div>
         <div id="pacing-alerts" style="max-height:60px;overflow-y:auto;font-size:10px;"></div>
+      </div>
+      </div>
+
+      <div class="panel-section" data-panel="soundboard">
+      <div class="section-header"><span class="drag-handle">⠿</span>Sound Board</div>
+      <div style="padding:6px 8px;">
+        <!-- Audio output routing -->
+        <div style="display:flex;gap:3px;margin-bottom:3px;align-items:center;">
+          <div style="font-size:9px;color:var(--text-dim);white-space:nowrap;">SFX Out:</div>
+          <select id="audio-output-sfx" style="flex:1;font-size:10px;padding:3px;background:var(--surface3);color:var(--text);border:1px solid var(--surface3);border-radius:3px;" onchange="SoundBoard.setSfxOutput(this.value)">
+            <option value="default">Default speakers</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:3px;margin-bottom:3px;align-items:center;">
+          <div style="font-size:9px;color:var(--text-dim);white-space:nowrap;">Earbud:</div>
+          <select id="audio-output-earbud" style="flex:1;font-size:10px;padding:3px;background:var(--surface3);color:var(--text);border:1px solid var(--surface3);border-radius:3px;" onchange="SoundBoard.setEarbudOutput(this.value)">
+            <option value="default">Default speakers</option>
+          </select>
+          <button class="sm" onclick="SoundBoard.refreshAudioOutputs()" title="Refresh audio devices" style="font-size:10px;padding:3px 5px;">&#x21bb;</button>
+        </div>
+        <!-- Echo device selector for directional -->
+        <div style="display:flex;gap:3px;margin-bottom:3px;align-items:center;">
+          <div style="font-size:9px;color:var(--text-dim);white-space:nowrap;">Echo:</div>
+          <select id="echo-device-select" style="flex:1;font-size:10px;padding:3px;background:var(--surface3);color:var(--text);border:1px solid var(--surface3);border-radius:3px;">
+            <option value="">Primary</option>
+            <option value="office_dot">Office Dot</option>
+            <option value="kitchen_echo">Kitchen</option>
+            <option value="dining_room">Dining Room</option>
+            <option value="living_room">Living Room</option>
+          </select>
+          <button class="sm" onclick="SoundBoard.refreshDevices()" title="Refresh Echo devices" style="font-size:10px;padding:3px 5px;">&#x21bb;</button>
+        </div>
+        <div id="echo-status" style="font-size:9px;color:var(--text-dim);margin-bottom:4px;"></div>
+
+        <!-- Sound Effects -->
+        <div style="font-size:9px;color:var(--text-dim);margin-bottom:3px;">Sound Effects</div>
+        <div id="sfx-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin-bottom:6px;">
+          <button class="sm" onclick="SoundBoard.play('thunder')" title="Thunder">&#9889;</button>
+          <button class="sm" onclick="SoundBoard.play('wolf_howl')" title="Wolf Howl">&#128058;</button>
+          <button class="sm" onclick="SoundBoard.play('door_creak')" title="Door Creak">&#128682;</button>
+          <button class="sm" onclick="SoundBoard.play('scream')" title="Scream">&#128561;</button>
+          <button class="sm" onclick="SoundBoard.play('wind')" title="Wind">&#127744;</button>
+          <button class="sm" onclick="SoundBoard.play('fire_crackling')" title="Fire">&#128293;</button>
+          <button class="sm" onclick="SoundBoard.play('chains')" title="Chains">&#9939;</button>
+          <button class="sm" onclick="SoundBoard.play('heartbeat')" title="Heartbeat">&#128147;</button>
+          <button class="sm" onclick="SoundBoard.play('footsteps')" title="Footsteps">&#128095;</button>
+          <button class="sm" onclick="SoundBoard.play('glass_break')" title="Glass Break">&#129351;</button>
+          <button class="sm" onclick="SoundBoard.play('growl')" title="Growl">&#128009;</button>
+          <button class="sm" onclick="SoundBoard.play('rats')" title="Rats">&#128000;</button>
+          <button class="sm" onclick="SoundBoard.play('bats')" title="Bats">&#129415;</button>
+          <button class="sm" onclick="SoundBoard.play('sword_clash')" title="Sword">&#9876;</button>
+          <button class="sm" onclick="SoundBoard.play('bell')" title="Bell">&#128276;</button>
+        </div>
+
+        <!-- Ambient Loops -->
+        <div style="font-size:9px;color:var(--text-dim);margin-bottom:3px;">Ambient Loops</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-bottom:4px;">
+          <button class="sm" onclick="SoundBoard.loop('tavern_ambient')" title="Tavern" style="font-size:9px;">Tavern</button>
+          <button class="sm" onclick="SoundBoard.loop('fire_crackling')" title="Fireplace" style="font-size:9px;">Fire</button>
+          <button class="sm" onclick="SoundBoard.loop('rain')" title="Rain" style="font-size:9px;">Rain</button>
+          <button class="sm" onclick="SoundBoard.loop('storm')" title="Storm" style="font-size:9px;">Storm</button>
+          <button class="sm" onclick="SoundBoard.loop('wind_ambient')" title="Wind" style="font-size:9px;">Wind</button>
+          <button class="sm" onclick="SoundBoard.loop('dungeon_drip')" title="Dungeon" style="font-size:9px;">Dungeon</button>
+          <button class="sm" onclick="SoundBoard.loop('night_forest')" title="Forest" style="font-size:9px;">Forest</button>
+          <button class="sm" onclick="SoundBoard.loop('heartbeat_loop')" title="Heartbeat" style="font-size:9px;">Pulse</button>
+        </div>
+        <div style="display:flex;gap:3px;margin-bottom:4px;">
+          <button class="sm" onclick="SoundBoard.stopLoop()" style="flex:1;font-size:9px;color:var(--red-bright);">Stop Ambient</button>
+          <input type="range" id="sfx-volume" min="0" max="100" value="70" style="flex:1;" onchange="SoundBoard.setVolume(this.value)">
+          <span id="sfx-vol-label" style="font-size:9px;color:var(--text-dim);width:28px;text-align:right;">70%</span>
+        </div>
+
+        <!-- Echo Directional quick buttons -->
+        <div style="font-size:9px;color:var(--text-dim);margin-bottom:3px;">Echo Directional (quick)</div>
+        <div style="display:flex;gap:3px;margin-bottom:4px;">
+          <button class="sm" onclick="SoundBoard.echoSpeak('footsteps')" style="flex:1;font-size:9px;">Footsteps</button>
+          <button class="sm" onclick="SoundBoard.echoSpeak('door_creak')" style="flex:1;font-size:9px;">Door</button>
+          <button class="sm" onclick="SoundBoard.echoSpeak('chains')" style="flex:1;font-size:9px;">Chains</button>
+          <button class="sm" onclick="SoundBoard.echoSpeak('whisper')" style="flex:1;font-size:9px;">Whisper</button>
+        </div>
+        <div id="directional-status" style="font-size:9px;color:var(--text-dim);margin-bottom:3px;"></div>
+
+        <details style="font-size:9px;color:var(--text-dim);margin-bottom:4px;">
+          <summary style="cursor:pointer;color:var(--accent);">Echo Cookie Refresh Guide</summary>
+          <div style="padding:4px;background:var(--surface3);border-radius:3px;margin-top:3px;line-height:1.5;">
+            <b>When Echo voice stops working (cookie expired):</b><br>
+            1. Open <b>alexa.amazon.com</b> in Chrome, log in<br>
+            2. Press F12 &rarr; Network tab &rarr; refresh page<br>
+            3. Click any request &rarr; copy the <b>Cookie:</b> header value<br>
+            4. In Console: <code>document.cookie.match(/csrf=([^;]+)/)?.[1]</code><br>
+            5. SSH in, edit <code>~/dark-pilgrimage/co-dm/.env</code><br>
+            6. Update ALEXA_COOKIE and ALEXA_CSRF<br>
+            7. <code>docker compose build --no-cache && docker compose up -d</code><br>
+          </div>
+        </details>
+
+        <!-- NPC Voice (Echo TTS) -->
+        <div style="font-size:9px;color:var(--text-dim);margin-bottom:3px;">Speak as NPC (Echo TTS)</div>
+        <div style="display:flex;gap:3px;margin-bottom:4px;">
+          <select id="voice-profile-select" style="flex:1;font-size:10px;padding:3px;background:var(--surface3);color:var(--text);border:1px solid var(--surface3);border-radius:3px;">
+            <option value="narrator">Narrator</option>
+            <option value="innkeeper_marta">Marta</option>
+            <option value="trapper_tomas">Tomas</option>
+            <option value="stranger_hooded">Vladislav</option>
+            <option value="spurt">Spurt</option>
+            <option value="patron_henryk">Henryk</option>
+            <option value="patron_aldric">Brother Aldric</option>
+            <option value="patron_katya">Katya</option>
+            <option value="patron_gregor">Old Gregor</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:3px;margin-bottom:4px;">
+          <input id="voice-speak-input" type="text" placeholder="Text to speak on Echo..." style="flex:1;font-size:10px;padding:4px 6px;background:var(--surface3);color:var(--text);border:1px solid var(--surface3);border-radius:3px;">
+          <button class="sm primary" onclick="SoundBoard.speakText()" style="padding:4px 8px;">Speak</button>
+        </div>
+
+        <!-- Custom Sound Generation -->
+        <div style="font-size:9px;color:var(--text-dim);margin-bottom:3px;">Generate Custom Sound (ElevenLabs)</div>
+        <div style="display:flex;gap:3px;">
+          <input id="sfx-gen-prompt" type="text" placeholder="Describe a sound..." style="flex:1;font-size:10px;padding:4px 6px;background:var(--surface3);color:var(--text);border:1px solid var(--surface3);border-radius:3px;">
+          <button class="sm primary" onclick="SoundBoard.generateCustom()" style="padding:4px 8px;">Gen</button>
+        </div>
+        <div id="sfx-gen-status" style="font-size:9px;color:var(--text-dim);margin-top:3px;"></div>
       </div>
       </div>
 
@@ -1023,18 +1168,30 @@
       </div>
 
       <div class="panel-section" data-panel="horror">
-      <div class="section-header"><span class="drag-handle">⠿</span>Horror Effects</div>
+      <div class="section-header"><span class="drag-handle">⠿</span>Player Screen Effects</div>
       <div class="horror-controls">
         <select id="horror-target">
           <option value="all">All Players</option>
         </select>
+        <div style="font-size:9px;color:var(--text-dim);margin:2px 0;">Atmosphere</div>
         <div class="row">
-          <button onclick="sendHorror('screen_tint', {color:'rgba(80,0,0,0.12)',pulse:true}, 5000)">Red Tint</button>
-          <button onclick="sendHorror('screen_flash', {color:'rgba(255,255,255,0.8)',flashMs:100}, 100)">Flash</button>
-          <button onclick="sendHorror('glitch', {}, 2000)">Glitch</button>
+          <button onclick="sendHorror('atmo_tint', {color:'rgba(80,0,0,.12)'}, 0)" title="Red atmosphere tint">Red Tint</button>
+          <button onclick="sendHorror('atmo_tint', {color:'rgba(0,0,60,.10)'}, 0)" title="Blue cold tint">Blue Tint</button>
+          <button onclick="sendHorror('atmo_tint', {color:'transparent'}, 0)" title="Clear tint">Clear</button>
+        </div>
+        <div style="font-size:9px;color:var(--text-dim);margin:2px 0;">Horror</div>
+        <div class="row">
+          <button onclick="sendHorror('screen_flash', {color:'rgba(255,255,255,0.8)'}, 100)" title="Bright flash">Flash</button>
+          <button onclick="sendHorror('revelation_flash', {}, 2500)" title="Golden revelation glow">Reveal</button>
+          <button onclick="sendHorror('terror_pulse', {}, 1500)" title="Terror glitch distortion">Terror</button>
         </div>
         <div class="row">
-          <button onclick="sendHorror('shake', {intensity:0.05}, 1000)">Shake</button>
+          <button onclick="sendHorror('damage_flash', {intensity:0.3, shake:4}, 300)" title="Red damage flash + shake">Damage</button>
+          <button onclick="sendHorror('shake', {intensity:0.05}, 1000)" title="Screen shake">Shake</button>
+          <button onclick="sendHorror('screen_tint', {color:'rgba(80,0,0,0.15)',pulse:true,pulseSpeed:2}, 8000)" title="Pulsing red">Pulse</button>
+        </div>
+        <div style="font-size:9px;color:var(--text-dim);margin:2px 0;">Narrative</div>
+        <div class="row">
           <button onclick="sendDreadVision()">Vision</button>
           <button onclick="sendWhisper()">Whisper</button>
         </div>
@@ -1406,6 +1563,16 @@
           PacingPanel.addAlert(msg.data);
           const paIcon = msg.data.type === 'revelation' ? '📊' : msg.data.type === 'pacing' ? '⏱' : '📈';
           addTranscript({ speaker: 'co-dm', text: `${paIcon} [${msg.data.type}] ${msg.data.message}` });
+        }
+        break;
+      case 'voice:devices':
+        if (msg.data?.devices) SoundBoard.updateDeviceList(msg.data.devices);
+        break;
+      case 'sound:ambient':
+        if (msg.data?.name) {
+          SoundBoard.loop(msg.data.name);
+        } else {
+          SoundBoard.stopLoop();
         }
         break;
       case 'hp:update':
@@ -1930,6 +2097,255 @@
       this.renderDialogues();
     }
   };
+
+  // === SESSION MANAGEMENT (Save/Reset/Resume) ===
+  const SessionMgr = {
+    async reset() {
+      try {
+        const res = await fetch('/api/session/reset', { method: 'POST' });
+        const data = await res.json();
+        addTranscript({ speaker: 'system', text: 'Session RESET to pristine state.' });
+        document.getElementById('session-save-info').textContent = 'Session reset. Ready for game night.';
+        // Refresh state
+        const st = await fetch('/api/state').then(r => r.json());
+        Object.assign(state, st);
+        renderBeats();
+      } catch (e) { console.error('Reset failed:', e); }
+    },
+    async resumeLatest() {
+      try {
+        const res = await fetch('/api/session/resume', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        const data = await res.json();
+        if (data.error) {
+          document.getElementById('session-save-info').textContent = data.error;
+        } else {
+          addTranscript({ speaker: 'system', text: `Session resumed from save (${data.savedAt}).` });
+          document.getElementById('session-save-info').textContent = `Resumed from: ${data.savedAt}`;
+          const st = await fetch('/api/state').then(r => r.json());
+          Object.assign(state, st);
+          renderBeats();
+        }
+      } catch (e) { console.error('Resume failed:', e); }
+    },
+    async checkSaves() {
+      try {
+        const res = await fetch('/api/session/saves');
+        const data = await res.json();
+        if (data.saves && data.saves.length > 0) {
+          document.getElementById('session-save-info').textContent = `${data.saves.length} save(s) available. Latest: ${data.saves[0]}`;
+        } else {
+          document.getElementById('session-save-info').textContent = 'No saves found.';
+        }
+      } catch (e) { /* ignore */ }
+    }
+  };
+  // Check for saves on load
+  SessionMgr.checkSaves();
+
+  // === SOUND BOARD ===
+  const SoundBoard = {
+    _devices: [],
+    _audioCache: {},
+    _loopAudio: null,
+    _loopName: null,
+    _volume: 0.7,
+    _sfxSinkId: 'default',
+    _earbudSinkId: 'default',
+
+    // ── Audio Output Routing ───────────────────────────────────────
+
+    async refreshAudioOutputs() {
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true }); // trigger permission
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const outputs = devices.filter(d => d.kind === 'audiooutput');
+
+        for (const selId of ['audio-output-sfx', 'audio-output-earbud']) {
+          const sel = document.getElementById(selId);
+          if (!sel) continue;
+          const current = sel.value;
+          sel.innerHTML = '<option value="default">Default</option>';
+          for (const d of outputs) {
+            if (d.deviceId === 'default') continue;
+            const opt = document.createElement('option');
+            opt.value = d.deviceId;
+            opt.textContent = d.label || `Speaker ${d.deviceId.slice(0,8)}`;
+            sel.appendChild(opt);
+          }
+          if (current) sel.value = current;
+        }
+
+        // Restore saved selections
+        const savedSfx = localStorage.getItem('dp_sfx_output');
+        const savedEarbud = localStorage.getItem('dp_earbud_output');
+        if (savedSfx) { document.getElementById('audio-output-sfx').value = savedSfx; this._sfxSinkId = savedSfx; }
+        if (savedEarbud) { document.getElementById('audio-output-earbud').value = savedEarbud; this._earbudSinkId = savedEarbud; }
+      } catch (e) {
+        console.warn('Could not enumerate audio devices:', e.message);
+      }
+    },
+
+    setSfxOutput(deviceId) {
+      this._sfxSinkId = deviceId;
+      localStorage.setItem('dp_sfx_output', deviceId);
+      // Re-route existing loop
+      if (this._loopAudio?.setSinkId) this._loopAudio.setSinkId(deviceId).catch(() => {});
+      // Clear cache so next play uses new output
+      this._audioCache = {};
+    },
+
+    setEarbudOutput(deviceId) {
+      this._earbudSinkId = deviceId;
+      localStorage.setItem('dp_earbud_output', deviceId);
+    },
+
+    async _routeAudio(audio, sinkId) {
+      if (audio.setSinkId && sinkId && sinkId !== 'default') {
+        try { await audio.setSinkId(sinkId); } catch (e) { console.warn('setSinkId failed:', e.message); }
+      }
+    },
+
+    // ── Browser Audio (MP3 files from server) ──────────────────────
+
+    async play(name) {
+      const url = `/sounds/${name}.mp3`;
+      // Always create fresh audio for correct output routing
+      const audio = new Audio(url);
+      await this._routeAudio(audio, this._sfxSinkId);
+      audio.volume = this._volume;
+      audio.play().catch(e => {
+        console.warn('Audio play failed:', e.message);
+        const st = document.getElementById('sfx-gen-status');
+        if (st) { st.textContent = `"${name}" not generated yet — add ELEVENLABS_API_KEY to .env`; setTimeout(() => st.textContent = '', 4000); }
+      });
+    },
+
+    async loop(name) {
+      this.stopLoop();
+      const url = `/sounds/${name}.mp3`;
+      this._loopAudio = new Audio(url);
+      await this._routeAudio(this._loopAudio, this._sfxSinkId);
+      this._loopAudio.volume = this._volume;
+      this._loopAudio.loop = true;
+      this._loopName = name;
+      this._loopAudio.play().catch(e => {
+        const st = document.getElementById('sfx-gen-status');
+        if (st) { st.textContent = `"${name}" not generated yet`; setTimeout(() => st.textContent = '', 4000); }
+      });
+    },
+
+    stopLoop() {
+      if (this._loopAudio) {
+        this._loopAudio.pause();
+        this._loopAudio.currentTime = 0;
+        this._loopAudio = null;
+        this._loopName = null;
+      }
+    },
+
+    setVolume(val) {
+      this._volume = val / 100;
+      document.getElementById('sfx-vol-label').textContent = val + '%';
+      if (this._loopAudio) this._loopAudio.volume = this._volume;
+    },
+
+    // ── Echo Directional (TTS from other rooms) ────────────────────
+
+    getSelectedDevice() {
+      const sel = document.getElementById('echo-device-select');
+      return sel?.value || '';
+    },
+
+    echoSpeak(effect) {
+      const device = this.getSelectedDevice();
+      ws.send(JSON.stringify({ type: 'audio:directional', effect, device: device || undefined }));
+      const statusEl = document.getElementById('directional-status');
+      if (statusEl) { statusEl.textContent = `Echo: ${effect}`; setTimeout(() => statusEl.textContent = '', 3000); }
+    },
+
+    speakText() {
+      const input = document.getElementById('voice-speak-input');
+      const profile = document.getElementById('voice-profile-select').value;
+      const text = input.value.trim();
+      if (!text) return;
+      const device = this.getSelectedDevice();
+      ws.send(JSON.stringify({ type: 'voice:speak', text, profile, device: device || undefined }));
+      input.value = '';
+    },
+
+    refreshDevices() {
+      ws.send(JSON.stringify({ type: 'voice:list_devices' }));
+    },
+
+    updateDeviceList(devices) {
+      this._devices = devices || [];
+      const sel = document.getElementById('echo-device-select');
+      const statusEl = document.getElementById('echo-status');
+      if (!sel) return;
+
+      const current = sel.value;
+      sel.innerHTML = '<option value="_local">Local (this device)</option><option value="">Echo: Primary</option>';
+      for (const d of this._devices) {
+        const opt = document.createElement('option');
+        opt.value = d.key || d.serial;
+        opt.textContent = `Echo: ${d.name}`;
+        sel.appendChild(opt);
+      }
+      if (current) sel.value = current;
+
+      if (statusEl) {
+        statusEl.textContent = this._devices.length > 0
+          ? `${this._devices.length} Echo device(s)`
+          : 'No Echo devices';
+      }
+    },
+
+    // ── Custom Sound Generation ────────────────────────────────────
+
+    async generateCustom() {
+      const input = document.getElementById('sfx-gen-prompt');
+      const status = document.getElementById('sfx-gen-status');
+      const prompt = input.value.trim();
+      if (!prompt) return;
+
+      const name = prompt.toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 40);
+      status.textContent = 'Generating...';
+
+      try {
+        const res = await fetch('/api/sounds/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, prompt, duration: 5 })
+        });
+        const data = await res.json();
+        if (data.file) {
+          status.textContent = 'Generated! Playing...';
+          input.value = '';
+          this.play(data.name);
+          setTimeout(() => status.textContent = '', 3000);
+        } else {
+          status.textContent = data.error || 'Failed';
+        }
+      } catch (e) {
+        status.textContent = 'Error: ' + e.message;
+      }
+    }
+  };
+
+  // Enter key handlers
+  document.getElementById('voice-speak-input')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') SoundBoard.speakText();
+  });
+  document.getElementById('sfx-gen-prompt')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') SoundBoard.generateCustom();
+  });
+
+  // Request device list on load
+  setTimeout(() => { SoundBoard.refreshDevices(); SoundBoard.refreshAudioOutputs(); }, 2000);
 
   // === PACING & TENSION PANEL ===
   const PacingPanel = {
@@ -4334,6 +4750,14 @@
           if (ico) ico.style.transform = p.classList.contains('panel-collapsed') ? 'rotate(-90deg)' : '';
         });
 
+        // Add pop-out button
+        const popBtn = document.createElement('button');
+        popBtn.className = 'panel-popout-btn';
+        popBtn.innerHTML = '&#10064;';
+        popBtn.title = 'Pop out to new window';
+        popBtn.onclick = (e) => { e.stopPropagation(); PanelLayout.popout(p.dataset.panel); };
+        p.appendChild(popBtn);
+
         // Add hide button
         const hideBtn = document.createElement('button');
         hideBtn.className = 'panel-hide-btn';
@@ -4342,6 +4766,38 @@
         hideBtn.onclick = (e) => { e.stopPropagation(); this.hidePanel(p.dataset.panel); };
         p.appendChild(hideBtn);
       });
+    },
+
+    popout(panelName) {
+      const panelTitle = document.querySelector(`[data-panel="${panelName}"] .section-header`)?.textContent?.replace('⠿','').replace('▼','').trim() || panelName;
+      const w = window.open(
+        `${location.pathname}?panel=${panelName}`,
+        `panel_${panelName}`,
+        'width=500,height=700,menubar=no,toolbar=no,location=no,status=no'
+      );
+      if (w) w.document.title = `${panelTitle} — Co-DM`;
+    },
+
+    checkPopoutMode() {
+      const params = new URLSearchParams(location.search);
+      const panel = params.get('panel');
+      if (!panel) return false;
+
+      document.body.classList.add('popout-mode');
+
+      // Wait for panels to exist, then activate the target
+      setTimeout(() => {
+        const target = document.querySelector(`[data-panel="${panel}"]`);
+        if (target) {
+          // Show the target panel's column so it's in the DOM
+          target.closest('.controls-col, .players-col')?.style.setProperty('display', 'block');
+          target.classList.add('popout-active');
+          target.classList.remove('panel-hidden', 'panel-collapsed');
+          document.title = (target.querySelector('.section-header')?.textContent?.replace('⠿','').replace('▼','').trim() || panel) + ' — Co-DM';
+        }
+      }, 100);
+
+      return true;
     },
 
     // === DRAG REORDER (within and across columns) ===
@@ -4412,6 +4868,9 @@
     },
 
     initDrag() {
+      // Check for pop-out mode first
+      if (this.checkPopoutMode()) return;
+
       // Restore saved layout
       this.restore();
       this.enhancePanelHeaders();

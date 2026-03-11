@@ -1,0 +1,17 @@
+{
+  "name": "tavern_dark",
+  "description": "Fire dying. Shadows moving. Trust eroding.",
+  "horrorLevel": 4,
+  "lights": {
+    "color": { "hue": 5, "sat": 60, "level": 25 },
+    "flicker": { "enabled": true, "intensity": 0.35, "speed": "fast" }
+  },
+  "playerEffects": {
+    "atmoTint": "rgba(40,10,0,.15)"
+  },
+  "audio": {
+    "ambient": "wind_low",
+    "music": "dread_ambient",
+    "volume": { "ambient": 0.5, "music": 0.35, "effects": 0.9 }
+  }
+}

@@ -178,6 +178,16 @@ async _applyAmbientLights(profile) {
   async _applyPlayerEffects(effects) {
     if (!effects) return;
 
+    // Atmosphere tint — persistent color overlay synced to profile
+    if (effects.atmoTint) {
+      this.bus.dispatch('player:horror_effect', {
+        playerId: 'all',
+        type: 'atmo_tint',
+        payload: { color: effects.atmoTint },
+        durationMs: 0
+      });
+    }
+
     if (effects.screenTint) {
       this.bus.dispatch('player:horror_effect', {
         playerId: 'all',
@@ -196,10 +206,19 @@ async _applyAmbientLights(profile) {
       });
     }
 
+    if (effects.terrorPulse) {
+      this.bus.dispatch('player:horror_effect', {
+        playerId: 'all',
+        type: 'terror_pulse',
+        payload: {},
+        durationMs: effects.terrorPulse.durationMs || 1500
+      });
+    }
+
     if (effects.glitch && Math.random() < (effects.glitch.chance || 0.1)) {
       this.bus.dispatch('player:horror_effect', {
         playerId: 'all',
-        type: 'glitch',
+        type: 'terror_pulse',
         payload: {},
         durationMs: effects.glitch.durationMs || 500
       });

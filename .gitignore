@@ -5,3 +5,4 @@ sessions/
 *.tar.gz
 __pycache__/
 *.pyc
+alexa-cookie.json

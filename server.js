@@ -9,6 +9,8 @@ const CharacterService = require('./services/characters/character-service');
 const MapService = require('./services/map/map-service');
 const CombatService = require('./services/combat/combat-service');
 const WorldClockService = require('./services/world/world-clock-service');
+const VoiceService = require('./services/audio/voice-service');
+const SoundService = require('./services/audio/sound-service');
 const { loadConfig } = require('./utils/config-loader');
 
 // Auto-discover session config: CLI arg > config/session-0.json > defaults only
@@ -31,6 +33,8 @@ orchestrator.register(new MapService());
 orchestrator.register(new CombatService());
 orchestrator.register(new WorldClockService());
 orchestrator.register(new AudioService());
+orchestrator.register(new VoiceService());
+orchestrator.register(new SoundService());
 orchestrator.register(new AIEngine());
 orchestrator.register(new AtmosphereEngine());
 

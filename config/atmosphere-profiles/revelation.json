@@ -1,17 +1,18 @@
 {
   "name": "revelation",
-  "description": "A truth uncovered. Sudden brightness, dramatic silence then swell.",
+  "description": "A major truth is revealed. Golden dramatic moment.",
+  "horrorLevel": 4,
   "lights": {
-    "color": { "hue": 63, "sat": 30, "level": 80 },
+    "color": { "hue": 45, "sat": 80, "level": 50 },
     "flicker": { "enabled": false }
   },
-  "audio": {
-    "ambient": null,
-    "music": "revelation_swell",
-    "volume": { "ambient": 0, "music": 0.6, "effects": 1.0 }
-  },
-  "horrorLevel": 5,
   "playerEffects": {
-    "screenFlash": { "color": "rgba(255,255,255,0.6)", "flashMs": 200 }
+    "atmoTint": "rgba(100,80,20,.10)",
+    "screenFlash": { "color": "rgba(201,165,78,.3)", "flashMs": 400 }
+  },
+  "audio": {
+    "ambient": "silence_tense",
+    "music": "revelation_sting",
+    "volume": { "ambient": 0.2, "music": 0.6, "effects": 0.8 }
   }
 }

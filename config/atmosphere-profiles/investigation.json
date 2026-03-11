@@ -1,15 +1,17 @@
 {
   "name": "investigation",
-  "description": "Searching for clues. Cool blue-white, tense strings, careful footsteps.",
+  "description": "Players searching for clues. Alert, curious.",
+  "horrorLevel": 3,
   "lights": {
-    "color": { "hue": 65, "sat": 40, "level": 35 },
-    "flicker": { "enabled": true, "intensity": 0.1, "speed": "slow" }
+    "color": { "hue": 35, "sat": 40, "level": 40 },
+    "flicker": { "enabled": false }
+  },
+  "playerEffects": {
+    "atmoTint": "rgba(30,30,50,.08)"
   },
   "audio": {
-    "ambient": "creaking_footsteps",
-    "music": "investigation_tension",
-    "volume": { "ambient": 0.5, "music": 0.2, "effects": 0.8 }
-  },
-  "horrorLevel": 3,
-  "playerEffects": null
+    "ambient": "silence_tense",
+    "music": "investigation_theme",
+    "volume": { "ambient": 0.3, "music": 0.2, "effects": 0.8 }
+  }
 }

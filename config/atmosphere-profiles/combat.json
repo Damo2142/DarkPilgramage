@@ -1,15 +1,17 @@
 {
   "name": "combat",
-  "description": "Violence erupts. Bright red/orange, driving percussion.",
+  "description": "Active combat. Urgent, dangerous.",
+  "horrorLevel": 5,
   "lights": {
-    "color": { "hue": 2, "sat": 100, "level": 50 },
-    "flicker": { "enabled": true, "intensity": 0.5, "speed": "fast" }
+    "color": { "hue": 0, "sat": 90, "level": 35 },
+    "flicker": { "enabled": true, "intensity": 0.15, "speed": "medium" }
+  },
+  "playerEffects": {
+    "atmoTint": "rgba(80,20,0,.12)"
   },
   "audio": {
-    "ambient": null,
-    "music": "combat_percussion",
-    "volume": { "ambient": 0, "music": 0.5, "effects": 1.0 }
-  },
-  "horrorLevel": 4,
-  "playerEffects": null
+    "ambient": "combat_tension",
+    "music": "combat_theme",
+    "volume": { "ambient": 0.3, "music": 0.5, "effects": 1.0 }
+  }
 }

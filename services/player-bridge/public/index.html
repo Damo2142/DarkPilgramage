@@ -22,6 +22,9 @@
     #overlay h1{font-family:Cinzel,serif;color:#c9a54e;font-size:1.5rem;margin-bottom:10px;}
     #overlay p{color:#8a7a5a;}
     #horror-layer{position:fixed;inset:0;pointer-events:none;z-index:100;transition:background .4s;}
+    #dread-vignette{position:fixed;inset:0;pointer-events:none;z-index:99;transition:all 2s;}
+    @keyframes terror-glitch{0%{clip-path:inset(0 0 90% 0);transform:translate(-2px,0);}10%{clip-path:inset(80% 0 0 0);transform:translate(3px,1px);}20%{clip-path:inset(40% 0 40% 0);transform:translate(-1px,-2px);}30%{clip-path:inset(0);transform:none;}100%{clip-path:inset(0);transform:none;}}
+    @keyframes revelation-glow{0%{box-shadow:inset 0 0 60px rgba(201,165,78,0);background:rgba(201,165,78,0);}30%{box-shadow:inset 0 0 100px rgba(201,165,78,.25);background:rgba(201,165,78,.08);}100%{box-shadow:inset 0 0 0 rgba(201,165,78,0);background:rgba(201,165,78,0);}}
     #toast-layer{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:150;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:6px;max-width:90vw;}
     .toast{background:rgba(15,15,20,0.92);border:1px solid #c9a54e;border-radius:6px;padding:8px 14px;color:#ddd9cf;font-size:13px;max-width:80vw;animation:toast-in .4s ease-out;pointer-events:auto;box-shadow:0 4px 20px rgba(0,0,0,0.6);}
     .toast .toast-who{color:#c9a54e;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}
@@ -223,6 +226,7 @@
 <body>
 <div id="overlay"><h1>⛧ Dark Pilgrimage</h1><p id="ovmsg">Connecting to Co-DM...</p></div>
 <div id="horror-layer"></div>
+<div id="dread-vignette"></div>
 <div id="toast-layer"></div>
 <div id="app">
   <div id="topbar">
@@ -1534,19 +1538,71 @@ function showAttackNotification(data){
   setTimeout(()=>{el.style.display='none';},5000);
 }
 
-// ── DREAD / HORROR ──────────────────────────────────────────────────
-function updDread(s){dread=s;$('dfill').style.width=Math.min(100,s)+'%';$('dval').textContent=s+'/100';}
+// ── DREAD / HORROR (Phase H) ────────────────────────────────────────
 var _horrorPulseInterval=null;
+var _dreadVignetteActive=false;
+var _terrorGlitchInterval=null;
+var _atmoTintColor=null;
+
+function updDread(s){
+  dread=s;
+  $('dfill').style.width=Math.min(100,s)+'%';
+  $('dval').textContent=s+'/100';
+  // Dread vision distortion — scales with dread score (feature 40)
+  updateDreadVignette(s);
+}
+
+function updateDreadVignette(score){
+  var v=$('dread-vignette');
+  if(!v) return;
+  if(score<20){
+    v.style.boxShadow='none';
+    v.style.filter='';
+    _dreadVignetteActive=false;
+    return;
+  }
+  _dreadVignetteActive=true;
+  // Vignette darkens edges as dread rises
+  var intensity=Math.min(1,(score-20)/80); // 0 at 20, 1 at 100
+  var spread=Math.round(40+intensity*80);  // 40px to 120px
+  var opacity=Math.round(intensity*60)/100; // 0 to 0.6
+  v.style.boxShadow='inset 0 0 '+spread+'px rgba(0,0,0,'+opacity+')';
+  // Subtle desaturation at high dread
+  if(score>=60){
+    var desat=Math.round((score-60)/40*30); // 0% to 30% desaturation
+    v.style.filter='saturate('+(100-desat)+'%)';
+  } else {
+    v.style.filter='';
+  }
+  // At 80+, add subtle red tinge
+  if(score>=80){
+    var red=Math.round((score-80)/20*15)/100; // 0 to 0.15
+    v.style.background='rgba(80,0,0,'+red+')';
+  } else {
+    v.style.background='transparent';
+  }
+}
+
 function applyHorror(ef,pl,ms){
   pl=pl||{};
   var l=$('horror-layer');
+
+  // Feature 37: Atmosphere color tint overlay
+  if(ef==='atmo_tint'){
+    if(_horrorPulseInterval){clearInterval(_horrorPulseInterval);_horrorPulseInterval=null;}
+    _atmoTintColor=pl.color||'rgba(80,0,0,.12)';
+    l.style.transition='background 3s'; // slow atmospheric transition
+    l.style.background=_atmoTintColor;
+    // No auto-clear — stays until atmosphere changes
+    return;
+  }
+
+  // Feature 37: Screen tint (manual, with optional pulse)
   if(ef==='screen_tint'){
-    // Clear any existing pulse
     if(_horrorPulseInterval){clearInterval(_horrorPulseInterval);_horrorPulseInterval=null;}
     var color=pl.color||'rgba(80,0,0,.2)';
     l.style.background=color;
     l.style.transition='background .4s';
-    // Pulse effect: fade in and out
     if(pl.pulse){
       var pulseSpeed=(pl.pulseSpeed||3)*1000;
       var on=true;
@@ -1556,57 +1612,111 @@ function applyHorror(ef,pl,ms){
       },pulseSpeed/2);
     }
     if(ms)setTimeout(clearHorror,ms);
-  } else if(ef==='screen_flash'||ef==='flash'){
+    return;
+  }
+
+  // Feature 38: Revelation flash — golden glow when secret revealed
+  if(ef==='revelation_flash'){
+    l.style.transition='none';
+    l.style.animation='revelation-glow 2.5s ease-out';
+    if(pl.text) showToast('Revelation',pl.text,6000);
+    setTimeout(function(){l.style.animation='';clearHorror();},2500);
+    return;
+  }
+
+  // Feature 38: Generic flash
+  if(ef==='screen_flash'||ef==='flash'){
     l.style.transition='none';
     l.style.background=pl.color||'rgba(255,255,255,.5)';
     setTimeout(function(){l.style.transition='background .3s';clearHorror();},ms||150);
-  } else if(ef==='glitch'){
+    return;
+  }
+
+  // Feature 39: Terror pulse/glitch — rapid multi-frame distortion
+  if(ef==='terror_pulse'||ef==='glitch'){
+    if(_terrorGlitchInterval){clearInterval(_terrorGlitchInterval);_terrorGlitchInterval=null;}
+    var dur=ms||1500;
+    var frames=0;
+    var maxFrames=Math.round(dur/80);
+    var colors=['rgba(0,255,0,.06)','rgba(255,0,0,.06)','rgba(0,0,255,.06)','transparent'];
+    _terrorGlitchInterval=setInterval(function(){
+      if(frames>=maxFrames){
+        clearInterval(_terrorGlitchInterval);
+        _terrorGlitchInterval=null;
+        l.style.background=_atmoTintColor||'transparent';
+        l.style.filter='';
+        document.body.style.transform='';
+        return;
+      }
+      l.style.transition='none';
+      l.style.background=colors[frames%colors.length];
+      l.style.filter=frames%3===0?'hue-rotate('+(Math.random()*180)+'deg)':'';
+      document.body.style.transform='translate('+(Math.random()*6-3)+'px,'+(Math.random()*4-2)+'px)';
+      frames++;
+    },80);
+    return;
+  }
+
+  // Feature 40: Dread vision — purple overlay + distortion + vision text
+  if(ef==='dread_vision'){
+    if(pl.text) showToast('Vision',pl.text,6000);
     l.style.transition='none';
-    l.style.background='rgba(0,255,0,.08)';
-    l.style.filter='hue-rotate(90deg)';
-    document.body.style.transform='translateX('+(Math.random()*6-3)+'px)';
-    setTimeout(function(){
-      l.style.background='transparent';
-      l.style.filter='';
-      document.body.style.transform='';
-      // Second glitch
-      setTimeout(function(){
-        l.style.background='rgba(255,0,0,.06)';
-        document.body.style.transform='translateX('+(Math.random()*4-2)+'px)';
-        setTimeout(function(){
-          l.style.background='transparent';
-          l.style.filter='';
-          document.body.style.transform='';
-        },80);
-      },100);
-    },ms||200);
-  } else if(ef==='dread_vision'){
-    if(pl.text) showToast('Vision',pl.text,5000);
+    var intensity=Math.min(1,(dread||0)/100);
+    var alpha=Math.round((10+intensity*15))/100; // .10 to .25
+    l.style.background='rgba(60,0,80,'+alpha+')';
+    // Brief distortion based on dread level
+    if(dread>=40){
+      document.body.style.filter='blur(1px) contrast(1.1)';
+      setTimeout(function(){document.body.style.filter='';},1500);
+    }
+    setTimeout(function(){l.style.transition='background 2s';l.style.background=_atmoTintColor||'transparent';},3000);
+    return;
+  }
+
+  // Feature 41: Damage flash — red flash + screen shake
+  if(ef==='damage_flash'){
     l.style.transition='none';
-    l.style.background='rgba(60,0,80,.15)';
-    setTimeout(function(){l.style.transition='background 2s';l.style.background='transparent';},3000);
-  } else if(ef==='damage_flash'){
-    l.style.transition='none';
-    l.style.background='rgba(180,0,0,.25)';
-    setTimeout(function(){l.style.transition='background .5s';l.style.background='transparent';},200);
-  } else if(ef==='shake'){
-    var intensity=pl.intensity||0.03;
-    var dur=ms||800;
+    var dmgIntensity=pl.intensity||0.25;
+    l.style.background='rgba(180,0,0,'+dmgIntensity+')';
+    // Shake proportional to damage
+    var shakeAmt=pl.shake||3;
+    var shakeCount=0;
+    var shakeInt=setInterval(function(){
+      if(shakeCount>=5){clearInterval(shakeInt);document.body.style.transform='';return;}
+      document.body.style.transform='translate('+(Math.random()*shakeAmt*2-shakeAmt)+'px,'+(Math.random()*shakeAmt*2-shakeAmt)+'px)';
+      shakeCount++;
+    },40);
+    setTimeout(function(){l.style.transition='background .5s';l.style.background=_atmoTintColor||'transparent';},300);
+    return;
+  }
+
+  // Shake effect
+  if(ef==='shake'){
+    var sintensity=pl.intensity||0.03;
+    var sdur=ms||800;
     var shakeInterval=setInterval(function(){
-      document.body.style.transform='translate('+(Math.random()*intensity*200-intensity*100)+'px,'+(Math.random()*intensity*200-intensity*100)+'px)';
+      document.body.style.transform='translate('+(Math.random()*sintensity*200-sintensity*100)+'px,'+(Math.random()*sintensity*200-sintensity*100)+'px)';
     },50);
-    setTimeout(function(){clearInterval(shakeInterval);document.body.style.transform='';},dur);
-  } else if(ef==='whisper'){
-    var text=pl.text||'...';
-    showToast('DM Whisper',text,ms||5000);
+    setTimeout(function(){clearInterval(shakeInterval);document.body.style.transform='';},sdur);
+    return;
+  }
+
+  // Whisper
+  if(ef==='whisper'){
+    showToast('DM Whisper',pl.text||'...',ms||5000);
+    return;
   }
 }
+
 function clearHorror(){
   if(_horrorPulseInterval){clearInterval(_horrorPulseInterval);_horrorPulseInterval=null;}
+  if(_terrorGlitchInterval){clearInterval(_terrorGlitchInterval);_terrorGlitchInterval=null;}
   var l=$('horror-layer');
-  l.style.background='transparent';
+  l.style.background=_atmoTintColor||'transparent';
   l.style.filter='';
+  l.style.animation='';
   document.body.style.transform='';
+  document.body.style.filter='';
 }
 
 function showToast(who,text,dur){

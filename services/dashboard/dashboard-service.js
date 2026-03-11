@@ -35,6 +35,7 @@ class DashboardService {
       res.sendFile(path.join(__dirname, '..', 'player-bridge', 'public', 'index.html'));
     });
     this.app.use('/assets', express.static(path.join(__dirname, '..', '..', 'assets')));
+    this.app.use('/sounds', express.static(path.join(__dirname, '..', '..', 'assets', 'sounds')));
 
     this._setupRoutes();
 
@@ -118,6 +119,31 @@ class DashboardService {
     this.app.post('/api/session/end', (req, res) => {
       this.state.endSession();
       res.json({ status: 'ended' });
+    });
+
+    // Session save/reset/resume
+    this.app.post('/api/session/reset', (req, res) => {
+      this.state.resetSession(this.config);
+      res.json({ status: 'reset' });
+    });
+
+    this.app.post('/api/session/resume', (req, res) => {
+      const { savePath } = req.body || {};
+      const logDir = this.config?.session?.logDir || './sessions';
+      const path = require('path');
+      const target = savePath
+        ? path.join(logDir, 'saves', savePath)
+        : path.join(logDir, 'saves', 'latest-save.json');
+      const result = this.state.resumeFromSave(target);
+      if (result) {
+        res.json({ status: 'resumed', savedAt: result.savedAt });
+      } else {
+        res.json({ error: 'No save file found or resume failed' });
+      }
+    });
+
+    this.app.get('/api/session/saves', (req, res) => {
+      res.json({ saves: this.state.listSaves() });
     });
 
     this.app.post('/api/panic', (req, res) => {
@@ -462,6 +488,26 @@ Answer concisely (2-4 sentences). If it's a rules question, give the D&D 5e rule
       const actions = combatSvc.getActions(req.params.combatantId);
       res.json(actions);
     });
+
+    // ── Sound Library routes ──────────────────────────────────────────
+    // GET /api/sounds — list all available sounds
+    this.app.get('/api/sounds', (req, res) => {
+      const svc = this.orchestrator.getService('sound');
+      if (!svc) return res.json({ sounds: [] });
+      res.json({ sounds: svc.listSounds() });
+    });
+
+    // POST /api/sounds/generate — generate a custom sound
+    this.app.post('/api/sounds/generate', async (req, res) => {
+      const svc = this.orchestrator.getService('sound');
+      if (!svc) return res.status(503).json({ error: 'Sound service not running' });
+      const { name, prompt, duration, loop } = req.body || {};
+      if (!name || !prompt) return res.status(400).json({ error: 'name and prompt required' });
+      const safeName = name.replace(/[^a-z0-9_-]/gi, '_').toLowerCase();
+      const file = await svc.generate(safeName, prompt, duration, loop);
+      if (!file) return res.status(500).json({ error: 'Generation failed' });
+      res.json({ name: safeName, file });
+    });
   }
 
   _onConnection(ws) {
@@ -562,6 +608,15 @@ Answer concisely (2-4 sentences). If it's a rules question, give the D&D 5e rule
         break;
       case 'spurt:approve_action':
         this.bus.dispatch('spurt:approve_action', msg);
+        break;
+      case 'voice:speak':
+        this.bus.dispatch('voice:speak', { text: msg.text, profile: msg.profile, device: msg.device });
+        break;
+      case 'audio:sfx':
+        this.bus.dispatch('audio:sfx', { effect: msg.effect, device: msg.device, surround: msg.surround });
+        break;
+      case 'voice:list_devices':
+        this.bus.dispatch('voice:list_devices', {});
         break;
       default:
         console.log(`[Dashboard] Unknown message type: ${msg.type}`);

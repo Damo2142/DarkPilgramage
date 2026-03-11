@@ -1,15 +1,17 @@
 {
   "name": "dawn",
-  "description": "Safety returns. Warm gold light, birds, gentle relief.",
+  "description": "Dawn breaks. Relief. Safety — for now.",
+  "horrorLevel": 0,
   "lights": {
-    "color": { "hue": 19, "sat": 60, "level": 70 },
+    "color": { "hue": 40, "sat": 50, "level": 80 },
     "flicker": { "enabled": false }
   },
-  "audio": {
-    "ambient": "morning_birds_wind",
-    "music": "gentle_resolution",
-    "volume": { "ambient": 0.4, "music": 0.3, "effects": 0.5 }
+  "playerEffects": {
+    "atmoTint": "rgba(100,90,60,.05)"
   },
-  "horrorLevel": 0,
-  "playerEffects": null
+  "audio": {
+    "ambient": "birds_morning",
+    "music": "relief_theme",
+    "volume": { "ambient": 0.4, "music": 0.2, "effects": 0.5 }
+  }
 }

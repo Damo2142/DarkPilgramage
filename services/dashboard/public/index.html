@@ -857,10 +857,55 @@
         <div style="display:flex;gap:4px;margin-bottom:6px;">
           <button class="sm" onclick="toggleSecretView('secrets')" style="flex:1;font-size:9px;" id="btn-show-secrets">Secrets</button>
           <button class="sm" onclick="toggleSecretView('clues')" style="flex:1;font-size:9px;" id="btn-show-clues">Clues</button>
-          <button class="sm" onclick="toggleSecretView('goals')" style="flex:1;font-size:9px;" id="btn-show-goals">NPC Goals</button>
+          <button class="sm" onclick="toggleSecretView('goals')" style="flex:1;font-size:9px;" id="btn-show-goals">Goals</button>
           <button class="sm" onclick="toggleSecretView('chains')" style="flex:1;font-size:9px;" id="btn-show-chains">Chains</button>
+          <button class="sm" onclick="toggleSecretView('players')" style="flex:1;font-size:9px;" id="btn-show-players">Per-Player</button>
         </div>
         <div id="secrets-panel" style="max-height:200px;overflow-y:auto;font-size:10px;"></div>
+      </div>
+      </div>
+
+      <div class="panel-section" data-panel="pacing">
+      <div class="section-header"><span class="drag-handle">⠿</span>Pacing & Tension</div>
+      <div style="padding:6px 8px;">
+        <div style="display:flex;gap:8px;margin-bottom:6px;">
+          <div style="flex:1;">
+            <div style="font-size:9px;color:var(--text-dim);margin-bottom:2px;">Revelation</div>
+            <div id="pacing-revelation" style="font-size:11px;font-weight:600;color:var(--green);">—</div>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:9px;color:var(--text-dim);margin-bottom:2px;">Pacing</div>
+            <div id="pacing-pace" style="font-size:11px;font-weight:600;color:var(--green);">—</div>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:9px;color:var(--text-dim);margin-bottom:2px;">Tension</div>
+            <div id="pacing-tension" style="font-size:11px;font-weight:600;color:var(--green);">—</div>
+          </div>
+        </div>
+        <div style="margin-bottom:4px;">
+          <div style="font-size:9px;color:var(--text-dim);margin-bottom:2px;">Secrets</div>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <div style="flex:1;height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;">
+              <div id="pacing-secret-bar" style="height:100%;width:0%;background:var(--accent);transition:width 0.5s;"></div>
+            </div>
+            <span id="pacing-secret-text" style="font-size:9px;color:var(--text-dim);min-width:32px;">0/0</span>
+          </div>
+        </div>
+        <div style="margin-bottom:4px;">
+          <div style="font-size:9px;color:var(--text-dim);margin-bottom:2px;">Clues</div>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <div style="flex:1;height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;">
+              <div id="pacing-clue-bar" style="height:100%;width:0%;background:var(--green);transition:width 0.5s;"></div>
+            </div>
+            <span id="pacing-clue-text" style="font-size:9px;color:var(--text-dim);min-width:32px;">0/0</span>
+          </div>
+        </div>
+        <div id="pacing-chains" style="font-size:10px;margin-bottom:4px;"></div>
+        <div style="margin-bottom:4px;">
+          <div style="font-size:9px;color:var(--text-dim);margin-bottom:2px;">Tension Curve (actual vs target)</div>
+          <canvas id="tension-canvas" width="280" height="60" style="width:100%;height:60px;background:var(--surface3);border-radius:3px;"></canvas>
+        </div>
+        <div id="pacing-alerts" style="max-height:60px;overflow-y:auto;font-size:10px;"></div>
       </div>
       </div>
 
@@ -1089,6 +1134,31 @@
         <button class="primary" onclick="sendNpcManual()" style="width:100%">Generate Dialogue</button>
       </div>
       </div>
+
+      <div class="panel-section" data-panel="spurt-agent">
+      <div class="section-header"><span class="drag-handle">⠿</span>Spurt AI Agent</div>
+      <div style="padding:6px 8px;">
+        <div style="display:flex;gap:4px;align-items:center;margin-bottom:6px;">
+          <span id="spurt-dread-badge" style="font-size:10px;padding:2px 6px;border-radius:3px;background:var(--green);color:#000;font-weight:700;">NORMAL</span>
+          <span id="spurt-dread-score" style="font-size:10px;color:var(--text-dim);">Dread: 0</span>
+          <span id="spurt-surge-count" style="font-size:10px;color:var(--text-dim);margin-left:auto;">Surges: 0</span>
+        </div>
+        <div id="spurt-action-queue" style="max-height:120px;overflow-y:auto;margin-bottom:6px;">
+          <div style="color:var(--text-dim);font-size:11px;text-align:center;padding:8px;">Spurt is idle</div>
+        </div>
+        <div id="spurt-dialogue-log" style="max-height:100px;overflow-y:auto;margin-bottom:6px;font-size:11px;border-top:1px solid var(--border);padding-top:4px;">
+        </div>
+        <div style="display:flex;gap:4px;margin-bottom:4px;">
+          <input type="text" id="spurt-prompt" placeholder="Tell Spurt to say or do..." style="flex:1;padding:4px 8px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px;font-family:inherit;" onkeydown="if(event.key==='Enter')SpurtPanel.speak()">
+          <button class="primary sm" onclick="SpurtPanel.speak()">Speak</button>
+        </div>
+        <div style="display:flex;gap:4px;">
+          <button class="sm" onclick="SpurtPanel.surge()" style="flex:1;" title="Force a Wild Magic Surge">🎲 Wild Surge</button>
+          <button class="sm ghost" onclick="SpurtPanel.clear()" style="font-size:9px;">Clear</button>
+        </div>
+      </div>
+      </div>
+
     </div>
   </div>
 
@@ -1296,6 +1366,47 @@
         }
         break;
       case 'player:chat':
+        break;
+      case 'spurt:dialogue':
+        if (msg.data) {
+          SpurtPanel.addDialogue({ text: msg.data.text, dreadTier: msg.data.dreadTier, dread: msg.data.dread, time: Date.now() });
+          addTranscript({ speaker: 'Spurt', text: msg.data.text });
+        }
+        break;
+      case 'spurt:combat_action':
+        if (msg.data) {
+          SpurtPanel.addAction(msg.data);
+          SpurtPanel.updateDread(msg.data.dread, msg.data.dreadTier);
+          const spellStr = msg.data.spell ? ` (${msg.data.spell})` : '';
+          addTranscript({ speaker: 'Spurt', text: `⚔️ ${msg.data.action}${spellStr} → ${msg.data.target || 'none'}` });
+          if (msg.data.dialogue) addTranscript({ speaker: 'Spurt', text: msg.data.dialogue });
+        }
+        break;
+      case 'spurt:wild_magic_check':
+        if (msg.data) {
+          const wmText = msg.data.triggered
+            ? `🌀 WILD MAGIC CHECK: d20=${msg.data.d20Roll} — SURGE TRIGGERED!`
+            : `🎲 Wild magic check: d20=${msg.data.d20Roll} (no surge)`;
+          addTranscript({ speaker: 'Spurt', text: wmText });
+        }
+        break;
+      case 'spurt:surge_result':
+        if (msg.data) {
+          SpurtPanel.updateSurgeCount(msg.data.surgeNumber);
+          const harmTag = msg.data.selfHarm ? ' ⚠️ SELF-HARM' : '';
+          addTranscript({ speaker: 'Spurt', text: `🌀 WILD MAGIC SURGE (d100=${msg.data.d100Roll}): ${msg.data.effect}${harmTag}` });
+          Earbud.speak(`Wild Magic Surge! ${msg.data.effect}`, 1);
+        }
+        break;
+      case 'pacing:status':
+        if (msg.data) PacingPanel.update(msg.data);
+        break;
+      case 'pacing:alert':
+        if (msg.data) {
+          PacingPanel.addAlert(msg.data);
+          const paIcon = msg.data.type === 'revelation' ? '📊' : msg.data.type === 'pacing' ? '⏱' : '📈';
+          addTranscript({ speaker: 'co-dm', text: `${paIcon} [${msg.data.type}] ${msg.data.message}` });
+        }
         break;
       case 'hp:update':
         if (msg.data) {
@@ -1726,6 +1837,249 @@
     dismiss(index) {
       this.queue.splice(index, 1);
       this.render();
+    }
+  };
+
+  // === SPURT AI AGENT PANEL ===
+  const SpurtPanel = {
+    actions: [],
+    dialogues: [],
+    surgeCount: 0,
+
+    speak() {
+      const input = document.getElementById('spurt-prompt');
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      send('spurt:speak', { prompt: text, spurtType: 'dialogue' });
+      addTranscript({ speaker: 'dm', text: '[to Spurt] ' + text });
+    },
+
+    surge() {
+      send('spurt:wild_surge', {});
+      addTranscript({ speaker: 'system', text: '🎲 DM triggered Wild Magic Surge for Spurt' });
+    },
+
+    addAction(data) {
+      this.actions.push(data);
+      if (this.actions.length > 10) this.actions.shift();
+      this.renderActions();
+    },
+
+    addDialogue(data) {
+      this.dialogues.push(data);
+      if (this.dialogues.length > 20) this.dialogues.shift();
+      this.renderDialogues();
+      this.updateDread(data.dread, data.dreadTier);
+    },
+
+    updateDread(dread, tier) {
+      const badge = document.getElementById('spurt-dread-badge');
+      const score = document.getElementById('spurt-dread-score');
+      if (badge && tier) {
+        const colors = { normal: 'var(--green)', anxious: '#c9a54e', unhinged: 'var(--orange)', manic: 'var(--red)' };
+        badge.textContent = tier.toUpperCase();
+        badge.style.background = colors[tier] || 'var(--green)';
+        badge.style.color = tier === 'normal' ? '#000' : '#fff';
+      }
+      if (score && dread !== undefined) {
+        score.textContent = 'Dread: ' + dread;
+      }
+    },
+
+    updateSurgeCount(count) {
+      this.surgeCount = count;
+      const el = document.getElementById('spurt-surge-count');
+      if (el) el.textContent = 'Surges: ' + count;
+    },
+
+    renderActions() {
+      const el = document.getElementById('spurt-action-queue');
+      if (!el) return;
+      if (this.actions.length === 0) {
+        el.innerHTML = '<div style="color:var(--text-dim);font-size:11px;text-align:center;padding:8px;">Spurt is idle</div>';
+        return;
+      }
+      el.innerHTML = this.actions.map((a, i) => {
+        const spell = a.spell ? ` (${a.spell})` : '';
+        const tierColor = { normal: 'var(--green)', anxious: '#c9a54e', unhinged: 'var(--orange)', manic: 'var(--red)' };
+        return `<div style="padding:4px 6px;border-bottom:1px solid var(--border);font-size:11px;">
+          <div><span style="color:${tierColor[a.dreadTier] || 'var(--text)'};font-weight:600;">${esc(a.action)}${spell}</span> → ${esc(a.target || 'none')}</div>
+          ${a.dialogue ? `<div style="color:var(--accent);font-style:italic;">"${esc(a.dialogue)}"</div>` : ''}
+          ${a.reasoning ? `<div style="color:var(--text-dim);font-size:10px;">${esc(a.reasoning)}</div>` : ''}
+        </div>`;
+      }).join('');
+      el.scrollTop = el.scrollHeight;
+    },
+
+    renderDialogues() {
+      const el = document.getElementById('spurt-dialogue-log');
+      if (!el) return;
+      el.innerHTML = this.dialogues.slice(-8).map(d => {
+        const time = new Date(d.time || Date.now()).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+        const tierColor = { normal: 'var(--green)', anxious: '#c9a54e', unhinged: 'var(--orange)', manic: 'var(--red)' };
+        return `<div style="margin-bottom:3px;"><span style="color:var(--text-dim);font-size:9px;">${time}</span> <span style="color:${tierColor[d.dreadTier] || 'var(--accent)'};font-weight:600;">Spurt:</span> ${esc(d.text)}</div>`;
+      }).join('');
+      el.scrollTop = el.scrollHeight;
+    },
+
+    clear() {
+      this.actions = [];
+      this.dialogues = [];
+      this.renderActions();
+      this.renderDialogues();
+    }
+  };
+
+  // === PACING & TENSION PANEL ===
+  const PacingPanel = {
+    alerts: [],
+    tensionHistory: [],
+
+    update(data) {
+      // Revelation status
+      if (data.revelation) {
+        const el = document.getElementById('pacing-revelation');
+        if (el) {
+          const colors = { on_track: 'var(--green)', too_fast: 'var(--orange)', too_slow: '#c9a54e' };
+          el.textContent = data.revelation.status?.replace('_', ' ') || '—';
+          el.style.color = colors[data.revelation.status] || 'var(--text)';
+          el.title = data.revelation.message || '';
+        }
+      }
+      // Pacing status
+      if (data.pacing) {
+        const el = document.getElementById('pacing-pace');
+        if (el) {
+          const colors = { good: 'var(--green)', stuck: 'var(--red)', rushing: 'var(--orange)' };
+          let label = data.pacing.status || '—';
+          if (data.pacing.status === 'stuck' && data.pacing.stuckMinutes) label += ' (' + data.pacing.stuckMinutes + 'm)';
+          el.textContent = label;
+          el.style.color = colors[data.pacing.status] || 'var(--text)';
+          el.title = data.pacing.message || '';
+        }
+      }
+      // Tension
+      if (data.tension) {
+        const el = document.getElementById('pacing-tension');
+        if (el) {
+          const colors = { on_track: 'var(--green)', too_low: '#c9a54e', too_high: 'var(--orange)' };
+          el.textContent = (data.tension.actual || 0) + '/' + (data.tension.target || 0);
+          el.style.color = colors[data.tension.status] || 'var(--text)';
+          el.title = data.tension.message || '';
+        }
+      }
+      // Secret progress bar
+      if (data.secretProgress) {
+        const sp = data.secretProgress;
+        const pct = sp.total > 0 ? Math.round((sp.revealed / sp.total) * 100) : 0;
+        const bar = document.getElementById('pacing-secret-bar');
+        const txt = document.getElementById('pacing-secret-text');
+        if (bar) bar.style.width = pct + '%';
+        if (txt) txt.textContent = sp.revealed + '/' + sp.total;
+      }
+      // Clue progress bar
+      if (data.clueProgress) {
+        const cp = data.clueProgress;
+        const bar = document.getElementById('pacing-clue-bar');
+        const txt = document.getElementById('pacing-clue-text');
+        if (bar) bar.style.width = cp.percent + '%';
+        if (txt) txt.textContent = cp.found + '/' + cp.total;
+      }
+      // Chain progress
+      if (data.chainProgress) {
+        const el = document.getElementById('pacing-chains');
+        if (el) {
+          el.innerHTML = data.chainProgress.map(function(c) {
+            const pct = c.percent;
+            const color = c.completed ? 'var(--green)' : 'var(--accent)';
+            return '<div style="margin-bottom:3px;">'
+              + '<div style="display:flex;justify-content:space-between;"><span>' + esc(c.id) + '</span><span>' + c.currentStep + '/' + c.steps + '</span></div>'
+              + '<div style="height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;">'
+              + '<div style="height:100%;width:' + pct + '%;background:' + color + ';"></div>'
+              + '</div></div>';
+          }).join('');
+        }
+      }
+      // Tension history chart
+      if (data.tensionHistory && data.tensionHistory.length > 1) {
+        this.tensionHistory = data.tensionHistory;
+        this.drawTensionChart();
+      }
+    },
+
+    addAlert(alert) {
+      this.alerts.push(alert);
+      if (this.alerts.length > 20) this.alerts.shift();
+      this.renderAlerts();
+    },
+
+    renderAlerts() {
+      const el = document.getElementById('pacing-alerts');
+      if (!el) return;
+      el.innerHTML = this.alerts.slice(-5).map(function(a) {
+        var icon = a.type === 'revelation' ? '📊' : a.type === 'pacing' ? '⏱' : '📈';
+        var colors = { too_fast: 'var(--orange)', too_slow: '#c9a54e', stuck: 'var(--red)', rushing: 'var(--orange)', too_low: '#c9a54e', too_high: 'var(--orange)' };
+        var color = colors[a.status] || 'var(--text-dim)';
+        return '<div style="padding:2px 0;color:' + color + ';">' + icon + ' ' + esc(a.message) + '</div>';
+      }).join('');
+    },
+
+    drawTensionChart() {
+      var canvas = document.getElementById('tension-canvas');
+      if (!canvas) return;
+      var ctx = canvas.getContext('2d');
+      var w = canvas.width, h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      var hist = this.tensionHistory;
+      if (hist.length < 2) return;
+
+      var len = hist.length;
+      var xStep = w / (len - 1);
+
+      // Draw target range (filled band)
+      ctx.fillStyle = 'rgba(201, 165, 78, 0.15)';
+      ctx.beginPath();
+      for (var i = 0; i < len; i++) {
+        var x = i * xStep;
+        var yMin = h - (hist[i].targetMin || 0) / 100 * h;
+        if (i === 0) ctx.moveTo(x, yMin);
+        else ctx.lineTo(x, yMin);
+      }
+      for (var i = len - 1; i >= 0; i--) {
+        var x = i * xStep;
+        var yMax = h - (hist[i].targetMax || 0) / 100 * h;
+        ctx.lineTo(x, yMax);
+      }
+      ctx.closePath();
+      ctx.fill();
+
+      // Draw target line
+      ctx.strokeStyle = '#c9a54e';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 2]);
+      ctx.beginPath();
+      for (var i = 0; i < len; i++) {
+        var x = i * xStep;
+        var y = h - (hist[i].target || 0) / 100 * h;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Draw actual line
+      ctx.strokeStyle = 'var(--accent)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (var i = 0; i < len; i++) {
+        var x = i * xStep;
+        var y = h - (hist[i].actual || 0) / 100 * h;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
     }
   };
 
@@ -3251,7 +3605,7 @@
 
   function toggleSecretView(view) {
     _secretView = view;
-    ['secrets','clues','goals','chains'].forEach(function(v) {
+    ['secrets','clues','goals','chains','players'].forEach(function(v) {
       var btn = document.getElementById('btn-show-' + v);
       if (btn) btn.className = v === view ? 'sm primary' : 'sm';
     });
@@ -3324,6 +3678,32 @@
         var icon = b.active ? '⚡' : '○';
         return '<div style="padding:2px 0;">' + icon + ' ' + esc(b.id) + ': ' + esc(b.description) + '</div>';
       }).join('');
+      el.innerHTML = html;
+    }
+
+    if (_secretView === 'players') {
+      var secrets = _worldData.secrets || [];
+      var clues = _worldData.clues || [];
+      var players = state.players || {};
+      var pids = Object.keys(players);
+      if (!pids.length) { el.innerHTML = '<span style="color:var(--text-dim)">No players connected</span>'; return; }
+
+      var html = '';
+      for (var i = 0; i < pids.length; i++) {
+        var pid = pids[i];
+        var pName = players[pid]?.character?.name || players[pid]?.name || pid;
+        var knownSecrets = secrets.filter(function(s) { return s.discoveredBy && s.discoveredBy.indexOf(pid) >= 0; });
+        var foundClues = clues.filter(function(c) { return c.found && c.foundBy === pid; });
+        html += '<div style="margin-bottom:6px;padding:4px;background:var(--surface3);border-radius:3px;">';
+        html += '<div style="font-weight:600;color:var(--accent);margin-bottom:2px;">' + esc(pName) + '</div>';
+        html += '<div>Secrets known: ' + knownSecrets.length + '/' + secrets.length;
+        if (knownSecrets.length) html += ' — ' + knownSecrets.map(function(s) { return esc(s.id); }).join(', ');
+        html += '</div>';
+        html += '<div>Clues found: ' + foundClues.length + '/' + clues.length;
+        if (foundClues.length) html += ' — ' + foundClues.map(function(c) { return esc(c.id); }).join(', ');
+        html += '</div>';
+        html += '</div>';
+      }
       el.innerHTML = html;
     }
   }

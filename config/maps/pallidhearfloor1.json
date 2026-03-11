@@ -321,8 +321,8 @@
     "patron-minstrel-mmkzgeqd3": {
       "name": "Katya Voss",
       "type": "npc",
-      "x": 4224,
-      "y": 1408,
+      "x": 4736,
+      "y": 1664,
       "image": "patron-minstrel.png",
       "visible": true,
       "hidden": false,

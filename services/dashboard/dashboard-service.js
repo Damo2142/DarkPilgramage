@@ -560,6 +560,15 @@ Answer concisely (2-4 sentences). If it's a rules question, give the D&D 5e rule
       case 'npc:execute_action':
         this.bus.dispatch('npc:execute_action', msg);
         break;
+      case 'spurt:speak':
+        this.bus.dispatch('spurt:speak', { prompt: msg.prompt || '', type: msg.spurtType || 'dialogue' });
+        break;
+      case 'spurt:wild_surge':
+        this.bus.dispatch('spurt:wild_surge', {});
+        break;
+      case 'spurt:approve_action':
+        this.bus.dispatch('spurt:approve_action', msg);
+        break;
       default:
         console.log(`[Dashboard] Unknown message type: ${msg.type}`);
     }

@@ -91,6 +91,34 @@ class WorldClockService {
     };
   }
 
+  getFullState() {
+    return {
+      secrets: Object.fromEntries(
+        Array.from(this.secrets.entries()).map(([id, s]) => [id, {
+          id: s.id, description: s.description, revealed: s.revealed,
+          discoveredBy: Object.keys(s.discoveredBy), knownBy: s.knownBy,
+          linkedClues: s.linkedClues || []
+        }])
+      ),
+      clues: Object.fromEntries(
+        Array.from(this.clues.entries()).map(([id, c]) => [id, {
+          id: c.id, description: c.description, found: c.found,
+          foundBy: c.foundBy, location: c.location, dc: c.dc,
+          revealsSecret: c.revealsSecret
+        }])
+      ),
+      discoveries: Object.fromEntries(
+        Array.from(this.discoveries.entries()).map(([id, d]) => [id, {
+          id: d.id, description: d.description,
+          clueChain: d.clueChain, currentStep: d.currentStep,
+          completed: d.completed, revealsSecret: d.revealsSecret
+        }])
+      ),
+      npcGoals: Object.fromEntries(Array.from(this.npcGoals.entries())),
+      branches: Object.fromEntries(Array.from(this.branches.entries()))
+    };
+  }
+
   // ═══════════════════════════════════════════════════════════════
   // CONFIG LOADING
   // ═══════════════════════════════════════════════════════════════

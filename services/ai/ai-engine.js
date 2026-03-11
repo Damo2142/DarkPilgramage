@@ -10,6 +10,8 @@ const AtmosphereAdvisor = require('./atmosphere-advisor');
 const StoryTracker = require('./story-tracker');
 const DmAdvisor = require('./dm-advisor');
 const NpcAutonomy = require('./npc-autonomy');
+const SpurtAgent = require('./spurt-agent');
+const PacingMonitor = require('./pacing-monitor');
 
 class AIEngine {
   constructor() {
@@ -22,6 +24,8 @@ class AIEngine {
     this.story = null;
     this.advisor = null;
     this.autonomy = null;
+    this.spurt = null;
+    this.pacing = null;
   }
 
   async init(orchestrator) {
@@ -45,6 +49,8 @@ class AIEngine {
     this.story = new StoryTracker(this.gemini, this.context, this.bus, this.state, this.config);
     this.advisor = new DmAdvisor(this.gemini, this.context, this.bus, this.state, this.config);
     this.autonomy = new NpcAutonomy(this.gemini, this.context, this.bus, this.state, this.config);
+    this.spurt = new SpurtAgent(this.gemini, this.context, this.bus, this.state, this.config);
+    this.pacing = new PacingMonitor(this.gemini, this.context, this.bus, this.state, this.config);
   }
 
   async start() {
@@ -64,7 +70,8 @@ class AIEngine {
           this.npc.evaluateTranscript(segment),
           this.atmosphere.onTranscript(segment),
           this.story.onTranscript(segment),
-          this.advisor.onTranscript(segment)
+          this.advisor.onTranscript(segment),
+          this.pacing.onTranscript(segment)
         ]);
       } catch (err) {
         console.error('[AIEngine] Analysis error:', err.message);
@@ -146,11 +153,19 @@ class AIEngine {
     // Start NPC autonomy engine
     this.autonomy.start();
 
+    // Start Spurt AI Agent
+    this.spurt.start();
+
+    // Start Pacing Monitor
+    this.pacing.start();
+
     console.log(`[AIEngine] Gemini: ${this.gemini.available ? 'connected' : 'disabled'}`);
   }
 
   async stop() {
     this.autonomy.stop();
+    this.spurt.stop();
+    this.pacing.stop();
   }
 
   getStatus() {
@@ -162,7 +177,9 @@ class AIEngine {
       npc: this.npc.getStats(),
       atmosphere: this.atmosphere.getStats(),
       story: this.story.getStats(),
-      autonomy: this.autonomy.getStats()
+      autonomy: this.autonomy.getStats(),
+      spurt: this.spurt.getStats(),
+      pacing: this.pacing.getStats()
     };
   }
 }

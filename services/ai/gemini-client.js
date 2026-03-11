@@ -6,7 +6,7 @@
 class GeminiClient {
   constructor(config) {
     this.apiKey = process.env[config.apiKeyEnv || 'GEMINI_API_KEY'];
-    this.model = config.model || 'gemini-2.0-flash';
+    this.model = config.model || 'gemini-2.5-flash';
     this.maxTokens = config.maxTokens || 500;
     this.temperature = config.temperature || 0.8;
     this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
@@ -34,13 +34,10 @@ class GeminiClient {
     const url = `${this.baseUrl}/models/${model}:generateContent?key=${this.apiKey}`;
 
     const body = {
-      system_instruction: {
-        parts: [{ text: systemPrompt }]
-      },
       contents: [
         {
           role: 'user',
-          parts: [{ text: userPrompt }]
+          parts: [{ text: userPrompt || 'Respond.' }]
         }
       ],
       generationConfig: {
@@ -55,6 +52,10 @@ class GeminiClient {
         { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
       ]
     };
+
+    if (systemPrompt) {
+      body.system_instruction = { parts: [{ text: systemPrompt }] };
+    }
 
     try {
       const response = await fetch(url, {
@@ -98,9 +99,6 @@ class GeminiClient {
     }));
 
     const body = {
-      system_instruction: {
-        parts: [{ text: systemPrompt }]
-      },
       contents,
       generationConfig: {
         maxOutputTokens: options.maxTokens || this.maxTokens,
@@ -114,6 +112,10 @@ class GeminiClient {
         { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
       ]
     };
+
+    if (systemPrompt) {
+      body.system_instruction = { parts: [{ text: systemPrompt }] };
+    }
 
     try {
       const response = await fetch(url, {

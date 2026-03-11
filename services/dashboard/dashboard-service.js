@@ -191,12 +191,6 @@ Answer concisely (2-4 sentences). If it's a rules question, give the D&D 5e rule
 
         const answer = await aiEngine.gemini.generate(prompt);
         if (answer) {
-          // Also whisper the answer
-          this.bus.dispatch('dm:whisper', {
-            text: answer,
-            priority: 2,
-            category: 'story'
-          });
           res.json({ answer });
         } else {
           res.json({ error: 'No response from AI' });

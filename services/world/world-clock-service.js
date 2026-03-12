@@ -31,6 +31,21 @@ class WorldClockService {
     this.branches = new Map();   // pathId -> { id, conditions[], active, convergeTo }
     this.discoveries = new Map();// id -> { id, clueChain[], currentStep, completed }
     this.clues = new Map();      // id -> { id, description, location, method, dc, revealsSecret, found, foundBy }
+
+    // Weather system
+    this.weather = {
+      current: null,             // Current weather state { type, intensity, description }
+      phases: [],                // Time-based weather phases from config
+      lastTransition: null       // Timestamp of last weather change
+    };
+
+    // Beat atmosphere map — beat id -> atmosphere profile name
+    this.beatAtmosphereMap = new Map();
+
+    // Phase M — Campaign Continuity
+    this.futureHooks = new Map();    // id -> { id, description, plantedAt, plantedInBeat, payoffCondition, payoffBeat, session, status, notes }
+    this.reputation = new Map();     // factionId -> { id, name, score, history[], description }
+    this.backstories = new Map();    // playerId -> { hooks[], themes[], connections[], integrated[] }
   }
 
   async init(orchestrator) {
@@ -58,10 +73,11 @@ class WorldClockService {
       }
     }, 'world-clock');
 
-    // Story beat completions can trigger branching logic
+    // Story beat completions can trigger branching logic + atmosphere shifts
     this.bus.subscribe('story:beat', (env) => {
       this._evaluateBranches(env.data);
       this._evaluateNpcGoals(env.data);
+      this._onBeatAtmosphere(env.data);
     }, 'world-clock');
 
     // Clue discovery
@@ -70,7 +86,19 @@ class WorldClockService {
     // Secret reveal
     this.bus.subscribe('secret:reveal', (env) => this._onSecretReveal(env.data), 'world-clock');
 
-    console.log(`[WorldClock] Ready — ${this.timedEvents.length} timed events, ${this.secrets.size} secrets, ${this.clues.size} clues`);
+    // Campaign continuity — check hooks on beat completion
+    this.bus.subscribe('story:beat', (env) => {
+      this._checkHookPayoffs(env.data);
+      this._checkBackstoryOpportunities(env.data);
+    }, 'world-clock');
+
+    // Reputation changes from combat/NPC interactions
+    this.bus.subscribe('campaign:reputation_event', (env) => {
+      const { factionId, delta, reason } = env.data;
+      if (factionId && delta) this.changeReputation(factionId, delta, reason);
+    }, 'world-clock');
+
+    console.log(`[WorldClock] Ready — ${this.timedEvents.length} timed events, ${this.secrets.size} secrets, ${this.clues.size} clues, ${this.futureHooks.size} hooks, ${this.reputation.size} factions`);
   }
 
   async stop() {
@@ -87,7 +115,11 @@ class WorldClockService {
       firedEvents: this.timedEvents.filter(e => e.fired).length,
       secrets: this.secrets.size,
       clues: this.clues.size,
-      npcGoals: this.npcGoals.size
+      npcGoals: this.npcGoals.size,
+      weather: this.weather.current?.type || 'clear',
+      futureHooks: this.futureHooks.size,
+      factions: this.reputation.size,
+      backstories: this.backstories.size
     };
   }
 
@@ -115,7 +147,27 @@ class WorldClockService {
         }])
       ),
       npcGoals: Object.fromEntries(Array.from(this.npcGoals.entries())),
-      branches: Object.fromEntries(Array.from(this.branches.entries()))
+      branches: Object.fromEntries(Array.from(this.branches.entries())),
+      futureHooks: Object.fromEntries(
+        Array.from(this.futureHooks.entries()).map(([id, h]) => [id, {
+          id: h.id, description: h.description, status: h.status,
+          payoffCondition: h.payoffCondition, session: h.session,
+          linkedNpcs: h.linkedNpcs, notes: h.notes
+        }])
+      ),
+      reputation: Object.fromEntries(
+        Array.from(this.reputation.entries()).map(([id, r]) => [id, {
+          id: r.id, name: r.name, score: r.score, tier: r.tier,
+          regions: r.regions, recentChanges: r.history.slice(-5)
+        }])
+      ),
+      backstories: Object.fromEntries(
+        Array.from(this.backstories.entries()).map(([pid, bs]) => [pid, {
+          summary: bs.summary, themes: bs.themes,
+          activeHooks: bs.hooks.filter(h => h.status !== 'integrated').length,
+          connections: bs.connections.length, integrated: bs.integrated.length
+        }])
+      )
     };
   }
 
@@ -258,6 +310,87 @@ class WorldClockService {
       }
     }
 
+    // Weather phases
+    if (world.weather) {
+      this.weather.phases = (world.weather.phases || []).map(p => ({
+        id: p.id,
+        type: p.type,
+        intensity: p.intensity || 1.0,
+        description: p.description || '',
+        startTime: p.startTime ? new Date(p.startTime) : null,
+        offsetMinutes: p.offsetMinutes || null,
+        atmosphereModifiers: p.atmosphereModifiers || null, // { flickerOverride, levelModifier, etc. }
+        effects: p.effects || []
+      }));
+      // Set initial weather
+      if (world.weather.initial) {
+        this.weather.current = {
+          type: world.weather.initial.type || 'clear',
+          intensity: world.weather.initial.intensity || 1.0,
+          description: world.weather.initial.description || ''
+        };
+      }
+    }
+
+    // Build beat -> atmosphere map from story beats
+    if (config.story?.beats) {
+      for (const beat of config.story.beats) {
+        if (beat.atmosphere) {
+          this.beatAtmosphereMap.set(beat.id, beat.atmosphere);
+        }
+      }
+    }
+
+    // Future hooks
+    if (world.futureHooks) {
+      for (const h of world.futureHooks) {
+        this.futureHooks.set(h.id, {
+          id: h.id,
+          description: h.description,
+          plantedAt: h.plantedAt || null,          // game time when planted
+          plantedInBeat: h.plantedInBeat || null,  // beat id where planted
+          payoffCondition: h.payoffCondition || null, // what triggers payoff
+          payoffBeat: h.payoffBeat || null,         // beat where it pays off
+          payoffSession: h.payoffSession || null,   // session number for payoff
+          session: h.session || 0,                  // session when planted
+          status: h.status || 'planted',            // planted | foreshadowed | ready | paid_off | abandoned
+          notes: h.notes || '',
+          linkedSecrets: h.linkedSecrets || [],
+          linkedNpcs: h.linkedNpcs || []
+        });
+      }
+    }
+
+    // Reputation / factions
+    if (world.factions) {
+      for (const f of world.factions) {
+        this.reputation.set(f.id, {
+          id: f.id,
+          name: f.name,
+          description: f.description || '',
+          score: f.initialScore || 0,           // -100 (hostile) to +100 (revered)
+          tier: this._reputationTier(f.initialScore || 0),
+          history: [],                           // { delta, reason, session, gameTime }
+          regions: f.regions || [],              // where this faction operates
+          allies: f.allies || [],                // other faction ids
+          enemies: f.enemies || []
+        });
+      }
+    }
+
+    // Player backstories
+    if (config.backstories) {
+      for (const [playerId, bs] of Object.entries(config.backstories)) {
+        this.backstories.set(playerId, {
+          hooks: bs.hooks || [],                 // story hooks from backstory: { id, description, status }
+          themes: bs.themes || [],               // recurring themes: 'loss', 'redemption', etc.
+          connections: bs.connections || [],      // NPC/location connections: { type, targetId, description }
+          integrated: [],                        // hooks that have been woven into play: { hookId, beatId, gameTime }
+          summary: bs.summary || ''              // brief backstory summary for AI context
+        });
+      }
+    }
+
     // Store in state for dashboard access
     this._syncToState();
   }
@@ -316,6 +449,39 @@ class WorldClockService {
       };
     }
     this.state.set('world.discoveries', discoverySummary);
+
+    // Weather state
+    this.state.set('world.weather', this.weather.current || { type: 'clear', intensity: 0, description: '' });
+
+    // Future hooks
+    const hooksSummary = {};
+    for (const [id, h] of this.futureHooks) {
+      hooksSummary[id] = {
+        id: h.id, description: h.description, status: h.status,
+        payoffCondition: h.payoffCondition, session: h.session
+      };
+    }
+    this.state.set('world.futureHooks', hooksSummary);
+
+    // Reputation
+    const repSummary = {};
+    for (const [id, r] of this.reputation) {
+      repSummary[id] = {
+        id: r.id, name: r.name, score: r.score, tier: r.tier
+      };
+    }
+    this.state.set('world.reputation', repSummary);
+
+    // Backstories
+    const bsSummary = {};
+    for (const [playerId, bs] of this.backstories) {
+      bsSummary[playerId] = {
+        hooks: bs.hooks.length,
+        integrated: bs.integrated.length,
+        themes: bs.themes
+      };
+    }
+    this.state.set('world.backstories', bsSummary);
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -331,6 +497,13 @@ class WorldClockService {
     for (const evt of this.timedEvents) {
       if (evt.offsetMinutes != null && !evt.gameTime) {
         evt.gameTime = new Date(this.gameTime.getTime() + evt.offsetMinutes * 60000);
+      }
+    }
+
+    // Resolve offset-based weather phases
+    for (const phase of this.weather.phases) {
+      if (phase.offsetMinutes != null && !phase.startTime) {
+        phase.startTime = new Date(this.gameTime.getTime() + phase.offsetMinutes * 60000);
       }
     }
 
@@ -380,6 +553,9 @@ class WorldClockService {
       // Check NPC goal timers
       this._checkNpcGoalTimers();
 
+      // Check weather transitions
+      this._checkWeather();
+
       // Broadcast time update every 10 seconds (not every tick)
       if (now % 10000 < 1100) {
         this.state.set('world.gameTime', this.gameTime.toISOString());
@@ -414,6 +590,16 @@ class WorldClockService {
         // Also dispatch the actual event type
         if (evt.event) {
           this.bus.dispatch(evt.event, { ...evt.data, _timedEvent: evt.id });
+        }
+
+        // If the event carries an atmosphere profile, trigger the change (Feature 45)
+        if (evt.data.profile) {
+          this.bus.dispatch('atmo:change', {
+            profile: evt.data.profile,
+            reason: `Timed event: ${evt.data.description || evt.id}`,
+            auto: true,
+            source: 'timed_event'
+          });
         }
 
         // Whisper to DM
@@ -801,6 +987,89 @@ class WorldClockService {
     return false;
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // BEAT-LINKED ATMOSPHERE (Feature 42)
+  // ═══════════════════════════════════════════════════════════════
+
+  _onBeatAtmosphere(beatData) {
+    if (beatData.status !== 'completed') return;
+
+    const profileName = this.beatAtmosphereMap.get(beatData.beatId);
+    if (!profileName) return;
+
+    console.log(`[WorldClock] Beat "${beatData.beatId}" completed → atmosphere: ${profileName}`);
+    this.bus.dispatch('atmo:change', {
+      profile: profileName,
+      reason: `Beat completed: ${beatData.name || beatData.beatId}`,
+      auto: true,
+      source: 'beat'
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // WEATHER SYSTEM (Feature 44)
+  // ═══════════════════════════════════════════════════════════════
+
+  _checkWeather() {
+    if (this.weather.phases.length === 0) return;
+
+    // Find the latest applicable weather phase
+    let activePhase = null;
+    for (const phase of this.weather.phases) {
+      if (!phase.startTime) continue;
+      if (this.gameTime >= phase.startTime) {
+        activePhase = phase;
+      }
+    }
+
+    if (!activePhase) return;
+    if (this.weather.current && this.weather.current._phaseId === activePhase.id) return;
+
+    // Weather is changing
+    const previous = this.weather.current;
+    this.weather.current = {
+      _phaseId: activePhase.id,
+      type: activePhase.type,
+      intensity: activePhase.intensity,
+      description: activePhase.description
+    };
+    this.weather.lastTransition = Date.now();
+
+    console.log(`[WorldClock] Weather: ${previous?.type || 'none'} → ${activePhase.type} (${activePhase.description})`);
+
+    this.bus.dispatch('world:weather_change', {
+      previous: previous?.type || null,
+      current: activePhase.type,
+      intensity: activePhase.intensity,
+      description: activePhase.description,
+      gameTime: this.gameTime.toISOString()
+    });
+
+    this.bus.dispatch('dm:whisper', {
+      text: `Weather: ${activePhase.description}`,
+      priority: 4,
+      category: 'atmosphere'
+    });
+
+    // Apply atmosphere modifiers if configured
+    if (activePhase.atmosphereModifiers) {
+      this.bus.dispatch('atmo:weather_modifier', {
+        weather: activePhase.type,
+        intensity: activePhase.intensity,
+        modifiers: activePhase.atmosphereModifiers
+      });
+    }
+
+    // Fire any weather-specific effects
+    for (const effect of activePhase.effects) {
+      if (effect.event) {
+        this.bus.dispatch(effect.event, effect.data || {});
+      }
+    }
+
+    this._syncToState();
+  }
+
   _onSceneChange(sceneId) {
     // Reset environmental cue timers for new scene
     for (const cue of this.environmentalCues) {
@@ -857,6 +1126,207 @@ class WorldClockService {
   // API ROUTES
   // ═══════════════════════════════════════════════════════════════
 
+  // ═══════════════════════════════════════════════════════════════
+  // PHASE M — CAMPAIGN CONTINUITY
+  // ═══════════════════════════════════════════════════════════════
+
+  _reputationTier(score) {
+    if (score >= 80) return 'revered';
+    if (score >= 50) return 'honored';
+    if (score >= 20) return 'friendly';
+    if (score >= -20) return 'neutral';
+    if (score >= -50) return 'unfriendly';
+    if (score >= -80) return 'hostile';
+    return 'hated';
+  }
+
+  // --- Future Hooks ---
+
+  plantHook(hookData) {
+    const id = hookData.id || `hook-${Date.now()}`;
+    const hook = {
+      id,
+      description: hookData.description,
+      plantedAt: this.gameTime?.toISOString() || null,
+      plantedInBeat: hookData.beatId || null,
+      payoffCondition: hookData.payoffCondition || null,
+      payoffBeat: hookData.payoffBeat || null,
+      payoffSession: hookData.payoffSession || null,
+      session: hookData.session || 0,
+      status: 'planted',
+      notes: hookData.notes || '',
+      linkedSecrets: hookData.linkedSecrets || [],
+      linkedNpcs: hookData.linkedNpcs || []
+    };
+    this.futureHooks.set(id, hook);
+    this._syncToState();
+
+    this.bus.dispatch('campaign:hook_planted', { hook });
+    this.bus.dispatch('dm:whisper', {
+      text: `Hook planted: ${hook.description}`,
+      priority: 4, category: 'story'
+    });
+    console.log(`[WorldClock] Future hook planted: ${id} — ${hook.description}`);
+    return hook;
+  }
+
+  updateHookStatus(hookId, status, notes) {
+    const hook = this.futureHooks.get(hookId);
+    if (!hook) return null;
+    const previous = hook.status;
+    hook.status = status;
+    if (notes) hook.notes = notes;
+    this._syncToState();
+
+    this.bus.dispatch('campaign:hook_updated', { hookId, previous, status });
+    if (status === 'paid_off') {
+      this.bus.dispatch('dm:whisper', {
+        text: `Hook paid off: ${hook.description}`,
+        priority: 3, category: 'story'
+      });
+    }
+    return hook;
+  }
+
+  getReadyHooks() {
+    // Hooks that are planted/foreshadowed and could pay off this session
+    return Array.from(this.futureHooks.values()).filter(h =>
+      (h.status === 'planted' || h.status === 'foreshadowed' || h.status === 'ready')
+    );
+  }
+
+  // --- Reputation ---
+
+  changeReputation(factionId, delta, reason) {
+    const faction = this.reputation.get(factionId);
+    if (!faction) return null;
+
+    const oldScore = faction.score;
+    const oldTier = faction.tier;
+    faction.score = Math.max(-100, Math.min(100, faction.score + delta));
+    faction.tier = this._reputationTier(faction.score);
+    faction.history.push({
+      delta,
+      reason,
+      session: this.state.get('session.id') || 0,
+      gameTime: this.gameTime?.toISOString() || null,
+      timestamp: new Date().toISOString()
+    });
+
+    this._syncToState();
+
+    const tierChanged = oldTier !== faction.tier;
+    this.bus.dispatch('campaign:reputation_change', {
+      factionId, factionName: faction.name,
+      oldScore, newScore: faction.score,
+      delta, reason, tier: faction.tier, tierChanged
+    });
+
+    if (tierChanged) {
+      this.bus.dispatch('dm:whisper', {
+        text: `Reputation with ${faction.name}: ${oldTier} → ${faction.tier} (${faction.score})`,
+        priority: 3, category: 'story'
+      });
+    }
+
+    console.log(`[WorldClock] Reputation ${factionId}: ${oldScore} → ${faction.score} (${reason})`);
+    return faction;
+  }
+
+  getReputationSummary() {
+    return Array.from(this.reputation.values()).map(r => ({
+      id: r.id, name: r.name, score: r.score, tier: r.tier,
+      regions: r.regions, recentChanges: r.history.slice(-5)
+    }));
+  }
+
+  // --- Player Backstory Integration ---
+
+  addBackstory(playerId, backstoryData) {
+    const bs = this.backstories.get(playerId) || {
+      hooks: [], themes: [], connections: [], integrated: [], summary: ''
+    };
+    if (backstoryData.hooks) bs.hooks.push(...backstoryData.hooks);
+    if (backstoryData.themes) bs.themes.push(...backstoryData.themes);
+    if (backstoryData.connections) bs.connections.push(...backstoryData.connections);
+    if (backstoryData.summary) bs.summary = backstoryData.summary;
+    this.backstories.set(playerId, bs);
+    this._syncToState();
+    return bs;
+  }
+
+  markBackstoryIntegrated(playerId, hookId, beatId) {
+    const bs = this.backstories.get(playerId);
+    if (!bs) return null;
+    bs.integrated.push({
+      hookId, beatId,
+      gameTime: this.gameTime?.toISOString() || null,
+      timestamp: new Date().toISOString()
+    });
+    // Mark the hook as used
+    const hook = bs.hooks.find(h => h.id === hookId);
+    if (hook) hook.status = 'integrated';
+    this._syncToState();
+
+    this.bus.dispatch('campaign:backstory_integrated', { playerId, hookId, beatId });
+    return bs;
+  }
+
+  getBackstoryContext(playerId) {
+    const bs = this.backstories.get(playerId);
+    if (!bs) return null;
+    return {
+      summary: bs.summary,
+      activeHooks: bs.hooks.filter(h => h.status !== 'integrated'),
+      themes: bs.themes,
+      connections: bs.connections,
+      integratedCount: bs.integrated.length
+    };
+  }
+
+  _checkHookPayoffs(beatData) {
+    // When a beat completes, check if any hooks reference it as payoff
+    if (!beatData?.beatId) return;
+    for (const [id, hook] of this.futureHooks) {
+      if (hook.status === 'planted' || hook.status === 'foreshadowed' || hook.status === 'ready') {
+        if (hook.payoffBeat === beatData.beatId) {
+          this.updateHookStatus(id, 'paid_off', `Paid off at beat: ${beatData.beatId}`);
+        }
+      }
+    }
+  }
+
+  _checkBackstoryOpportunities(beatData) {
+    // Whisper to DM when a beat has potential backstory tie-ins
+    if (!beatData?.beatId) return;
+    for (const [playerId, bs] of this.backstories) {
+      for (const hook of bs.hooks) {
+        if (hook.status === 'integrated') continue;
+        // Check if hook's trigger matches this beat or related themes
+        if (hook.triggerBeat === beatData.beatId || hook.triggerCondition === beatData.beatId) {
+          const playerName = this.state.get(`players.${playerId}.character.name`) || playerId;
+          this.bus.dispatch('dm:whisper', {
+            text: `Backstory opportunity for ${playerName}: ${hook.description}`,
+            priority: 3, category: 'story'
+          });
+        }
+      }
+    }
+  }
+
+  getAllBackstoryHooks() {
+    // Get all un-integrated backstory hooks across all players for AI to weave in
+    const hooks = [];
+    for (const [playerId, bs] of this.backstories) {
+      for (const hook of bs.hooks) {
+        if (hook.status !== 'integrated') {
+          hooks.push({ playerId, ...hook });
+        }
+      }
+    }
+    return hooks;
+  }
+
   _setupRoutes() {
     const app = this.orchestrator.getService('dashboard')?.app;
     if (!app) return;
@@ -867,6 +1337,7 @@ class WorldClockService {
         clock: this.getFormattedGameTime(),
         timeScale: this.timeScale,
         paused: this.paused,
+        weather: this.weather.current || { type: 'clear', intensity: 0 },
         timedEvents: this.timedEvents.map(e => ({
           id: e.id, fired: e.fired, gameTime: e.gameTime?.toISOString(),
           description: e.data?.description || e.id
@@ -890,7 +1361,20 @@ class WorldClockService {
         })),
         branches: Array.from(this.branches.values()).map(b => ({
           id: b.id, description: b.description, active: b.active
-        }))
+        })),
+        futureHooks: Array.from(this.futureHooks.values()).map(h => ({
+          id: h.id, description: h.description, status: h.status,
+          payoffCondition: h.payoffCondition, session: h.session, notes: h.notes
+        })),
+        reputation: Array.from(this.reputation.values()).map(r => ({
+          id: r.id, name: r.name, score: r.score, tier: r.tier
+        })),
+        backstories: Object.fromEntries(
+          Array.from(this.backstories.entries()).map(([pid, bs]) => [pid, {
+            themes: bs.themes,
+            activeHooks: bs.hooks.filter(h => h.status !== 'integrated').length
+          }])
+        )
       });
     });
 
@@ -968,6 +1452,121 @@ class WorldClockService {
       });
       this._syncToState();
       res.json({ ok: true, clueId: c.id });
+    });
+
+    // POST /api/world/weather — manually set weather
+    app.post('/api/world/weather', (req, res) => {
+      const { type, intensity, description } = req.body;
+      if (!type) return res.status(400).json({ error: 'type required' });
+      const previous = this.weather.current?.type;
+      this.weather.current = {
+        type,
+        intensity: intensity || 1.0,
+        description: description || type
+      };
+      this.weather.lastTransition = Date.now();
+      this.bus.dispatch('world:weather_change', {
+        previous,
+        current: type,
+        intensity: this.weather.current.intensity,
+        description: this.weather.current.description,
+        manual: true
+      });
+      this._syncToState();
+      res.json({ ok: true, weather: this.weather.current });
+    });
+
+    // ── Phase M: Future Hooks ──
+
+    // GET /api/world/hooks — all future hooks
+    app.get('/api/world/hooks', (req, res) => {
+      res.json(Array.from(this.futureHooks.values()));
+    });
+
+    // GET /api/world/hooks/ready — hooks ready to pay off
+    app.get('/api/world/hooks/ready', (req, res) => {
+      res.json(this.getReadyHooks());
+    });
+
+    // POST /api/world/hooks — plant a new hook
+    app.post('/api/world/hooks', (req, res) => {
+      const { description, payoffCondition, payoffBeat, payoffSession, beatId, notes, linkedSecrets, linkedNpcs } = req.body;
+      if (!description) return res.status(400).json({ error: 'description required' });
+      const hook = this.plantHook({ description, payoffCondition, payoffBeat, payoffSession, beatId, notes, linkedSecrets, linkedNpcs });
+      res.json({ ok: true, hook });
+    });
+
+    // PUT /api/world/hooks/:id — update hook status
+    app.put('/api/world/hooks/:id', (req, res) => {
+      const { status, notes } = req.body;
+      if (!status) return res.status(400).json({ error: 'status required (planted/foreshadowed/ready/paid_off/abandoned)' });
+      const hook = this.updateHookStatus(req.params.id, status, notes);
+      if (!hook) return res.status(404).json({ error: 'hook not found' });
+      res.json({ ok: true, hook });
+    });
+
+    // ── Phase M: Reputation ──
+
+    // GET /api/world/reputation — all faction reputations
+    app.get('/api/world/reputation', (req, res) => {
+      res.json(this.getReputationSummary());
+    });
+
+    // POST /api/world/reputation — change faction reputation
+    app.post('/api/world/reputation', (req, res) => {
+      const { factionId, delta, reason } = req.body;
+      if (!factionId || delta == null) return res.status(400).json({ error: 'factionId and delta required' });
+      const faction = this.changeReputation(factionId, delta, reason || 'manual adjustment');
+      if (!faction) return res.status(404).json({ error: 'faction not found' });
+      res.json({ ok: true, faction: { id: faction.id, name: faction.name, score: faction.score, tier: faction.tier } });
+    });
+
+    // POST /api/world/reputation/add-faction — add faction mid-session
+    app.post('/api/world/reputation/add-faction', (req, res) => {
+      const f = req.body;
+      if (!f.id || !f.name) return res.status(400).json({ error: 'id and name required' });
+      this.reputation.set(f.id, {
+        id: f.id, name: f.name, description: f.description || '',
+        score: f.initialScore || 0, tier: this._reputationTier(f.initialScore || 0),
+        history: [], regions: f.regions || [], allies: f.allies || [], enemies: f.enemies || []
+      });
+      this._syncToState();
+      res.json({ ok: true, factionId: f.id });
+    });
+
+    // ── Phase M: Backstories ──
+
+    // GET /api/world/backstories — all player backstory data
+    app.get('/api/world/backstories', (req, res) => {
+      const result = {};
+      for (const [pid, bs] of this.backstories) {
+        result[pid] = {
+          summary: bs.summary, themes: bs.themes,
+          hooks: bs.hooks, connections: bs.connections,
+          integrated: bs.integrated
+        };
+      }
+      res.json(result);
+    });
+
+    // GET /api/world/backstories/hooks — all un-integrated backstory hooks (for AI)
+    app.get('/api/world/backstories/hooks', (req, res) => {
+      res.json(this.getAllBackstoryHooks());
+    });
+
+    // POST /api/world/backstories/:playerId — add/update player backstory
+    app.post('/api/world/backstories/:playerId', (req, res) => {
+      const bs = this.addBackstory(req.params.playerId, req.body);
+      res.json({ ok: true, backstory: bs });
+    });
+
+    // POST /api/world/backstories/:playerId/integrate — mark a hook as woven in
+    app.post('/api/world/backstories/:playerId/integrate', (req, res) => {
+      const { hookId, beatId } = req.body;
+      if (!hookId) return res.status(400).json({ error: 'hookId required' });
+      const bs = this.markBackstoryIntegrated(req.params.playerId, hookId, beatId);
+      if (!bs) return res.status(404).json({ error: 'player backstory not found' });
+      res.json({ ok: true });
     });
 
     // POST /api/world/add-timed-event — add a timed event mid-session

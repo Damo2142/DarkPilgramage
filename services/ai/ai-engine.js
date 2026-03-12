@@ -51,6 +51,8 @@ class AIEngine {
     this.autonomy = new NpcAutonomy(this.gemini, this.context, this.bus, this.state, this.config);
     this.spurt = new SpurtAgent(this.gemini, this.context, this.bus, this.state, this.config);
     this.pacing = new PacingMonitor(this.gemini, this.context, this.bus, this.state, this.config);
+
+    this._setupRoutes();
   }
 
   async start() {
@@ -150,6 +152,29 @@ class AIEngine {
       await this.autonomy._executeNpcAction(npcId, npcState, env.data);
     }, 'ai-engine');
 
+    // Player-to-NPC private chat (Feature 49)
+    this.bus.subscribe('npc:player_chat', async (env) => {
+      const { playerId, npcId, npcName, text } = env.data;
+      console.log(`[AIEngine] NPC chat: ${playerId} → ${npcId}: "${text}"`);
+      try {
+        const response = await this.npc.generateDialogue(npcId, `Player ${playerId} says directly to ${npcName}: "${text}". Respond in character.`);
+        if (response) {
+          this.bus.dispatch('npc:chat_reply', { playerId, npcId, npcName, text: response });
+          // Also log to DM dashboard
+          this.bus.dispatch('dm:whisper', {
+            text: `[NPC Chat] ${playerId} → ${npcName}: "${text}" | ${npcName}: "${response}"`,
+            priority: 4,
+            category: 'story'
+          });
+        } else {
+          this.bus.dispatch('npc:chat_reply', { playerId, npcId, npcName, text: '*says nothing, just stares*' });
+        }
+      } catch (err) {
+        console.error('[AIEngine] NPC chat error:', err.message);
+        this.bus.dispatch('npc:chat_reply', { playerId, npcId, npcName, text: '*no response*' });
+      }
+    }, 'ai-engine');
+
     // Start NPC autonomy engine
     this.autonomy.start();
 
@@ -181,6 +206,109 @@ class AIEngine {
       spurt: this.spurt.getStats(),
       pacing: this.pacing.getStats()
     };
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PHASE O — DM TOOLS
+  // ═══════════════════════════════════════════════════════════════
+
+  // Feature 69: Improv Generator — AI creates NPCs/locations/encounters on the fly
+  async improvGenerate(type, constraints) {
+    if (!this.gemini?.available) return null;
+
+    const gameContext = this.context.buildForNpc('improv', {});
+    const prompts = {
+      npc: `Generate a D&D 5e NPC for a gothic horror campaign set in 1274 Central Europe. Include: name, role, appearance (1 sentence), personality (1 sentence), secret (1 sentence), voice mannerism, disposition, 2-3 knowledge items, and a stat block (AC, HP, CR, 1-2 actions). Format as JSON: {name, role, appearance, personality, secret, voiceMannerism, disposition, knowledge:[], statBlock:{ac, hp, cr, actions:[{name,toHit,damage,damageType}]}}`,
+      location: `Generate a D&D location for a gothic horror campaign in 1274 Central Europe. Include: name, type (tavern/church/ruin/cave/road/village), description (2-3 sentences), atmosphere (1 sentence), 2-3 notable features, 1-2 hidden secrets, and a danger level (safe/cautious/dangerous/deadly). Format as JSON: {name, type, description, atmosphere, features:[], secrets:[], dangerLevel}`,
+      encounter: `Generate a D&D 5e encounter for a gothic horror campaign in 1274 Central Europe. Include: name, description (2-3 sentences), difficulty (easy/medium/hard/deadly), creatures with CR and count, terrain features, tactics, and potential rewards. Format as JSON: {name, description, difficulty, creatures:[{name,cr,count}], terrain:[], tactics, rewards:[]}`,
+      item: `Generate a D&D 5e magic item for a gothic horror campaign in 1274 Central Europe. Include: name, rarity, type, description (2 sentences), properties (mechanical effects), curse or drawback if any. Format as JSON: {name, rarity, type, description, properties, curse}`,
+      plot_twist: `Generate a dramatic plot twist for a gothic horror D&D campaign in 1274 Central Europe. Include: title, revelation (1-2 sentences), implications for the party, suggested dramatic moment to reveal it. Format as JSON: {title, revelation, implications, revealMoment}`
+    };
+
+    const systemPrompt = prompts[type] || prompts.npc;
+    const userPrompt = `Current game context:\n${gameContext}\n\nConstraints: ${constraints || 'none — surprise me'}`;
+
+    try {
+      const response = await this.gemini.generate(systemPrompt, userPrompt, {
+        maxTokens: 800, temperature: 1.0
+      });
+      if (response) {
+        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          return { type, data: parsed, raw: response };
+        }
+        return { type, data: null, raw: response };
+      }
+    } catch (err) {
+      console.error('[AIEngine] Improv generation error:', err.message);
+    }
+    return null;
+  }
+
+  // Feature 70: Session Prep Assistant — AI flags gaps before session
+  async sessionPrep() {
+    if (!this.gemini?.available) return null;
+
+    const story = this.state.get('story') || {};
+    const world = this.state.get('world') || {};
+    const npcs = this.state.get('npcs') || {};
+    const players = this.state.get('players') || {};
+
+    const prompt = `You are a session prep assistant for "The Dark Pilgrimage," a gothic horror D&D 5e campaign set in 1274 Central Europe.
+
+Review the current game state and identify:
+1. **Gaps**: Missing NPC motivations, unresolved plot threads, scenes without read-aloud text
+2. **Warnings**: Pacing issues, players who might be sidelined, NPCs without clear goals
+3. **Suggestions**: Atmosphere opportunities, dramatic moments to plan, items to prepare
+4. **Reminders**: Timed events coming up, secrets close to being revealed, NPC goals near completion
+
+Be specific and actionable. Format as JSON: {gaps:[], warnings:[], suggestions:[], reminders:[]}`;
+
+    const context = [
+      `Completed beats: ${(story.beats || []).filter(b => b.status === 'completed').map(b => b.name).join(', ') || 'none'}`,
+      `Pending beats: ${(story.beats || []).filter(b => b.status === 'pending').map(b => b.name).join(', ') || 'none'}`,
+      `Secrets: ${Object.values(world.secrets || {}).map(s => `${s.id}: ${s.revealed ? 'REVEALED' : 'hidden'}`).join(', ')}`,
+      `Clues: ${Object.values(world.clues || {}).map(c => `${c.id}: ${c.found ? 'FOUND' : 'unfound'}`).join(', ')}`,
+      `NPCs: ${Object.entries(npcs).map(([id, n]) => `${n.name || id} (${n.status || 'alive'}, ${n.disposition || 'neutral'})`).join(', ')}`,
+      `Players: ${Object.entries(players).map(([id, p]) => `${p.character?.name || id} Lv${p.character?.level || 1}, Dread ${p.dread?.score || 0}`).join(', ')}`,
+      `Hooks: ${Object.values(world.futureHooks || {}).filter(h => h.status !== 'paid_off').map(h => `[${h.status}] ${h.description}`).join('; ') || 'none'}`,
+      `Reputation: ${Object.values(world.reputation || {}).map(f => `${f.name}: ${f.score} (${f.tier})`).join(', ') || 'none'}`
+    ].join('\n');
+
+    try {
+      const response = await this.gemini.generate(prompt, context, {
+        maxTokens: 1500, temperature: 0.7
+      });
+      if (response) {
+        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0]);
+        }
+        return { raw: response };
+      }
+    } catch (err) {
+      console.error('[AIEngine] Session prep error:', err.message);
+    }
+    return null;
+  }
+
+  _setupRoutes() {
+    const app = this.orchestrator.getService('dashboard')?.app;
+    if (!app) return;
+
+    // Feature 69: Improv Generator
+    app.post('/api/ai/improv', async (req, res) => {
+      const { type, constraints } = req.body;
+      const result = await this.improvGenerate(type || 'npc', constraints);
+      res.json({ ok: !!result, result });
+    });
+
+    // Feature 70: Session Prep
+    app.get('/api/ai/session-prep', async (req, res) => {
+      const result = await this.sessionPrep();
+      res.json({ ok: !!result, result });
+    });
   }
 }
 

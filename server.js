@@ -11,6 +11,7 @@ const CombatService = require('./services/combat/combat-service');
 const WorldClockService = require('./services/world/world-clock-service');
 const VoiceService = require('./services/audio/voice-service');
 const SoundService = require('./services/audio/sound-service');
+const CampaignService = require('./services/campaign/campaign-service');
 const { loadConfig } = require('./utils/config-loader');
 
 // Auto-discover session config: CLI arg > config/session-0.json > defaults only
@@ -37,13 +38,21 @@ orchestrator.register(new VoiceService());
 orchestrator.register(new SoundService());
 orchestrator.register(new AIEngine());
 orchestrator.register(new AtmosphereEngine());
+orchestrator.register(new CampaignService());
 
 orchestrator.startAll().catch(err => {
   console.error('Fatal startup error:', err);
   process.exit(1);
 });
 
-process.on('SIGINT', async () => { await orchestrator.stopAll(); process.exit(0); });
-process.on('SIGTERM', async () => { await orchestrator.stopAll(); process.exit(0); });
+async function gracefulShutdown(signal) {
+  console.log(`\n${signal} received — shutting down...`);
+  const forceTimer = setTimeout(() => { console.error('Shutdown timeout — forcing exit'); process.exit(1); }, 8000);
+  forceTimer.unref();
+  try { await orchestrator.stopAll(); } catch(e) { console.error('Shutdown error:', e); }
+  process.exit(0);
+}
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('uncaughtException', err => console.error('Uncaught exception:', err));
 process.on('unhandledRejection', err => console.error('Unhandled rejection:', err));

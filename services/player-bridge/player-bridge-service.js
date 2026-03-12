@@ -91,6 +91,76 @@ class PlayerBridgeService {
       res.json(roster);
     });
 
+    // Feature 72: QR code join data
+    this.app.get('/api/join-info', (req, res) => {
+      const os = require('os');
+      const interfaces = os.networkInterfaces();
+      let ip = '192.168.0.198'; // fallback
+      for (const [name, addrs] of Object.entries(interfaces)) {
+        for (const addr of addrs) {
+          if (addr.family === 'IPv4' && !addr.internal && addr.address.startsWith('192.168.')) {
+            ip = addr.address;
+          }
+        }
+      }
+      const proto = this.server instanceof https.Server ? 'https' : 'http';
+      const port = this.port || 3202;
+      const assignments = this.config?.characterAssignments || {};
+      const players = Object.keys(assignments);
+      res.json({
+        baseUrl: `${proto}://${ip}:${port}`,
+        players: players.map(p => ({
+          name: p,
+          url: `${proto}://${ip}:${port}/player/${p}`,
+          assigned: !!assignments[p]
+        }))
+      });
+    });
+
+    // Feature 74: Dual-axis alignment tracking
+    this.app.post('/api/alignment/:playerId', (req, res) => {
+      const { playerId } = req.params;
+      const { compassion, ruthlessness, reason } = req.body;
+      const current = this.state.get(`players.${playerId}.alignment`) || { compassion: 0, ruthlessness: 0, history: [] };
+      if (compassion != null) current.compassion = Math.max(-100, Math.min(100, current.compassion + compassion));
+      if (ruthlessness != null) current.ruthlessness = Math.max(-100, Math.min(100, current.ruthlessness + ruthlessness));
+      current.history.push({
+        compassion: compassion || 0, ruthlessness: ruthlessness || 0,
+        reason: reason || 'DM adjustment',
+        timestamp: new Date().toISOString()
+      });
+      // Keep last 50 history entries
+      if (current.history.length > 50) current.history = current.history.slice(-50);
+      this.state.set(`players.${playerId}.alignment`, current);
+      this.bus.dispatch('campaign:alignment_change', { playerId, alignment: current, reason });
+      res.json({ ok: true, alignment: { compassion: current.compassion, ruthlessness: current.ruthlessness } });
+    });
+
+    this.app.get('/api/alignment/:playerId', (req, res) => {
+      const alignment = this.state.get(`players.${req.params.playerId}.alignment`) || { compassion: 0, ruthlessness: 0, history: [] };
+      res.json(alignment);
+    });
+
+    // Feature 75: Camera engagement data from Chromebooks
+    this.app.post('/api/camera/engagement', (req, res) => {
+      const { playerId, engagement, expressions } = req.body;
+      if (!playerId) return res.status(400).json({ error: 'playerId required' });
+      // Store engagement data for AI context
+      this.state.set(`players.${playerId}.engagement`, {
+        score: engagement || 0,         // 0-100
+        expressions: expressions || {}, // { smiling, focused, bored, surprised, scared }
+        lastUpdate: Date.now()
+      });
+      // Feed to AI if significant
+      if (engagement != null && engagement < 30) {
+        this.bus.dispatch('dm:whisper', {
+          text: `${playerId} appears disengaged (engagement: ${engagement}%)`,
+          priority: 5, category: 'story'
+        });
+      }
+      res.json({ ok: true });
+    });
+
     // Try HTTPS, fall back to HTTP
     try {
       const sslKey = fs.readFileSync(path.join(__dirname, '..', '..', 'key.pem'));
@@ -260,6 +330,50 @@ class PlayerBridgeService {
     this.bus.subscribe('characters:imported', () => this._pushCharactersToPlayers(), 'player-bridge');
     this.bus.subscribe('characters:reloaded', () => this._pushCharactersToPlayers(), 'player-bridge');
 
+    // Quest journal updates (Feature 47)
+    this.bus.subscribe('quest:update', (env) => {
+      const { playerId } = env.data;
+      if (playerId && playerId !== 'all') {
+        this._sendToPlayer(playerId, { type: 'quest:update', quest: env.data.quest, quests: env.data.quests });
+      } else {
+        this._broadcast({ type: 'quest:update', quest: env.data.quest, quests: env.data.quests });
+      }
+    }, 'player-bridge');
+
+    // NPC chat reply (Feature 49)
+    this.bus.subscribe('npc:chat_reply', (env) => {
+      const { playerId, npcId, npcName, text } = env.data;
+      this._sendToPlayer(playerId, { type: 'npc:chat_reply', npcId, npcName, text });
+    }, 'player-bridge');
+
+    // Handout distribution (Feature 50) — with language gating
+    this.bus.subscribe('handout:send', (env) => {
+      const { playerId, title, text, image, preview, language } = env.data;
+
+      if (playerId && playerId !== 'all') {
+        const msg = this._buildHandoutForPlayer(playerId, { title, text, image, preview, language });
+        this._sendToPlayer(playerId, msg);
+      } else {
+        // Broadcast to all — each player gets a version gated by their languages
+        for (const [pid] of this.players) {
+          const msg = this._buildHandoutForPlayer(pid, { title, text, image, preview, language });
+          this._sendToPlayer(pid, msg);
+        }
+      }
+    }, 'player-bridge');
+
+    // Inspiration (Feature 51)
+    this.bus.subscribe('inspiration:grant', (env) => {
+      const { playerId, reason } = env.data;
+      this._sendToPlayer(playerId, { type: 'inspiration:gain', reason });
+      this.state.set(`players.${playerId}.character.inspiration`, true);
+    }, 'player-bridge');
+
+    // Push available NPCs to players on session start
+    this.bus.subscribe('session:started', () => {
+      this._broadcastAvailableNpcs();
+    }, 'player-bridge');
+
     // Forward combat events to all players
     const combatEvents = [
       'combat:started', 'combat:ended', 'combat:next_turn', 'combat:prev_turn',
@@ -353,6 +467,9 @@ class PlayerBridgeService {
     } catch (e) {
       console.error('[PlayerBridge] Error sending init:', e.message);
     }
+
+    // Send available NPCs for player chat
+    setTimeout(() => this._broadcastAvailableNpcs(), 1000);
 
     ws.on('message', (raw, isBinary) => {
       // Binary messages are audio chunks
@@ -500,6 +617,20 @@ class PlayerBridgeService {
         this.bus.dispatch('player:spell_aoe', { playerId, spell: msg.spell, aoe: msg.aoe, x: msg.x, y: msg.y, damageType: msg.damageType });
         break;
 
+      case 'npc:chat': {
+        // Player wants to talk to an NPC — route to AI for response
+        const npcId = msg.npcId;
+        const npcState = this.state.get(`npcs.${npcId}`);
+        console.log(`[PlayerBridge] ${playerId} talks to NPC ${npcId}: "${msg.text}"`);
+        this.bus.dispatch('npc:player_chat', {
+          playerId,
+          npcId,
+          npcName: npcState?.name || npcId,
+          text: msg.text
+        });
+        break;
+      }
+
       case 'ping':
         this._sendToPlayer(playerId, { type: 'pong', ts: Date.now() });
         break;
@@ -531,6 +662,52 @@ class PlayerBridgeService {
         player.ws.send(json);
       }
     }
+  }
+
+  _buildHandoutForPlayer(playerId, handout) {
+    const { title, text, image, preview, language } = handout;
+    // If no language requirement, send as-is
+    if (!language) {
+      return { type: 'handout:receive', title, text, image, preview };
+    }
+    // Check if player knows the required language
+    const charData = this.state.get(`players.${playerId}.character`) || {};
+    const knownLanguages = (charData.languages || []).map(l => l.toLowerCase());
+    const canRead = knownLanguages.includes(language.toLowerCase());
+
+    if (canRead) {
+      return { type: 'handout:receive', title, text, image, preview, language, readable: true };
+    } else {
+      // Player can't read this language — scramble the text
+      const scrambled = this._scrambleText(text || '');
+      return {
+        type: 'handout:receive',
+        title: title,
+        text: scrambled,
+        image: image,
+        preview: `Written in ${language} — you cannot read this`,
+        language: language,
+        readable: false
+      };
+    }
+  }
+
+  _scrambleText(text) {
+    // Replace readable text with mysterious glyphs, preserving line breaks and spacing
+    const glyphs = 'ᚠᚡᚢᚣᚤᚥᚦᚧᚨᚩᚪᚫᚬᚭᚮᚯᚰᚱᚲᚳᚴᚵᚶᚷᚸᚹᚺᚻᚼᚽᚾᚿᛀᛁᛂᛃᛄᛅᛆᛇᛈᛉᛊᛋᛌᛍ';
+    return text.replace(/[a-zA-Z]/g, () => glyphs[Math.floor(Math.random() * glyphs.length)]);
+  }
+
+  _broadcastAvailableNpcs() {
+    const npcs = this.state.get('npcs') || {};
+    const available = Object.entries(npcs)
+      .filter(([id, npc]) => npc.status === 'alive')
+      .map(([id, npc]) => ({
+        id,
+        name: npc.name || id,
+        disposition: npc.disposition || ''
+      }));
+    this._broadcast({ type: 'npc:available', npcs: available });
   }
 
   _broadcastPlayerList() {

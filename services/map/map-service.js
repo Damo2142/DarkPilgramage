@@ -214,6 +214,20 @@ class MapService {
       res.json({ mapId: req.params.mapId });
     });
 
+    // POST /api/map/floor-transition — move tokens to another map (Feature 71)
+    app.post('/api/map/floor-transition', (req, res) => {
+      const { targetMapId, tokenIds, spawnPoint } = req.body;
+      if (!targetMapId) return res.status(400).json({ error: 'targetMapId required' });
+      const result = this.transitionFloor(targetMapId, tokenIds, spawnPoint);
+      if (result.error) return res.status(404).json(result);
+      res.json(result);
+    });
+
+    // GET /api/map/floor-links — get zones that link to other maps
+    app.get('/api/map/floor-links', (req, res) => {
+      res.json(this.getFloorLinks());
+    });
+
     // DELETE /api/map/:mapId — delete a map config and optionally its image
     app.delete('/api/map/:mapId', (req, res) => {
       const mapId = req.params.mapId;
@@ -899,6 +913,92 @@ class MapService {
         this.state.set(`map.tokens.${playerId}.hp`, pData.character.hp);
       }
     }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // FEATURE 71 — MULTI-LEVEL MAPS (Floor Transitions)
+  // ═══════════════════════════════════════════════════════════════
+
+  /**
+   * Transition tokens from current map to a target map.
+   * Preserves HP, conditions, and other token state.
+   * @param {string} targetMapId - Map to transition to
+   * @param {string[]} tokenIds - Tokens to move (empty = all PCs)
+   * @param {object} spawnPoint - Optional {x, y} override on target map
+   */
+  transitionFloor(targetMapId, tokenIds, spawnPoint) {
+    const targetMap = this.maps.get(targetMapId);
+    if (!targetMap) return { error: 'Target map not found' };
+
+    const currentTokens = this.state.get('map.tokens') || {};
+
+    // If no token ids specified, move all PCs
+    if (!tokenIds || !tokenIds.length) {
+      tokenIds = Object.entries(currentTokens)
+        .filter(([id, t]) => t.type === 'pc')
+        .map(([id]) => id);
+    }
+
+    // Capture token state before transition
+    const migratingTokens = {};
+    for (const tid of tokenIds) {
+      if (currentTokens[tid]) {
+        migratingTokens[tid] = { ...currentTokens[tid] };
+      }
+    }
+
+    // Activate the target map (this resets tokens to map defaults)
+    this._activateMap(targetMapId);
+
+    // Re-inject migrating tokens at spawn points
+    const newTokens = this.state.get('map.tokens') || {};
+    const spawns = targetMap.playerSpawns?.spread || [];
+    const defaultSpawn = spawnPoint || targetMap.playerSpawns?.default || { x: 280, y: 350 };
+    let spawnIdx = 0;
+
+    for (const [tid, tok] of Object.entries(migratingTokens)) {
+      const spawn = spawnPoint || spawns[spawnIdx] || defaultSpawn;
+      newTokens[tid] = {
+        ...tok,
+        x: spawn.x,
+        y: spawn.y
+      };
+      spawnIdx++;
+    }
+
+    this.state.set('map.tokens', newTokens);
+
+    this.bus.dispatch('map:floor_transition', {
+      from: this.activeMapId,
+      to: targetMapId,
+      tokens: tokenIds
+    });
+
+    console.log(`[MapService] Floor transition: ${tokenIds.length} tokens → ${targetMapId}`);
+    return { ok: true, mapId: targetMapId, movedTokens: tokenIds };
+  }
+
+  /**
+   * Get linked floors for the current map (zones with transitionTo)
+   */
+  getFloorLinks() {
+    const mapDef = this.maps.get(this.activeMapId);
+    if (!mapDef) return [];
+
+    const links = [];
+    for (const zone of (mapDef.zones || [])) {
+      if (zone.transitionTo) {
+        const targetMap = this.maps.get(zone.transitionTo);
+        links.push({
+          zoneId: zone.id,
+          zoneName: zone.name || zone.id,
+          targetMapId: zone.transitionTo,
+          targetMapName: targetMap?.name || zone.transitionTo,
+          x: zone.x, y: zone.y
+        });
+      }
+    }
+    return links;
   }
 
   async stop() {

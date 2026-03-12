@@ -14,8 +14,8 @@
       --surface3: #1e1e28;
       --border: #252530;
       --border-light: #333340;
-      --text: #ddd9cf;
-      --text-dim: #6b6760;
+      --text: #f0ece6;
+      --text-dim: #b0a99f;
       --accent: #c9a54e;
       --accent-dim: #8a7030;
       --accent-glow: rgba(201,165,78,0.15);
@@ -852,7 +852,8 @@
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
           <span id="game-time" style="font-size:18px;font-weight:bold;font-family:monospace;color:var(--accent);">--:--</span>
           <span id="game-date" style="font-size:10px;color:var(--text-dim);"></span>
-          <span id="game-period" style="font-size:9px;padding:2px 5px;border-radius:3px;background:var(--surface3);color:var(--text-dim);"></span>
+          <span id="game-period" style="font-size:13px;font-weight:700;padding:2px 8px;border-radius:3px;background:var(--surface3);color:var(--text);text-transform:uppercase;letter-spacing:1px;"></span>
+          <span id="game-weather" style="font-size:13px;font-weight:700;padding:2px 8px;border-radius:3px;background:var(--surface3);color:var(--blue);"></span>
         </div>
         <div style="display:flex;gap:4px;margin-bottom:6px;">
           <label style="font-size:9px;color:var(--text-dim);display:flex;align-items:center;gap:3px;">Speed
@@ -1214,9 +1215,181 @@
       </div>
       </div>
 
+      <div class="panel-section" data-panel="quest-mgr">
+      <div class="section-header"><span class="drag-handle">⠿</span>Quests & Handouts</div>
+      <div style="padding:6px 8px;">
+        <div style="display:flex;gap:4px;margin-bottom:6px;">
+          <button class="sm primary" onclick="showQuestForm()" style="flex:1;font-size:10px;">+ Quest</button>
+          <button class="sm" onclick="showHandoutForm()" style="flex:1;font-size:10px;">+ Handout</button>
+          <button class="sm" onclick="showInspirationForm()" style="flex:1;font-size:10px;">Inspire</button>
+        </div>
+        <div id="quest-form" style="display:none;margin-bottom:6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:6px;">
+          <input type="text" id="q-title" placeholder="Quest title" style="width:100%;margin-bottom:4px;font-size:11px;padding:4px;">
+          <input type="text" id="q-desc" placeholder="Description" style="width:100%;margin-bottom:4px;font-size:11px;padding:4px;">
+          <select id="q-type" style="margin-bottom:4px;font-size:10px;padding:3px;"><option value="main">Main</option><option value="side">Side</option></select>
+          <input type="text" id="q-objs" placeholder="Objectives (comma-separated)" style="width:100%;margin-bottom:4px;font-size:11px;padding:4px;">
+          <select id="q-target" style="margin-bottom:4px;font-size:10px;padding:3px;"><option value="all">All Players</option></select>
+          <div style="display:flex;gap:4px;"><button class="sm primary" onclick="sendQuest()" style="font-size:10px;">Send Quest</button><button class="sm" onclick="$('quest-form').style.display='none'" style="font-size:10px;">Cancel</button></div>
+        </div>
+        <div id="handout-form" style="display:none;margin-bottom:6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:6px;">
+          <input type="text" id="h-title" placeholder="Document title" style="width:100%;margin-bottom:4px;font-size:11px;padding:4px;">
+          <textarea id="h-text" placeholder="Content (text, lore, letter...)" rows="3" style="width:100%;margin-bottom:4px;font-size:11px;padding:4px;"></textarea>
+          <input type="text" id="h-image" placeholder="Image URL (optional)" style="width:100%;margin-bottom:4px;font-size:11px;padding:4px;">
+          <select id="h-lang" style="margin-bottom:4px;font-size:10px;padding:3px;"><option value="">No language requirement</option><option value="Common">Common</option><option value="Draconic">Draconic</option><option value="Elvish">Elvish</option><option value="Dwarvish">Dwarvish</option><option value="Infernal">Infernal</option><option value="Abyssal">Abyssal</option><option value="Celestial">Celestial</option><option value="Sylvan">Sylvan</option><option value="Undercommon">Undercommon</option><option value="Primordial">Primordial</option><option value="Giant">Giant</option><option value="Goblin">Goblin</option><option value="Gnomish">Gnomish</option><option value="Halfling">Halfling</option><option value="Orc">Orc</option><option value="Thieves' Cant">Thieves' Cant</option><option value="Deep Speech">Deep Speech</option></select>
+          <select id="h-target" style="margin-bottom:4px;font-size:10px;padding:3px;"><option value="all">All Players</option></select>
+          <div style="display:flex;gap:4px;"><button class="sm primary" onclick="sendHandout()" style="font-size:10px;">Send Handout</button><button class="sm" onclick="$('handout-form').style.display='none'" style="font-size:10px;">Cancel</button></div>
+        </div>
+        <div id="insp-form" style="display:none;margin-bottom:6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:6px;">
+          <select id="insp-target" style="width:100%;margin-bottom:4px;font-size:10px;padding:3px;"></select>
+          <input type="text" id="insp-reason" placeholder="Reason (e.g., Great roleplay!)" style="width:100%;margin-bottom:4px;font-size:11px;padding:4px;">
+          <div style="display:flex;gap:4px;"><button class="sm primary" onclick="sendInspiration()" style="font-size:10px;">Grant Inspiration</button><button class="sm" onclick="$('insp-form').style.display='none'" style="font-size:10px;">Cancel</button></div>
+        </div>
+        <div id="dm-quest-list" style="max-height:120px;overflow-y:auto;font-size:10px;color:var(--text-dim);"></div>
+      </div>
+      </div>
+
+      <div class="panel-section" data-panel="campaign">
+      <div class="section-header"><span class="drag-handle">⠿</span>Campaign</div>
+      <div style="padding:6px 8px;">
+        <div style="margin-bottom:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:11px;color:var(--accent);font-family:Cinzel,serif;">Future Hooks</span>
+            <button class="sm" onclick="showHookForm()" style="font-size:9px;">+ Hook</button>
+          </div>
+          <div id="hook-form" style="display:none;margin-bottom:6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:6px;">
+            <input type="text" id="hk-desc" placeholder="Hook description" style="width:100%;margin-bottom:4px;font-size:11px;padding:4px;">
+            <input type="text" id="hk-payoff" placeholder="Payoff condition" style="width:100%;margin-bottom:4px;font-size:11px;padding:4px;">
+            <input type="text" id="hk-npcs" placeholder="Linked NPCs (comma-sep)" style="width:100%;margin-bottom:4px;font-size:11px;padding:4px;">
+            <input type="text" id="hk-notes" placeholder="DM notes" style="width:100%;margin-bottom:4px;font-size:11px;padding:4px;">
+            <div style="display:flex;gap:4px;"><button class="sm primary" onclick="plantHook()" style="font-size:10px;">Plant Hook</button><button class="sm" onclick="$('hook-form').style.display='none'" style="font-size:10px;">Cancel</button></div>
+          </div>
+          <div id="hooks-list" style="max-height:100px;overflow-y:auto;font-size:10px;"></div>
+        </div>
+        <div style="margin-bottom:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:11px;color:var(--accent);font-family:Cinzel,serif;">Reputation</span>
+          </div>
+          <div id="reputation-list" style="max-height:80px;overflow-y:auto;font-size:10px;"></div>
+        </div>
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:11px;color:var(--accent);font-family:Cinzel,serif;">Backstory Hooks</span>
+          </div>
+          <div id="backstory-list" style="max-height:80px;overflow-y:auto;font-size:10px;color:var(--text-dim);"></div>
+        </div>
+      </div>
+      </div>
+
+      <div class="panel-section" data-panel="between-sessions">
+      <div class="section-header"><span class="drag-handle">⠿</span>Between Sessions</div>
+      <div style="padding:6px 8px;">
+        <div style="margin-bottom:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:11px;color:var(--accent);font-family:Cinzel,serif;">XP</span>
+            <div style="display:flex;gap:4px;">
+              <button class="sm" onclick="showXpForm()" style="font-size:9px;">+ Award</button>
+              <button class="sm" onclick="awardPartyXP()" style="font-size:9px;">Party XP</button>
+            </div>
+          </div>
+          <div id="xp-form" style="display:none;margin-bottom:6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:6px;">
+            <select id="xp-target" style="width:100%;margin-bottom:4px;font-size:10px;padding:3px;"></select>
+            <input type="number" id="xp-amount" placeholder="XP amount" style="width:100%;margin-bottom:4px;font-size:11px;padding:4px;">
+            <input type="text" id="xp-reason" placeholder="Reason" style="width:100%;margin-bottom:4px;font-size:11px;padding:4px;">
+            <div style="display:flex;gap:4px;"><button class="sm primary" onclick="sendXP()" style="font-size:10px;">Award</button><button class="sm" onclick="$('xp-form').style.display='none'" style="font-size:10px;">Cancel</button></div>
+          </div>
+          <div id="xp-list" style="font-size:10px;"></div>
+        </div>
+        <div style="margin-bottom:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:11px;color:var(--accent);font-family:Cinzel,serif;">Session Tools</span>
+          </div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;">
+            <button class="sm" onclick="generateRecap()" style="font-size:9px;">Generate Recap</button>
+            <button class="sm" onclick="generateDowntime()" style="font-size:9px;">AI Downtime</button>
+            <button class="sm" onclick="runDowntime()" style="font-size:9px;">Run Downtime</button>
+          </div>
+          <div id="recap-display" style="max-height:120px;overflow-y:auto;font-size:10px;color:var(--text-dim);margin-top:4px;"></div>
+        </div>
+        <div style="margin-bottom:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:11px;color:var(--accent);font-family:Cinzel,serif;">Timeline</span>
+            <button class="sm" onclick="showTimelineForm()" style="font-size:9px;">+ Entry</button>
+          </div>
+          <div id="tl-form" style="display:none;margin-bottom:6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:6px;">
+            <input type="text" id="tl-title" placeholder="Title" style="width:100%;margin-bottom:4px;font-size:11px;padding:4px;">
+            <input type="text" id="tl-desc" placeholder="Description" style="width:100%;margin-bottom:4px;font-size:11px;padding:4px;">
+            <select id="tl-type" style="margin-bottom:4px;font-size:10px;padding:3px;"><option value="story">Story</option><option value="combat">Combat</option><option value="discovery">Discovery</option><option value="custom">Custom</option></select>
+            <div style="display:flex;gap:4px;"><button class="sm primary" onclick="addTimelineEntry()" style="font-size:10px;">Add</button><button class="sm" onclick="$('tl-form').style.display='none'" style="font-size:10px;">Cancel</button></div>
+          </div>
+          <div id="timeline-list" style="max-height:100px;overflow-y:auto;font-size:10px;"></div>
+        </div>
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:11px;color:var(--accent);font-family:Cinzel,serif;">Lore DB</span>
+            <button class="sm" onclick="showLoreForm()" style="font-size:9px;">+ Lore</button>
+          </div>
+          <div id="lore-form" style="display:none;margin-bottom:6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:6px;">
+            <input type="text" id="lore-title" placeholder="Title" style="width:100%;margin-bottom:4px;font-size:11px;padding:4px;">
+            <select id="lore-cat" style="margin-bottom:4px;font-size:10px;padding:3px;"><option value="history">History</option><option value="geography">Geography</option><option value="religion">Religion</option><option value="magic">Magic</option><option value="creature">Creature</option><option value="npc">NPC</option><option value="item">Item</option><option value="general">General</option></select>
+            <textarea id="lore-content" placeholder="Content" rows="3" style="width:100%;margin-bottom:4px;font-size:11px;padding:4px;"></textarea>
+            <input type="text" id="lore-tags" placeholder="Tags (comma-separated)" style="width:100%;margin-bottom:4px;font-size:11px;padding:4px;">
+            <label style="font-size:10px;color:var(--text-dim);"><input type="checkbox" id="lore-hidden"> Hidden from players</label>
+            <div style="display:flex;gap:4px;margin-top:4px;"><button class="sm primary" onclick="addLoreEntry()" style="font-size:10px;">Add</button><button class="sm" onclick="$('lore-form').style.display='none'" style="font-size:10px;">Cancel</button></div>
+          </div>
+          <div id="lore-list" style="max-height:100px;overflow-y:auto;font-size:10px;"></div>
+        </div>
+      </div>
+      </div>
+
       <div class="panel-section" data-panel="beats">
       <div class="section-header"><span class="drag-handle">⠿</span>Story Beats</div>
       <div id="beats"></div>
+      </div>
+
+      <div class="panel-section" data-panel="dm-tools">
+      <div class="section-header"><span class="drag-handle">⠿</span>DM Tools</div>
+      <div style="padding:6px 8px;">
+        <div style="margin-bottom:8px;">
+          <span style="font-size:11px;color:var(--accent);font-family:Cinzel,serif;">Improv Generator</span>
+          <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;">
+            <button class="sm" onclick="aiImprov('npc')" style="font-size:9px;">NPC</button>
+            <button class="sm" onclick="aiImprov('location')" style="font-size:9px;">Location</button>
+            <button class="sm" onclick="aiImprov('encounter')" style="font-size:9px;">Encounter</button>
+            <button class="sm" onclick="aiImprov('item')" style="font-size:9px;">Item</button>
+            <button class="sm" onclick="aiImprov('plot_twist')" style="font-size:9px;">Plot Twist</button>
+          </div>
+          <input type="text" id="improv-constraints" placeholder="Constraints (optional)" style="width:100%;margin-top:4px;font-size:11px;padding:4px;">
+          <div id="improv-result" style="max-height:150px;overflow-y:auto;font-size:10px;margin-top:4px;"></div>
+        </div>
+        <div style="margin-bottom:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:11px;color:var(--accent);font-family:Cinzel,serif;">Session Prep</span>
+            <button class="sm primary" onclick="runSessionPrep()" style="font-size:9px;">Analyze</button>
+          </div>
+          <div id="prep-result" style="max-height:150px;overflow-y:auto;font-size:10px;margin-top:4px;"></div>
+        </div>
+        <div style="margin-bottom:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:11px;color:var(--accent);font-family:Cinzel,serif;">Floor Transitions</span>
+          </div>
+          <div id="floor-links" style="font-size:10px;margin-top:4px;"></div>
+          <div style="display:flex;gap:4px;margin-top:4px;">
+            <select id="floor-target" style="flex:1;font-size:10px;padding:3px;"></select>
+            <button class="sm" onclick="transitionFloor()" style="font-size:9px;">Go</button>
+          </div>
+        </div>
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:11px;color:var(--accent);font-family:Cinzel,serif;">QR Join Codes</span>
+            <button class="sm" onclick="showJoinQR()" style="font-size:9px;">Generate</button>
+          </div>
+          <div id="qr-display" style="font-size:10px;margin-top:4px;"></div>
+        </div>
+        <div style="margin-top:8px;">
+          <span style="font-size:11px;color:var(--accent);font-family:Cinzel,serif;">Alignment Tracking</span>
+          <div id="alignment-display" style="font-size:10px;margin-top:4px;"></div>
+        </div>
+      </div>
       </div>
 
       <div class="panel-section" data-panel="services">
@@ -1478,7 +1651,11 @@
         loadWorldState();
         break;
       case 'world:environmental_cue':
-        addTranscript({ speaker: 'world', text: '🌿 ' + msg.data.text });
+        addTranscript({ speaker: 'world', text: msg.data.text });
+        break;
+      case 'world:weather_change':
+        addTranscript({ speaker: 'world', text: 'Weather: ' + (msg.data.description || msg.data.current) });
+        updateWeatherDisplay(msg.data);
         break;
       case 'dm:whisper':
         if (msg.data) {
@@ -1630,6 +1807,24 @@
         const hitMsg = ar.hit ? `HIT for ${ar.damage} ${ar.damageType}` : 'MISS';
         addTranscript({ speaker: 'system', text: `${ar.attackerName} → ${ar.targetName}: ${ar.attackRoll} vs AC ${ar.targetAC} — ${hitMsg}` });
         break;
+      case 'combat:npc_suggestion': {
+        const s = msg.data;
+        addTranscript({ speaker: 'co-dm', text: `[Combat AI] ${s.combatantName}: action #${s.actionIndex} → ${s.targetId} (${s.reasoning})` });
+        Combat.showNpcSuggestion(s);
+        break;
+      }
+      case 'combat:loot_generated': {
+        const l = msg.data;
+        addTranscript({ speaker: 'system', text: `Loot from ${l.combatantName}: ${l.loot.gold}gp + ${l.loot.items.map(function(i){return i.name;}).join(', ')}` });
+        Combat.showLoot(l);
+        break;
+      }
+      case 'campaign:hook_planted':
+      case 'campaign:hook_updated':
+      case 'campaign:reputation_change':
+      case 'campaign:backstory_integrated':
+        refreshCampaignPanel();
+        break;
     }
 
     // Event log (skip noisy)
@@ -1729,9 +1924,10 @@
 
     c.innerHTML = beats.map((b, i) => {
       const done = b.status === 'completed';
+      const atmoTag = b.atmosphere ? `<span style="font-size:8px;padding:1px 4px;border-radius:3px;background:var(--surface3);color:var(--blue);margin-left:4px;" title="Auto-triggers atmosphere: ${esc(b.atmosphere)}">\u{1F4A1}${esc(b.atmosphere)}</span>` : '';
       let html = `<div class="beat-item ${done ? 'completed' : ''}">
         <div class="beat-check" onclick="toggleBeat(${i}, '${b.id}')">${done ? '✓' : ''}</div>
-        <span class="beat-name" onclick="toggleBeat(${i}, '${b.id}')">${esc(b.name)}</span>
+        <span class="beat-name" onclick="toggleBeat(${i}, '${b.id}')">${esc(b.name)}</span>${atmoTag}
         <button class="sm" onclick="event.stopPropagation();beatReadAloud('${esc(b.id)}','${esc(b.name)}')" style="font-size:8px;padding:1px 4px;margin-left:4px;" title="Generate read-aloud">🎧</button>`;
       if (b.readAloud) {
         html += `<button class="sm" onclick="event.stopPropagation();Earbud.speak(state.story.beats[${i}].readAloud,2);addTranscript({speaker:'co-dm',text:'🎧 '+state.story.beats[${i}].readAloud})" style="font-size:8px;padding:1px 4px;" title="Read stored text">📖</button>`;
@@ -3979,8 +4175,32 @@
         _worldData = data;
         updateWorldClockUI(data);
         renderSecretView();
+        renderHooksList(data.futureHooks || []);
+        renderReputationList(data.reputation || []);
+        renderBackstoryList(data.backstories || {});
+        refreshBetweenSessions();
+        loadFloorLinks();
+        loadAlignmentDisplay();
       })
       .catch(console.error);
+  }
+
+  function updateWeatherDisplay(weatherData) {
+    var el = document.getElementById('game-weather');
+    if (!el) return;
+    // Accept both { type, intensity } (from API) and { current, intensity } (from event)
+    var type = weatherData.type || weatherData.current;
+    var intensity = weatherData.intensity || 0;
+    if (!type) {
+      el.textContent = '';
+      return;
+    }
+    var icons = { blizzard: '\u2744', storm: '\u26C8', rain: '\uD83C\uDF27', clear: '\u2600', fog: '\uD83C\uDF2B', snow: '\u2744' };
+    var icon = icons[type] || '\uD83C\uDF24';
+    el.textContent = icon + ' ' + type;
+    if (intensity > 0.7) el.style.color = 'var(--red)';
+    else if (intensity > 0.3) el.style.color = 'var(--yellow)';
+    else el.style.color = 'var(--blue)';
   }
 
   function updateWorldClockUI(data) {
@@ -3989,6 +4209,11 @@
     document.getElementById('game-date').textContent = data.clock.date || '';
     document.getElementById('game-period').textContent = data.clock.period || '';
     document.getElementById('time-scale').value = String(data.timeScale || 1);
+
+    // Weather
+    if (data.weather) {
+      updateWeatherDisplay(data.weather);
+    }
 
     // Timed events
     var el = document.getElementById('timed-events-list');
@@ -4017,6 +4242,483 @@
     }).then(function(r) { return r.json(); })
      .then(function(d) { loadWorldState(); })
      .catch(console.error);
+  }
+
+  // === QUEST / HANDOUT / INSPIRATION (Phase J) ===
+  var _dmQuests = [];
+
+  function showQuestForm() {
+    document.getElementById('quest-form').style.display = 'block';
+    document.getElementById('handout-form').style.display = 'none';
+    document.getElementById('insp-form').style.display = 'none';
+    _updateQHTargets();
+  }
+  function showHandoutForm() {
+    document.getElementById('handout-form').style.display = 'block';
+    document.getElementById('quest-form').style.display = 'none';
+    document.getElementById('insp-form').style.display = 'none';
+    _updateQHTargets();
+  }
+  function showInspirationForm() {
+    document.getElementById('insp-form').style.display = 'block';
+    document.getElementById('quest-form').style.display = 'none';
+    document.getElementById('handout-form').style.display = 'none';
+    _updateQHTargets();
+  }
+  function _updateQHTargets() {
+    var players = state.players || {};
+    var opts = '<option value="all">All Players</option>';
+    Object.keys(players).forEach(function(id) {
+      var name = players[id].character?.name || id;
+      opts += '<option value="' + esc(id) + '">' + esc(name) + '</option>';
+    });
+    ['q-target','h-target'].forEach(function(sel) { var el = document.getElementById(sel); if (el) el.innerHTML = opts; });
+    var inspSel = document.getElementById('insp-target');
+    if (inspSel) {
+      var iopts = '';
+      Object.keys(players).forEach(function(id) {
+        var name = players[id].character?.name || id;
+        iopts += '<option value="' + esc(id) + '">' + esc(name) + '</option>';
+      });
+      inspSel.innerHTML = iopts;
+    }
+  }
+  function sendQuest() {
+    var title = document.getElementById('q-title').value.trim();
+    if (!title) return;
+    var quest = {
+      id: 'q_' + Date.now(),
+      title: title,
+      description: document.getElementById('q-desc').value.trim(),
+      type: document.getElementById('q-type').value,
+      status: 'active',
+      objectives: document.getElementById('q-objs').value.split(',').filter(function(s){return s.trim();}).map(function(s){return {text:s.trim(),done:false};})
+    };
+    var target = document.getElementById('q-target').value;
+    send('quest:update', { playerId: target, quest: quest });
+    _dmQuests.push(quest);
+    _renderDmQuests();
+    document.getElementById('quest-form').style.display = 'none';
+    document.getElementById('q-title').value = '';
+    document.getElementById('q-desc').value = '';
+    document.getElementById('q-objs').value = '';
+    addTranscript({ speaker: 'system', text: 'Quest sent: ' + title });
+  }
+  function sendHandout() {
+    var title = document.getElementById('h-title').value.trim();
+    if (!title) return;
+    var target = document.getElementById('h-target').value;
+    var lang = document.getElementById('h-lang').value || null;
+    send('handout:send', {
+      playerId: target,
+      title: title,
+      text: document.getElementById('h-text').value,
+      image: document.getElementById('h-image').value.trim() || null,
+      preview: (document.getElementById('h-text').value || '').slice(0, 80),
+      language: lang
+    });
+    document.getElementById('handout-form').style.display = 'none';
+    document.getElementById('h-title').value = '';
+    document.getElementById('h-text').value = '';
+    document.getElementById('h-image').value = '';
+    document.getElementById('h-lang').selectedIndex = 0;
+    addTranscript({ speaker: 'system', text: 'Handout sent: ' + title + (lang ? ' [' + lang + ']' : '') });
+  }
+  function sendInspiration() {
+    var target = document.getElementById('insp-target').value;
+    if (!target) return;
+    var reason = document.getElementById('insp-reason').value.trim() || 'Great roleplaying!';
+    send('inspiration:grant', { playerId: target, reason: reason });
+    document.getElementById('insp-form').style.display = 'none';
+    document.getElementById('insp-reason').value = '';
+    addTranscript({ speaker: 'system', text: 'Inspiration granted to ' + target + ': ' + reason });
+  }
+  // === CAMPAIGN PANEL (Phase M) ===
+  function showHookForm() { document.getElementById('hook-form').style.display = 'block'; }
+  async function plantHook() {
+    var desc = document.getElementById('hk-desc').value.trim();
+    if (!desc) return;
+    var data = {
+      description: desc,
+      payoffCondition: document.getElementById('hk-payoff').value.trim() || null,
+      linkedNpcs: (document.getElementById('hk-npcs').value.trim() || '').split(',').map(function(s){return s.trim();}).filter(Boolean),
+      notes: document.getElementById('hk-notes').value.trim() || ''
+    };
+    await fetch('/api/world/hooks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    document.getElementById('hook-form').style.display = 'none';
+    document.getElementById('hk-desc').value = '';
+    document.getElementById('hk-payoff').value = '';
+    document.getElementById('hk-npcs').value = '';
+    document.getElementById('hk-notes').value = '';
+    addTranscript({ speaker: 'system', text: 'Hook planted: ' + desc });
+    refreshCampaignPanel();
+  }
+  async function updateHookStatus(hookId, status) {
+    await fetch('/api/world/hooks/' + hookId, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: status }) });
+    refreshCampaignPanel();
+  }
+  async function changeReputation(factionId, delta) {
+    var reason = prompt('Reason for reputation change:');
+    if (!reason) return;
+    await fetch('/api/world/reputation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ factionId: factionId, delta: delta, reason: reason }) });
+    refreshCampaignPanel();
+  }
+  async function refreshCampaignPanel() {
+    try {
+      var resp = await fetch('/api/world');
+      var data = await resp.json();
+      renderHooksList(data.futureHooks || []);
+      renderReputationList(data.reputation || []);
+      renderBackstoryList(data.backstories || {});
+    } catch(e) {}
+  }
+  function renderHooksList(hooks) {
+    var el = document.getElementById('hooks-list');
+    if (!el) return;
+    if (!hooks.length) { el.innerHTML = '<span style="color:var(--text-dim);">No hooks planted</span>'; return; }
+    var statusColors = { planted: '#7a9cc6', foreshadowed: '#c9a84c', ready: '#e8a84c', paid_off: '#6a9955', abandoned: '#666' };
+    el.innerHTML = hooks.map(function(h) {
+      var col = statusColors[h.status] || 'var(--text-dim)';
+      var btns = '';
+      if (h.status !== 'paid_off' && h.status !== 'abandoned') {
+        btns = ' <button class="sm" onclick="updateHookStatus(\'' + h.id + '\',\'foreshadowed\')" style="font-size:8px;padding:1px 3px;" title="Mark foreshadowed">F</button>'
+          + '<button class="sm" onclick="updateHookStatus(\'' + h.id + '\',\'paid_off\')" style="font-size:8px;padding:1px 3px;" title="Paid off">✓</button>'
+          + '<button class="sm" onclick="updateHookStatus(\'' + h.id + '\',\'abandoned\')" style="font-size:8px;padding:1px 3px;" title="Abandon">✗</button>';
+      }
+      return '<div style="padding:2px 0;border-bottom:1px solid var(--bg);">'
+        + '<span style="color:' + col + ';font-weight:bold;">[' + h.status + ']</span> '
+        + esc(h.description) + btns
+        + (h.notes ? '<div style="color:var(--text-dim);font-size:9px;margin-left:12px;">' + esc(h.notes) + '</div>' : '')
+        + '</div>';
+    }).join('');
+  }
+  function renderReputationList(factions) {
+    var el = document.getElementById('reputation-list');
+    if (!el) return;
+    if (!factions.length) { el.innerHTML = '<span style="color:var(--text-dim);">No factions</span>'; return; }
+    var tierColors = { revered: '#4ec9b0', honored: '#6a9955', friendly: '#7a9cc6', neutral: '#b0a99f', unfriendly: '#d7ba7d', hostile: '#ce9178', hated: '#f44747' };
+    el.innerHTML = factions.map(function(f) {
+      var col = tierColors[f.tier] || 'var(--text)';
+      var pct = (f.score + 100) / 200 * 100;
+      return '<div style="padding:3px 0;border-bottom:1px solid var(--bg);">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+        + '<span style="color:var(--text);">' + esc(f.name) + '</span>'
+        + '<span style="color:' + col + ';font-weight:bold;">' + f.tier + ' (' + f.score + ')</span>'
+        + '</div>'
+        + '<div style="background:var(--bg);border-radius:2px;height:4px;margin:2px 0;">'
+        + '<div style="width:' + pct + '%;height:100%;background:' + col + ';border-radius:2px;"></div>'
+        + '</div>'
+        + '<div style="display:flex;gap:4px;">'
+        + '<button class="sm" onclick="changeReputation(\'' + f.id + '\',10)" style="font-size:8px;padding:1px 3px;">+10</button>'
+        + '<button class="sm" onclick="changeReputation(\'' + f.id + '\',-10)" style="font-size:8px;padding:1px 3px;">-10</button>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+  }
+  function renderBackstoryList(backstories) {
+    var el = document.getElementById('backstory-list');
+    if (!el) return;
+    var entries = Object.entries(backstories);
+    if (!entries.length) { el.innerHTML = 'No backstories loaded'; return; }
+    el.innerHTML = entries.map(function(e) {
+      var pid = e[0], bs = e[1];
+      return '<div style="padding:2px 0;">'
+        + '<span style="color:var(--text);">' + esc(pid) + '</span>: '
+        + (bs.activeHooks || 0) + ' hooks, ' + (bs.integrated || 0) + ' used'
+        + (bs.themes && bs.themes.length ? ' — <span style="color:var(--accent);">' + bs.themes.join(', ') + '</span>' : '')
+        + '</div>';
+    }).join('');
+  }
+
+  // === BETWEEN SESSIONS PANEL (Phase N) ===
+  function showXpForm() {
+    var sel = document.getElementById('xp-target');
+    sel.innerHTML = '<option value="">Select player</option>';
+    var players = state.players || {};
+    Object.entries(players).forEach(function(e) {
+      sel.innerHTML += '<option value="' + e[0] + '">' + (e[1].character?.name || e[0]) + '</option>';
+    });
+    document.getElementById('xp-form').style.display = 'block';
+  }
+  async function sendXP() {
+    var pid = document.getElementById('xp-target').value;
+    if (!pid) return;
+    var amount = parseInt(document.getElementById('xp-amount').value) || 0;
+    if (!amount) return;
+    var reason = document.getElementById('xp-reason').value.trim() || 'DM award';
+    await fetch('/api/campaign/xp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ playerId: pid, amount: amount, reason: reason }) });
+    document.getElementById('xp-form').style.display = 'none';
+    document.getElementById('xp-amount').value = '';
+    document.getElementById('xp-reason').value = '';
+    addTranscript({ speaker: 'system', text: 'XP awarded: ' + amount + ' to ' + pid + ' (' + reason + ')' });
+    refreshBetweenSessions();
+  }
+  async function awardPartyXP() {
+    var amount = prompt('XP amount for each party member:');
+    if (!amount || isNaN(amount)) return;
+    var reason = prompt('Reason:') || 'Party XP';
+    await fetch('/api/campaign/xp/party', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: parseInt(amount), reason: reason }) });
+    addTranscript({ speaker: 'system', text: 'Party XP: ' + amount + ' each (' + reason + ')' });
+    refreshBetweenSessions();
+  }
+  async function generateRecap() {
+    var el = document.getElementById('recap-display');
+    el.innerHTML = '<span style="color:var(--accent);">Generating recap...</span>';
+    var resp = await fetch('/api/campaign/recap/generate', { method: 'POST' });
+    var data = await resp.json();
+    if (data.recap?.narrative) {
+      el.innerHTML = '<div style="white-space:pre-wrap;color:var(--text);">' + esc(data.recap.narrative).slice(0, 2000) + '</div>';
+    } else {
+      el.innerHTML = '<span style="color:var(--text-dim);">No recap generated (no transcript data)</span>';
+    }
+  }
+  async function generateDowntime() {
+    addTranscript({ speaker: 'system', text: 'Generating AI downtime events...' });
+    var resp = await fetch('/api/campaign/downtime/generate', { method: 'POST' });
+    var data = await resp.json();
+    if (data.events?.length) {
+      data.events.forEach(function(e) { addTranscript({ speaker: 'co-dm', text: '[Downtime] ' + e.title + ': ' + e.description }); });
+    } else {
+      addTranscript({ speaker: 'system', text: 'No downtime events generated' });
+    }
+    refreshBetweenSessions();
+  }
+  async function runDowntime() {
+    var resp = await fetch('/api/campaign/downtime/run', { method: 'POST' });
+    var data = await resp.json();
+    if (data.events?.length) {
+      data.events.forEach(function(e) { addTranscript({ speaker: 'system', text: '[Downtime] ' + e.description }); });
+    } else {
+      addTranscript({ speaker: 'system', text: 'No pending downtime events' });
+    }
+  }
+  function showTimelineForm() { document.getElementById('tl-form').style.display = 'block'; }
+  async function addTimelineEntry() {
+    var title = document.getElementById('tl-title').value.trim();
+    if (!title) return;
+    await fetch('/api/campaign/timeline', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title, description: document.getElementById('tl-desc').value.trim(), type: document.getElementById('tl-type').value }) });
+    document.getElementById('tl-form').style.display = 'none';
+    document.getElementById('tl-title').value = '';
+    document.getElementById('tl-desc').value = '';
+    refreshBetweenSessions();
+  }
+  function showLoreForm() { document.getElementById('lore-form').style.display = 'block'; }
+  async function addLoreEntry() {
+    var title = document.getElementById('lore-title').value.trim();
+    if (!title) return;
+    await fetch('/api/campaign/lore', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title, category: document.getElementById('lore-cat').value, content: document.getElementById('lore-content').value, tags: document.getElementById('lore-tags').value.split(',').map(function(t){return t.trim();}).filter(Boolean), hidden: document.getElementById('lore-hidden').checked }) });
+    document.getElementById('lore-form').style.display = 'none';
+    document.getElementById('lore-title').value = '';
+    document.getElementById('lore-content').value = '';
+    document.getElementById('lore-tags').value = '';
+    refreshBetweenSessions();
+  }
+  async function refreshBetweenSessions() {
+    try {
+      var resp = await fetch('/api/campaign');
+      var data = await resp.json();
+      renderXPList(data.xp || {});
+      renderTimelineList(data.timeline || []);
+      renderLoreList(data.lore || []);
+    } catch(e) {}
+  }
+  function renderXPList(xpData) {
+    var el = document.getElementById('xp-list');
+    if (!el) return;
+    var entries = Object.entries(xpData);
+    if (!entries.length) { el.innerHTML = '<span style="color:var(--text-dim);">No players</span>'; return; }
+    el.innerHTML = entries.map(function(e) {
+      var pid = e[0], d = e[1];
+      var name = (state.players?.[pid]?.character?.name) || pid;
+      var pct = Math.min(100, Math.round((d.progress || 0) * 100));
+      return '<div style="padding:2px 0;border-bottom:1px solid var(--bg);">'
+        + '<div style="display:flex;justify-content:space-between;"><span style="color:var(--text);">' + esc(name) + '</span><span style="color:var(--accent);">Lv' + d.level + ' — ' + d.xp + '/' + d.nextLevelXP + ' XP</span></div>'
+        + '<div style="background:var(--bg);border-radius:2px;height:3px;margin:2px 0;"><div style="width:' + pct + '%;height:100%;background:var(--accent);border-radius:2px;"></div></div>'
+        + '</div>';
+    }).join('');
+  }
+  function renderTimelineList(timeline) {
+    var el = document.getElementById('timeline-list');
+    if (!el) return;
+    if (!timeline.length) { el.innerHTML = '<span style="color:var(--text-dim);">No events</span>'; return; }
+    var typeIcons = { story: '&#9733;', combat: '&#9876;', discovery: '&#128269;', reputation: '&#9878;', downtime: '&#9788;', custom: '&#9679;' };
+    el.innerHTML = timeline.slice(-20).reverse().map(function(t) {
+      return '<div style="padding:2px 0;border-bottom:1px solid var(--bg);">'
+        + '<span style="color:var(--text-dim);">' + (typeIcons[t.type] || '&#9679;') + '</span> '
+        + '<span style="color:var(--text);">' + esc(t.title) + '</span>'
+        + (t.description ? '<div style="color:var(--text-dim);font-size:9px;margin-left:14px;">' + esc(t.description).slice(0, 80) + '</div>' : '')
+        + '</div>';
+    }).join('');
+  }
+  function renderLoreList(lore) {
+    var el = document.getElementById('lore-list');
+    if (!el) return;
+    if (!lore.length) { el.innerHTML = '<span style="color:var(--text-dim);">No lore entries</span>'; return; }
+    var catColors = { history: '#7a9cc6', geography: '#6a9955', religion: '#c9a84c', magic: '#b48ead', creature: '#ce9178', npc: '#d7ba7d', item: '#4ec9b0', general: 'var(--text-dim)' };
+    el.innerHTML = lore.map(function(l) {
+      var col = catColors[l.category] || 'var(--text-dim)';
+      return '<div style="padding:2px 0;border-bottom:1px solid var(--bg);">'
+        + '<span style="color:' + col + ';font-size:9px;">[' + l.category + ']</span> '
+        + '<span style="color:var(--text);">' + esc(l.title) + '</span>'
+        + (l.hidden ? ' <span style="color:#ce9178;font-size:8px;">HIDDEN</span>' : '')
+        + '</div>';
+    }).join('');
+  }
+
+  // === DM TOOLS (Phase O) + PLAYER APP POLISH (Phase P) ===
+  async function aiImprov(type) {
+    var el = document.getElementById('improv-result');
+    el.innerHTML = '<span style="color:var(--accent);">Generating ' + type + '...</span>';
+    var constraints = document.getElementById('improv-constraints').value.trim();
+    try {
+      var resp = await fetch('/api/ai/improv', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: type, constraints: constraints || null }) });
+      var data = await resp.json();
+      if (data.result?.data) {
+        el.innerHTML = '<pre style="white-space:pre-wrap;color:var(--text);font-size:10px;margin:0;">' + esc(JSON.stringify(data.result.data, null, 2)) + '</pre>';
+        addTranscript({ speaker: 'co-dm', text: '[Improv ' + type + '] ' + (data.result.data.name || data.result.data.title || 'Generated') });
+      } else if (data.result?.raw) {
+        el.innerHTML = '<div style="white-space:pre-wrap;color:var(--text);">' + esc(data.result.raw).slice(0, 500) + '</div>';
+      } else {
+        el.innerHTML = '<span style="color:var(--text-dim);">No result (AI unavailable?)</span>';
+      }
+    } catch(e) { el.innerHTML = '<span style="color:#f44747;">Error: ' + e.message + '</span>'; }
+  }
+  async function runSessionPrep() {
+    var el = document.getElementById('prep-result');
+    el.innerHTML = '<span style="color:var(--accent);">Analyzing session state...</span>';
+    try {
+      var resp = await fetch('/api/ai/session-prep');
+      var data = await resp.json();
+      if (data.result) {
+        var r = data.result;
+        var html = '';
+        if (r.gaps?.length) html += '<div style="margin-bottom:4px;"><b style="color:#f44747;">Gaps:</b> ' + r.gaps.map(esc).join('; ') + '</div>';
+        if (r.warnings?.length) html += '<div style="margin-bottom:4px;"><b style="color:#d7ba7d;">Warnings:</b> ' + r.warnings.map(esc).join('; ') + '</div>';
+        if (r.suggestions?.length) html += '<div style="margin-bottom:4px;"><b style="color:#6a9955;">Suggestions:</b> ' + r.suggestions.map(esc).join('; ') + '</div>';
+        if (r.reminders?.length) html += '<div style="margin-bottom:4px;"><b style="color:#7a9cc6;">Reminders:</b> ' + r.reminders.map(esc).join('; ') + '</div>';
+        if (r.raw) html = '<div style="white-space:pre-wrap;">' + esc(r.raw).slice(0, 1000) + '</div>';
+        el.innerHTML = html || '<span style="color:var(--text-dim);">No issues found</span>';
+      } else {
+        el.innerHTML = '<span style="color:var(--text-dim);">AI unavailable</span>';
+      }
+    } catch(e) { el.innerHTML = '<span style="color:#f44747;">Error: ' + e.message + '</span>'; }
+  }
+  async function loadFloorLinks() {
+    try {
+      var resp = await fetch('/api/map/floor-links');
+      var links = await resp.json();
+      var el = document.getElementById('floor-links');
+      if (!el) return;
+      if (!links.length) { el.innerHTML = '<span style="color:var(--text-dim);">No floor links on this map</span>'; return; }
+      el.innerHTML = links.map(function(l) {
+        return '<div style="padding:2px 0;">' + esc(l.zoneName) + ' → <span style="color:var(--accent);">' + esc(l.targetMapName) + '</span></div>';
+      }).join('');
+    } catch(e) {}
+    // Also populate floor target selector
+    try {
+      var resp2 = await fetch('/api/map/list');
+      var maps = await resp2.json();
+      var sel = document.getElementById('floor-target');
+      if (sel) {
+        sel.innerHTML = maps.map(function(m) { return '<option value="' + m.id + '"' + (m.active ? ' disabled' : '') + '>' + esc(m.name) + (m.active ? ' (current)' : '') + '</option>'; }).join('');
+      }
+    } catch(e) {}
+  }
+  async function transitionFloor() {
+    var target = document.getElementById('floor-target').value;
+    if (!target) return;
+    await fetch('/api/map/floor-transition', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetMapId: target }) });
+    addTranscript({ speaker: 'system', text: 'Floor transition → ' + target });
+    loadFloorLinks();
+  }
+  async function showJoinQR() {
+    try {
+      var resp = await fetch('/api/join-info');
+      var data = await resp.json();
+      var el = document.getElementById('qr-display');
+      el.innerHTML = data.players.map(function(p) {
+        return '<div style="padding:4px 0;border-bottom:1px solid var(--bg);">'
+          + '<b style="color:var(--text);">' + esc(p.name) + '</b>: '
+          + '<a href="' + esc(p.url) + '" target="_blank" style="color:var(--accent);font-size:10px;">' + esc(p.url) + '</a>'
+          + '<div style="margin-top:2px;"><canvas id="qr-' + esc(p.name) + '" width="120" height="120" style="background:#fff;border-radius:4px;"></canvas></div>'
+          + '</div>';
+      }).join('');
+      // Generate QR codes using simple canvas rendering
+      data.players.forEach(function(p) { _drawQR('qr-' + p.name, p.url); });
+    } catch(e) {}
+  }
+  function _drawQR(canvasId, text) {
+    // Simple QR-like visual (actual QR would need a library — this shows the URL prominently)
+    var canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, 120, 120);
+    ctx.fillStyle = '#000';
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    // Wrap URL text
+    var words = text.split('/');
+    var y = 30;
+    words.forEach(function(w, i) {
+      if (i === 0) return; // skip empty
+      if (i === 1) return; // skip empty
+      ctx.fillText((i === 2 ? '//' : '/') + w, 60, y);
+      y += 14;
+    });
+    // Draw border pattern
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(4, 4, 112, 112);
+    ctx.strokeRect(10, 10, 24, 24);
+    ctx.strokeRect(86, 10, 24, 24);
+    ctx.strokeRect(10, 86, 24, 24);
+  }
+  async function loadAlignmentDisplay() {
+    var el = document.getElementById('alignment-display');
+    if (!el) return;
+    var players = state.players || {};
+    var entries = Object.entries(players);
+    if (!entries.length) { el.innerHTML = '<span style="color:var(--text-dim);">No players</span>'; return; }
+    el.innerHTML = entries.map(function(e) {
+      var pid = e[0], p = e[1];
+      var name = p.character?.name || pid;
+      var a = p.alignment || { compassion: 0, ruthlessness: 0 };
+      var cPct = (a.compassion + 100) / 200 * 100;
+      var rPct = (a.ruthlessness + 100) / 200 * 100;
+      return '<div style="padding:3px 0;border-bottom:1px solid var(--bg);">'
+        + '<span style="color:var(--text);">' + esc(name) + '</span>'
+        + '<div style="display:flex;gap:8px;font-size:9px;margin-top:2px;">'
+        + '<div style="flex:1;"><span style="color:#6a9955;">Compassion</span> ' + a.compassion
+        + '<div style="background:var(--bg);height:3px;border-radius:2px;margin-top:1px;"><div style="width:' + cPct + '%;height:100%;background:#6a9955;border-radius:2px;"></div></div></div>'
+        + '<div style="flex:1;"><span style="color:#ce9178;">Ruthlessness</span> ' + a.ruthlessness
+        + '<div style="background:var(--bg);height:3px;border-radius:2px;margin-top:1px;"><div style="width:' + rPct + '%;height:100%;background:#ce9178;border-radius:2px;"></div></div></div>'
+        + '</div>'
+        + '<div style="display:flex;gap:2px;margin-top:2px;">'
+        + '<button class="sm" onclick="adjustAlignment(\'' + pid + '\',10,0)" style="font-size:7px;padding:1px 3px;">C+</button>'
+        + '<button class="sm" onclick="adjustAlignment(\'' + pid + '\',-10,0)" style="font-size:7px;padding:1px 3px;">C-</button>'
+        + '<button class="sm" onclick="adjustAlignment(\'' + pid + '\',0,10)" style="font-size:7px;padding:1px 3px;">R+</button>'
+        + '<button class="sm" onclick="adjustAlignment(\'' + pid + '\',0,-10)" style="font-size:7px;padding:1px 3px;">R-</button>'
+        + '</div></div>';
+    }).join('');
+  }
+  async function adjustAlignment(playerId, compassion, ruthlessness) {
+    var reason = prompt('Reason:') || 'DM adjustment';
+    await fetch('/api/alignment/' + playerId, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ compassion: compassion, ruthlessness: ruthlessness, reason: reason }) });
+    // Refresh via state poll
+    setTimeout(loadAlignmentDisplay, 500);
+  }
+
+  function _renderDmQuests() {
+    var el = document.getElementById('dm-quest-list');
+    if (!_dmQuests.length) { el.innerHTML = ''; return; }
+    el.innerHTML = _dmQuests.map(function(q, i) {
+      var done = q.status === 'completed';
+      return '<div style="padding:2px 0;' + (done ? 'opacity:0.5;text-decoration:line-through;' : '') + '">'
+        + (q.type === 'main' ? '&#9733; ' : '&#9702; ') + esc(q.title)
+        + (!done ? ' <button class="sm" onclick="_dmQuests[' + i + '].status=\'completed\';send(\'quest:update\',{playerId:\'all\',quest:_dmQuests[' + i + ']});_renderDmQuests();" style="font-size:8px;padding:1px 3px;">Done</button>' : '')
+        + '</div>';
+    }).join('');
   }
 
   function toggleSecretView(view) {
@@ -5360,6 +6062,60 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ combatantId: id, result })
       });
+    },
+
+    showNpcSuggestion(s) {
+      // Show AI combat suggestion with approve/override buttons
+      var box = document.getElementById('npc-suggestion-box');
+      if (!box) {
+        box = document.createElement('div');
+        box.id = 'npc-suggestion-box';
+        box.style.cssText = 'position:fixed;bottom:80px;right:20px;background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:12px 16px;max-width:360px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.6);font-size:12px;';
+        document.body.appendChild(box);
+      }
+      var actionName = 'Action #' + s.actionIndex;
+      if (s.combatant && s.combatant.actions && s.combatant.actions[s.actionIndex]) {
+        actionName = s.combatant.actions[s.actionIndex].name || actionName;
+      }
+      box.innerHTML = '<div style="color:var(--accent);font-family:Cinzel,serif;margin-bottom:6px;">Combat AI Suggestion</div>' +
+        '<div style="color:var(--text);margin-bottom:4px;"><b>' + s.combatantName + '</b> → ' + actionName + ' → ' + (s.targetId || 'no target') + '</div>' +
+        '<div style="color:var(--text-dim);margin-bottom:8px;font-size:11px;">' + (s.reasoning || '') + '</div>' +
+        '<div style="display:flex;gap:8px;">' +
+        '<button onclick="Combat.approveNpcAction(\'' + s.combatantId + '\',' + s.actionIndex + ',\'' + (s.targetId || '') + '\')" style="background:var(--accent);color:#000;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;">Approve</button>' +
+        '<button onclick="document.getElementById(\'npc-suggestion-box\').style.display=\'none\'" style="background:var(--surface-light);color:var(--text);border:1px solid var(--border);padding:4px 12px;border-radius:4px;cursor:pointer;">Dismiss</button>' +
+        '</div>';
+      box.style.display = 'block';
+    },
+
+    async approveNpcAction(combatantId, actionIndex, targetId) {
+      var box = document.getElementById('npc-suggestion-box');
+      if (box) box.style.display = 'none';
+      await fetch('/api/combat/npc-execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ combatantId: combatantId, actionIndex: actionIndex, targetId: targetId })
+      });
+    },
+
+    showLoot(l) {
+      // Show generated loot in a popup
+      var box = document.getElementById('loot-box');
+      if (!box) {
+        box = document.createElement('div');
+        box.id = 'loot-box';
+        box.style.cssText = 'position:fixed;bottom:80px;left:20px;background:var(--surface);border:1px solid #c9a84c;border-radius:8px;padding:12px 16px;max-width:320px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.6);font-size:12px;';
+        document.body.appendChild(box);
+      }
+      var itemsHtml = (l.loot.items || []).map(function(i) {
+        var rarity = i.rarity ? ' <span style="color:#c9a84c;">(' + i.rarity + ')</span>' : '';
+        return '<div style="margin:2px 0;color:var(--text);">• ' + i.name + rarity + (i.description ? ' — <span style="color:var(--text-dim);">' + i.description + '</span>' : '') + '</div>';
+      }).join('');
+      box.innerHTML = '<div style="color:#c9a84c;font-family:Cinzel,serif;margin-bottom:6px;">Loot — ' + l.combatantName + '</div>' +
+        (l.loot.gold ? '<div style="color:var(--text);margin-bottom:4px;">' + l.loot.gold + ' gp</div>' : '') +
+        itemsHtml +
+        (l.loot.hook ? '<div style="color:var(--accent);margin-top:6px;font-size:11px;font-style:italic;">' + l.loot.hook + '</div>' : '') +
+        '<div style="margin-top:8px;"><button onclick="document.getElementById(\'loot-box\').style.display=\'none\'" style="background:var(--surface-light);color:var(--text);border:1px solid var(--border);padding:4px 12px;border-radius:4px;cursor:pointer;">Dismiss</button></div>';
+      box.style.display = 'block';
     }
   };
 

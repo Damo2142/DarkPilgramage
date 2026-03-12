@@ -303,6 +303,7 @@ class CombatService {
     }
 
     this._setCombatState(combat);
+    this._syncConditionsToToken(combatantId, c.conditions);
     this._broadcastCombat('combat:condition_changed', { combatantId, conditions: c.conditions, toggled: condition });
     return c;
   }
@@ -609,6 +610,22 @@ class CombatService {
     };
   }
 
+  async _executeNpcCombatAction(combatant, decision) {
+    const rollResult = this.rollNpcAction(combatant.id, decision.actionIndex);
+    if (!rollResult || rollResult.error) return;
+
+    if (decision.targetId) {
+      const result = this.processAttack(
+        combatant.id, decision.targetId,
+        rollResult.attackRoll, rollResult.damage,
+        rollResult.dmgType, rollResult.crit
+      );
+      if (result) {
+        console.log(`[CombatService] ${combatant.name} attacks ${result.targetName}: ${result.hit ? 'HIT' : 'MISS'} (${rollResult.attackRoll} vs AC ${result.targetAC})${result.hit ? `, ${result.damage} ${result.damageType}` : ''}`);
+      }
+    }
+  }
+
   // ── Routes ─────────────────────────────────────────────────────────────
 
   _setupRoutes() {
@@ -730,8 +747,285 @@ class CombatService {
       res.json(c);
     });
 
+    // POST /api/combat/condition-duration — add condition with auto-expiry
+    app.post('/api/combat/condition-duration', (req, res) => {
+      const { combatantId, condition, rounds } = req.body || {};
+      if (!combatantId || !condition || !rounds) return res.status(400).json({ error: 'combatantId, condition, and rounds required' });
+      const result = this.addConditionWithDuration(combatantId, condition, rounds);
+      if (!result) return res.status(404).json({ error: 'Combatant not found' });
+      res.json(result);
+    });
+
+    // POST /api/combat/npc-execute — DM approves an NPC combat action suggestion
+    app.post('/api/combat/npc-execute', async (req, res) => {
+      const { combatantId, actionIndex, targetId } = req.body || {};
+      const combat = this._getCombatState();
+      const c = combat.turnOrder.find(x => x.id === combatantId);
+      if (!c) return res.status(404).json({ error: 'Combatant not found' });
+      await this._executeNpcCombatAction(c, { actionIndex, targetId });
+      res.json({ ok: true });
+    });
+
+    // GET /api/combat/loot/:combatantId — generate loot for a defeated NPC
+    app.get('/api/combat/loot/:combatantId', async (req, res) => {
+      const combat = this._getCombatState();
+      const c = combat.turnOrder.find(x => x.id === req.params.combatantId);
+      if (!c) return res.status(404).json({ error: 'Combatant not found' });
+      const loot = await this._generateLoot(c);
+      res.json(loot);
+    });
+
     // NOTE: attack, npc-roll, and actions routes are registered in
     // dashboard-service.js to ensure they're available before server.listen().
+  }
+
+  // ── NPC Tactical AI (Feature 52) ──────────────────────────────────────
+
+  async _npcTacticalAI(combatant, combat) {
+    const aiEngine = this.orchestrator.getService('ai-engine');
+    if (!aiEngine?.gemini?.available) {
+      // No AI — fall back to basic tactics
+      return this._basicNpcTactics(combatant, combat);
+    }
+
+    const actions = this.getActions(combatant.id);
+    if (!actions.actions.length) return null;
+
+    // Build combat context for AI
+    const allies = combat.turnOrder.filter(c => c.type === 'npc' && c.isAlive && c.id !== combatant.id);
+    const enemies = combat.turnOrder.filter(c => c.type === 'pc' && c.isAlive);
+    const context = {
+      self: { name: combatant.name, hp: combatant.hp, ac: combatant.ac, conditions: combatant.conditions },
+      allies: allies.map(a => ({ name: a.name, hp: a.hp, conditions: a.conditions })),
+      enemies: enemies.map(e => ({ name: e.name, hp: e.hp, ac: e.ac, conditions: e.conditions })),
+      actions: actions.actions.filter(a => a.canRoll).map(a => ({ index: a.index, name: a.name, toHit: a.toHit, damage: a.damageDice, type: a.dmgType })),
+      round: combat.round,
+      specialAbilities: actions.specialAbilities.map(a => a.name)
+    };
+
+    try {
+      const prompt = `You are the tactical brain for ${combatant.name} in D&D 5e combat.
+Current state: ${JSON.stringify(context)}
+
+Pick the BEST action. Consider:
+- Target the weakest/most dangerous enemy
+- Use conditions/abilities strategically
+- Protect allies if possible
+- If badly wounded, consider defensive play
+
+Respond with JSON only: { "actionIndex": <number>, "targetId": "<enemy id>", "reasoning": "<brief tactical note>" }
+Available targets: ${enemies.map(e => `"${e.name}" (id: check turnOrder)`).join(', ')}`;
+
+      const result = await aiEngine.gemini.generateJSON(
+        'You are a D&D 5e combat tactician. Respond with valid JSON only.',
+        prompt
+      );
+
+      if (result?.actionIndex !== undefined) {
+        // Map target by name if needed
+        let targetId = result.targetId;
+        if (!targetId || !combat.turnOrder.find(c => c.id === targetId)) {
+          // Pick lowest HP enemy
+          const sorted = enemies.sort((a, b) => a.hp.current - b.hp.current);
+          targetId = sorted[0]?.id;
+        }
+        return {
+          actionIndex: result.actionIndex,
+          targetId,
+          reasoning: result.reasoning || 'AI tactical decision'
+        };
+      }
+    } catch (err) {
+      console.error('[CombatService] AI tactics error:', err.message);
+    }
+
+    return this._basicNpcTactics(combatant, combat);
+  }
+
+  _basicNpcTactics(combatant, combat) {
+    const actions = this.getActions(combatant.id);
+    const rollable = actions.actions.filter(a => a.canRoll);
+    if (!rollable.length) return null;
+
+    const enemies = combat.turnOrder.filter(c => c.type === 'pc' && c.isAlive);
+    if (!enemies.length) return null;
+
+    // Basic: use first available attack on lowest-HP enemy
+    const target = enemies.sort((a, b) => a.hp.current - b.hp.current)[0];
+    return {
+      actionIndex: rollable[0].index,
+      targetId: target.id,
+      reasoning: 'Basic tactics: attack weakest enemy'
+    };
+  }
+
+  // ── Condition Duration Tracking (Feature 53) ────────────────────────────
+
+  _syncConditionsToToken(combatantId, conditions) {
+    const token = this.state.get(`map.tokens.${combatantId}`);
+    if (token) {
+      this.state.set(`map.tokens.${combatantId}.conditions`, [...conditions]);
+    }
+  }
+
+  _processConditionExpiry(combat) {
+    for (const c of combat.turnOrder) {
+      if (!c._conditionDurations) continue;
+      const expired = [];
+      for (const [cond, info] of Object.entries(c._conditionDurations)) {
+        if (info.expiresRound && combat.round > info.expiresRound) {
+          expired.push(cond);
+        } else if (info.expiresRound === combat.round && info.expiresTurn === 'start') {
+          expired.push(cond);
+        }
+      }
+      for (const cond of expired) {
+        c.conditions = c.conditions.filter(x => x !== cond);
+        delete c._conditionDurations[cond];
+        this.bus.dispatch('dm:whisper', {
+          text: `${c.name}: ${cond} expired`,
+          priority: 3, category: 'combat'
+        });
+      }
+      if (expired.length) this._syncConditionsToToken(c.id, c.conditions);
+    }
+  }
+
+  addConditionWithDuration(combatantId, condition, durationRounds) {
+    const combat = this._getCombatState();
+    const c = combat.turnOrder.find(x => x.id === combatantId);
+    if (!c) return null;
+
+    if (!c.conditions.includes(condition)) c.conditions.push(condition);
+    if (!c._conditionDurations) c._conditionDurations = {};
+    c._conditionDurations[condition] = {
+      expiresRound: combat.round + durationRounds,
+      expiresTurn: 'start'
+    };
+
+    this._setCombatState(combat);
+    this._syncConditionsToToken(combatantId, c.conditions);
+    this._broadcastCombat('combat:condition_changed', { combatantId, conditions: c.conditions, toggled: condition });
+    return c;
+  }
+
+  // ── Death Save Automation (Feature 54) ───────────────────────────────
+
+  _autoDeathSave(combatant) {
+    const d20 = this._rollD20();
+    let result;
+    if (d20 === 20) result = 'crit_success';
+    else if (d20 === 1) result = 'crit_failure';
+    else if (d20 >= 10) result = 'success';
+    else result = 'failure';
+
+    console.log(`[CombatService] Auto death save for ${combatant.name}: d20=${d20} → ${result}`);
+
+    // Apply the death save
+    const c = this.deathSave(combatant.id, result);
+
+    // Dramatic effects
+    this.bus.dispatch('dm:whisper', {
+      text: `DEATH SAVE: ${combatant.name} rolls ${d20} → ${result.replace('_', ' ').toUpperCase()}! (${c.deathSaves.successes}S / ${c.deathSaves.failures}F)`,
+      priority: 1, category: 'combat'
+    });
+
+    // Player screen effects
+    if (result === 'crit_success') {
+      this.bus.dispatch('player:horror_effect', {
+        playerId: combatant.id,
+        type: 'screen_flash',
+        payload: { color: 'rgba(201,165,78,0.4)' },
+        durationMs: 500
+      });
+    } else if (result === 'crit_failure' || c.deathSaves.failures >= 3) {
+      this.bus.dispatch('player:horror_effect', {
+        playerId: combatant.id,
+        type: 'terror_pulse',
+        payload: {},
+        durationMs: 2000
+      });
+    } else if (result === 'failure') {
+      this.bus.dispatch('player:horror_effect', {
+        playerId: combatant.id,
+        type: 'damage_flash',
+        payload: { intensity: 0.3, shake: 3 },
+        durationMs: 300
+      });
+    }
+
+    // Check if dead
+    if (c.deathSaves.failures >= 3) {
+      this.bus.dispatch('dm:whisper', {
+        text: `${combatant.name} HAS DIED. Three failed death saves.`,
+        priority: 1, category: 'combat'
+      });
+      this.bus.dispatch('player:horror_effect', {
+        playerId: 'all',
+        type: 'screen_flash',
+        payload: { color: 'rgba(139,0,0,0.3)' },
+        durationMs: 800
+      });
+    }
+
+    return { d20, result, deathSaves: c.deathSaves };
+  }
+
+  // ── Loot Generator (Feature 55) ──────────────────────────────────────
+
+  async _generateLoot(combatant) {
+    const aiEngine = this.orchestrator.getService('ai-engine');
+
+    // Get actor data for context
+    const mapSvc = this.orchestrator.getService('map');
+    const actor = combatant.actorSlug ? (mapSvc?.customActors?.get(combatant.actorSlug) || mapSvc?.srdMonsters?.get(combatant.actorSlug)) : null;
+    const cr = actor?.challenge_rating || '0';
+
+    if (!aiEngine?.gemini?.available) {
+      // Basic loot table
+      return this._basicLoot(combatant.name, cr);
+    }
+
+    try {
+      const npcState = this.state.get(`npcs.${combatant.id}`) || {};
+      const storyBeats = (this.state.get('story.beats') || []).filter(b => b.status === 'completed').map(b => b.name);
+
+      const prompt = `Generate loot for defeated ${combatant.name} (CR ${cr}) in a gothic horror D&D 5e campaign set in 1274 Central Europe.
+
+NPC info: ${npcState.trueIdentity || combatant.name}, ${npcState.role || 'enemy'}
+Story context: ${storyBeats.length ? 'Completed beats: ' + storyBeats.join(', ') : 'Early in session'}
+
+Generate 1-3 items that are:
+- Story-relevant (plant hooks for future sessions, reveal lore)
+- Period-appropriate (1274 medieval Eastern Europe)
+- Some useful, some atmospheric/narrative
+
+Respond with JSON: { "items": [{ "name": "...", "description": "...", "type": "weapon|armor|consumable|lore|treasure|key", "value": "Xgp", "hook": "optional future story hook" }], "gold": <number> }`;
+
+      const result = await aiEngine.gemini.generateJSON(
+        'You are a D&D 5e loot designer for gothic horror campaigns. Respond with valid JSON only.',
+        prompt
+      );
+
+      if (result?.items) return result;
+    } catch (err) {
+      console.error('[CombatService] Loot generation error:', err.message);
+    }
+
+    return this._basicLoot(combatant.name, cr);
+  }
+
+  _basicLoot(name, cr) {
+    const crNum = parseFloat(cr) || 0;
+    const gold = Math.floor(Math.random() * (crNum * 10 + 5)) + 1;
+    const items = [];
+    if (crNum >= 3) {
+      items.push({ name: 'Bloodstained Journal', description: `A worn leather journal belonging to ${name}. The pages are filled with cryptic notes.`, type: 'lore', value: '0gp' });
+    }
+    if (crNum >= 5) {
+      items.push({ name: 'Dark Iron Key', description: 'A heavy key forged from dark iron. It feels unnaturally cold.', type: 'key', value: '0gp', hook: 'Opens something in a future location' });
+    }
+    return { items, gold };
   }
 
   // ── Event Listeners ────────────────────────────────────────────────────
@@ -758,6 +1052,81 @@ class CombatService {
       if (combat.turnOrder.some(x => x.id === tokenId)) {
         this.removeCombatant(tokenId);
       }
+    }, 'combat');
+
+    // NPC turn automation (Feature 52) + Death save automation (Feature 54)
+    this.bus.subscribe('combat:next_turn', async (env) => {
+      const combat = this._getCombatState();
+      if (!combat.active) return;
+
+      const current = combat.turnOrder[combat.currentTurn];
+      if (!current || !current.isAlive) return;
+
+      // Process condition expiry at start of turn
+      this._processConditionExpiry(combat);
+      this._setCombatState(combat);
+
+      // Death save automation for PCs at 0 HP
+      if (current.type === 'pc' && current.hp.current === 0) {
+        this._autoDeathSave(current);
+        return; // Death save IS their turn
+      }
+
+      // NPC tactical AI
+      if (current.type === 'npc') {
+        const trustLevel = this.state.get('session.aiTrustLevel') || 'manual';
+        const decision = await this._npcTacticalAI(current, combat);
+
+        if (decision) {
+          if (trustLevel === 'autopilot') {
+            // Auto-execute
+            await this._executeNpcCombatAction(current, decision);
+          } else {
+            // Queue for DM approval
+            this.bus.dispatch('combat:npc_suggestion', {
+              combatantId: current.id,
+              combatantName: current.name,
+              ...decision
+            });
+            this.bus.dispatch('dm:whisper', {
+              text: `[Combat AI] ${current.name}: ${decision.reasoning}`,
+              priority: 2, category: 'combat'
+            });
+          }
+        }
+      }
+    }, 'combat');
+
+    // Sync conditions to map tokens on condition change
+    this.bus.subscribe('combat:condition_changed', (env) => {
+      const { combatantId, conditions } = env.data;
+      if (combatantId && conditions) {
+        this._syncConditionsToToken(combatantId, conditions);
+      }
+    }, 'combat');
+
+    // NPC death → generate loot (Feature 55)
+    this.bus.subscribe('combat:hp_changed', async (env) => {
+      const { combatantId, newHp } = env.data;
+      if (newHp > 0) return;
+
+      const combat = this._getCombatState();
+      const c = combat.turnOrder.find(x => x.id === combatantId);
+      if (!c || c.type === 'pc' || c.isAlive) return; // Only dead NPCs
+
+      console.log(`[CombatService] ${c.name} defeated — generating loot`);
+      const loot = await this._generateLoot(c);
+
+      this.bus.dispatch('combat:loot_generated', {
+        combatantId: c.id,
+        combatantName: c.name,
+        loot
+      });
+
+      this.bus.dispatch('dm:whisper', {
+        text: `LOOT from ${c.name}: ${loot.gold}gp, ${loot.items.map(i => i.name).join(', ')}`,
+        priority: 2, category: 'combat'
+      });
     }, 'combat');
   }
 

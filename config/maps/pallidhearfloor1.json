@@ -240,6 +240,15 @@
       "revealed": false
     },
     {
+      "id": "storage-cellar",
+      "name": "Storage/Cellar",
+      "x": 6400,
+      "y": 2304,
+      "w": 512,
+      "h": 768,
+      "revealed": false
+    },
+    {
       "id": "storage",
       "name": "Storage",
       "x": 6400,
@@ -247,37 +256,14 @@
       "w": 1024,
       "h": 1024,
       "revealed": false
-    },
-    {
-      "id": "cellarentry-storage",
-      "name": "CellarEntry/Storage",
-      "x": 6400,
-      "y": 2304,
-      "w": 512,
-      "h": 768,
-      "revealed": false
     }
   ],
   "tokens": {
-    "dave": {
-      "name": "Spurt the Sorcerer",
-      "type": "pc",
-      "x": 3712,
-      "y": 1664,
-      "image": "dave.webp",
-      "visible": true,
-      "hp": {
-        "current": 14,
-        "max": 14,
-        "temp": 0
-      },
-      "ac": 12
-    },
-    "marta-mmkzgeqc0": {
+    "marta-mmmq6srj1": {
       "name": "Marta Kowalski",
       "type": "npc",
       "x": 5504,
-      "y": 1664,
+      "y": 2176,
       "image": "marta.png",
       "visible": true,
       "hidden": false,
@@ -288,7 +274,7 @@
       "ac": 10,
       "actorSlug": "marta"
     },
-    "patron-farmer-mmkzgeqd1": {
+    "patron-farmer-mmmq6srj2": {
       "name": "Old Gregor",
       "type": "npc",
       "x": 4224,
@@ -303,11 +289,11 @@
       "ac": 10,
       "actorSlug": "patron-farmer"
     },
-    "patron-merchant-mmkzgeqd2": {
+    "patron-merchant-mmmq6srj3": {
       "name": "Henryk the Merchant",
       "type": "npc",
-      "x": 4224,
-      "y": 3456,
+      "x": 3712,
+      "y": 2176,
       "image": "patron-merchant.png",
       "visible": true,
       "hidden": false,
@@ -318,10 +304,10 @@
       "ac": 10,
       "actorSlug": "patron-merchant"
     },
-    "patron-minstrel-mmkzgeqd3": {
+    "patron-minstrel-mmmq6srj4": {
       "name": "Katya Voss",
       "type": "npc",
-      "x": 4736,
+      "x": 4224,
       "y": 1664,
       "image": "patron-minstrel.png",
       "visible": true,
@@ -333,11 +319,11 @@
       "ac": 12,
       "actorSlug": "patron-minstrel"
     },
-    "patron-pilgrim-mmkzgeqd4": {
+    "patron-pilgrim-mmmq6srk5": {
       "name": "Brother Aldric",
       "type": "npc",
-      "x": 5248,
-      "y": 1920,
+      "x": 4736,
+      "y": 3200,
       "image": "patron-pilgrim.png",
       "visible": true,
       "hidden": false,
@@ -348,11 +334,11 @@
       "ac": 10,
       "actorSlug": "patron-pilgrim"
     },
-    "piotr-kowalski-mmkzgeqd5": {
+    "piotr-kowalski-mmmq6srk6": {
       "name": "Piotr Kowalski (Vampire Spawn)",
       "type": "npc",
-      "x": 6016,
-      "y": 2432,
+      "x": 6528,
+      "y": 2688,
       "image": "piotr-kowalski.png",
       "visible": true,
       "hidden": false,
@@ -363,7 +349,7 @@
       "ac": 14,
       "actorSlug": "piotr-kowalski"
     },
-    "swarm-of-rats-mmkzgeqd7": {
+    "swarm-of-rats-mmmq6srk8": {
       "name": "Swarm of Rats",
       "type": "npc",
       "x": 7040,
@@ -378,7 +364,7 @@
       "ac": 10,
       "actorSlug": "swarm-of-rats"
     },
-    "vladislav-mmkzgeqd9": {
+    "vladislav-mmmq6srl10": {
       "name": "Vladislav Dragan",
       "type": "npc",
       "x": 3712,
@@ -393,11 +379,11 @@
       "ac": 16,
       "actorSlug": "vladislav"
     },
-    "werewolf-mmkzgeqd10": {
+    "werewolf-mmmq6srl11": {
       "name": "Tomas Birkov",
       "type": "npc",
       "x": 4736,
-      "y": 2944,
+      "y": 1664,
       "image": "werewolf.png",
       "visible": true,
       "hidden": false,
@@ -407,6 +393,22 @@
       },
       "ac": 11,
       "actorSlug": "werewolf"
+    },
+    "spurt-ai-pc": {
+      "name": "Spurt the Sorcerer",
+      "type": "pc",
+      "x": 4480,
+      "y": 2688,
+      "image": "spurt.png",
+      "visible": true,
+      "hidden": false,
+      "hp": {
+        "current": 14,
+        "max": 14
+      },
+      "ac": 12,
+      "ddbId": "162472191",
+      "aiControlled": true
     }
   },
   "playerSpawns": {

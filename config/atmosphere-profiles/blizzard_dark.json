@@ -1,0 +1,17 @@
+{
+  "name": "blizzard_dark",
+  "description": "Blizzard on the mountain road. Freezing cold, near-zero visibility, dying light.",
+  "horrorLevel": 3,
+  "lights": {
+    "color": { "hue": 67, "sat": 30, "level": 15 },
+    "flicker": { "enabled": true, "intensity": 0.3, "speed": "medium" }
+  },
+  "playerEffects": {
+    "atmoTint": "rgba(40,40,80,.15)"
+  },
+  "audio": {
+    "ambient": "blizzard_wind",
+    "music": "isolation_drone",
+    "volume": { "ambient": 0.7, "music": 0.3, "effects": 0.8 }
+  }
+}

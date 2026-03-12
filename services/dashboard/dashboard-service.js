@@ -618,6 +618,15 @@ Answer concisely (2-4 sentences). If it's a rules question, give the D&D 5e rule
       case 'voice:list_devices':
         this.bus.dispatch('voice:list_devices', {});
         break;
+      case 'quest:update':
+        this.bus.dispatch('quest:update', { playerId: msg.playerId || 'all', quest: msg.quest, quests: msg.quests });
+        break;
+      case 'handout:send':
+        this.bus.dispatch('handout:send', { playerId: msg.playerId || 'all', title: msg.title, text: msg.text, image: msg.image, preview: msg.preview });
+        break;
+      case 'inspiration:grant':
+        this.bus.dispatch('inspiration:grant', { playerId: msg.playerId, reason: msg.reason });
+        break;
       default:
         console.log(`[Dashboard] Unknown message type: ${msg.type}`);
     }

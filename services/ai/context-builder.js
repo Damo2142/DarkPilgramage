@@ -244,6 +244,28 @@ class ContextBuilder {
       }
     }
 
+    // Future hooks (for AI to reference/foreshadow)
+    const hooks = world.futureHooks || {};
+    const activeHooks = Object.values(hooks).filter(h => h.status !== 'paid_off' && h.status !== 'abandoned');
+    if (activeHooks.length) {
+      parts.push(`Active story hooks: ${activeHooks.map(h => `[${h.status}] ${h.description}`).join('; ')}`);
+    }
+
+    // Reputation
+    const rep = world.reputation || {};
+    const factions = Object.values(rep);
+    if (factions.length) {
+      parts.push(`Faction standing: ${factions.map(f => `${f.name}: ${f.score} (${f.tier})`).join(', ')}`);
+    }
+
+    // Backstory hooks to weave in
+    const backstories = world.backstories || {};
+    for (const [pid, bs] of Object.entries(backstories)) {
+      if (bs.activeHooks > 0) {
+        parts.push(`Player ${pid} has ${bs.activeHooks} un-integrated backstory hook(s), themes: ${(bs.themes || []).join(', ')}`);
+      }
+    }
+
     return parts.join('\n') || 'No world state';
   }
 

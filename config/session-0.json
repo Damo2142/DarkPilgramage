@@ -33,6 +33,69 @@
       "timeScale": 1
     },
 
+    "weather": {
+      "initial": {
+        "type": "blizzard",
+        "intensity": 0.8,
+        "description": "Heavy blizzard — snow hammers the shutters, wind screams"
+      },
+      "phases": [
+        {
+          "id": "blizzard_heavy",
+          "type": "blizzard",
+          "intensity": 1.0,
+          "description": "The blizzard intensifies. The shutters rattle. Snow piles against the door.",
+          "startTime": "1274-10-15T19:00:00",
+          "atmosphereModifiers": {
+            "levelModifier": -10,
+            "flicker": { "intensity": 0.25, "speed": "medium" }
+          },
+          "effects": [
+            { "event": "dm:whisper", "data": { "text": "The storm outside is getting worse. Describe the wind howling louder, snow pressing against the windows.", "priority": 4, "category": "atmosphere" } }
+          ]
+        },
+        {
+          "id": "blizzard_peak",
+          "type": "blizzard",
+          "intensity": 1.0,
+          "description": "The storm peaks. Thunder rolls through the mountains. The building groans.",
+          "startTime": "1274-10-15T22:00:00",
+          "atmosphereModifiers": {
+            "levelModifier": -15,
+            "flicker": { "intensity": 0.35, "speed": "fast" },
+            "playerEffect": { "type": "terror_pulse", "payload": {}, "durationMs": 800 }
+          },
+          "effects": [
+            { "event": "dm:whisper", "data": { "text": "Thunder cracks — not normal thunder. It sounds like something enormous moving through the mountains. The whole inn shudders.", "priority": 3, "category": "atmosphere" } }
+          ]
+        },
+        {
+          "id": "storm_fading",
+          "type": "blizzard",
+          "intensity": 0.5,
+          "description": "The storm begins to fade. The wind drops. An eerie silence grows.",
+          "startTime": "1274-10-16T04:00:00",
+          "atmosphereModifiers": {
+            "levelModifier": -5,
+            "flicker": { "intensity": 0.1, "speed": "slow_pulse" }
+          },
+          "effects": [
+            { "event": "dm:whisper", "data": { "text": "The storm is dying down. The silence is almost worse than the wind. Dawn is coming.", "priority": 4, "category": "atmosphere" } }
+          ]
+        },
+        {
+          "id": "dawn_clear",
+          "type": "clear",
+          "intensity": 0.0,
+          "description": "The storm has passed. Pale dawn light creeps through the shutters. Snow lies deep and still.",
+          "startTime": "1274-10-16T06:00:00",
+          "effects": [
+            { "event": "dm:whisper", "data": { "text": "Dawn breaks. The blizzard is over. Thin light pushes through every crack. The world outside is white and silent.", "priority": 3, "category": "atmosphere" } }
+          ]
+        }
+      ]
+    },
+
     "timedEvents": [
       {
         "id": "sunset_complete",
@@ -124,6 +187,57 @@
         "data": {
           "description": "Dawn breaks. The blizzard subsides. Vladislav must retreat or die.",
           "profile": "dawn"
+        }
+      },
+      {
+        "id": "katya_song_stops",
+        "gameTime": "1274-10-15T19:30:00",
+        "event": "dm:whisper",
+        "data": {
+          "text": "Katya stops playing mid-song. She stares at the brass plate behind the bar. She's seen the stranger's missing reflection. She catches a player's eye and subtly shakes her head — she won't say it aloud. But she KNOWS.",
+          "priority": 3,
+          "category": "story"
+        }
+      },
+      {
+        "id": "fire_dies_completely",
+        "gameTime": "1274-10-15T22:00:00",
+        "event": "dm:whisper",
+        "data": {
+          "text": "The fire gutters and dies completely. The room plunges into near-darkness — only a single candle on Aldric's table remains. The temperature drops sharply. This is Vladislav's doing — he's drawing the heat from the room. Set atmosphere to dread_rising if not already there.",
+          "priority": 2,
+          "category": "atmosphere",
+          "profile": "dread_rising"
+        }
+      },
+      {
+        "id": "gregor_collapse",
+        "gameTime": "1274-10-15T21:00:00",
+        "event": "dm:whisper",
+        "data": {
+          "text": "Old Gregor suddenly clutches his chest and collapses. Is it a heart attack? Or did something happen to him when no one was looking? Medicine DC 12 reveals two small puncture wounds on his neck. Vladislav fed on him when the room was distracted.",
+          "priority": 2,
+          "category": "story"
+        }
+      },
+      {
+        "id": "tomas_cellar_attempt",
+        "gameTime": "1274-10-15T21:30:00",
+        "event": "dm:whisper",
+        "data": {
+          "text": "Tomas stands abruptly. He can't wait any longer — the moon is pulling at him. He walks toward the cellar door with grim determination. Vladislav stiffens. Both monsters are now converging on the same location. What do the players do?",
+          "priority": 1,
+          "category": "story"
+        }
+      },
+      {
+        "id": "aldric_prayer",
+        "gameTime": "1274-10-15T23:00:00",
+        "event": "dm:whisper",
+        "data": {
+          "text": "Brother Aldric begins praying loudly. His holy symbol glows faintly — genuine faith responding to the evil in the room. Vladislav REACTS: he turns his head toward Aldric for the first time, and his lips pull back in something between a snarl and a smile. The players see fangs. BRIEFLY. Then the hood falls forward again.",
+          "priority": 1,
+          "category": "story"
         }
       }
     ],
@@ -358,6 +472,133 @@
         ],
         "convergeTo": "climax"
       }
+    ],
+
+    "futureHooks": [
+      {
+        "id": "hook-marta-husband",
+        "description": "Marta's husband Piotr is a vampire spawn in the cellar — if players save or destroy him, Marta becomes an ally or enemy in future sessions",
+        "payoffCondition": "Players discover Piotr's fate and make a choice",
+        "payoffSession": 1,
+        "session": 0,
+        "linkedSecrets": ["piotr_in_cellar"],
+        "linkedNpcs": ["marta", "piotr-kowalski"],
+        "notes": "If players promise to help Piotr, Marta provides safe haven at The Pallid Hart for future sessions"
+      },
+      {
+        "id": "hook-vladislav-escape",
+        "description": "If Vladislav escapes the inn alive, he becomes a recurring antagonist across the three-castle arc",
+        "payoffCondition": "Vladislav survives Session 0",
+        "payoffSession": 2,
+        "linkedNpcs": ["vladislav"],
+        "notes": "Vladislav flees toward Houska (Castle 2). Players may encounter him again with new spawn."
+      },
+      {
+        "id": "hook-tomas-curse",
+        "description": "Tomas Birkov's werewolf curse — if players learn of it and let him live, he may seek their help curing it",
+        "payoffCondition": "Players interact with Tomas's lycanthropy without killing him",
+        "payoffSession": 1,
+        "linkedNpcs": ["werewolf"],
+        "notes": "Tomas knows mountain routes to Houska. Could become guide or enemy."
+      },
+      {
+        "id": "hook-cellar-evidence",
+        "description": "The cellar contains evidence of a larger vampire network — letters referencing Houska Castle and 'the gathering'",
+        "payoffCondition": "Players thoroughly search the cellar",
+        "payoffBeat": "cellar_investigation",
+        "payoffSession": 1,
+        "linkedSecrets": ["vladislav_is_vampire"],
+        "notes": "This plants the seed for the Houska arc (sessions 2-4)"
+      }
+    ],
+
+    "factions": [
+      {
+        "id": "local-villagers",
+        "name": "Mountain Villagers",
+        "description": "The scattered communities of the Orava mountain region. Superstitious, fearful, desperate for help.",
+        "initialScore": 0,
+        "regions": ["orava-mountains", "pallid-hart"]
+      },
+      {
+        "id": "church-of-light",
+        "name": "The Church of Light",
+        "description": "Local clergy and inquisitors. Suspicious of outsiders but aligned against undead. Brother Aldric is their representative.",
+        "initialScore": 10,
+        "regions": ["orava-mountains", "houska"],
+        "allies": ["local-villagers"]
+      },
+      {
+        "id": "vladislav-network",
+        "name": "Vladislav's Brood",
+        "description": "The vampire lord's growing network of spawn, thralls, and unwitting servants.",
+        "initialScore": -30,
+        "regions": ["orava-mountains", "houska", "cachtice"],
+        "enemies": ["church-of-light"]
+      }
+    ]
+  },
+
+  "backstories": {},
+
+  "campaign": {
+    "lore": [
+      {
+        "id": "lore-pallid-hart",
+        "title": "The Pallid Hart",
+        "category": "geography",
+        "content": "A small inn perched on a mountain road through the Orava mountains of the Slovak region. Run by Marta Kowalski and her husband Piotr (now missing). Named for a ghostly white stag said to appear on the road before disaster strikes. The cellar is older than the inn — locals say it was once part of a monastery.",
+        "tags": ["orava", "inn", "session-0"]
+      },
+      {
+        "id": "lore-vladislav",
+        "title": "Vladislav Dragan — The Hooded Stranger",
+        "category": "npc",
+        "content": "A vampire lord posing as a weary traveler. He arrived at The Pallid Hart two days ago. His true purpose: to feed on isolated travelers and expand his brood. He created Piotr as a spawn and keeps him in the cellar. Vladislav is connected to a larger vampire network centered on Houska Castle in Bohemia.",
+        "tags": ["vampire", "antagonist", "session-0"],
+        "hidden": true
+      },
+      {
+        "id": "lore-tomas-birkov",
+        "title": "Tomas Birkov — The Trapper",
+        "category": "npc",
+        "content": "A werewolf disguised as a mountain trapper. Tomas was bitten three months ago and is losing control. He came to the inn seeking the cellar — he heard rumors of old chains in the monastery foundations where he could restrain himself during the full moon. He does not know about Vladislav.",
+        "tags": ["werewolf", "session-0"],
+        "hidden": true
+      },
+      {
+        "id": "lore-orava-mountains",
+        "title": "The Orava Mountains",
+        "category": "geography",
+        "content": "A remote, heavily forested mountain range in the northern Slovak region of the Kingdom of Hungary. In 1274, these mountains are sparsely populated, with scattered villages connected by dangerous mountain roads. Wolves, bears, and worse things prowl the forests. The region has a dark reputation — travelers disappear, livestock is found drained of blood, and the locals whisper about things that walk at night.",
+        "tags": ["orava", "geography", "setting"]
+      },
+      {
+        "id": "lore-three-castles",
+        "title": "The Three Castles",
+        "category": "history",
+        "content": "Three ancient castles form the backbone of the vampire conspiracy: Orava Castle in the Slovak mountains (the starting region), Houska Castle in Bohemia (said to be built over a gateway to Hell), and Čachtice Castle in western Hungary (seat of a noble family with dark secrets). The Dark Pilgrimage follows this path.",
+        "tags": ["campaign-arc", "castles", "setting"],
+        "hidden": true
+      }
+    ],
+    "downtimeEvents": [
+      {
+        "id": "dt-wolves-closer",
+        "description": "Wolf packs have been moving closer to the mountain road, driven by something in the deep forest",
+        "trigger": "between_sessions",
+        "effects": [
+          { "event": "dm:whisper", "data": { "text": "Between sessions: wolves closing in on the road. Travelers report larger packs than normal.", "priority": 4, "category": "story" } }
+        ]
+      },
+      {
+        "id": "dt-village-missing",
+        "description": "Another traveler has gone missing on the mountain road — the third this month",
+        "trigger": "between_sessions",
+        "effects": [
+          { "event": "dm:whisper", "data": { "text": "Between sessions: another disappearance reported. Villagers are talking about closing the road.", "priority": 4, "category": "story" } }
+        ]
+      }
     ]
   },
 
@@ -397,7 +638,11 @@
         "cellar": "Visibly frightened. 'Don't go down there. Please. Just... don't.'",
         "stranger": "'He came two days ago. Paid in coin. Doesn't eat. Doesn't drink. Just... sits.'",
         "sounds": "'You hear them too? I thought I was going mad. Every night. From below.'",
-        "blood": "'The goat behind the inn. Drained dry. Like something sucked the life from it.'"
+        "blood": "'The goat behind the inn. Drained dry. Like something sucked the life from it.'",
+        "when_vampire_revealed": "Collapses. 'I KNEW. I knew what he was. I could feel it. But I couldn't— I didn't know how to— Oh God, Piotr. What did he do to Piotr?'",
+        "when_tomas_transforms": "Screams and dives behind the bar. 'TWO of them?! There are TWO?!'",
+        "when_confronted_about_silence": "'What was I supposed to do?! He's a MONSTER. You think I could fight that? I'm an innkeeper! I kept quiet because keeping quiet kept me alive!'",
+        "when_piotr_found": "Wailing. 'That's not him. That's not my Piotr. Please... please help him. Or end it. I can't watch this anymore.'"
       },
       "dialogueHistory": []
     },
@@ -442,7 +687,11 @@
         "nervousness": "'The storm. Just the storm. I don't like being trapped.' (half-truth)",
         "stranger": "'Something about him. Something wrong. I can... I just don't trust him.' (he can smell the undead)",
         "woods": "Opens up here — knows every trail, every cave. This is genuine and helpful.",
-        "moonrise": "Goes pale. Changes subject immediately. If pressed: 'I need air. I need to— I need to go somewhere.'"
+        "moonrise": "Goes pale. Changes subject immediately. If pressed: 'I need air. I need to— I need to go somewhere.'",
+        "when_exposed": "Desperate, broken. 'I didn't ASK for this! I was bitten three months ago. I came here to lock myself in the cellar before the moon. I'm trying to PROTECT you!'",
+        "when_transforming": "Screaming, bones cracking. 'RUN! Get away from me! I can't— I can't stop it— PLEASE—' Then the screaming stops and the growling starts.",
+        "when_vampire_revealed": "Vindicated, angry. 'I TOLD you something was wrong with him! I could SMELL it. The dead. He reeks of the dead.'",
+        "when_offered_help": "Tears. Genuine hope for the first time. 'You would... help me? No one has offered to help. Everyone runs. Or tries to kill me. I know a path to Houska — there are people there who study curses. I could guide you.'"
       },
       "revealTriggers": [
         "The full moon becomes visible through a broken shutter or opened door",
@@ -499,7 +748,13 @@
         "cellar": "Goes very still. 'I wouldn't go down there. Old buildings. Unstable floors.' (threatening undertone)",
         "weather": "'The storm will pass. They always do. The question is what survives the night.'",
         "missing_people": "'People go missing in the mountains all the time. The cold. The wolves.' A faint smile.",
-        "direct_accusation": "Stands slowly. The shadows seem to deepen around him. 'You should be very careful what you accuse a stranger of.'"
+        "direct_accusation": "Stands slowly. The shadows seem to deepen around him. 'You should be very careful what you accuse a stranger of.'",
+        "when_exposed": "Drops all pretense. 'How long has it been since you've seen something truly ancient? I have walked these mountains since before your great-grandparents were born. You are meat. Clever meat, but meat nonetheless.'",
+        "when_fighting": "'I offered you a peaceful death. You chose the other kind.'",
+        "when_wounded": "Shock — then fury. 'You DARE? Do you know what I am? I am the lord of this mountain. I am the death that walks the road. And you have just made your last mistake.'",
+        "when_fleeing": "'This is not over. I remember faces. I remember names. I remember the taste of fear. And yours...' (dissolves into mist) '...is exquisite.'",
+        "to_tomas": "'Ah. The wolf. I can smell the beast in you. We are not so different, you and I. Both cursed. Both hungry. Perhaps we can help each other.' (manipulation)",
+        "to_piotr": "'Rise.' Simple command. Piotr obeys instantly, a puppet on invisible strings."
       },
       "revealTriggers": [
         "Directly confronted with evidence",
@@ -512,77 +767,243 @@
     }
   },
 
+  "patron-farmer": {
+    "name": "Old Gregor",
+    "role": "Elderly farmer, fatalistic and resigned",
+    "status": "alive",
+    "disposition": "grim",
+    "location": "table near the hearth",
+    "knowledge": [
+      "Has lived in these mountains his whole life",
+      "Knows the old legends — vampires, werewolves, the white stag",
+      "His livestock have been dying — drained of blood",
+      "He came to the inn to warn Marta but lost his nerve"
+    ],
+    "dialogueHints": {
+      "legends": "'My grandmother told me stories. About things in the mountains that drink blood. I thought they were stories.' (long pause) 'They weren't.'",
+      "livestock": "'Three goats. A cow. Found them at dawn, white as snow. Not a drop of blood in them. Not a drop on the ground.'",
+      "stranger": "'Don't look at him. Don't talk to him. Don't go near him. I've seen eyes like that before. On a dead man.'",
+      "stag": "'The pallid hart. The white stag. My grandmother said it appears before death comes to these mountains. I saw it on the road tonight.'",
+      "hope": "Shakes his head. 'We're not leaving this inn alive. I've known it since I walked in.'"
+    },
+    "dialogueHistory": []
+  },
+  "patron-merchant": {
+    "name": "Henryk the Merchant",
+    "role": "Traveling merchant, nervous and self-interested",
+    "status": "alive",
+    "disposition": "anxious",
+    "location": "table with his goods",
+    "knowledge": [
+      "Travels this road regularly — knows it's dangerous",
+      "Has heard rumors of disappearances but dismissed them",
+      "Carries valuable goods and is afraid of thieves",
+      "Noticed the stranger doesn't eat or drink"
+    ],
+    "dialogueHints": {
+      "road": "'I've traveled this road twenty times. Never seen a storm this bad. Never felt this... wrong.'",
+      "stranger": "'Man hasn't touched his food. Hasn't moved. I've been watching — he doesn't even blink. That's not natural.'",
+      "business": "Perks up briefly about trade, then catches himself. 'None of that matters if we don't make it through the night.'",
+      "disappearances": "'People go missing on mountain roads. It happens. But three in one month? From the same inn?' (whispers) 'That doesn't happen.'",
+      "danger": "'I'll pay double for an escort out of here at first light. Triple. Name your price.'"
+    },
+    "dialogueHistory": []
+  },
+  "patron-pilgrim": {
+    "name": "Brother Aldric",
+    "role": "Pilgrim priest, devout and frightened",
+    "status": "alive",
+    "disposition": "prayerful",
+    "location": "corner table with candle",
+    "knowledge": [
+      "Traveling to a monastery in the south",
+      "His faith is genuine — he can sense evil nearby",
+      "He has blessed water in his pack (holy water)",
+      "He knows the rites of turning undead but has never performed them"
+    ],
+    "dialogueHints": {
+      "prayer": "'I have been praying since I entered this place. The words... they feel important here. As if something is listening.'",
+      "evil": "'There is evil in this room. I can feel it. My training taught me to recognize the presence of the unholy. It is here. Close.'",
+      "stranger": "'I cannot look at him. My hand goes to my symbol every time I try. Something in my faith recoils from what sits in that corner.'",
+      "holy_water": "If asked directly: 'I carry blessed water. For the journey. I... yes. You may have it. I think you will need it more than I.'",
+      "courage": "'I am a man of faith, not a man of war. But if this is God's test, I will not fail it. Tell me what to do.'"
+    },
+    "dialogueHistory": []
+  },
+  "patron-minstrel": {
+    "name": "Katya Voss",
+    "role": "Traveling minstrel, observant and clever",
+    "status": "alive",
+    "disposition": "watchful",
+    "location": "by the hearth with lute",
+    "knowledge": [
+      "Travels widely and collects stories",
+      "Has sharp eyes — notices details others miss",
+      "Heard of the Pallid Hart's dark reputation before arriving",
+      "She noticed Tomas's scars and the stranger's lack of reflection"
+    ],
+    "dialogueHints": {
+      "stories": "'I collect stories. That's what minstrels do. And this inn? This inn is going to be one hell of a story. If we survive to tell it.'",
+      "observation": "'The trapper is hiding something under his sleeves. The stranger has no reflection — I saw it in the brass plate. And the innkeeper is terrified of her own cellar.'",
+      "music": "'I tried to play earlier. The acoustics in here are wrong. The sound... echoes differently. As if the room is bigger than it should be. Or as if something underground is resonating.'",
+      "stranger": "'He's been watching us. All of us. But especially the ones who go near the cellar door. I've been watching him watch us.'",
+      "help": "'I'm not a fighter. But I'm clever, I'm fast, and I have very good ears. Tell me what you need.'"
+    },
+    "dialogueHistory": []
+  },
+
   "story": {
     "currentAct": "act1_arrival",
     "beats": [
       {
         "id": "road_arrival",
-        "name": "Each PC arrives alone on the mountain road — solo scenes with Perception checks, strange sounds, shadows in the trees, a dead bloodless deer",
+        "name": "Mountain Road — Solo Arrival Scenes",
         "status": "pending",
-        "readAloud": "You're alone on a mountain road in a blizzard. The light is dying. The cold is killing.",
+        "readAloud": "You're alone on a mountain road in a blizzard. The light is dying. The cold is killing. Trees press close on either side, their branches groaning under the weight of snow. The road is a guess now — a memory of packed earth beneath the drifts. You have been walking for hours. And for the last mile, you have had the feeling — the certainty — that something is following you.",
         "checks": [
-          { "skill": "Perception", "dc": 12, "success": "You hear movement in the trees — too heavy for wind. Something is pacing you, matching your stride.", "fail": "The wind is all you hear. But the feeling of being watched doesn't fade." },
-          { "skill": "Perception", "dc": 15, "success": "Between the trees, barely visible — a shape. Tall. Thin. Standing still. Watching. Then the snow shifts and it's gone." }
+          { "skill": "Perception", "dc": 12, "success": "You hear movement in the trees — too heavy for wind. Something is pacing you, matching your stride. When you stop, it stops. When you walk, it walks.", "fail": "The wind is all you hear. But the feeling of being watched doesn't fade." },
+          { "skill": "Perception", "dc": 15, "success": "Between the trees, barely visible — a shape. Tall. Thin. Standing perfectly still. Watching. Then the snow shifts and it's gone. But the footprints it left are bare — human feet in the snow, and they stop suddenly, as if whoever made them simply rose into the air." },
+          { "skill": "Survival", "dc": 10, "success": "You spot a dead deer beside the road. Its throat is torn open but there is almost no blood — not on the snow, not on the animal. Something drained it completely.", "fail": "You notice dark shapes in the snow beside the road but the blizzard makes it impossible to investigate." },
+          { "skill": "Nature", "dc": 13, "success": "No animal did this. The wound is surgical — two punctures, perfectly placed over the jugular. Whatever killed this deer knew anatomy.", "fail": "It looks like a wolf attack, but something about it bothers you." }
         ],
-        "atmosphere": "blizzard_dark"
+        "atmosphere": "blizzard_dark",
+        "dmNotes": "Run each PC arrival SEPARATELY. 2-3 minutes each. Ask what they're doing on this road. Build isolation and dread before they reach the inn."
       },
       {
         "id": "enter_inn",
-        "name": "PCs reach the Pallid Hart one by one, shaking snow from their cloaks. Marta greets them nervously. The warmth is a relief but the inn feels wrong.",
+        "name": "Entering The Pallid Hart",
         "status": "pending",
-        "atmosphere": "tavern_warm"
+        "readAloud": "The door fights you as you push it open, the wind howling behind you like something alive. Inside — warmth. Not much, but enough. A cramped common room, low-ceilinged, dark wood. A fire crackles in a stone hearth but it's burning low — no one has added wood in hours. A bar runs along the far wall. Behind it, a woman — thin, dark-haired, gripping a glass she's been polishing for too long. Her eyes snap to you the moment you enter. In the far corner, almost lost in shadow, a hooded figure sits motionless at a table. They don't look up. The door slams shut behind you. The wind outside screams.",
+        "checks": [
+          { "skill": "Insight", "dc": 10, "success": "Marta is terrified. Not of you — of something else. She keeps glancing at the cellar door and then quickly away, as if forcing herself not to look.", "fail": "The innkeeper seems nervous, but it could just be the storm." },
+          { "skill": "Perception", "dc": 14, "success": "The stranger in the corner hasn't moved since you entered. Not a muscle. You're not even sure he's breathing.", "fail": "Just a tired traveler in a hood. Nothing unusual." }
+        ],
+        "atmosphere": "tavern_warm",
+        "dmNotes": "Each PC enters separately, a few minutes apart in game time. Let them take in the room before the next one arrives. Marta offers ale and stew."
       },
       {
         "id": "introductions",
-        "name": "Characters introduce themselves to each other and to the patrons — Henryk the merchant, Brother Aldric the pilgrim, Katya the minstrel, Old Gregor the farmer. And the hooded stranger who says nothing.",
-        "status": "pending"
+        "name": "Meeting the Patrons",
+        "status": "pending",
+        "readAloud": "The common room holds a handful of other souls driven in by the storm. A stout merchant counts coins at a table, muttering about lost shipments. A gaunt man in a pilgrim's robe sits with his hands clasped, lips moving in silent prayer. A young woman with a lute leans against the hearth, watching everyone with bright, curious eyes. In the furthest corner, an old farmer hunches over an untouched bowl of stew, staring at nothing. And then there is the stranger. The hooded figure in the deepest shadow. He has not moved. He has not spoken. Marta seems to pretend he isn't there.",
+        "checks": [
+          { "skill": "Insight", "dc": 12, "success": "Henryk the merchant is putting on a brave face but his hands are shaking. Brother Aldric's prayers have an urgency to them — he is genuinely frightened. Katya is studying everyone, cataloguing details. Gregor looks like a man who has already given up.", "fail": "The patrons seem tired but otherwise normal travelers sheltering from the storm." },
+          { "skill": "Perception", "dc": 13, "success": "The trapper by the door — Tomas — keeps touching his forearms. He rolls his sleeves down the moment he notices you looking. His hands are clenched into fists.", "fail": "Just another nervous traveler." }
+        ],
+        "atmosphere": "tavern_warm",
+        "dmNotes": "Let players approach any patron. Each has a personality. Katya is the most talkative, Gregor the most doom-and-gloom. Tomas deflects everything. The stranger says nothing unless directly addressed."
       },
       {
         "id": "unease",
-        "name": "Players notice something off — the stranger, Marta's nervousness, odd details",
+        "name": "Something Is Wrong",
         "status": "pending",
-        "atmosphere": "tavern_tense"
+        "readAloud": "An hour passes. The fire burns lower. Marta adds no wood, though the pile beside the hearth is full. The ale is warm but the room is getting colder. The stranger still hasn't moved. Katya's song falters and stops — she says the acoustics in here are 'wrong.' Old Gregor pushes his untouched stew away and says, very quietly: 'Something happened here. Something bad. Can't you feel it?' No one answers him. But you can feel it. Something in the walls. Something waiting.",
+        "checks": [
+          { "skill": "Perception", "dc": 12, "success": "A sound from below the floor — faint, rhythmic. Scratching. Like fingernails on stone. Then it stops.", "fail": "You hear the wind and the fire. Nothing else." },
+          { "skill": "Investigation", "dc": 11, "success": "There's a cloth draped over the cellar door handle. Looking closer, you see scratches on the doorframe — deep ones, from the inside.", "fail": "Nothing catches your eye." },
+          { "skill": "Insight", "dc": 14, "success": "Marta flinched when the scratching sound came. She heard it too. And Tomas — Tomas went rigid, like a hunting dog catching a scent.", "fail": "Hard to read anyone in this gloom." }
+        ],
+        "atmosphere": "tavern_tense",
+        "dmNotes": "This beat should trigger naturally as players settle in. Mark it when players first express suspicion or unease. The scratching sound is key — it's Piotr in the cellar."
       },
       {
         "id": "first_clue",
-        "name": "First concrete evidence something is wrong (missing husband, bloodless animal, cellar sounds)",
-        "status": "pending"
+        "name": "The First Clue",
+        "status": "pending",
+        "readAloud": "You ask Marta about her husband. She freezes. The glass she was polishing slips and shatters on the floor. For a long moment, the only sound is the wind and the fire. Then, very quietly, with tears rolling down her cheeks: 'Piotr went down to the cellar three weeks ago. He never came back up. I can hear him down there, sometimes. Scratching. But that's not... that's not Piotr anymore. I know it isn't. I just... I don't know what to do.'",
+        "checks": [
+          { "skill": "Insight", "dc": 10, "success": "She is telling the truth. Every word. The grief is real — but so is the terror. She has been living with this for three weeks, alone.", "fail": "Sounds like she might be confused by grief." },
+          { "skill": "Perception", "dc": 13, "success": "When Marta mentioned the cellar, the stranger's hand tightened on the edge of his table. Just for a moment. Then perfect stillness again.", "fail": "The stranger didn't react." },
+          { "skill": "Medicine", "dc": 12, "success": "If something has been alive in the cellar for three weeks without food, it isn't alive in any normal sense of the word.", "fail": "People can survive a long time without food. Probably." }
+        ],
+        "atmosphere": "tavern_tense",
+        "dmNotes": "This can trigger from any conversation about Piotr, the cellar, or the missing travelers. Mark it when Marta reveals her husband is missing. Key clue — links to cellar_sounds and piotr_in_cellar secrets."
       },
       {
         "id": "investigation",
-        "name": "Players actively search for answers — questioning NPCs, exploring the inn",
+        "name": "The Investigation",
         "status": "pending",
-        "atmosphere": "investigation"
+        "readAloud": "The inn feels smaller now. The shadows deeper. The fire lower. Everyone in this room is hiding something — you can feel it. The cellar door is right there, the scratches on its frame clearly visible. The stranger watches. Marta wrings her hands. Tomas keeps checking the shuttered windows, as though expecting the moon. The question is no longer whether something is wrong. The question is: what are you going to do about it?",
+        "checks": [
+          { "skill": "Investigation", "dc": 14, "success": "Searching the stranger's corner of the room, you find that his plate of food is untouched — not a single bite. His mug is full. But most disturbing: the candle nearest him has gone out, and the wax is ice cold. As if the warmth is being drawn from it.", "fail": "Nothing unusual about his table." },
+          { "skill": "Investigation", "dc": 12, "success": "Behind the bar, you find Marta's logbook. The last three entries show guests who checked in but never checked out. Their rooms are still made up, belongings still inside.", "fail": "Just a normal innkeeper's ledger." },
+          { "skill": "Perception", "dc": 16, "success": "You catch the stranger's reflection — or rather, you DON'T. In the brass serving plate behind the bar, everyone in the room is reflected. Everyone except him. Where he sits, there is only empty chair.", "fail": "Nothing in the reflections catches your eye." },
+          { "skill": "Religion", "dc": 13, "success": "Brother Aldric's holy symbol — he keeps touching it, unconsciously turning it toward the stranger. It's an instinct. Something in his faith is reacting to the presence in that corner.", "fail": "Aldric seems devout but frightened, like everyone else." }
+        ],
+        "atmosphere": "investigation",
+        "dmNotes": "Let players drive this. They can search rooms, question NPCs, examine the cellar door, look for evidence. Each action should reveal a clue. The no-reflection clue is the big one — if anyone checks a mirror or reflective surface near Vladislav."
       },
       {
         "id": "escalation",
-        "name": "Something frightening happens — lights go out, someone screams, blood is found",
+        "name": "The Escalation",
         "status": "pending",
-        "atmosphere": "dread_rising"
+        "readAloud": "The fire goes out. All at once, as if something exhaled on it. The room plunges into darkness. Someone screams — you think it's Katya. A crash of breaking glass. The shutters slam open and the blizzard howls in, driving snow across the floor. In the momentary flash of moonlight through the window, you see two things: the stranger's chair is empty — he was there a second ago — and Tomas is on his knees, clutching his head, a sound like a growl tearing from his throat. The shutters slam closed. Darkness again. And from the cellar, the scratching becomes pounding.",
+        "checks": [
+          { "skill": "Perception", "dc": 10, "success": "In the darkness, you hear movement — inhumanly fast — near the ceiling. Something is above you.", "fail": "The darkness is total. You can't see or hear anything over the wind." },
+          { "skill": "Constitution", "dc": 12, "success": "You keep your nerve. You can act.", "fail": "Terror grips you. You are frozen for a moment, unable to act (lose your first round of actions)." },
+          { "skill": "Investigation", "dc": 11, "success": "Feeling along the wall, you find a lantern. One match. One shot at light.", "fail": "You can't find anything useful in the dark." }
+        ],
+        "atmosphere": "dread_rising",
+        "dmNotes": "This is the horror peak before combat. The fire going out should be dramatic — all lights in the room (Hubitat) go dark simultaneously. Let them fumble in darkness for 30-60 seconds of real time. Tomas is fighting his transformation. Vladislav has moved."
+      },
+      {
+        "id": "cellar_investigation",
+        "name": "The Cellar",
+        "status": "pending",
+        "readAloud": "The cellar stairs descend into a cold that has nothing to do with winter. The walls are ancient — older than the inn above, rough-hewn monastery stone stained dark with something you don't want to identify. At the bottom: a narrow passage, the ceiling so low you have to duck. The air smells of copper and rot. Chains hang from the walls — old, rusted. The scratching sound is louder now. Much louder. And then you see it: in the far corner, a makeshift coffin made of rough planks. Beside it, crouched in the shadows, is what was once a man. Piotr Kowalski stares at you with dead white eyes, his mouth open, two elongated canines gleaming in your torchlight. He hisses.",
+        "checks": [
+          { "skill": "Investigation", "dc": 13, "success": "The coffin contains a velvet lining, a sealed letter addressed to 'Houska,' and dried blood. This is not Piotr's coffin — it belongs to the stranger upstairs.", "fail": "A coffin. Terrifying but you can't bring yourself to search it." },
+          { "skill": "Religion", "dc": 12, "success": "A vampire spawn. Created by a vampire's bite. Piotr is no longer human — but a stronger vampire controls him. Destroy the master, and the spawn may find peace. Or they may simply go feral.", "fail": "Undead. Very dangerous. That's all you know." },
+          { "skill": "Perception", "dc": 14, "success": "Letters scattered on the floor, written in an old Slavic dialect. They reference 'the gathering at Houska' and 'the three seats of power.' There is a larger conspiracy here.", "fail": "Nothing else in the cellar catches your eye." }
+        ],
+        "atmosphere": "revelation",
+        "dmNotes": "Piotr spawn attacks if approached within 10 feet. He is CR3 — dangerous but beatable. The letter to Houska is a campaign hook. If players search thoroughly, they find evidence of the three-castle conspiracy."
       },
       {
         "id": "discovery",
-        "name": "Players discover definitive evidence of the vampire (coffin, feeding, supernatural event)",
+        "name": "The Revelation",
         "status": "pending",
-        "atmosphere": "revelation"
+        "readAloud": "Now you understand. The hooded stranger. The missing travelers. Piotr in the cellar. The dead, bloodless deer on the road. It was never the storm you needed to fear. It was never the cold. It was the thing sitting in the corner of this inn, watching you with ancient, hungry eyes, waiting for the right moment to feed. And now it knows that you know.",
+        "checks": [
+          { "skill": "Arcana", "dc": 14, "success": "Vampires are vulnerable to sunlight, running water, and stakes through the heart. They cannot enter a residence without invitation — but Vladislav was invited by Marta. Garlic repels them. Holy symbols wielded with faith cause them pain.", "fail": "You know vampires are dangerous. That's about it." },
+          { "skill": "Religion", "dc": 12, "success": "Brother Aldric's holy symbol could be a weapon if wielded with true faith. A prayer of turning could force the vampire back. But it requires genuine conviction — fear alone isn't enough.", "fail": "You remember something about holy symbols and vampires but the details escape you." }
+        ],
+        "atmosphere": "revelation",
+        "dmNotes": "This beat fires when the vampire secret is definitively revealed — either through cellar evidence, caught feeding, no-reflection discovery, or direct confrontation. The revelation flash player effect should fire here."
       },
       {
         "id": "confrontation",
-        "name": "The vampire is confronted or reveals himself",
+        "name": "The Confrontation",
         "status": "pending",
-        "atmosphere": "terror_peak"
+        "readAloud": "Vladislav rises from his chair — or rather, he is suddenly standing, with no visible transition between sitting and standing. The hood falls back. His face is pale as bone, angular, beautiful in the way a knife is beautiful. His eyes are dark and old — centuries old. He smiles, and you see the fangs. 'I had hoped,' he says, his voice like silk over broken glass, 'to leave without unpleasantness. But you have made that... difficult.' The shadows in the room seem to lean toward him, as if drawn by gravity. The temperature drops. The fire, if it was still burning, dies.",
+        "checks": [
+          { "skill": "Intimidation", "dc": 18, "success": "You stand your ground. Vladislav's smile falters — just for a moment. He is used to terror. Defiance surprises him.", "fail": "His presence is overwhelming. Ancient. Predatory. Every instinct screams at you to run." },
+          { "skill": "Persuasion", "dc": 20, "success": "You appeal to whatever humanity remains. For a moment — just a moment — something flickers in those dead eyes. Then it's gone. 'You remind me of someone I knew. Before.' He pauses. 'They died badly.'", "fail": "He is beyond persuasion. He is beyond reason. He is hunger wearing a human face." }
+        ],
+        "atmosphere": "terror_peak",
+        "dmNotes": "Vladislav is CR13. He will NOT fight to the death — if reduced below 50 HP, he flees (mist form to cellar or out window). He fights smart: Charm on the strongest fighter, bite on the isolated, legendary actions to scatter the party. Call Piotr spawn if cellar wasn't cleared."
       },
       {
         "id": "climax",
-        "name": "Final battle or desperate survival until dawn",
+        "name": "The Battle for Survival",
         "status": "pending",
-        "atmosphere": "combat"
+        "readAloud": "Combat erupts in the cramped common room. Tables shatter. The fire scatters embers across the floor. Vladislav moves like smoke — appearing, striking, vanishing. If Tomas hasn't already transformed, the violence and the moonlight push him over the edge. The patrons scream and scatter. Marta dives behind the bar. Brother Aldric raises his holy symbol with shaking hands. This is not a fight you were prepared for. This is survival. Hold until dawn — or die in the dark.",
+        "checks": [
+          { "skill": "Athletics", "dc": 13, "success": "You flip a heavy table to create cover, giving half-cover (+2 AC) to anyone behind it.", "fail": "The table is heavier than you expected. No cover." },
+          { "skill": "Perception", "dc": 14, "success": "You spot Vladislav's movement pattern — he always returns to the cellar door side. That's his escape route.", "fail": "He's too fast to track." },
+          { "skill": "Religion", "dc": 15, "success": "Brother Aldric's faith holds. His holy symbol blazes with light — Vladislav recoils (disadvantage on attacks against Aldric this round).", "fail": "Aldric's faith wavers. The symbol is just metal." }
+        ],
+        "atmosphere": "combat",
+        "dmNotes": "This is the final combat. Vladislav (CR13), potentially Piotr spawn (CR3), potentially transformed Tomas (CR3 werewolf). Use the combat AI system for NPC tactics. If Vladislav escapes, mark hook-vladislav-escape as foreshadowed. If Tomas transforms, play for tragedy — he didn't want this."
       },
       {
         "id": "resolution",
-        "name": "Dawn breaks. Survivors emerge. The party is forged in shared trauma.",
+        "name": "Dawn Breaks",
         "status": "pending",
-        "atmosphere": "dawn"
+        "readAloud": "The first light creeps through the shattered shutters. Pale. Cold. But light. The blizzard is dying — the wind a whisper where it was a scream. If Vladislav still stands, he recoils from the dawn, hissing, retreating to the cellar or crumbling to ash. The horror is over. But the cost is written on every face in this room — the blood on the floor, the broken furniture, the empty chairs where people sat just hours ago. Marta is sobbing. Tomas, if he survived, is human again, naked and shaking in the corner, remembering what he did. The mountain road is visible through the broken door. The snow has stopped. The sun is rising. You are alive. And you will never forget this night.",
+        "checks": [],
+        "atmosphere": "dawn",
+        "dmNotes": "Let the players breathe. This is the denouement. Award XP. Resolve NPC fates — who lived, who died, who was transformed. Marta's reaction depends on Piotr's fate. If the Houska letter was found, plant the seed for the next arc. The party is forged — strangers who survived together."
       }
     ],
     "cluesDiscovered": [],

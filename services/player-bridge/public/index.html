@@ -175,6 +175,58 @@
     #chatin{flex:1;padding:7px 8px;}
     .sendbtn{padding:7px 12px;background:#58180d;border:none;color:#f4ebd0;border-radius:4px;font-weight:700;}
 
+    /* Quest Journal */
+    .quest-item{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:6px;}
+    .quest-item.completed{opacity:0.5;}
+    .quest-title{font-family:Cinzel,serif;font-weight:700;font-size:13px;color:#58180d;display:flex;align-items:center;gap:6px;}
+    .quest-title .qi{font-size:14px;}
+    .quest-desc{font-size:12px;color:var(--text-dim);margin-top:4px;line-height:1.4;}
+    .quest-obj{font-size:11px;padding:3px 0 3px 16px;border-bottom:1px solid rgba(88,24,13,0.1);}
+    .quest-obj:last-child{border:none;}
+    .quest-obj.done{text-decoration:line-through;opacity:0.5;}
+    .quest-obj::before{content:'○ ';color:var(--accent-dim);}
+    .quest-obj.done::before{content:'● ';color:var(--green);}
+    .quest-badge{font-size:9px;padding:1px 5px;border-radius:8px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+    .quest-badge.main{background:rgba(88,24,13,0.2);color:var(--accent);}
+    .quest-badge.side{background:rgba(26,58,90,0.2);color:var(--blue);}
+    .quest-new{animation:quest-glow 2s ease-out;}
+    @keyframes quest-glow{0%{box-shadow:0 0 12px rgba(201,165,78,0.4);}100%{box-shadow:none;}}
+
+    /* NPC Chat */
+    .npc-chat-select{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;margin-bottom:8px;}
+    .npc-chat-btn{padding:8px 6px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;font-size:11px;text-align:center;cursor:pointer;}
+    .npc-chat-btn.active{background:rgba(88,24,13,0.15);border-color:var(--accent);color:var(--accent);font-weight:700;}
+    .npc-chat-btn .npc-disp{font-size:8px;color:var(--text-dim);margin-top:2px;}
+    #npc-chatlog{background:var(--surface2);border:1px solid var(--border);border-radius:4px;height:200px;overflow-y:auto;padding:8px;margin-bottom:8px;}
+    .npc-msg{margin-bottom:6px;font-size:12px;line-height:1.4;}
+    .npc-msg .nm-who{font-weight:700;font-size:11px;}
+    .npc-msg.from-npc .nm-who{color:var(--accent);}
+    .npc-msg.from-player .nm-who{color:var(--blue);}
+    .npc-msg .nm-text{margin-top:2px;}
+    .npc-thinking{color:var(--text-dim);font-style:italic;font-size:11px;padding:4px 0;}
+
+    /* Handouts */
+    .handout-item{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:6px;cursor:pointer;}
+    .handout-item:active{opacity:0.7;}
+    .handout-item.unread{border-color:var(--accent);box-shadow:0 0 6px rgba(201,165,78,0.3);}
+    .handout-title{font-family:Cinzel,serif;font-weight:700;font-size:13px;color:#58180d;display:flex;align-items:center;gap:6px;}
+    .handout-preview{font-size:11px;color:var(--text-dim);margin-top:4px;max-height:40px;overflow:hidden;}
+    .handout-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;padding:16px;}
+    .handout-modal.open{display:flex;}
+    .handout-content{background:var(--bg);border:2px solid #58180d;border-radius:6px;padding:16px;width:95%;max-width:400px;max-height:80vh;overflow-y:auto;}
+    .handout-content h3{font-family:Cinzel,serif;color:#58180d;margin-bottom:8px;}
+    .handout-content img{max-width:100%;border-radius:4px;margin:8px 0;}
+    .handout-content .hc-text{font-size:13px;line-height:1.5;}
+    .handout-close{position:absolute;top:8px;right:12px;background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;}
+
+    /* Inspiration popup */
+    #inspiration-popup{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:180;background:linear-gradient(135deg,#1a1008,#2a1a08);border:2px solid #c9a54e;border-radius:10px;padding:20px;text-align:center;box-shadow:0 0 40px rgba(201,165,78,0.4);animation:insp-appear 0.5s ease-out;}
+    @keyframes insp-appear{from{opacity:0;transform:translate(-50%,-50%) scale(0.8);}to{opacity:1;transform:translate(-50%,-50%) scale(1);}}
+    #inspiration-popup .insp-star{font-size:48px;line-height:1;}
+    #inspiration-popup .insp-title{font-family:Cinzel,serif;color:#c9a54e;font-size:18px;font-weight:700;margin:8px 0 4px;}
+    #inspiration-popup .insp-reason{color:#b0a080;font-size:12px;max-width:250px;margin:0 auto;}
+    #inspiration-popup .insp-dismiss{margin-top:12px;padding:8px 20px;background:#58180d;border:none;color:#f4ebd0;border-radius:4px;font-weight:700;}
+
     /* Edit modal */
     #emodal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;}
     #emodal.open{display:flex;}
@@ -221,6 +273,13 @@
     .spellbar{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:7px 10px;font-size:11px;margin-bottom:6px;display:flex;gap:16px;}
     .spellbar span{color:var(--text-dim);}
     .spellbar strong{color:var(--text);}
+
+    /* Kiosk mode — hides browser chrome indicators, fullscreen feel */
+    body.kiosk #topbar{display:none;}
+    body.kiosk{padding-top:0;}
+    body.kiosk #app{padding-top:env(safe-area-inset-top);}
+    body.kiosk .tab-bar{position:fixed;bottom:0;left:0;right:0;z-index:100;}
+    body.kiosk #toast-layer{bottom:50px;}
   </style>
 </head>
 <body>
@@ -264,6 +323,9 @@
     <div class="tab" onclick="showTab('features')">Features</div>
     <div class="tab" onclick="showTab('dice')">Dice</div>
     <div class="tab" onclick="showTab('chat')">Chat</div>
+    <div class="tab" onclick="showTab('journal')">Journal</div>
+    <div class="tab" onclick="showTab('npcchat')">NPC</div>
+    <div class="tab" onclick="showTab('handouts')">Docs</div>
     <div class="tab" onclick="showTab('notes')">Notes</div>
   </div>
   <!-- MAP -->
@@ -374,6 +436,36 @@
     <div id="chatlog" style="height:calc(100% - 80px);"></div>
     <div id="chatr"><input id="chatin" type="text" placeholder="Say something..." onkeydown="if(event.key==='Enter')sndChat()"><button class="sendbtn" onclick="sndChat()">→</button></div>
   </div>
+  <!-- JOURNAL -->
+  <div class="panel" id="panel-journal">
+    <div class="st">Quest Journal</div>
+    <div id="journal-list" style="min-height:60px;"><div style="color:var(--text-dim);font-size:12px;text-align:center;padding:20px;">No quests yet. Your journey awaits.</div></div>
+  </div>
+  <!-- NPC CHAT -->
+  <div class="panel" id="panel-npcchat">
+    <div class="st">Speak with NPC</div>
+    <div id="npc-chat-npcs" class="npc-chat-select"></div>
+    <div id="npc-chatlog"></div>
+    <div style="display:flex;gap:6px;">
+      <input id="npc-chat-input" type="text" placeholder="Say something to the NPC..." style="flex:1;padding:7px 8px;" onkeydown="if(event.key==='Enter')sendNpcChat()">
+      <button class="sendbtn" onclick="sendNpcChat()">&#8594;</button>
+    </div>
+  </div>
+  <!-- HANDOUTS -->
+  <div class="panel" id="panel-handouts">
+    <div class="st">Documents & Handouts</div>
+    <div id="handouts-list" style="min-height:60px;"><div style="color:var(--text-dim);font-size:12px;text-align:center;padding:20px;">No documents received yet.</div></div>
+  </div>
+  <div class="handout-modal" id="handout-modal" onclick="if(event.target===this)closeHandout()">
+    <div class="handout-content" id="handout-content"></div>
+  </div>
+  <!-- INSPIRATION POPUP -->
+  <div id="inspiration-popup">
+    <div class="insp-star">&#9733;</div>
+    <div class="insp-title">Inspiration!</div>
+    <div class="insp-reason" id="insp-reason"></div>
+    <button class="insp-dismiss" onclick="dismissInspiration()">Accept</button>
+  </div>
   <!-- NOTES -->
   <div class="panel" id="panel-notes">
     <div class="st">Notes</div>
@@ -432,6 +524,15 @@ function handle(m){
     case 'chat:party': addChat(m.fromName||m.from,'[Party] '+m.text,'var(--accent)'); if(m.from!==PID) showToast(m.fromName||m.from,m.text,4000); break;
     case 'chat:whisper': addChat(m.fromName||m.from,'[Whisper] '+m.text,'#c9a54e'); showToast(m.fromName||m.from,'(whisper) '+m.text,5000); break;
     case 'chat:dm_reply': addChat('DM',m.text,'#c9a54e'); showToast('DM',m.text,5000); break;
+    case 'quest:update': onQuestUpdate(m); break;
+    case 'npc:chat_reply': onNpcChatReply(m); break;
+    case 'npc:available': _availableNpcs = m.npcs || []; renderNpcSelect(); break;
+    case 'handout:receive':
+      _handouts.unshift({ title: m.title, text: m.text, image: m.image, preview: m.preview || (m.text||'').slice(0,80), read: false, language: m.language || null, readable: m.readable !== false });
+      renderHandouts();
+      showToast('Document', 'New: ' + m.title + (m.readable === false ? ' (unknown language)' : ''), 5000);
+      break;
+    case 'inspiration:gain': showInspiration(m); break;
     case 'player:list': updatePlayerList(m.players||[]); break;
     case 'combat:started':
     case 'combat:ended':
@@ -1731,9 +1832,176 @@ function showToast(who,text,dur){
   addChat(who,text,who==='DM Whisper'?'#c9a54e':'var(--purple)');
 }
 
+// ── QUEST JOURNAL (Feature 47) ──────────────────────────────────────
+var _quests = [];
+function renderJournal() {
+  var el = $('journal-list');
+  if (!_quests.length) {
+    el.innerHTML = '<div style="color:var(--text-dim);font-size:12px;text-align:center;padding:20px;">No quests yet. Your journey awaits.</div>';
+    return;
+  }
+  el.innerHTML = _quests.map(function(q) {
+    var done = q.status === 'completed';
+    var badge = q.type === 'main' ? '<span class="quest-badge main">Main</span>' : '<span class="quest-badge side">Side</span>';
+    var objs = (q.objectives || []).map(function(o) {
+      return '<div class="quest-obj' + (o.done ? ' done' : '') + '">' + esc(o.text) + '</div>';
+    }).join('');
+    return '<div class="quest-item' + (done ? ' completed' : '') + (q._new ? ' quest-new' : '') + '">'
+      + '<div class="quest-title"><span class="qi">' + (done ? '&#9745;' : '&#9744;') + '</span>' + esc(q.title) + ' ' + badge + '</div>'
+      + (q.description ? '<div class="quest-desc">' + esc(q.description) + '</div>' : '')
+      + objs
+      + '</div>';
+  }).join('');
+}
+function onQuestUpdate(data) {
+  if (data.quests) {
+    // Full quest list push
+    _quests = data.quests;
+  } else if (data.quest) {
+    // Single quest add/update
+    var idx = _quests.findIndex(function(q) { return q.id === data.quest.id; });
+    if (idx >= 0) _quests[idx] = data.quest;
+    else { data.quest._new = true; _quests.unshift(data.quest); }
+  }
+  renderJournal();
+  if (data.quest && data.quest._new !== false) {
+    showToast('Quest', (data.quest.status === 'completed' ? 'Completed: ' : 'New: ') + data.quest.title, 5000);
+  }
+}
+
+// ── NPC PRIVATE CHAT (Feature 49) ───────────────────────────────────
+var _npcChatTarget = null;
+var _npcChatHistory = {}; // npcId -> [{from,text,time}]
+var _availableNpcs = [];
+
+function renderNpcSelect() {
+  var el = $('npc-chat-npcs');
+  if (!_availableNpcs.length) {
+    el.innerHTML = '<div style="color:var(--text-dim);font-size:11px;grid-column:1/-1;text-align:center;">No NPCs available to talk to.</div>';
+    return;
+  }
+  el.innerHTML = _availableNpcs.map(function(n) {
+    var active = _npcChatTarget === n.id;
+    return '<div class="npc-chat-btn' + (active ? ' active' : '') + '" onclick="selectNpcChat(\'' + esc(n.id) + '\')">'
+      + esc(n.name)
+      + '<div class="npc-disp">' + esc(n.disposition || '') + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function selectNpcChat(npcId) {
+  _npcChatTarget = npcId;
+  renderNpcSelect();
+  renderNpcChatLog();
+}
+
+function renderNpcChatLog() {
+  var el = $('npc-chatlog');
+  if (!_npcChatTarget) {
+    el.innerHTML = '<div style="color:var(--text-dim);font-size:11px;text-align:center;padding:20px;">Select an NPC to talk to.</div>';
+    return;
+  }
+  var history = _npcChatHistory[_npcChatTarget] || [];
+  if (!history.length) {
+    var npc = _availableNpcs.find(function(n) { return n.id === _npcChatTarget; });
+    el.innerHTML = '<div style="color:var(--text-dim);font-size:11px;text-align:center;padding:20px;">Start a conversation with ' + esc(npc ? npc.name : _npcChatTarget) + '.</div>';
+    return;
+  }
+  el.innerHTML = history.map(function(m) {
+    var cls = m.from === 'player' ? 'from-player' : 'from-npc';
+    var name = m.from === 'player' ? (char.name || PID) : m.npcName || _npcChatTarget;
+    return '<div class="npc-msg ' + cls + '"><div class="nm-who">' + esc(name) + '</div><div class="nm-text">' + esc(m.text) + '</div></div>';
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function sendNpcChat() {
+  if (!_npcChatTarget) return;
+  var input = $('npc-chat-input');
+  var text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  if (!_npcChatHistory[_npcChatTarget]) _npcChatHistory[_npcChatTarget] = [];
+  _npcChatHistory[_npcChatTarget].push({ from: 'player', text: text, time: Date.now() });
+  renderNpcChatLog();
+  // Show thinking indicator
+  var log = $('npc-chatlog');
+  log.innerHTML += '<div class="npc-thinking" id="npc-thinking">Thinking...</div>';
+  log.scrollTop = log.scrollHeight;
+  send({ type: 'npc:chat', npcId: _npcChatTarget, text: text });
+}
+
+function onNpcChatReply(data) {
+  var el = $('npc-thinking');
+  if (el) el.remove();
+  var npcId = data.npcId;
+  if (!_npcChatHistory[npcId]) _npcChatHistory[npcId] = [];
+  _npcChatHistory[npcId].push({ from: 'npc', npcName: data.npcName, text: data.text, time: Date.now() });
+  if (_npcChatTarget === npcId) renderNpcChatLog();
+  showToast(data.npcName || npcId, data.text, 5000);
+}
+
+// ── HANDOUTS (Feature 50) ───────────────────────────────────────────
+var _handouts = [];
+
+function renderHandouts() {
+  var el = $('handouts-list');
+  if (!_handouts.length) {
+    el.innerHTML = '<div style="color:var(--text-dim);font-size:12px;text-align:center;padding:20px;">No documents received yet.</div>';
+    return;
+  }
+  el.innerHTML = _handouts.map(function(h, i) {
+    var unread = !h.read;
+    var langTag = h.language ? ' <span style="color:' + (h.readable ? 'var(--text-dim)' : '#ce9178') + ';font-size:9px;">[' + esc(h.language) + (h.readable ? '' : ' - unreadable') + ']</span>' : '';
+    return '<div class="handout-item' + (unread ? ' unread' : '') + '" onclick="openHandout(' + i + ')">'
+      + '<div class="handout-title">' + (h.image ? '&#128444;' : '&#128220;') + ' ' + esc(h.title) + langTag + (unread ? ' <span style="color:var(--accent);font-size:9px;">NEW</span>' : '') + '</div>'
+      + (h.preview ? '<div class="handout-preview">' + esc(h.preview) + '</div>' : '')
+      + '</div>';
+  }).join('');
+}
+
+function openHandout(idx) {
+  var h = _handouts[idx];
+  if (!h) return;
+  h.read = true;
+  renderHandouts();
+  var content = '<button class="handout-close" onclick="closeHandout()">&times;</button>';
+  content += '<h3>' + esc(h.title) + '</h3>';
+  if (h.language && !h.readable) {
+    content += '<div style="color:#ce9178;font-style:italic;margin-bottom:8px;padding:8px;background:rgba(206,145,120,0.1);border-radius:4px;">This document is written in ' + esc(h.language) + '. You cannot read it.</div>';
+  } else if (h.language && h.readable) {
+    content += '<div style="color:var(--text-dim);font-size:11px;margin-bottom:4px;">Written in ' + esc(h.language) + '</div>';
+  }
+  if (h.image) content += '<img src="' + esc(h.image) + '" alt="' + esc(h.title) + '">';
+  if (h.text) {
+    var textStyle = !h.readable ? 'font-family:serif;letter-spacing:2px;color:#8a7a6a;' : '';
+    content += '<div class="hc-text" style="' + textStyle + '">' + h.text.replace(/\n/g, '<br>') + '</div>';
+  }
+  $('handout-content').innerHTML = content;
+  $('handout-modal').classList.add('open');
+}
+
+function closeHandout() {
+  $('handout-modal').classList.remove('open');
+}
+
+// ── INSPIRATION (Feature 51) ────────────────────────────────────────
+function showInspiration(data) {
+  var reason = data.reason || 'The DM awards you Inspiration!';
+  $('insp-reason').textContent = reason;
+  $('inspiration-popup').style.display = 'block';
+  $('vinsp').textContent = '\u2605'; // filled star
+  char.inspiration = true;
+  showToast('Inspiration', reason, 6000);
+}
+
+function dismissInspiration() {
+  $('inspiration-popup').style.display = 'none';
+}
+
 // ── TABS ────────────────────────────────────────────────────────────
 function showTab(n){
-  const tabs=['stats','map','combat','spells','skills','inventory','features','dice','chat','notes'];
+  const tabs=['stats','map','combat','spells','skills','inventory','features','dice','chat','journal','npcchat','handouts','notes'];
   document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',tabs[i]===n));
   document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+n));
   if(n==='map') PlayerMap.resize();
@@ -2159,6 +2427,64 @@ const PlayerMap = {
 };
 
 document.addEventListener('DOMContentLoaded', () => PlayerMap.init());
+
+// ── FEATURE 73: KIOSK MODE ──────────────────────────────────────
+// Auto-detect kiosk mode via URL param or localStorage
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('kiosk') === '1' || localStorage.getItem('kiosk') === '1') {
+    document.body.classList.add('kiosk');
+    localStorage.setItem('kiosk', '1');
+    // Request fullscreen on first touch
+    document.addEventListener('touchstart', function kioskFS() {
+      if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(function(){});
+      document.removeEventListener('touchstart', kioskFS);
+    }, { once: true });
+  }
+})();
+
+// ── FEATURE 75: CAMERA ENGAGEMENT ────────────────────────────────
+// Periodically capture camera frame and send engagement data
+var _cameraStream = null;
+var _cameraInterval = null;
+async function startCameraCapture() {
+  if (_cameraStream) return;
+  try {
+    _cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 320, height: 240 } });
+    var video = document.createElement('video');
+    video.srcObject = _cameraStream;
+    video.play();
+    var canvas = document.createElement('canvas');
+    canvas.width = 320; canvas.height = 240;
+    var ctx = canvas.getContext('2d');
+    // Send frame every 30 seconds
+    _cameraInterval = setInterval(function() {
+      ctx.drawImage(video, 0, 0, 320, 240);
+      // Simple brightness-based engagement heuristic
+      var imageData = ctx.getImageData(0, 0, 320, 240);
+      var pixels = imageData.data;
+      var brightness = 0, motion = 0;
+      for (var i = 0; i < pixels.length; i += 16) { brightness += pixels[i]; }
+      brightness = brightness / (pixels.length / 16);
+      // Engagement = rough heuristic: if camera is covered or person is still, low engagement
+      var engagement = Math.min(100, Math.max(0, brightness * 1.5));
+      fetch('/api/camera/engagement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId: PID, engagement: Math.round(engagement) })
+      }).catch(function(){});
+    }, 30000);
+    console.log('[Camera] Engagement tracking started');
+  } catch(e) {
+    console.log('[Camera] Not available:', e.message);
+  }
+}
+// Auto-start camera if permitted (won't prompt — only works if already granted)
+if (navigator.permissions) {
+  navigator.permissions.query({ name: 'camera' }).then(function(result) {
+    if (result.state === 'granted') startCameraCapture();
+  }).catch(function(){});
+}
 </script>
 </body>
 </html>

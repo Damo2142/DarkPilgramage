@@ -68,6 +68,13 @@ class AtmosphereEngine {
       await this._lightsOff();
     }, 'atmosphere');
 
+    // Weather modifier overlay — adjusts current profile lighting based on weather
+    this.bus.subscribe('atmo:weather_modifier', async (env) => {
+      const { weather, intensity, modifiers } = env.data;
+      console.log(`[Atmosphere] Weather modifier: ${weather} (intensity ${intensity})`);
+      await this._applyWeatherModifier(modifiers, intensity);
+    }, 'atmosphere');
+
     if (!this.hubitat.token) {
       console.warn('[Atmosphere] No HUBITAT_TOKEN found — light control disabled');
     } else {
@@ -262,6 +269,41 @@ async _applyAmbientLights(profile) {
 
       await Promise.allSettled(commands);
     }, intervalMs);
+  }
+
+  async _applyWeatherModifier(modifiers, intensity) {
+    if (!modifiers || !this.hubitat.token) return;
+
+    // Weather can override flicker settings
+    if (modifiers.flicker) {
+      await this._applyFlicker({
+        enabled: true,
+        intensity: modifiers.flicker.intensity || 0.3,
+        speed: modifiers.flicker.speed || 'slow'
+      });
+    }
+
+    // Weather can dim/brighten lights relative to current level
+    if (modifiers.levelModifier && this.currentProfile?.lights?.color) {
+      const baseLevel = this.currentProfile.lights.color.level || 50;
+      const adjusted = Math.max(1, Math.min(100,
+        Math.round(baseLevel + modifiers.levelModifier * intensity)
+      ));
+      for (const deviceId of this.lights.color) {
+        await this._hubitatCommand(deviceId, 'setLevel', adjusted);
+        await this._sleep(100);
+      }
+    }
+
+    // Weather can push a player screen effect
+    if (modifiers.playerEffect) {
+      this.bus.dispatch('player:horror_effect', {
+        playerId: 'all',
+        type: modifiers.playerEffect.type || 'atmo_tint',
+        payload: modifiers.playerEffect.payload || {},
+        durationMs: modifiers.playerEffect.durationMs || 0
+      });
+    }
   }
 
   async _handleLightCommand(data) {

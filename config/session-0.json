@@ -319,6 +319,16 @@
         "discoveryMethods": ["Watch both NPCs' behavior toward the cellar", "Ask Tomas why he keeps looking at the cellar door"],
         "revealConsequences": "Players realize the cellar is the key to everything. Increases tension dramatically.",
         "linkedClues": ["tomas_cellar_desperation", "vladislav_cellar_interest"]
+      },
+      {
+        "id": "frascht_family_hunters",
+        "description": "The Frascht family are legendary monster hunters — a Van Helsing bloodline known and feared across the supernatural world for generations. Barry's parents were active hunters who died fighting Vladislav (or his network). Barry has no memory of this — he was too young. The genie patron knows the full truth but is forbidden from revealing it. Barry's 'paranoid' gear (stakes, holy water, mirror, manacles) is instinct — the hunter blood calling. Vladislav recognizes the Frascht name immediately and is both fascinated and wary. The last Frascht, untrained, sitting in his lair.",
+        "knownBy": ["hooded-stranger", "genie-patron"],
+        "discoveryMethods": ["Vladislav lets it slip in dialogue", "Barry finds a family journal or symbol", "Tomas or another monster recognizes the name", "Katya knows a ballad about the Frascht hunters", "The genie breaks its silence in a moment of desperation"],
+        "revealConsequences": "Barry's entire identity shifts. The 'imaginary friend' is real. His parents were heroes, not ordinary people. Vladislav killed them. Barry must choose: embrace the family legacy or reject it. This is a campaign-spanning revelation — do NOT reveal it all at once. Plant seeds in Session 0, pay it off over the arc.",
+        "linkedClues": ["frascht_name_reaction", "hunter_instinct", "genie_panic"],
+        "linkedBeats": ["discovery", "confrontation"],
+        "aiInstructions": "CRITICAL: This is the biggest player-specific secret in the campaign. Vladislav KNOWS the Frascht name. When he hears it, he goes still — just for a moment. He studies Barry differently from the other players. He is careful, respectful, almost nostalgic. He does NOT attack Barry directly unless forced. He wants to understand how much Barry knows. Drop TINY hints in Session 0 only: a reaction to the name, a comment about 'old families', Vladislav watching Barry's hands when he handles the stakes. Do NOT reveal the full truth yet. The genie should be unusually agitated — it knows where they are and what Vladislav is. If Barry talks to his 'imaginary friend', the genie is terrified but cannot explain why."
       }
     ],
 
@@ -423,6 +433,35 @@
         "dc": null,
         "revealsSecret": "piotr_is_spawn",
         "readAloud": "A rattling. Chains. Something moves in the darkest corner. A man — or what was a man. He's chained to the wall, emaciated, but his eyes burn red in the darkness. His mouth opens and you see fangs. 'Help... me...' The voice is a rasp. 'He... made me... this...'"
+      },
+      {
+        "id": "frascht_name_reaction",
+        "description": "Vladislav reacts when he hears the name Frascht — a moment of stillness, recognition, danger.",
+        "location": "pallid-hart-common-room",
+        "method": "observation",
+        "dc": null,
+        "revealsSecret": null,
+        "triggerCondition": "Barry introduces himself by surname or another player uses it",
+        "readAloud": "The hooded stranger goes still. Not the casual stillness of someone listening — a predator's stillness. Like a snake that has just scented something unexpected. It lasts only a moment. Then the hood turns, slowly, toward Barry. You can't see the face. But you can feel the attention."
+      },
+      {
+        "id": "hunter_instinct",
+        "description": "Barry's gear marks him as a monster hunter to anyone who knows what to look for.",
+        "location": "pallid-hart-common-room",
+        "method": "perception",
+        "dc": 12,
+        "revealsSecret": null,
+        "readAloud": "You notice the newcomer's pack. Wooden stakes — nine of them. A flask of holy water. A steel mirror. Manacles. That's not a traveler's kit. That's a hunter's kit. Whoever this person is, they came prepared for something specific."
+      },
+      {
+        "id": "genie_panic",
+        "description": "Barry's 'imaginary friend' (genie patron) is unusually agitated inside the inn. If Barry tries to talk to it, it's terrified but can't say why.",
+        "location": "pallid-hart-common-room",
+        "method": "player-initiated",
+        "dc": null,
+        "revealsSecret": null,
+        "playerSpecific": "barry",
+        "readAloud": "Your imaginary friend hasn't spoken since you entered the inn. That's unusual — normally you can't shut them up. When you reach out, there's... static. Fear. A feeling like a hand gripping your wrist, pulling you toward the door. Then one word, barely a whisper: 'Leave.'"
       }
     ],
 

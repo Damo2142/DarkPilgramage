@@ -1,0 +1,512 @@
+{
+  "ddbId": "162702065",
+  "name": "Barry Goodfellow Frascht",
+  "class": "Warlock",
+  "classes": [
+    {
+      "name": "Warlock",
+      "level": 3,
+      "subclass": "Fiend Patron"
+    }
+  ],
+  "level": 3,
+  "race": "Human",
+  "background": "Haunted One",
+  "alignment": "CN",
+  "hp": {
+    "current": 18,
+    "max": 18,
+    "temp": 0
+  },
+  "ac": 11,
+  "speed": 30,
+  "initiative": 1,
+  "proficiencyBonus": 2,
+  "abilities": {
+    "str": {
+      "score": 8,
+      "modifier": -1,
+      "modifierStr": "-1"
+    },
+    "dex": {
+      "score": 13,
+      "modifier": 1,
+      "modifierStr": "+1"
+    },
+    "con": {
+      "score": 14,
+      "modifier": 2,
+      "modifierStr": "+2"
+    },
+    "int": {
+      "score": 10,
+      "modifier": 0,
+      "modifierStr": "+0"
+    },
+    "wis": {
+      "score": 12,
+      "modifier": 1,
+      "modifierStr": "+1"
+    },
+    "cha": {
+      "score": 15,
+      "modifier": 2,
+      "modifierStr": "+2"
+    }
+  },
+  "savingThrows": {
+    "str": {
+      "modifier": -1,
+      "proficient": false
+    },
+    "dex": {
+      "modifier": 1,
+      "proficient": false
+    },
+    "con": {
+      "modifier": 2,
+      "proficient": false
+    },
+    "int": {
+      "modifier": 0,
+      "proficient": false
+    },
+    "wis": {
+      "modifier": 1,
+      "proficient": false
+    },
+    "cha": {
+      "modifier": 2,
+      "proficient": false
+    }
+  },
+  "skills": {
+    "acrobatics": {
+      "modifier": 1,
+      "proficiency": "none"
+    },
+    "animal-handling": {
+      "modifier": 1,
+      "proficiency": "none"
+    },
+    "arcana": {
+      "modifier": 2,
+      "proficiency": "proficiency"
+    },
+    "athletics": {
+      "modifier": -1,
+      "proficiency": "none"
+    },
+    "deception": {
+      "modifier": 4,
+      "proficiency": "proficiency"
+    },
+    "history": {
+      "modifier": 0,
+      "proficiency": "none"
+    },
+    "insight": {
+      "modifier": 1,
+      "proficiency": "none"
+    },
+    "intimidation": {
+      "modifier": 2,
+      "proficiency": "none"
+    },
+    "investigation": {
+      "modifier": 2,
+      "proficiency": "proficiency"
+    },
+    "medicine": {
+      "modifier": 1,
+      "proficiency": "none"
+    },
+    "nature": {
+      "modifier": 0,
+      "proficiency": "none"
+    },
+    "perception": {
+      "modifier": 3,
+      "proficiency": "proficiency"
+    },
+    "performance": {
+      "modifier": 2,
+      "proficiency": "none"
+    },
+    "persuasion": {
+      "modifier": 2,
+      "proficiency": "none"
+    },
+    "religion": {
+      "modifier": 2,
+      "proficiency": "proficiency"
+    },
+    "sleight-of-hand": {
+      "modifier": 1,
+      "proficiency": "none"
+    },
+    "stealth": {
+      "modifier": 1,
+      "proficiency": "none"
+    },
+    "survival": {
+      "modifier": 1,
+      "proficiency": "none"
+    }
+  },
+  "spellSlots": null,
+  "spells": [
+    {
+      "name": "Hex",
+      "level": 1,
+      "school": "Enchantment",
+      "ritual": false,
+      "concentration": true,
+      "prepared": false,
+      "description": "You place a curse on a creature that you can see within range. Until the spell ends, you deal an extra 1d6 Necrotic damage to the target whenever you hit it with an attack roll. Also, choose one abili",
+      "damage": "1d6",
+      "damageType": "necrotic",
+      "castingTime": "1 bonus action",
+      "range": "90 feet",
+      "components": "V, S, M (the petrified eye of a newt)",
+      "duration": "Concentration, up to 1 hour",
+      "classes": [
+        "Warlock"
+      ],
+      "higherLevel": "Duration increases with higher slots: 8 hours at 3rd, 24 hours at 5th.",
+      "_enriched": true
+    },
+    {
+      "name": "Eldritch Blast",
+      "level": 0,
+      "school": "Evocation",
+      "ritual": false,
+      "concentration": false,
+      "prepared": true,
+      "description": "You hurl a beam of crackling energy. Make a ranged spell attack against one creature or object in range. On a hit, the target takes 1d10 Force damage.\r\nCantrip Upgrade. The spell creates two beams at ",
+      "damage": "1d10",
+      "damageType": "force",
+      "castingTime": "1 action",
+      "range": "120 feet",
+      "components": "V, S",
+      "duration": "Instantaneous",
+      "classes": [
+        "Warlock"
+      ],
+      "higherLevel": "Additional beams at 5th (2), 11th (3), and 17th (4) level.",
+      "_enriched": true
+    },
+    {
+      "name": "Prestidigitation",
+      "level": 0,
+      "school": "Transmutation",
+      "ritual": false,
+      "concentration": false,
+      "prepared": true,
+      "description": "You create a magical effect within range. Choose the effect from the options below. If you cast this spell multiple times, you can have up to three of its non-instantaneous effects active at a time.\r\n",
+      "castingTime": "1 action",
+      "range": "10 feet",
+      "components": "V, S",
+      "duration": "Up to 1 hour",
+      "classes": [
+        "Bard",
+        "Sorcerer",
+        "Warlock",
+        "Wizard"
+      ],
+      "_enriched": true
+    },
+    {
+      "name": "Hellish Rebuke",
+      "level": 1,
+      "school": "Evocation",
+      "ritual": false,
+      "concentration": false,
+      "prepared": false,
+      "description": "The creature that damaged you is momentarily surrounded by green flames. It makes a Dexterity saving throw, taking 2d10 Fire damage on a failed save or half as much damage on a successful one.\r\nUsing "
+    },
+    {
+      "name": "Misty Step",
+      "level": 2,
+      "school": "Conjuration",
+      "ritual": false,
+      "concentration": false,
+      "prepared": false,
+      "description": "Briefly surrounded by silvery mist, you teleport up to 30 feet to an unoccupied space that you can see.",
+      "castingTime": "1 bonus action",
+      "range": "Self",
+      "components": "V",
+      "duration": "Instantaneous",
+      "classes": [
+        "Sorcerer",
+        "Warlock",
+        "Wizard"
+      ],
+      "_enriched": true
+    },
+    {
+      "name": "Mirror Image",
+      "level": 2,
+      "school": "Illusion",
+      "ritual": false,
+      "concentration": false,
+      "prepared": false,
+      "description": "Three illusory duplicates of yourself appear in your space. Until the spell ends, the duplicates move with you and mimic your actions, shifting position so it’s impossible to track which image is real",
+      "castingTime": "1 action",
+      "range": "Self",
+      "components": "V, S",
+      "duration": "1 minute",
+      "classes": [
+        "Sorcerer",
+        "Warlock",
+        "Wizard"
+      ],
+      "_enriched": true
+    }
+  ],
+  "attacks": [],
+  "features": [
+    {
+      "name": "Medium",
+      "source": "Size",
+      "description": ""
+    },
+    {
+      "name": "Common",
+      "source": "Language",
+      "description": ""
+    },
+    {
+      "name": "Draconic",
+      "source": "Language",
+      "description": ""
+    },
+    {
+      "name": "Goblin",
+      "source": "Language",
+      "description": ""
+    },
+    {
+      "name": "Subclass",
+      "source": "Set",
+      "description": ""
+    },
+    {
+      "name": "Bonus Damage",
+      "source": "Eldritch Blast",
+      "description": ""
+    },
+    {
+      "name": "Celestial",
+      "source": "Language",
+      "description": ""
+    },
+    {
+      "name": "Elvish",
+      "source": "Language",
+      "description": ""
+    }
+  ],
+  "inventory": [
+    {
+      "name": "Leather",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Armor",
+      "weight": 10
+    },
+    {
+      "name": "Dagger",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Weapon",
+      "weight": 1
+    },
+    {
+      "name": "Dagger",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Weapon",
+      "weight": 1
+    },
+    {
+      "name": "Sickle",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Weapon",
+      "weight": 2
+    },
+    {
+      "name": "Chest",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 25
+    },
+    {
+      "name": "Clothes, Common",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 3
+    },
+    {
+      "name": "Backpack",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 5
+    },
+    {
+      "name": "Book",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 5
+    },
+    {
+      "name": "Orb",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 3
+    },
+    {
+      "name": "Crowbar",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 5
+    },
+    {
+      "name": "Hammer",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 3
+    },
+    {
+      "name": "Holy Water (flask)",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 1
+    },
+    {
+      "name": "Manacles",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 6
+    },
+    {
+      "name": "Mirror, Steel",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 0.5
+    },
+    {
+      "name": "Oil (flask)",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 1
+    },
+    {
+      "name": "Tinderbox",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 1
+    },
+    {
+      "name": "Torch",
+      "quantity": 3,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 1
+    },
+    {
+      "name": "Stake (Wooden)",
+      "quantity": 9,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 0
+    },
+    {
+      "name": "Holy Symbol",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 0
+    },
+    {
+      "name": "Oil",
+      "quantity": 10,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 1
+    },
+    {
+      "name": "Parchment",
+      "quantity": 10,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 0
+    },
+    {
+      "name": "Tinderbox",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 1
+    },
+    {
+      "name": "Book",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 5
+    },
+    {
+      "name": "Lamp",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 1
+    },
+    {
+      "name": "Ink Pen",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 0
+    },
+    {
+      "name": "Ink",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 0
+    }
+  ],
+  "conditions": [],
+  "currency": {
+    "pp": 0,
+    "gp": 15,
+    "ep": 0,
+    "sp": 0,
+    "cp": 0
+  },
+  "languages": [
+    "Common",
+    "Draconic",
+    "Goblin",
+    "Celestial",
+    "Elvish"
+  ],
+  "_syncedAt": "2026-03-12T23:32:12.176Z",
+  "_source": "ddb",
+  "_ddbUrl": "https://www.dndbeyond.com/characters/162702065"
+}

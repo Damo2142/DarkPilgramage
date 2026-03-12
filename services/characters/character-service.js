@@ -467,6 +467,38 @@ class CharacterService {
       });
     }
 
+    // Backstory, traits, appearance, allies
+    const traits = d.traits || {};
+    const notes = d.notes || {};
+
+    const backstory = {
+      personalityTraits: traits.personalityTraits || null,
+      ideals: traits.ideals || null,
+      bonds: traits.bonds || null,
+      flaws: traits.flaws || null,
+      backstoryText: notes.backstory || d.backstory || null,
+      allies: notes.allies || null,
+      organizations: notes.organizations || null,
+      enemies: notes.enemies || null,
+      otherNotes: notes.otherNotes || null
+    };
+
+    const appearance = {
+      gender: d.gender || null,
+      age: d.age || null,
+      height: d.height || null,
+      weight: d.weight || null,
+      size: d.race?.size || null,
+      eyes: d.eyes || null,
+      hair: d.hair || null,
+      skin: d.skin || null,
+      faith: d.faith || null,
+      description: traits.appearance || null
+    };
+
+    // Patron / subclass details (important for warlocks, clerics, etc)
+    const patron = classes.map(c => c.subclass).filter(Boolean).join(', ') || null;
+
     return {
       ddbId: String(ddbId),
       name: d.name || 'Unknown',
@@ -492,6 +524,9 @@ class CharacterService {
       conditions: [],
       currency,
       languages: allMods.filter(m => m.type === 'language').map(m => m.friendlySubtypeName).filter(Boolean),
+      backstory,
+      appearance,
+      patron,
       _syncedAt: new Date().toISOString(),
       _source: 'ddb',
       _ddbUrl: 'https://www.dndbeyond.com/characters/' + ddbId

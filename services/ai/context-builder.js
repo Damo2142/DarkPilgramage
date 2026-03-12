@@ -290,8 +290,23 @@ class ContextBuilder {
       const c = p.character || {};
       const hp = c.hp || {};
       const dread = p.dread || {};
-      return `${c.name || id}: ${c.race || '?'} ${c.class || '?'} Lv${c.level || 1}, HP ${hp.current || '?'}/${hp.max || '?'}, Dread ${dread.score || 0}/100 (${dread.threshold || 'calm'})`;
-    }).join('\n') || 'No players';
+      const bs = c.backstory || {};
+      const app = c.appearance || {};
+      const parts = [];
+      parts.push(`${c.name || id}: ${c.race || '?'} ${c.class || '?'} Lv${c.level || 1}, HP ${hp.current || '?'}/${hp.max || '?'}, Dread ${dread.score || 0}/100 (${dread.threshold || 'calm'})`);
+      if (c.patron) parts.push(`  Subclass/Patron: ${c.patron}`);
+      if (c.background) parts.push(`  Background: ${c.background}`);
+      if (app.faith) parts.push(`  Faith: ${app.faith}`);
+      if (bs.personalityTraits) parts.push(`  Personality: ${bs.personalityTraits}`);
+      if (bs.ideals) parts.push(`  Ideals: ${bs.ideals}`);
+      if (bs.bonds) parts.push(`  Bonds: ${bs.bonds}`);
+      if (bs.flaws) parts.push(`  Flaws: ${bs.flaws}`);
+      if (bs.backstoryText) parts.push(`  Backstory: ${bs.backstoryText.slice(0, 500)}`);
+      if (bs.allies) parts.push(`  Allies: ${bs.allies.slice(0, 300)}`);
+      if (bs.organizations) parts.push(`  Organizations: ${bs.organizations.slice(0, 300)}`);
+      if (bs.enemies) parts.push(`  Enemies: ${bs.enemies.slice(0, 300)}`);
+      return parts.join('\n');
+    }).join('\n\n') || 'No players';
   }
 
   _formatTranscript() {

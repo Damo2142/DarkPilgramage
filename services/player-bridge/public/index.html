@@ -274,6 +274,98 @@
     .spellbar span{color:var(--text-dim);}
     .spellbar strong{color:var(--text);}
 
+    /* ── DDB-inspired style enhancements ── */
+
+    /* Ability score boxes — shield/hex style */
+    .abbox{background:linear-gradient(135deg,var(--surface2),var(--surface));border:2px solid var(--border);border-radius:8px;padding:10px 4px;text-align:center;box-shadow:inset 0 1px 3px rgba(255,255,255,0.15),0 2px 6px rgba(0,0,0,0.15);position:relative;}
+    .abbox::before{content:'';position:absolute;inset:2px;border-radius:6px;border:1px solid rgba(88,24,13,0.12);pointer-events:none;}
+    .abm{font-size:28px;font-weight:700;color:#58180d;line-height:1;text-shadow:0 1px 2px rgba(0,0,0,0.1);}
+    .abs{font-size:11px;color:var(--text-dim);border:1.5px solid var(--border);border-radius:12px;padding:2px 8px;margin-top:4px;display:inline-block;cursor:pointer;background:var(--surface3);transition:border-color .2s;}
+    .abs:hover{border-color:var(--accent);background:rgba(88,24,13,0.08);}
+
+    /* HP bar — dramatic gradient */
+    #hpfill{background:linear-gradient(90deg,#e53935,#b71c1c,#880e0e);box-shadow:0 0 6px rgba(229,57,53,0.4);}
+    #tmpfill{background:linear-gradient(90deg,#42a5f5,#1565c0);box-shadow:0 0 6px rgba(66,165,245,0.3);}
+    .hpw{flex:1;background:rgba(0,0,0,0.2);border-radius:4px;height:14px;overflow:hidden;border:1px solid rgba(0,0,0,0.1);}
+
+    /* Section headers — serif with subtle underline */
+    .st{font-family:Cinzel,serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);border-bottom:2px solid var(--border);padding-bottom:4px;margin:14px 0 8px;background:linear-gradient(90deg,rgba(88,24,13,0.06),transparent);padding-left:6px;}
+    .st:first-child{margin-top:0;}
+
+    /* Skill list — alternating rows */
+    .skr{display:flex;align-items:center;gap:6px;padding:4px 6px;border-bottom:1px solid rgba(88,24,13,0.06);font-size:12px;border-radius:2px;transition:background .15s;}
+    .skr:nth-child(odd){background:rgba(88,24,13,0.03);}
+    .skr:hover{background:rgba(88,24,13,0.08);}
+    .skr:last-child{border:none;}
+
+    /* Attack cards — refined */
+    .atk-card{background:linear-gradient(135deg,var(--surface2),var(--surface));border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,0.08);}
+    .roll-btn{margin-top:8px;width:100%;padding:8px;background:linear-gradient(135deg,#58180d,#7a2010);border:none;color:#f4ebd0;border-radius:6px;font-weight:700;font-size:12px;box-shadow:0 2px 4px rgba(88,24,13,0.3);transition:box-shadow .2s;}
+    .roll-btn:active{box-shadow:inset 0 2px 4px rgba(0,0,0,0.3);}
+
+    /* Feature cards — refined */
+    .feat{background:linear-gradient(135deg,var(--surface2),var(--surface));border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
+    .feat-name{font-family:Cinzel,serif;font-weight:700;font-size:13px;color:#58180d;margin-bottom:3px;}
+
+    /* Spell slot pips — improved */
+    .pip{width:14px;height:14px;border-radius:50%;border:2px solid var(--accent-dim);cursor:pointer;transition:all .15s;}
+    .pip.avail{background:linear-gradient(135deg,#58180d,#7a2010);border-color:#58180d;box-shadow:0 0 4px rgba(88,24,13,0.4);}
+    .pip.used{background:var(--surface3);border-color:var(--border);box-shadow:none;}
+    .pip:hover{transform:scale(1.15);}
+
+    /* Vitals boxes — refined */
+    .vbox{text-align:center;background:linear-gradient(135deg,var(--surface3),var(--surface2));border-radius:6px;padding:6px 2px;cursor:pointer;border:1px solid rgba(0,0,0,0.08);transition:border-color .2s;}
+    .vbox:active{opacity:.7;border-color:var(--accent);}
+    .vv{font-size:18px;font-weight:700;color:#58180d;line-height:1.2;font-family:Cinzel,serif;}
+
+    /* Inventory items — refined */
+    .inv-item{display:flex;align-items:center;gap:6px;padding:6px 8px;background:linear-gradient(135deg,var(--surface2),var(--surface));border-radius:5px;margin-bottom:4px;font-size:12px;border:1px solid rgba(0,0,0,0.04);}
+
+    /* Dice buttons — refined */
+    .diebtn{padding:14px 4px;background:linear-gradient(135deg,var(--surface2),var(--surface));border:2px solid var(--border);color:#58180d;border-radius:8px;font-family:Cinzel,serif;font-size:13px;text-align:center;box-shadow:0 2px 4px rgba(0,0,0,0.08);transition:all .15s;}
+    .diebtn:active{background:var(--accent);color:#f4ebd0;border-color:var(--accent);box-shadow:inset 0 2px 4px rgba(0,0,0,0.2);}
+
+    /* Dread bar — enhanced */
+    .df{height:100%;background:linear-gradient(90deg,#9c27b0,#6a1a8a,#4a1a6a);border-radius:3px;transition:width .6s;box-shadow:0 0 6px rgba(106,26,138,0.4);}
+
+    /* ── Background tab styles ── */
+    .bg-identity{background:linear-gradient(135deg,var(--surface2),var(--surface));border:2px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+    .bg-identity .bg-charname{font-family:Cinzel,serif;font-size:1.3rem;font-weight:700;color:#58180d;line-height:1.2;}
+    .bg-identity .bg-subtitle{font-size:12px;color:var(--text-dim);margin-top:2px;}
+    .bg-identity .bg-patron{font-size:11px;color:var(--accent-dim);margin-top:4px;font-style:italic;}
+    .bg-identity .bg-faith{font-size:10px;color:var(--text-dim);margin-top:2px;}
+
+    .bg-section{margin-bottom:10px;}
+    .bg-section-hdr{font-family:Cinzel,serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);border-bottom:2px solid var(--border);padding-bottom:4px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(90deg,rgba(88,24,13,0.06),transparent);padding:4px 6px;border-radius:2px 2px 0 0;user-select:none;}
+    .bg-section-hdr .bg-toggle{font-size:12px;color:var(--text-dim);transition:transform .2s;}
+    .bg-section-hdr.collapsed .bg-toggle{transform:rotate(-90deg);}
+    .bg-section-body{overflow:hidden;transition:max-height .3s ease;}
+    .bg-section-body.collapsed{max-height:0!important;overflow:hidden;}
+
+    .bg-appear-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:6px;}
+    .bg-appear-item{background:var(--surface3);border:1px solid var(--border);border-radius:4px;padding:6px;text-align:center;}
+    .bg-appear-item .bg-al{font-size:8px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;}
+    .bg-appear-item .bg-av{font-size:12px;font-weight:600;color:var(--text);}
+    .bg-appear-desc{margin-top:8px;font-size:12px;color:var(--text-dim);line-height:1.5;font-style:italic;padding:8px;background:rgba(88,24,13,0.04);border-radius:4px;border-left:3px solid var(--border);}
+
+    .bg-personality-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    @media(max-width:400px){.bg-personality-grid{grid-template-columns:1fr;}}
+    .bg-trait-card{background:linear-gradient(135deg,var(--surface),var(--bg));border:1px solid var(--border);border-radius:6px;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,0.06);position:relative;}
+    .bg-trait-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:6px 6px 0 0;background:var(--accent);opacity:0.4;}
+    .bg-trait-label{font-family:Cinzel,serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:4px;}
+    .bg-trait-text{font-size:12px;color:var(--text);line-height:1.5;}
+
+    .bg-backstory{background:linear-gradient(135deg,var(--surface),#f0e4c0);border:1px solid var(--border);border-radius:6px;padding:14px 16px;font-size:12px;line-height:1.7;color:var(--text);box-shadow:inset 0 0 20px rgba(184,151,90,0.15);position:relative;}
+    .bg-backstory::before{content:'';position:absolute;inset:3px;border:1px solid rgba(184,151,90,0.2);border-radius:4px;pointer-events:none;}
+
+    .bg-allies-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    @media(max-width:400px){.bg-allies-grid{grid-template-columns:1fr;}}
+    .bg-ally-card{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;}
+    .bg-ally-card.enemies{border-color:rgba(139,0,0,0.3);background:rgba(139,0,0,0.04);}
+    .bg-ally-label{font-family:Cinzel,serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent-dim);margin-bottom:4px;}
+    .bg-ally-card.enemies .bg-ally-label{color:var(--red);}
+    .bg-ally-text{font-size:12px;color:var(--text);line-height:1.4;}
+
     /* Kiosk mode — hides browser chrome indicators, fullscreen feel */
     body.kiosk #topbar{display:none;}
     body.kiosk{padding-top:0;}
@@ -321,6 +413,7 @@
     <div class="tab" onclick="showTab('skills')">Skills</div>
     <div class="tab" onclick="showTab('inventory')">Items</div>
     <div class="tab" onclick="showTab('features')">Features</div>
+    <div class="tab" onclick="showTab('background')">Background</div>
     <div class="tab" onclick="showTab('dice')">Dice</div>
     <div class="tab" onclick="showTab('chat')">Chat</div>
     <div class="tab" onclick="showTab('journal')">Journal</div>
@@ -413,6 +506,26 @@
   </div>
   <!-- FEATURES -->
   <div class="panel" id="panel-features"><div id="featlist"></div><button class="add-btn" onclick="openAddFeat()">+ Add Feature / Trait</button></div>
+  <!-- BACKGROUND -->
+  <div class="panel" id="panel-background">
+    <div class="bg-identity" id="bg-identity"></div>
+    <div class="bg-section" id="bg-appear-section">
+      <div class="bg-section-hdr" onclick="toggleBgSection('bg-appear')">Appearance <span class="bg-toggle">&#9660;</span></div>
+      <div class="bg-section-body" id="bg-appear"></div>
+    </div>
+    <div class="bg-section" id="bg-personality-section">
+      <div class="bg-section-hdr" onclick="toggleBgSection('bg-personality')">Personality <span class="bg-toggle">&#9660;</span></div>
+      <div class="bg-section-body" id="bg-personality"></div>
+    </div>
+    <div class="bg-section" id="bg-backstory-section">
+      <div class="bg-section-hdr" onclick="toggleBgSection('bg-backstory')">Backstory <span class="bg-toggle">&#9660;</span></div>
+      <div class="bg-section-body" id="bg-backstory"></div>
+    </div>
+    <div class="bg-section" id="bg-allies-section">
+      <div class="bg-section-hdr" onclick="toggleBgSection('bg-allies')">Allies, Organizations &amp; Enemies <span class="bg-toggle">&#9660;</span></div>
+      <div class="bg-section-body" id="bg-allies"></div>
+    </div>
+  </div>
   <!-- DICE -->
   <div class="panel" id="panel-dice">
     <div class="diceg">
@@ -578,7 +691,7 @@ function loadChar(c){
   if(c.spells&&c.spells.length){spells=c.spells.map(s=>({...s, level:s.level||0, concentration:!!s.concentration, ritual:!!s.ritual, school:s.school||'', description:s.description||''}));}
   // Populate features from DDB sync data (format: {name,source,description})
   if(c.features&&c.features.length){feats=c.features.map(f=>({name:f.name,src:f.source||'',desc:f.description||''}));}
-  renderHp(); renderAbil(); renderSaves(); renderSkills(); renderAtks(); renderSpells(); renderInv(); renderFeats(); renderConds();
+  renderHp(); renderAbil(); renderSaves(); renderSkills(); renderAtks(); renderSpells(); renderInv(); renderFeats(); renderConds(); renderBackground();
   $('notes-area').value=localStorage.getItem('dpnotes_'+PID)||'';
   // Enrich spells with SRD data (damage, save, AOE, etc.)
   enrichSpellsFromSRD();
@@ -1378,6 +1491,92 @@ function openAddFeat(){
   ],()=>{const v=getEV();if(!v.name)return;feats.push({name:v.name,src:v.src,desc:v.desc});renderFeats();});
 }
 
+// ── BACKGROUND TAB ──────────────────────────────────────────────────
+function renderBackground(){
+  // Identity card
+  var h='';
+  h+='<div class="bg-charname">'+esc(char.name||'Unknown')+'</div>';
+  var sub=[];
+  if(char.race)sub.push(char.race);
+  if(char.class)sub.push(char.class+(char.level?' '+char.level:''));
+  if(char.background)sub.push(char.background);
+  if(char.alignment)sub.push(char.alignment);
+  if(sub.length)h+='<div class="bg-subtitle">'+esc(sub.join(' · '))+'</div>';
+  if(char.patron)h+='<div class="bg-patron">'+esc(char.patron)+'</div>';
+  var app=char.appearance||{};
+  if(app.faith)h+='<div class="bg-faith">Faith: '+esc(app.faith)+'</div>';
+  $('bg-identity').innerHTML=h;
+
+  // Appearance
+  var ahtml='';
+  var aFields=[['gender','Gender'],['age','Age'],['height','Height'],['weight','Weight'],['size','Size'],['eyes','Eyes'],['hair','Hair'],['skin','Skin']];
+  var hasAppear=false;
+  var gridItems='';
+  for(var i=0;i<aFields.length;i++){
+    var val=app[aFields[i][0]];
+    if(val){hasAppear=true;gridItems+='<div class="bg-appear-item"><div class="bg-al">'+aFields[i][1]+'</div><div class="bg-av">'+esc(String(val))+'</div></div>';}
+  }
+  if(hasAppear)ahtml+='<div class="bg-appear-grid">'+gridItems+'</div>';
+  if(app.description)ahtml+='<div class="bg-appear-desc">'+esc(app.description)+'</div>';
+  if(!ahtml)ahtml='<div style="color:var(--text-dim);font-size:11px;padding:8px;">No appearance details available.</div>';
+  $('bg-appear').innerHTML=ahtml;
+
+  // Personality
+  var bs=char.backstory||{};
+  var phtml='<div class="bg-personality-grid">';
+  var traits=[['personalityTraits','Personality Traits'],['ideals','Ideals'],['bonds','Bonds'],['flaws','Flaws']];
+  var hasTrait=false;
+  for(var i=0;i<traits.length;i++){
+    var val=bs[traits[i][0]];
+    if(val){hasTrait=true;phtml+='<div class="bg-trait-card"><div class="bg-trait-label">'+traits[i][1]+'</div><div class="bg-trait-text">'+esc(val)+'</div></div>';}
+  }
+  phtml+='</div>';
+  if(!hasTrait)phtml='<div style="color:var(--text-dim);font-size:11px;padding:8px;">No personality traits set.</div>';
+  $('bg-personality').innerHTML=phtml;
+
+  // Backstory
+  var bsHtml='';
+  if(bs.backstoryText){
+    bsHtml='<div class="bg-backstory">'+esc(bs.backstoryText).replace(/\n/g,'<br>')+'</div>';
+  }else{
+    bsHtml='<div style="color:var(--text-dim);font-size:11px;padding:8px;">No backstory written yet.</div>';
+  }
+  $('bg-backstory').innerHTML=bsHtml;
+
+  // Allies & enemies
+  var alHtml='';
+  var hasAl=bs.allies||bs.organizations||bs.enemies||bs.otherNotes;
+  if(hasAl){
+    alHtml='<div class="bg-allies-grid">';
+    if(bs.allies)alHtml+='<div class="bg-ally-card"><div class="bg-ally-label">Allies</div><div class="bg-ally-text">'+esc(bs.allies)+'</div></div>';
+    if(bs.organizations)alHtml+='<div class="bg-ally-card"><div class="bg-ally-label">Organizations</div><div class="bg-ally-text">'+esc(bs.organizations)+'</div></div>';
+    if(bs.enemies)alHtml+='<div class="bg-ally-card enemies"><div class="bg-ally-label">Enemies</div><div class="bg-ally-text">'+esc(bs.enemies)+'</div></div>';
+    if(bs.otherNotes)alHtml+='<div class="bg-ally-card"><div class="bg-ally-label">Other Notes</div><div class="bg-ally-text">'+esc(bs.otherNotes)+'</div></div>';
+    alHtml+='</div>';
+  }else{
+    alHtml='<div style="color:var(--text-dim);font-size:11px;padding:8px;">No allies or organizations noted.</div>';
+  }
+  $('bg-allies').innerHTML=alHtml;
+}
+
+function toggleBgSection(id){
+  var body=$(id);
+  var hdr=body.previousElementSibling;
+  if(body.classList.contains('collapsed')){
+    body.classList.remove('collapsed');
+    body.style.maxHeight=body.scrollHeight+'px';
+    hdr.classList.remove('collapsed');
+    setTimeout(function(){body.style.maxHeight='none';},300);
+  }else{
+    body.style.maxHeight=body.scrollHeight+'px';
+    // Force reflow
+    body.offsetHeight;
+    body.style.maxHeight='0';
+    body.classList.add('collapsed');
+    hdr.classList.add('collapsed');
+  }
+}
+
 // ── CONDITIONS ──────────────────────────────────────────────────────
 function renderConds(){
   $('condg').innerHTML=CONDS.map(c=>'<div class="cond '+(activeConds.has(c)?'on':'')+'" onclick="togCond(\''+c+'\')">'+c+'</div>').join('');
@@ -2001,7 +2200,7 @@ function dismissInspiration() {
 
 // ── TABS ────────────────────────────────────────────────────────────
 function showTab(n){
-  const tabs=['stats','map','combat','spells','skills','inventory','features','dice','chat','journal','npcchat','handouts','notes'];
+  const tabs=['stats','map','combat','spells','skills','inventory','features','background','dice','chat','journal','npcchat','handouts','notes'];
   document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',tabs[i]===n));
   document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+n));
   if(n==='map') PlayerMap.resize();

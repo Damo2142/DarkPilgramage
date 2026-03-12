@@ -235,6 +235,37 @@ function mapCharacter(ddbData, ddbId) {
   // Spell slots
   const spellSlots = getSpellSlots(d);
 
+  // Backstory, traits, appearance, allies
+  const traits = d.traits || {};
+  const notes = d.notes || {};
+
+  const backstory = {
+    personalityTraits: traits.personalityTraits || null,
+    ideals: traits.ideals || null,
+    bonds: traits.bonds || null,
+    flaws: traits.flaws || null,
+    backstoryText: notes.backstory || d.backstory || null,
+    allies: notes.allies || null,
+    organizations: notes.organizations || null,
+    enemies: notes.enemies || null,
+    otherNotes: notes.otherNotes || null
+  };
+
+  const appearance = {
+    gender: d.gender || null,
+    age: d.age || null,
+    height: d.height || null,
+    weight: d.weight || null,
+    size: d.race?.size || null,
+    eyes: d.eyes || null,
+    hair: d.hair || null,
+    skin: d.skin || null,
+    faith: d.faith || null,
+    description: traits.appearance || null
+  };
+
+  const patron = classes.map(c => c.subclass).filter(Boolean).join(', ') || null;
+
   return {
     ddbId: ddbId,
     name: d.name || 'Unknown',
@@ -255,6 +286,9 @@ function mapCharacter(ddbData, ddbId) {
     inventory: mapInventory(d.inventory),
     conditions: [],
     languages: (d.modifiers?.language || []).map(m => m.friendlySubtypeName).filter(Boolean),
+    backstory,
+    appearance,
+    patron,
     _syncedAt: new Date().toISOString(),
     _ddbUrl: `https://www.dndbeyond.com/characters/${ddbId}`
   };

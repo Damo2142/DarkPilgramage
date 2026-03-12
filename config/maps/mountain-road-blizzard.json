@@ -47,7 +47,56 @@
       "revealed": false
     }
   ],
-  "tokens": {},
+  "tokens": {
+    "dire-wolf-road-1": {
+      "name": "Dire Wolf",
+      "type": "npc",
+      "x": 1088,
+      "y": 320,
+      "image": "dire-wolf.png",
+      "visible": false,
+      "hidden": true,
+      "hp": { "current": 37, "max": 37 },
+      "ac": 14,
+      "actorSlug": "dire-wolf"
+    },
+    "wolf-road-1": {
+      "name": "Wolf",
+      "type": "npc",
+      "x": 384,
+      "y": 448,
+      "image": "wolf.png",
+      "visible": false,
+      "hidden": true,
+      "hp": { "current": 11, "max": 11 },
+      "ac": 13,
+      "actorSlug": "wolf"
+    },
+    "wolf-road-2": {
+      "name": "Wolf",
+      "type": "npc",
+      "x": 1152,
+      "y": 576,
+      "image": "wolf.png",
+      "visible": false,
+      "hidden": true,
+      "hp": { "current": 11, "max": 11 },
+      "ac": 13,
+      "actorSlug": "wolf"
+    },
+    "swarm-of-bats-road": {
+      "name": "Swarm of Bats",
+      "type": "npc",
+      "x": 448,
+      "y": 192,
+      "image": "swarm-of-bats.png",
+      "visible": false,
+      "hidden": true,
+      "hp": { "current": 22, "max": 22 },
+      "ac": 12,
+      "actorSlug": "swarm-of-bats"
+    }
+  },
   "playerSpawns": {
     "pc1": {
       "x": 736,

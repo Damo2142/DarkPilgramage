@@ -6,6 +6,9 @@ services:
     restart: "no"
     env_file: ./.env
     network_mode: host
+    security_opt:
+      - apparmor:unconfined
+    pid: host
     volumes:
       - ./sessions:/app/sessions
       - ./cert.pem:/app/cert.pem:ro

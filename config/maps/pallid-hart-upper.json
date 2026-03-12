@@ -54,7 +54,18 @@
       "y": 256,
       "w": 320,
       "h": 320,
-      "revealed": false
+      "revealed": false,
+      "checks": [
+        {
+          "skill": "perception",
+          "dc": 14,
+          "successText": "The mirror on the wall is cracked but still reflective. You catch yourself glancing at it — and freeze. You can see yourself. You can see the hallway behind you. But if anyone else were standing there... would you see them?",
+          "failText": null,
+          "dmWhisper": "Player noticed the mirror in Room 2 — potential vampire reflection clue planted",
+          "triggerOnce": true,
+          "triggered": []
+        }
+      ]
     },
     {
       "id": "room-3",
@@ -63,7 +74,18 @@
       "y": 256,
       "w": 320,
       "h": 320,
-      "revealed": false
+      "revealed": false,
+      "checks": [
+        {
+          "skill": "investigation",
+          "dc": 12,
+          "successText": "There's a dark stain on the floorboards near the bed. You kneel down. It's not wine — the grain of the wood has absorbed it differently. Blood. Old, but not ancient.",
+          "failText": null,
+          "dmWhisper": "Player found blood stain in Guest Room 3",
+          "triggerOnce": true,
+          "triggered": []
+        }
+      ]
     },
     {
       "id": "marta-room",
@@ -72,7 +94,18 @@
       "y": 640,
       "w": 448,
       "h": 320,
-      "revealed": false
+      "revealed": false,
+      "checks": [
+        {
+          "skill": "perception",
+          "dc": 10,
+          "successText": "The bed has only been slept on one side for weeks. A man's boots sit by the door — undisturbed, as if waiting for someone who won't return. On the nightstand, a wedding ring.",
+          "failText": "A simple bedroom. Lived in but lonely.",
+          "dmWhisper": "Player found evidence of Piotr's absence in Marta's room — boots, ring, one-sided bed",
+          "triggerOnce": true,
+          "triggered": []
+        }
+      ]
     },
     {
       "id": "stairs",

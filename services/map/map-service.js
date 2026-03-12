@@ -898,6 +898,11 @@ class MapService {
     // Character assignment updates token name/HP
     this.bus.subscribe('characters:imported', () => this._syncPlayerTokens(), 'map');
     this.bus.subscribe('characters:reloaded', () => this._syncPlayerTokens(), 'map');
+
+    // Auto-perception: check zones when tokens enter them
+    this.bus.subscribe('map:zone_enter', (env) => {
+      this._handleZonePerceptionCheck(env.data);
+    }, 'map');
   }
 
   _syncPlayerTokens() {
@@ -912,6 +917,94 @@ class MapService {
       if (pData.character?.hp) {
         this.state.set(`map.tokens.${playerId}.hp`, pData.character.hp);
       }
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // AUTO-PERCEPTION — Zone-triggered skill checks
+  // ═══════════════════════════════════════════════════════════════
+
+  /**
+   * When a player token enters a zone, check for auto-perception triggers.
+   * Rolls d20 + skill modifier vs DC, sends results to player and DM.
+   */
+  _handleZonePerceptionCheck(data) {
+    const { tokenId, zone } = data;
+    if (!zone) return;
+
+    // Only trigger for player tokens
+    const token = this.state.get(`map.tokens.${tokenId}`);
+    if (!token || token.type !== 'pc') return;
+
+    // Get the zone definition from the map file (not state — state zones may not have checks)
+    const mapDef = this.maps.get(this.activeMapId);
+    if (!mapDef) return;
+
+    const zoneDef = (mapDef.zones || []).find(z => z.id === zone.id);
+    if (!zoneDef || !zoneDef.checks || !zoneDef.checks.length) return;
+
+    const playerId = tokenId;
+    const charData = this.state.get(`players.${playerId}.character`);
+    if (!charData) return;
+
+    const charName = charData.name || playerId;
+
+    for (const check of zoneDef.checks) {
+      // Check if already triggered for this player
+      if (!check.triggered) check.triggered = [];
+      if (check.triggerOnce && check.triggered.includes(playerId)) continue;
+
+      // Get skill modifier from character data
+      const skillKey = check.skill.toLowerCase();
+      const skillData = charData.skills ? charData.skills[skillKey] : null;
+      const modifier = skillData ? skillData.modifier : 0;
+
+      // Roll d20
+      const roll = Math.floor(Math.random() * 20) + 1;
+      const total = roll + modifier;
+      const success = total >= check.dc;
+      const modStr = modifier >= 0 ? '+' + modifier : '' + modifier;
+
+      // Mark as triggered
+      check.triggered.push(playerId);
+
+      // Always whisper the roll result to DM
+      const resultStr = success ? 'SUCCESS' : 'FAIL';
+      this.bus.dispatch('dm:whisper', {
+        text: `${charName} entered ${zone.name || zone.id} — ${check.skill} check: rolled ${roll} ${modStr} = ${total} vs DC ${check.dc} — ${resultStr}`,
+        priority: 3,
+        category: 'story'
+      });
+
+      if (success) {
+        // Send success text to player
+        if (check.successText) {
+          this.bus.dispatch('dm:private_message', {
+            playerId,
+            text: check.successText,
+            durationMs: 12000
+          });
+        }
+        // Send detailed DM whisper if provided
+        if (check.dmWhisper) {
+          this.bus.dispatch('dm:whisper', {
+            text: check.dmWhisper,
+            priority: 2,
+            category: 'story'
+          });
+        }
+      } else {
+        // Send fail text to player (only if failText is not null)
+        if (check.failText) {
+          this.bus.dispatch('dm:private_message', {
+            playerId,
+            text: check.failText,
+            durationMs: 8000
+          });
+        }
+      }
+
+      console.log(`[MapService] Auto-check: ${charName} in ${zone.name || zone.id} — ${check.skill} ${total} vs DC ${check.dc} — ${resultStr}`);
     }
   }
 

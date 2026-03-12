@@ -151,6 +151,65 @@ class DashboardService {
       res.json({ status: 'panic triggered' });
     });
 
+    // POST /api/session/arrive — trigger arrival sequence for a player
+    this.app.post('/api/session/arrive', (req, res) => {
+      const { playerId } = req.body || {};
+      if (!playerId) return res.status(400).json({ error: 'playerId required' });
+
+      const arrived = this.state.get('session.arrived') || [];
+      if (arrived.includes(playerId)) {
+        return res.status(400).json({ error: 'Player already arrived' });
+      }
+
+      const charData = this.state.get(`players.${playerId}.character`) || {};
+      const charName = charData.name || playerId;
+
+      // Count already-arrived players + patrons
+      const patronCount = 4; // Marta + Vladislav + Tomas + patrons visible in common room
+      const arrivedCount = arrived.length;
+      const othersInside = arrivedCount + patronCount;
+
+      // 1. Send private message to arriving player
+      this.bus.dispatch('dm:private_message', {
+        playerId,
+        text: `You push through the door into warmth and firelight. A cramped common room — low ceiling, dark wood. A dying fire. A woman behind the bar who stares at you. A hooded figure in the far corner who doesn't look up. ${othersInside} other ${othersInside === 1 ? 'traveler is' : 'travelers are'} already here.`,
+        durationMs: 15000
+      });
+
+      // 2. Notify already-arrived players about the newcomer
+      const brief = charData.race ? `a ${charData.race} ${charData.class || 'traveler'}` : 'a weary traveler';
+      for (const arrivedId of arrived) {
+        this.bus.dispatch('dm:private_message', {
+          playerId: arrivedId,
+          text: `The door crashes open. Wind and snow blast in. A figure stumbles through — ${charName}, ${brief}. They force the door shut and stand there, shaking off the cold.`,
+          durationMs: 10000
+        });
+      }
+
+      // 3. Whisper to DM earbud
+      const newTotal = arrivedCount + 1;
+      const totalPlayers = Object.keys(this.state.get('players') || {}).length;
+      this.bus.dispatch('dm:whisper', {
+        text: `${charName} has arrived. ${newTotal} of ${totalPlayers} players now in the tavern.`,
+        priority: 3,
+        category: 'story'
+      });
+
+      // 4. Broadcast chat message
+      this.bus.dispatch('chat:party', {
+        from: 'system',
+        fromName: 'Narrator',
+        text: `${charName} pushes through the tavern door, bringing a gust of cold wind.`
+      });
+
+      // 5. Track arrival state
+      arrived.push(playerId);
+      this.state.set('session.arrived', arrived);
+
+      console.log(`[Dashboard] Player arrived: ${charName} (${newTotal}/${totalPlayers})`);
+      res.json({ ok: true, charName, arrived: arrived.length, total: totalPlayers });
+    });
+
     this.app.post('/api/state/set', (req, res) => {
       const { path, value } = req.body;
       if (!path) return res.status(400).json({ error: 'path required' });

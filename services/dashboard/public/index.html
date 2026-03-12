@@ -1389,6 +1389,11 @@
           <span style="font-size:11px;color:var(--accent);font-family:Cinzel,serif;">Alignment Tracking</span>
           <div id="alignment-display" style="font-size:10px;margin-top:4px;"></div>
         </div>
+        <div style="margin-top:8px;">
+          <span style="font-size:11px;color:var(--accent);font-family:Cinzel,serif;">Player Arrivals</span>
+          <div id="arrivals-display" style="font-size:10px;margin-top:4px;"></div>
+          <button class="sm" onclick="refreshArrivals()" style="font-size:9px;margin-top:4px;">Refresh</button>
+        </div>
       </div>
       </div>
 
@@ -3474,15 +3479,16 @@
         ctx.fillRect(-mw/2, -mh/2, mw, mh);
         // Draw zones as subtle rectangles
         for (const zone of (this.mapData.zones || [])) {
-          ctx.fillStyle = 'rgba(30,30,40,0.8)';
-          ctx.strokeStyle = 'rgba(80,80,100,0.3)';
-          ctx.lineWidth = 1;
+          ctx.fillStyle = 'rgba(30,30,40,0.25)';
+          ctx.strokeStyle = 'rgba(120,180,255,0.5)';
+          ctx.lineWidth = 2;
           ctx.fillRect(zone.x - mw/2, zone.y - mh/2, zone.w, zone.h);
           ctx.strokeRect(zone.x - mw/2, zone.y - mh/2, zone.w, zone.h);
           // Zone label
-          ctx.fillStyle = 'rgba(150,150,160,0.5)';
-          ctx.font = '10px Source Sans 3, sans-serif';
+          ctx.fillStyle = 'rgba(255,255,255,0.9)';
+          ctx.font = 'bold 14px Source Sans 3, sans-serif';
           ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
           ctx.fillText(zone.name, zone.x - mw/2 + zone.w/2, zone.y - mh/2 + zone.h/2);
         }
       }
@@ -3521,6 +3527,20 @@
           ctx.lineWidth = 1;
           ctx.strokeRect(zone.x - mw/2, zone.y - mh/2, zone.w, zone.h);
         }
+      }
+
+      // Zone labels (drawn on top of fog)
+      for (const zone of (this.mapData.zones || [])) {
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+        ctx.font = 'bold 14px Source Sans 3, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.lineWidth = 3;
+        const lx = zone.x - mw/2 + (zone.w || 0)/2;
+        const ly = zone.y - mh/2 + (zone.h || 0)/2;
+        ctx.strokeText(zone.name, lx, ly);
+        ctx.fillText(zone.name, lx, ly);
       }
 
       // Zone drawing preview (rectangle)
@@ -4181,6 +4201,7 @@
         refreshBetweenSessions();
         loadFloorLinks();
         loadAlignmentDisplay();
+        refreshArrivals();
       })
       .catch(console.error);
   }
@@ -4707,6 +4728,51 @@
     await fetch('/api/alignment/' + playerId, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ compassion: compassion, ruthlessness: ruthlessness, reason: reason }) });
     // Refresh via state poll
     setTimeout(loadAlignmentDisplay, 500);
+  }
+
+  // === Player Arrivals ===
+  function refreshArrivals() {
+    var el = document.getElementById('arrivals-display');
+    if (!el) return;
+    var players = state.players || {};
+    var arrived = (state.session && state.session.arrived) || [];
+    var entries = Object.entries(players);
+    if (!entries.length) { el.innerHTML = '<span style="color:var(--text-dim);">No players connected</span>'; return; }
+    el.innerHTML = entries.map(function(e) {
+      var pid = e[0], p = e[1];
+      var name = (p.character && p.character.name) || pid;
+      var isArrived = arrived.indexOf(pid) !== -1;
+      if (isArrived) {
+        return '<div style="padding:3px 0;border-bottom:1px solid var(--bg);display:flex;align-items:center;gap:6px;">'
+          + '<span class="dot green"></span>'
+          + '<span style="color:var(--text);">' + esc(name) + '</span>'
+          + '<span style="color:var(--text-dim);font-size:9px;">— arrived</span>'
+          + '</div>';
+      }
+      return '<div style="padding:3px 0;border-bottom:1px solid var(--bg);display:flex;align-items:center;gap:6px;">'
+        + '<span class="dot red"></span>'
+        + '<span style="color:var(--text);">' + esc(name) + '</span>'
+        + '<button class="sm primary" onclick="arrivePlayer(\'' + pid + '\')" style="font-size:9px;">Arrive</button>'
+        + '</div>';
+    }).join('');
+  }
+  async function arrivePlayer(playerId) {
+    try {
+      var resp = await fetch('/api/session/arrive', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ playerId: playerId }) });
+      var data = await resp.json();
+      if (data.ok) {
+        addTranscript({ speaker: 'system', text: data.charName + ' has arrived at the Pallid Hart (' + data.arrived + '/' + data.total + ')' });
+        // Update local state
+        if (!state.session) state.session = {};
+        if (!state.session.arrived) state.session.arrived = [];
+        state.session.arrived.push(playerId);
+        refreshArrivals();
+      } else {
+        addTranscript({ speaker: 'system', text: 'Arrival failed: ' + (data.error || 'unknown') });
+      }
+    } catch(e) {
+      addTranscript({ speaker: 'system', text: 'Arrival error: ' + e.message });
+    }
   }
 
   function _renderDmQuests() {

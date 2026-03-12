@@ -2,11 +2,10 @@
   "id": "mountain-road-blizzard",
   "name": "Mountain Road — Blizzard",
   "image": "mountain-road-blizzard.png",
-  "gridSize": 140,
-  "width": 4200,
-  "height": 2800,
-  "source": "dungeondraft",
-  "dd2vttFormat": 0.3,
+  "gridSize": 64,
+  "width": 1536,
+  "height": 1024,
+  "source": "chatgpt-image",
   "walls": [],
   "lights": [],
   "portals": [],
@@ -14,19 +13,19 @@
     {
       "id": "road",
       "name": "Mountain Road",
-      "x": 1400,
-      "y": 560,
-      "w": 1400,
-      "h": 1680,
+      "x": 576,
+      "y": 0,
+      "w": 384,
+      "h": 1024,
       "revealed": true
     },
     {
       "id": "treeline-east",
       "name": "Treeline East",
-      "x": 2800,
+      "x": 960,
       "y": 0,
-      "w": 1400,
-      "h": 2800,
+      "w": 576,
+      "h": 1024,
       "revealed": false
     },
     {
@@ -34,41 +33,41 @@
       "name": "Treeline West",
       "x": 0,
       "y": 0,
-      "w": 1400,
-      "h": 2800,
+      "w": 576,
+      "h": 1024,
       "revealed": false
     },
     {
       "id": "dead-deer",
       "name": "Dead Deer",
-      "x": 1680,
-      "y": 1400,
-      "w": 420,
-      "h": 420,
+      "x": 704,
+      "y": 704,
+      "w": 192,
+      "h": 192,
       "revealed": false
     }
   ],
   "tokens": {},
   "playerSpawns": {
     "pc1": {
-      "x": 2100,
-      "y": 280
+      "x": 736,
+      "y": 128
     },
     "pc2": {
-      "x": 2100,
-      "y": 700
+      "x": 736,
+      "y": 320
     },
     "pc3": {
-      "x": 2100,
-      "y": 1120
+      "x": 736,
+      "y": 512
     },
     "pc4": {
-      "x": 2100,
-      "y": 1540
+      "x": 736,
+      "y": 704
     },
     "default": {
-      "x": 2100,
-      "y": 280
+      "x": 736,
+      "y": 128
     }
   }
 }

@@ -2,410 +2,292 @@
   "id": "pallidhearfloor1",
   "name": "Pallid Hart — Ground Floor",
   "image": "pallidhearfloor1.png",
-  "gridSize": 256,
-  "width": 8960,
-  "height": 5120,
-  "source": "dungeondraft",
-  "dd2vttFormat": 0.3,
-  "walls": [
-    {
-      "x1": null,
-      "y1": null,
-      "x2": null,
-      "y2": null
-    },
-    {
-      "x1": null,
-      "y1": null,
-      "x2": null,
-      "y2": null
-    },
-    {
-      "x1": null,
-      "y1": null,
-      "x2": null,
-      "y2": null
-    },
-    {
-      "x1": null,
-      "y1": null,
-      "x2": null,
-      "y2": null
-    },
-    {
-      "x1": null,
-      "y1": null,
-      "x2": null,
-      "y2": null
-    }
-  ],
+  "gridSize": 64,
+  "width": 1536,
+  "height": 1024,
+  "source": "chatgpt-image",
+  "walls": [],
   "lights": [
     {
-      "x": 3404,
-      "y": 1638,
-      "range": 1536,
-      "color": "ffeccd8b"
+      "x": 192,
+      "y": 832,
+      "range": 256,
+      "color": "ffecb48b",
+      "note": "fireplace"
     },
     {
-      "x": 4652,
-      "y": 1366,
-      "range": 1536,
-      "color": "ffeccd8b"
+      "x": 384,
+      "y": 192,
+      "range": 192,
+      "color": "ffeccd8b",
+      "note": "common room sconce north-left"
     },
     {
-      "x": 5860,
-      "y": 1374,
-      "range": 1536,
-      "color": "ffeccd8b"
+      "x": 640,
+      "y": 192,
+      "range": 192,
+      "color": "ffeccd8b",
+      "note": "common room sconce north-center"
     },
     {
-      "x": 6844,
-      "y": 1370,
-      "range": 1536,
-      "color": "ffeccd8b"
+      "x": 384,
+      "y": 512,
+      "range": 192,
+      "color": "ffeccd8b",
+      "note": "common room sconce center-left"
     },
     {
-      "x": 6648,
-      "y": 2414,
-      "range": 1536,
-      "color": "ffeccd8b"
+      "x": 640,
+      "y": 512,
+      "range": 192,
+      "color": "ffeccd8b",
+      "note": "common room sconce center-right"
     },
     {
-      "x": 5604,
-      "y": 2998,
-      "range": 1536,
-      "color": "ffeccd8b"
+      "x": 960,
+      "y": 128,
+      "range": 192,
+      "color": "ffeccd8b",
+      "note": "bar area"
     },
     {
-      "x": 5560,
-      "y": 2382,
-      "range": 1536,
-      "color": "ffeccd8b"
+      "x": 1152,
+      "y": 128,
+      "range": 192,
+      "color": "ffeccd8b",
+      "note": "kitchen hearth"
     },
     {
-      "x": 6100,
-      "y": 2394,
-      "range": 1536,
-      "color": "ffeccd8b"
+      "x": 1024,
+      "y": 448,
+      "range": 128,
+      "color": "ffeccd8b",
+      "note": "staircase landing"
     },
     {
-      "x": 6048,
-      "y": 3450,
-      "range": 1536,
-      "color": "ffeccd8b"
-    },
-    {
-      "x": 5496,
-      "y": 3230,
-      "range": 1536,
-      "color": "ffeccd8b"
-    },
-    {
-      "x": 5488,
-      "y": 3754,
-      "range": 1536,
-      "color": "ffeccd8b"
-    },
-    {
-      "x": 3404,
-      "y": 2686,
-      "range": 1536,
-      "color": "ffeccd8b"
-    },
-    {
-      "x": 4492,
-      "y": 3898,
-      "range": 1536,
-      "color": "ffecb48b"
-    },
-    {
-      "x": 2708,
-      "y": 1908,
-      "range": 1536,
-      "color": "ffeccd8b"
-    },
-    {
-      "x": 2704,
-      "y": 2412,
-      "range": 1536,
-      "color": "ffeccd8b"
-    },
-    {
-      "x": 3052,
-      "y": 1856,
-      "range": 1536,
-      "color": "ffeccd8b"
+      "x": 1280,
+      "y": 640,
+      "range": 128,
+      "color": "ffecb48b",
+      "note": "storage room dim"
     }
   ],
   "portals": [
     {
-      "x": 3328,
-      "y": 2176,
+      "x": 128,
+      "y": 448,
       "closed": true,
+      "note": "front door",
       "bounds": [
-        {
-          "x": 3328,
-          "y": 2048
-        },
-        {
-          "x": 3328,
-          "y": 2304
-        }
+        { "x": 128, "y": 384 },
+        { "x": 128, "y": 512 }
       ]
     },
     {
-      "x": 6400,
-      "y": 1536,
+      "x": 832,
+      "y": 320,
       "closed": true,
+      "note": "kitchen door from bar",
       "bounds": [
-        {
-          "x": 6400,
-          "y": 1664
-        },
-        {
-          "x": 6400,
-          "y": 1408
-        }
+        { "x": 832, "y": 256 },
+        { "x": 832, "y": 384 }
       ]
     },
     {
-      "x": 6400,
-      "y": 2432,
+      "x": 832,
+      "y": 576,
       "closed": true,
+      "note": "cellar access door",
       "bounds": [
-        {
-          "x": 6400,
-          "y": 2560
-        },
-        {
-          "x": 6400,
-          "y": 2304
-        }
+        { "x": 832, "y": 512 },
+        { "x": 832, "y": 640 }
       ]
     },
     {
-      "x": 5376,
-      "y": 2688,
+      "x": 1088,
+      "y": 576,
       "closed": true,
+      "note": "storage room door",
       "bounds": [
-        {
-          "x": 5376,
-          "y": 2560
-        },
-        {
-          "x": 5376,
-          "y": 2816
-        }
-      ]
-    },
-    {
-      "x": 2816,
-      "y": 2176,
-      "closed": true,
-      "bounds": [
-        {
-          "x": 2816,
-          "y": 2304
-        },
-        {
-          "x": 2816,
-          "y": 2048
-        }
-      ]
-    },
-    {
-      "x": 7424,
-      "y": 1664,
-      "closed": true,
-      "bounds": [
-        {
-          "x": 7424,
-          "y": 1536
-        },
-        {
-          "x": 7424,
-          "y": 1792
-        }
+        { "x": 1088, "y": 512 },
+        { "x": 1088, "y": 640 }
       ]
     }
   ],
   "zones": [
     {
+      "id": "common-room",
+      "name": "Common Room",
+      "x": 128,
+      "y": 64,
+      "w": 704,
+      "h": 896,
+      "revealed": true
+    },
+    {
+      "id": "bar",
+      "name": "Bar",
+      "x": 832,
+      "y": 64,
+      "w": 256,
+      "h": 256,
+      "revealed": true
+    },
+    {
       "id": "kitchen",
       "name": "Kitchen",
-      "x": 5376,
-      "y": 2304,
-      "w": 1024,
-      "h": 768,
+      "x": 1088,
+      "y": 64,
+      "w": 384,
+      "h": 320,
       "revealed": false
     },
     {
       "id": "storage-cellar",
-      "name": "Storage/Cellar",
-      "x": 6400,
-      "y": 2304,
-      "w": 512,
-      "h": 768,
+      "name": "Storage/Cellar Access",
+      "x": 832,
+      "y": 448,
+      "w": 256,
+      "h": 320,
       "revealed": false
     },
     {
       "id": "storage",
-      "name": "Storage",
-      "x": 6400,
-      "y": 1280,
-      "w": 1024,
-      "h": 1024,
+      "name": "Storage Room",
+      "x": 1088,
+      "y": 448,
+      "w": 384,
+      "h": 512,
       "revealed": false
+    },
+    {
+      "id": "vladislav-corner",
+      "name": "Vladislav's Corner",
+      "x": 128,
+      "y": 768,
+      "w": 192,
+      "h": 192,
+      "revealed": true
     }
   ],
   "tokens": {
     "marta-mmmq6srj1": {
       "name": "Marta Kowalski",
       "type": "npc",
-      "x": 5504,
-      "y": 2176,
+      "x": 896,
+      "y": 160,
       "image": "marta.png",
       "visible": true,
       "hidden": false,
-      "hp": {
-        "current": 8,
-        "max": 8
-      },
+      "hp": { "current": 8, "max": 8 },
       "ac": 10,
       "actorSlug": "marta"
     },
     "patron-farmer-mmmq6srj2": {
       "name": "Old Gregor",
       "type": "npc",
-      "x": 4224,
-      "y": 3200,
+      "x": 512,
+      "y": 576,
       "image": "patron-farmer.png",
       "visible": true,
       "hidden": false,
-      "hp": {
-        "current": 11,
-        "max": 11
-      },
+      "hp": { "current": 11, "max": 11 },
       "ac": 10,
       "actorSlug": "patron-farmer"
     },
     "patron-merchant-mmmq6srj3": {
       "name": "Henryk the Merchant",
       "type": "npc",
-      "x": 3712,
-      "y": 2176,
+      "x": 384,
+      "y": 320,
       "image": "patron-merchant.png",
       "visible": true,
       "hidden": false,
-      "hp": {
-        "current": 9,
-        "max": 9
-      },
+      "hp": { "current": 9, "max": 9 },
       "ac": 10,
       "actorSlug": "patron-merchant"
     },
     "patron-minstrel-mmmq6srj4": {
       "name": "Katya Voss",
       "type": "npc",
-      "x": 4224,
-      "y": 1664,
+      "x": 512,
+      "y": 192,
       "image": "patron-minstrel.png",
       "visible": true,
       "hidden": false,
-      "hp": {
-        "current": 16,
-        "max": 16
-      },
+      "hp": { "current": 16, "max": 16 },
       "ac": 12,
       "actorSlug": "patron-minstrel"
     },
     "patron-pilgrim-mmmq6srk5": {
       "name": "Brother Aldric",
       "type": "npc",
-      "x": 4736,
-      "y": 3200,
+      "x": 640,
+      "y": 576,
       "image": "patron-pilgrim.png",
       "visible": true,
       "hidden": false,
-      "hp": {
-        "current": 11,
-        "max": 11
-      },
+      "hp": { "current": 11, "max": 11 },
       "ac": 10,
       "actorSlug": "patron-pilgrim"
     },
     "piotr-kowalski-mmmq6srk6": {
       "name": "Piotr Kowalski (Vampire Spawn)",
       "type": "npc",
-      "x": 6528,
-      "y": 2688,
+      "x": 896,
+      "y": 576,
       "image": "piotr-kowalski.png",
       "visible": true,
       "hidden": false,
-      "hp": {
-        "current": 52,
-        "max": 52
-      },
+      "hp": { "current": 52, "max": 52 },
       "ac": 14,
       "actorSlug": "piotr-kowalski"
     },
     "swarm-of-rats-mmmq6srk8": {
       "name": "Swarm of Rats",
       "type": "npc",
-      "x": 7040,
-      "y": 1408,
+      "x": 1280,
+      "y": 768,
       "image": "swarm-of-rats.png",
       "visible": false,
       "hidden": true,
-      "hp": {
-        "current": 24,
-        "max": 24
-      },
+      "hp": { "current": 24, "max": 24 },
       "ac": 10,
       "actorSlug": "swarm-of-rats"
     },
     "vladislav-mmmq6srl10": {
       "name": "Vladislav Dragan",
       "type": "npc",
-      "x": 3712,
-      "y": 3456,
+      "x": 192,
+      "y": 832,
       "image": "vladislav.png",
       "visible": true,
       "hidden": false,
-      "hp": {
-        "current": 144,
-        "max": 144
-      },
+      "hp": { "current": 144, "max": 144 },
       "ac": 16,
       "actorSlug": "vladislav"
     },
     "werewolf-mmmq6srl11": {
       "name": "Tomas Birkov",
       "type": "npc",
-      "x": 4736,
-      "y": 1664,
+      "x": 640,
+      "y": 192,
       "image": "werewolf.png",
       "visible": true,
       "hidden": false,
-      "hp": {
-        "current": 58,
-        "max": 58
-      },
+      "hp": { "current": 58, "max": 58 },
       "ac": 11,
       "actorSlug": "werewolf"
     },
     "spurt-ai-pc": {
       "name": "Spurt the Sorcerer",
       "type": "pc",
-      "x": 4480,
-      "y": 2688,
+      "x": 512,
+      "y": 384,
       "image": "spurt.png",
       "visible": true,
       "hidden": false,
-      "hp": {
-        "current": 14,
-        "max": 14
-      },
+      "hp": { "current": 14, "max": 14 },
       "ac": 12,
       "ddbId": "162472191",
       "aiControlled": true
@@ -415,20 +297,20 @@
     {
       "targetMapId": "pallid-hart-cellar",
       "label": "Down to Cellar",
-      "x": 6528,
-      "y": 2688
+      "x": 896,
+      "y": 576
     },
     {
       "targetMapId": "pallid-hart-upper",
       "label": "Up to Upper Floor",
-      "x": 5760,
-      "y": 3840
+      "x": 1024,
+      "y": 448
     }
   ],
   "playerSpawns": {
     "default": {
-      "x": 4736,
-      "y": 2688
+      "x": 192,
+      "y": 448
     }
   }
 }

@@ -2,17 +2,16 @@
   "id": "pallid-hart-cellar",
   "name": "Pallid Hart — Cellar",
   "image": "pallid-hart-cellar.png",
-  "gridSize": 140,
-  "width": 2800,
-  "height": 2100,
-  "source": "dungeondraft",
-  "dd2vttFormat": 0.3,
+  "gridSize": 64,
+  "width": 1536,
+  "height": 1024,
+  "source": "chatgpt-image",
   "walls": [],
   "lights": [
     {
-      "x": 420,
-      "y": 420,
-      "range": 840,
+      "x": 480,
+      "y": 384,
+      "range": 384,
       "color": "ffecb48b"
     }
   ],
@@ -21,37 +20,37 @@
     {
       "id": "stairs",
       "name": "Stairs",
-      "x": 140,
-      "y": 140,
-      "w": 560,
-      "h": 560,
+      "x": 384,
+      "y": 256,
+      "w": 256,
+      "h": 320,
       "revealed": true
     },
     {
       "id": "wine-storage",
       "name": "Wine Storage",
-      "x": 700,
-      "y": 140,
-      "w": 840,
-      "h": 840,
+      "x": 64,
+      "y": 64,
+      "w": 576,
+      "h": 384,
       "revealed": false
     },
     {
       "id": "coffin-chamber",
       "name": "Coffin Chamber",
-      "x": 1680,
-      "y": 140,
-      "w": 980,
-      "h": 980,
+      "x": 768,
+      "y": 64,
+      "w": 512,
+      "h": 448,
       "revealed": false
     },
     {
       "id": "piotr-chains",
       "name": "Piotr's Chains",
-      "x": 1680,
-      "y": 1260,
-      "w": 980,
-      "h": 700,
+      "x": 768,
+      "y": 544,
+      "w": 512,
+      "h": 416,
       "revealed": false
     }
   ],
@@ -59,8 +58,8 @@
     "piotr-kowalski-cellar": {
       "name": "Piotr Kowalski (Vampire Spawn)",
       "type": "npc",
-      "x": 2100,
-      "y": 1540,
+      "x": 960,
+      "y": 768,
       "image": "piotr-kowalski.png",
       "visible": true,
       "hidden": true,
@@ -74,8 +73,8 @@
     "coffin-obj": {
       "name": "Coffin",
       "type": "object",
-      "x": 2100,
-      "y": 560,
+      "x": 960,
+      "y": 192,
       "image": "coffin.png",
       "visible": true,
       "hidden": false,
@@ -87,14 +86,14 @@
     {
       "targetMapId": "pallidhearfloor1",
       "label": "Up to Ground Floor",
-      "x": 350,
-      "y": 350
+      "x": 480,
+      "y": 384
     }
   ],
   "playerSpawns": {
     "default": {
-      "x": 350,
-      "y": 350
+      "x": 480,
+      "y": 384
     }
   }
 }

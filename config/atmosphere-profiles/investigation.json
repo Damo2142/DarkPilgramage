@@ -1,4 +1,5 @@
 {
+  "id": "investigation",
   "name": "investigation",
   "description": "Players searching for clues. Alert, curious.",
   "horrorLevel": 3,

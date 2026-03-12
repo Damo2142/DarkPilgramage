@@ -1,6 +1,6 @@
 {
   "id": "pallidhearfloor1",
-  "name": "PallidHearFloor1",
+  "name": "Pallid Hart — Ground Floor",
   "image": "pallidhearfloor1.png",
   "gridSize": 256,
   "width": 8960,
@@ -411,6 +411,20 @@
       "aiControlled": true
     }
   },
+  "floorLinks": [
+    {
+      "targetMapId": "pallid-hart-cellar",
+      "label": "Down to Cellar",
+      "x": 6528,
+      "y": 2688
+    },
+    {
+      "targetMapId": "pallid-hart-upper",
+      "label": "Up to Upper Floor",
+      "x": 5760,
+      "y": 3840
+    }
+  ],
   "playerSpawns": {
     "default": {
       "x": 4736,

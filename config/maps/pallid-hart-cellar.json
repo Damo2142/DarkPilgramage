@@ -1,0 +1,100 @@
+{
+  "id": "pallid-hart-cellar",
+  "name": "Pallid Hart — Cellar",
+  "image": "pallid-hart-cellar.png",
+  "gridSize": 140,
+  "width": 2800,
+  "height": 2100,
+  "source": "dungeondraft",
+  "dd2vttFormat": 0.3,
+  "walls": [],
+  "lights": [
+    {
+      "x": 420,
+      "y": 420,
+      "range": 840,
+      "color": "ffecb48b"
+    }
+  ],
+  "portals": [],
+  "zones": [
+    {
+      "id": "stairs",
+      "name": "Stairs",
+      "x": 140,
+      "y": 140,
+      "w": 560,
+      "h": 560,
+      "revealed": true
+    },
+    {
+      "id": "wine-storage",
+      "name": "Wine Storage",
+      "x": 700,
+      "y": 140,
+      "w": 840,
+      "h": 840,
+      "revealed": false
+    },
+    {
+      "id": "coffin-chamber",
+      "name": "Coffin Chamber",
+      "x": 1680,
+      "y": 140,
+      "w": 980,
+      "h": 980,
+      "revealed": false
+    },
+    {
+      "id": "piotr-chains",
+      "name": "Piotr's Chains",
+      "x": 1680,
+      "y": 1260,
+      "w": 980,
+      "h": 700,
+      "revealed": false
+    }
+  ],
+  "tokens": {
+    "piotr-kowalski-cellar": {
+      "name": "Piotr Kowalski (Vampire Spawn)",
+      "type": "npc",
+      "x": 2100,
+      "y": 1540,
+      "image": "piotr-kowalski.png",
+      "visible": true,
+      "hidden": true,
+      "hp": {
+        "current": 52,
+        "max": 52
+      },
+      "ac": 14,
+      "actorSlug": "piotr-kowalski"
+    },
+    "coffin-obj": {
+      "name": "Coffin",
+      "type": "object",
+      "x": 2100,
+      "y": 560,
+      "image": "coffin.png",
+      "visible": true,
+      "hidden": false,
+      "hp": null,
+      "ac": null
+    }
+  },
+  "floorLinks": [
+    {
+      "targetMapId": "pallidhearfloor1",
+      "label": "Up to Ground Floor",
+      "x": 350,
+      "y": 350
+    }
+  ],
+  "playerSpawns": {
+    "default": {
+      "x": 350,
+      "y": 350
+    }
+  }
+}

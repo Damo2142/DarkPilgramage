@@ -1,4 +1,5 @@
 {
+  "id": "combat",
   "name": "combat",
   "description": "Active combat. Urgent, dangerous.",
   "horrorLevel": 5,

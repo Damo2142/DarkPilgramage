@@ -1,0 +1,103 @@
+{
+  "id": "pallid-hart-upper",
+  "name": "Pallid Hart — Upper Floor",
+  "image": "pallid-hart-upper.png",
+  "gridSize": 140,
+  "width": 2800,
+  "height": 2100,
+  "source": "dungeondraft",
+  "dd2vttFormat": 0.3,
+  "walls": [],
+  "lights": [
+    {
+      "x": 1400,
+      "y": 280,
+      "range": 700,
+      "color": "ffeccd8b"
+    },
+    {
+      "x": 700,
+      "y": 280,
+      "range": 700,
+      "color": "ffeccd8b"
+    },
+    {
+      "x": 2100,
+      "y": 280,
+      "range": 700,
+      "color": "ffeccd8b"
+    }
+  ],
+  "portals": [],
+  "zones": [
+    {
+      "id": "hallway",
+      "name": "Hallway",
+      "x": 280,
+      "y": 140,
+      "w": 2240,
+      "h": 420,
+      "revealed": true
+    },
+    {
+      "id": "room-1",
+      "name": "Guest Room 1",
+      "x": 140,
+      "y": 560,
+      "w": 700,
+      "h": 700,
+      "revealed": false
+    },
+    {
+      "id": "room-2",
+      "name": "Guest Room 2",
+      "x": 840,
+      "y": 560,
+      "w": 700,
+      "h": 700,
+      "revealed": false
+    },
+    {
+      "id": "room-3",
+      "name": "Guest Room 3",
+      "x": 1540,
+      "y": 560,
+      "w": 700,
+      "h": 700,
+      "revealed": false
+    },
+    {
+      "id": "marta-room",
+      "name": "Marta's Room",
+      "x": 140,
+      "y": 1400,
+      "w": 840,
+      "h": 560,
+      "revealed": false
+    },
+    {
+      "id": "stairs",
+      "name": "Stairs",
+      "x": 2240,
+      "y": 560,
+      "w": 420,
+      "h": 420,
+      "revealed": true
+    }
+  ],
+  "tokens": {},
+  "floorLinks": [
+    {
+      "targetMapId": "pallidhearfloor1",
+      "label": "Down to Ground Floor",
+      "x": 2380,
+      "y": 700
+    }
+  ],
+  "playerSpawns": {
+    "default": {
+      "x": 2380,
+      "y": 700
+    }
+  }
+}

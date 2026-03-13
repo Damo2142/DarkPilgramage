@@ -1172,9 +1172,14 @@
       <div class="section-header"><span class="drag-handle">⠿</span>Map Walls</div>
       <div style="padding:4px 8px;">
         <div style="display:flex;gap:4px;margin-bottom:6px;">
-          <button class="sm" id="draw-wall-btn" onclick="toggleWallDrawMode()" style="flex:1">Draw Wall</button>
-          <button class="sm" onclick="clearAllWalls()" style="flex:1">Clear All</button>
-          <button class="sm primary" onclick="saveWalls()" style="flex:1">Save</button>
+          <select id="wall-type-select" style="font-size:10px;padding:2px;flex:1;">
+            <option value="wall">Wall</option>
+            <option value="door">Door</option>
+            <option value="window">Window</option>
+          </select>
+          <button class="sm" id="draw-wall-btn" onclick="toggleWallDrawMode()" style="flex:1">Draw</button>
+          <button class="sm" onclick="clearAllWalls()" style="font-size:9px;">Clear</button>
+          <button class="sm primary" onclick="saveWalls()" style="font-size:9px;">Save</button>
         </div>
         <div style="font-size:10px;color:var(--text-dim);margin-bottom:4px;">
           <span id="wall-count">0</span> walls |
@@ -3565,22 +3570,47 @@
         ctx.fillText(zone.name, lx, ly);
       }
 
-      // Walls — render as red lines (DM view)
+      // Walls — render with type-specific colors (DM view)
       var showWalls = document.getElementById('show-walls-cb');
       if ((!showWalls || showWalls.checked) && mapWalls.length > 0) {
-        ctx.strokeStyle = 'rgba(220,40,40,0.7)';
-        ctx.lineWidth = 3;
         ctx.lineCap = 'round';
         for (var wi = 0; wi < mapWalls.length; wi++) {
           var w = mapWalls[wi];
-          ctx.beginPath();
-          ctx.moveTo(w.x1 - mw/2, w.y1 - mh/2);
-          ctx.lineTo(w.x2 - mw/2, w.y2 - mh/2);
-          ctx.stroke();
-          // Small circles at endpoints
-          ctx.fillStyle = 'rgba(220,40,40,0.9)';
-          ctx.beginPath(); ctx.arc(w.x1 - mw/2, w.y1 - mh/2, 3, 0, Math.PI*2); ctx.fill();
-          ctx.beginPath(); ctx.arc(w.x2 - mw/2, w.y2 - mh/2, 3, 0, Math.PI*2); ctx.fill();
+          var wtype = w.type || 'wall';
+          var wx1 = w.x1 - mw/2, wy1 = w.y1 - mh/2, wx2 = w.x2 - mw/2, wy2 = w.y2 - mh/2;
+
+          if (wtype === 'door') {
+            // Door: brown, dashed if open
+            ctx.strokeStyle = w.open ? 'rgba(100,180,80,0.6)' : 'rgba(184,134,11,0.8)';
+            ctx.lineWidth = 4;
+            if (w.open) ctx.setLineDash([4, 6]); else ctx.setLineDash([]);
+            ctx.beginPath(); ctx.moveTo(wx1, wy1); ctx.lineTo(wx2, wy2); ctx.stroke();
+            ctx.setLineDash([]);
+            // Lock icon if locked
+            if (w.lockDC && w.locked) {
+              var dcx = (wx1+wx2)/2, dcy = (wy1+wy2)/2;
+              ctx.fillStyle = '#ff4444'; ctx.font = 'bold ' + Math.max(10, gs*0.2) + 'px sans-serif';
+              ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+              ctx.fillText('🔒DC' + w.lockDC, dcx, dcy - gs*0.15);
+            }
+          } else if (wtype === 'window') {
+            // Window: blue, thin
+            ctx.strokeStyle = 'rgba(64,128,200,0.8)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath(); ctx.moveTo(wx1, wy1); ctx.lineTo(wx2, wy2); ctx.stroke();
+            ctx.setLineDash([]);
+          } else {
+            // Wall: red, solid
+            ctx.strokeStyle = 'rgba(220,40,40,0.7)';
+            ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(wx1, wy1); ctx.lineTo(wx2, wy2); ctx.stroke();
+          }
+          // Endpoint dots
+          var dotColor = wtype === 'door' ? 'rgba(184,134,11,0.9)' : wtype === 'window' ? 'rgba(64,128,200,0.9)' : 'rgba(220,40,40,0.9)';
+          ctx.fillStyle = dotColor;
+          ctx.beginPath(); ctx.arc(wx1, wy1, 3, 0, Math.PI*2); ctx.fill();
+          ctx.beginPath(); ctx.arc(wx2, wy2, 3, 0, Math.PI*2); ctx.fill();
         }
       }
 
@@ -5309,13 +5339,30 @@
   }
 
   function addWall(x1, y1, x2, y2) {
-    mapWalls.push({ x1: x1, y1: y1, x2: x2, y2: y2 });
+    var type = document.getElementById('wall-type-select').value || 'wall';
+    var wall = { x1: x1, y1: y1, x2: x2, y2: y2, type: type };
+    if (type === 'door') wall.open = false;
+    mapWalls.push(wall);
     renderWallList();
     VTT.render();
   }
 
   function removeWall(idx) {
     mapWalls.splice(idx, 1);
+    renderWallList();
+    VTT.render();
+  }
+
+  function toggleDoor(idx) {
+    var w = mapWalls[idx];
+    if (!w || w.type !== 'door') return;
+    w.open = !w.open;
+    // Also tell the server
+    fetch('/api/map/walls/toggle-door', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ index: idx })
+    }).catch(console.error);
     renderWallList();
     VTT.render();
   }
@@ -5362,11 +5409,41 @@
     if (countEl) countEl.textContent = mapWalls.length;
     if (!el) return;
     if (!mapWalls.length) { el.innerHTML = 'No walls defined'; return; }
+    var typeColors = { wall: 'var(--red)', door: '#b8860b', window: '#4080c0' };
+    var typeIcons = { wall: '▬', door: '🚪', window: '▭' };
     el.innerHTML = mapWalls.map(function(w, i) {
-      return '<div style="display:flex;justify-content:space-between;padding:1px 0;">'
-        + '<span>Wall ' + (i+1) + ': (' + Math.round(w.x1) + ',' + Math.round(w.y1) + ')→(' + Math.round(w.x2) + ',' + Math.round(w.y2) + ')</span>'
+      var type = w.type || 'wall';
+      var col = typeColors[type] || 'var(--text-dim)';
+      var icon = typeIcons[type] || '▬';
+      var label = icon + ' ' + type.charAt(0).toUpperCase() + type.slice(1) + ' ' + (i+1);
+      var extras = '';
+      if (type === 'door') {
+        var doorState = w.open ? 'Open' : 'Closed';
+        var lockInfo = w.lockDC ? ' DC' + w.lockDC : '';
+        extras = ' <span style="cursor:pointer;color:' + (w.open ? 'var(--green)' : '#b8860b') + ';" onclick="toggleDoor(' + i + ')">[' + doorState + ']</span>'
+          + lockInfo
+          + ' <span style="cursor:pointer;color:var(--text-dim);font-size:9px;" onclick="setDoorLock(' + i + ')">[lock]</span>';
+      }
+      return '<div style="display:flex;justify-content:space-between;padding:1px 0;align-items:center;">'
+        + '<span style="color:' + col + ';">' + label + extras + '</span>'
         + '<span style="cursor:pointer;color:var(--red);" onclick="removeWall(' + i + ')">✕</span></div>';
     }).join('');
+  }
+
+  function setDoorLock(idx) {
+    var w = mapWalls[idx];
+    if (!w || w.type !== 'door') return;
+    var dc = prompt('Lock DC (0 = unlocked, 15 = typical, 20 = hard, 25 = very hard):', w.lockDC || '0');
+    if (dc === null) return;
+    var dcNum = parseInt(dc);
+    if (isNaN(dcNum) || dcNum <= 0) {
+      delete w.lockDC;
+      delete w.locked;
+    } else {
+      w.lockDC = dcNum;
+      w.locked = true;
+    }
+    renderWallList();
   }
 
   /* === SCENE MANAGEMENT === */

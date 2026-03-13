@@ -528,6 +528,15 @@
   </div>
   <!-- DICE -->
   <div class="panel" id="panel-dice">
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:4px 0 6px;border-bottom:1px solid var(--border);margin-bottom:6px;">
+      <span style="font-size:11px;color:var(--text-dim);">Digital</span>
+      <label style="position:relative;display:inline-block;width:40px;height:22px;cursor:pointer;">
+        <input type="checkbox" id="physdice-toggle" onchange="togglePhysicalDice(this.checked)" style="opacity:0;width:0;height:0;">
+        <span style="position:absolute;inset:0;background:var(--surface3);border-radius:11px;border:1px solid var(--border);transition:.3s;"></span>
+        <span id="physdice-knob" style="position:absolute;top:2px;left:2px;width:16px;height:16px;background:var(--accent);border-radius:50%;transition:.3s;"></span>
+      </label>
+      <span style="font-size:11px;color:var(--text-dim);">Physical Dice</span>
+    </div>
     <div class="diceg">
       <button class="diebtn" onclick="roll(4)">d4</button><button class="diebtn" onclick="roll(6)">d6</button>
       <button class="diebtn" onclick="roll(8)">d8</button><button class="diebtn" onclick="roll(10)">d10</button>
@@ -589,6 +598,18 @@
 <!-- Edit modal -->
 <div id="emodal"><div id="einner"><h3 id="etitle">Edit</h3><div id="efields"></div><div class="ebtns"><button class="bsave" onclick="saveEdit()">Save</button><button class="bcancel" onclick="closeEdit()">Cancel</button></div></div></div>
 
+<div id="dicemodal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:2px solid var(--border);border-radius:8px;padding:20px;min-width:260px;max-width:90vw;text-align:center;">
+    <h3 id="dm-label" style="font-family:Cinzel,serif;color:var(--accent);margin-bottom:12px;">Enter Roll</h3>
+    <div id="dm-info" style="font-size:12px;color:var(--text-dim);margin-bottom:10px;"></div>
+    <input id="dm-val" type="number" min="1" max="100" style="font-size:24px;width:80px;text-align:center;padding:8px;" autofocus>
+    <div style="margin-top:14px;display:flex;gap:8px;justify-content:center;">
+      <button onclick="submitDiceModal()" style="padding:8px 20px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:600;">Submit</button>
+      <button onclick="cancelDiceModal()" style="padding:8px 16px;background:var(--surface3);border:1px solid var(--border);border-radius:4px;font-size:13px;">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const PID = location.pathname.split('/player/')[1] || 'unknown';
 const WSU = (location.protocol==='https:'?'wss:':'ws:')+'//'+location.hostname+':3200?player='+PID;
@@ -596,6 +617,50 @@ let ws, char={}, hpC=0, hpM=0, tmpH=0, dread=0;
 let attacks=[], spells=[], feats=[], slotState={};
 let activeConds=new Set(), ds={s:[false,false,false],f:[false,false,false]};
 let editCb=null, rollHist=[], pendingAttack=null, combatState=null;
+let usePhysicalDice = localStorage.getItem('dpPhysicalDice') === 'true';
+let _diceResolve = null;
+
+function togglePhysicalDice(on){
+  usePhysicalDice = on;
+  localStorage.setItem('dpPhysicalDice', on ? 'true' : 'false');
+  const knob = $('physdice-knob');
+  if(knob) knob.style.left = on ? '20px' : '2px';
+}
+
+function promptDiceRoll(label, dieName){
+  return new Promise((resolve, reject) => {
+    $('dm-label').textContent = label;
+    $('dm-info').textContent = 'Roll your ' + (dieName||'d20') + ' and enter the result:';
+    $('dm-val').value = '';
+    $('dm-val').max = dieName ? parseInt(dieName.replace('d','')) || 100 : 20;
+    $('dicemodal').style.display = 'flex';
+    _diceResolve = resolve;
+    setTimeout(()=>$('dm-val').focus(), 80);
+  });
+}
+
+function submitDiceModal(){
+  const v = parseInt($('dm-val').value);
+  if(isNaN(v) || v < 1){ $('dm-val').style.border='2px solid var(--red)'; return; }
+  $('dicemodal').style.display = 'none';
+  if(_diceResolve) _diceResolve(v);
+  _diceResolve = null;
+}
+
+function cancelDiceModal(){
+  $('dicemodal').style.display = 'none';
+  if(_diceResolve) _diceResolve(null);
+  _diceResolve = null;
+}
+
+// Handle Enter key in dice modal
+document.addEventListener('keydown', function(e){
+  if($('dicemodal').style.display === 'flex'){
+    if(e.key === 'Enter') submitDiceModal();
+    if(e.key === 'Escape') cancelDiceModal();
+  }
+});
+
 const CONDS=['Blinded','Charmed','Deafened','Frightened','Grappled','Incapacitated','Invisible','Paralyzed','Petrified','Poisoned','Prone','Restrained','Stunned','Unconscious','Exhausted'];
 const SKILL_AB={acrobatics:'dex','animal-handling':'wis',arcana:'int',athletics:'str',deception:'cha',history:'int',insight:'wis',intimidation:'cha',investigation:'int',medicine:'wis',nature:'int',perception:'wis',performance:'cha',persuasion:'cha',religion:'int','sleight-of-hand':'dex',stealth:'dex',survival:'wis'};
 
@@ -823,10 +888,35 @@ function rollAtk(i){
     showToast('Combat','It is not your turn!',3000);
     return;
   }
-  const a=attacks[i], d20=Math.floor(Math.random()*20)+1;
+  const a=attacks[i];
+  if(usePhysicalDice){
+    promptDiceRoll(a.name+' — Attack Roll', 'd20').then(d20 => {
+      if(d20 === null) return;
+      // For physical dice, also prompt for damage
+      const crit=d20===20, miss=d20===1;
+      if(!miss && a.dmgDice && a.dmgDice!=='—'){
+        const dmgLabel = crit ? a.dmgDice+' (CRIT — roll double!)' : a.dmgDice;
+        promptDiceRoll(a.name+' — Damage ('+dmgLabel+')', a.dmgDice).then(dmgRoll => {
+          if(dmgRoll === null) dmgRoll = 0;
+          _finishRollAtk(a, d20, dmgRoll);
+        });
+      } else {
+        _finishRollAtk(a, d20, null);
+      }
+    });
+  } else {
+    const d20=Math.floor(Math.random()*20)+1;
+    _finishRollAtk(a, d20, null);
+  }
+}
+function _finishRollAtk(a, d20, physDmg){
   const crit=d20===20, miss=d20===1, toHit=d20+(a.toHit||0);
   let dmgN=0,dmgS='';
-  if(a.dmgDice&&a.dmgDice!=='—'){
+  if(physDmg !== null && physDmg !== undefined){
+    // Physical dice — player entered total damage dice, add modifier
+    dmgN = physDmg + (a.dmgMod||0);
+    dmgS = physDmg+(a.dmgMod?(a.dmgMod>=0?'+':'')+a.dmgMod:'')+'=<strong>'+dmgN+'</strong>';
+  } else if(a.dmgDice&&a.dmgDice!=='—'){
     const[cnt,sid]=a.dmgDice.split('d').map(Number);
     const rs=Array.from({length:crit?cnt*2:cnt},()=>Math.floor(Math.random()*sid)+1);
     dmgN=rs.reduce((s,r)=>s+r,0)+(a.dmgMod||0);
@@ -838,7 +928,6 @@ function rollAtk(i){
     +(!miss&&dmgS?'<div style="font-size:12px;margin-top:4px;">'+esc(a.dmgType||'')+': '+dmgS+'</div>':'');
   addRH(a.name+': d20='+d20+' → '+(crit?'CRIT':miss?'MISS':toHit)+(miss?'':' / dmg='+dmgN));
   send({type:'roll:result',rollType:'attack',formula:'1d20',result:[d20],total:toHit});
-  // Store pending attack for damage application
   if(!miss && combatState && combatState.active){
     pendingAttack={attackRoll:toHit,damage:Math.max(1,dmgN),damageType:a.dmgType||'untyped',crit,attackName:a.name};
     updateTargetSection();
@@ -1085,30 +1174,85 @@ function castSpell(idx){
     }
   }
 
+  // Physical dice: spell attack needs async prompt
+  if(usePhysicalDice && s.damage && !s.save){
+    promptDiceRoll(s.name+' — Spell Attack', 'd20').then(d20 => {
+      if(d20 === null) return;
+      const crit=d20===20, fumble=d20===1;
+      promptDiceRoll(s.name+' — Damage ('+s.damage+(crit?' CRIT double!':'')+')', s.damage).then(dmgVal => {
+        if(dmgVal === null) dmgVal = 0;
+        _finishCastSpell(s, saveDC, atkMod, {d20, dmgVal});
+      });
+    });
+    renderSpells();
+    return;
+  }
+  if(usePhysicalDice && s.save && s.damage){
+    promptDiceRoll(s.name+' — Damage ('+s.damage+')', s.damage).then(dmgVal => {
+      if(dmgVal === null) dmgVal = 0;
+      _finishCastSpell(s, saveDC, atkMod, {saveDmg: dmgVal});
+    });
+    renderSpells();
+    return;
+  }
+  if(usePhysicalDice && s.healing){
+    promptDiceRoll(s.name+' — Healing ('+s.healing+')', s.healing).then(healVal => {
+      if(healVal === null) healVal = 0;
+      _finishCastSpell(s, saveDC, atkMod, {healVal});
+    });
+    renderSpells();
+    return;
+  }
+  _finishCastSpell(s, saveDC, atkMod, null);
+  renderSpells();
+  return;
+}
+
+function _finishCastSpell(s, saveDC, atkMod, phys){
   // Build result lines
   var lines=[], bigNum='', bigColor='var(--accent)', summary='';
 
   // ── Spell attack (damage, no save) ──
   if(s.damage && !s.save){
-    const d20=Math.floor(Math.random()*20)+1;
-    const total=d20+atkMod;
-    const crit=d20===20, fumble=d20===1;
-    bigNum=String(total);
-    bigColor=crit?'#c9a54e':fumble?'#8b0000':'var(--accent)';
-    lines.push('<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim);">Attack Roll</span><span>d20(<strong>'+d20+'</strong>) '+fmt(atkMod)+' = <strong style="color:'+(crit?'#c9a54e':fumble?'#8b0000':'#fff')+'">'+total+'</strong>'+(crit?' <span style="color:#c9a54e;">CRITICAL!</span>':'')+(fumble?' <span style="color:#8b0000;">MISS!</span>':'')+'</span></div>');
-    const dr=rollDiceStr(s.damage, crit);
-    lines.push('<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim);">Damage</span><span><strong style="color:var(--red);">'+dr.total+'</strong> '+(s.damageType||'')+' <span style="color:var(--text-dim);font-size:10px;">('+dr.formula+')</span></span></div>');
-    summary='Attack: '+total+(crit?' CRIT':'')+ ' | '+dr.total+' '+(s.damageType||'')+' dmg';
+    let d20, dr;
+    if(phys && phys.d20 !== undefined){
+      d20 = phys.d20;
+      const total=d20+atkMod;
+      const crit=d20===20, fumble=d20===1;
+      bigNum=String(total);
+      bigColor=crit?'#c9a54e':fumble?'#8b0000':'var(--accent)';
+      lines.push('<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim);">Attack Roll</span><span>d20(<strong>'+d20+'</strong>) '+fmt(atkMod)+' = <strong style="color:'+(crit?'#c9a54e':fumble?'#8b0000':'#fff')+'">'+total+'</strong>'+(crit?' <span style="color:#c9a54e;">CRITICAL!</span>':'')+(fumble?' <span style="color:#8b0000;">MISS!</span>':'')+'</span></div>');
+      const dmgTotal = (phys.dmgVal||0);
+      lines.push('<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim);">Damage</span><span><strong style="color:var(--red);">'+dmgTotal+'</strong> '+(s.damageType||'')+' <span style="color:var(--text-dim);font-size:10px;">(physical)</span></span></div>');
+      summary='Attack: '+total+(crit?' CRIT':'')+ ' | '+dmgTotal+' '+(s.damageType||'')+' dmg';
+    } else {
+      d20=Math.floor(Math.random()*20)+1;
+      const total=d20+atkMod;
+      const crit=d20===20, fumble=d20===1;
+      bigNum=String(total);
+      bigColor=crit?'#c9a54e':fumble?'#8b0000':'var(--accent)';
+      lines.push('<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim);">Attack Roll</span><span>d20(<strong>'+d20+'</strong>) '+fmt(atkMod)+' = <strong style="color:'+(crit?'#c9a54e':fumble?'#8b0000':'#fff')+'">'+total+'</strong>'+(crit?' <span style="color:#c9a54e;">CRITICAL!</span>':'')+(fumble?' <span style="color:#8b0000;">MISS!</span>':'')+'</span></div>');
+      dr=rollDiceStr(s.damage, crit);
+      lines.push('<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim);">Damage</span><span><strong style="color:var(--red);">'+dr.total+'</strong> '+(s.damageType||'')+' <span style="color:var(--text-dim);font-size:10px;">('+dr.formula+')</span></span></div>');
+      summary='Attack: '+total+(crit?' CRIT':'')+ ' | '+dr.total+' '+(s.damageType||'')+' dmg';
+    }
   }
   // ── Save-based spell ──
   else if(s.save){
     lines.push('<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim);">Save Required</span><span><strong style="color:var(--purple);">'+s.save+' DC '+saveDC+'</strong></span></div>');
     if(s.damage){
-      const dr=rollDiceStr(s.damage, false);
-      bigNum=String(dr.total);
-      bigColor='var(--red)';
-      lines.push('<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim);">Damage (on fail)</span><span><strong style="color:var(--red);">'+dr.total+'</strong> '+(s.damageType||'')+' <span style="color:var(--text-dim);font-size:10px;">('+dr.formula+')</span></span></div>');
-      summary=s.save+' DC '+saveDC+' | '+dr.total+' '+(s.damageType||'')+' dmg';
+      let dmgTotal;
+      if(phys && phys.saveDmg !== undefined){
+        dmgTotal = phys.saveDmg;
+        bigNum=String(dmgTotal); bigColor='var(--red)';
+        lines.push('<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim);">Damage (on fail)</span><span><strong style="color:var(--red);">'+dmgTotal+'</strong> '+(s.damageType||'')+' <span style="color:var(--text-dim);font-size:10px;">(physical)</span></span></div>');
+        summary=s.save+' DC '+saveDC+' | '+dmgTotal+' '+(s.damageType||'')+' dmg';
+      } else {
+        const dr=rollDiceStr(s.damage, false);
+        bigNum=String(dr.total); bigColor='var(--red)';
+        lines.push('<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim);">Damage (on fail)</span><span><strong style="color:var(--red);">'+dr.total+'</strong> '+(s.damageType||'')+' <span style="color:var(--text-dim);font-size:10px;">('+dr.formula+')</span></span></div>');
+        summary=s.save+' DC '+saveDC+' | '+dr.total+' '+(s.damageType||'')+' dmg';
+      }
     } else {
       bigNum='DC '+saveDC;
       summary=s.save+' Save DC '+saveDC;
@@ -1116,12 +1260,19 @@ function castSpell(idx){
   }
   // ── Healing spell ──
   else if(s.healing){
-    const hStr=s.healing.replace(/modifier/gi,String(sm));
-    const hr=rollDiceStr(hStr, false);
-    bigNum=String(hr.total);
-    bigColor='var(--green)';
-    lines.push('<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim);">Healing</span><span><strong style="color:var(--green);">'+hr.total+' HP</strong> <span style="color:var(--text-dim);font-size:10px;">('+hr.formula+')</span></span></div>');
-    summary='Heal '+hr.total+' HP';
+    if(phys && phys.healVal !== undefined){
+      const healTotal = phys.healVal;
+      bigNum=String(healTotal); bigColor='var(--green)';
+      lines.push('<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim);">Healing</span><span><strong style="color:var(--green);">'+healTotal+' HP</strong> <span style="color:var(--text-dim);font-size:10px;">(physical)</span></span></div>');
+      summary='Heal '+healTotal+' HP';
+    } else {
+      const sa2=char.spellcastingAbility||'cha', sm2=abilMod(sa2);
+      const hStr=s.healing.replace(/modifier/gi,String(sm2));
+      const hr=rollDiceStr(hStr, false);
+      bigNum=String(hr.total); bigColor='var(--green)';
+      lines.push('<div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim);">Healing</span><span><strong style="color:var(--green);">'+hr.total+' HP</strong> <span style="color:var(--text-dim);font-size:10px;">('+hr.formula+')</span></span></div>');
+      summary='Heal '+hr.total+' HP';
+    }
   }
   // ── Utility spell ──
   else {
@@ -1638,7 +1789,16 @@ function renderDs(){
 
 // ── DICE ────────────────────────────────────────────────────────────
 function roll(sides){
-  const r=Math.floor(Math.random()*sides)+1;
+  if(usePhysicalDice){
+    promptDiceRoll('Roll d'+sides, 'd'+sides).then(r => {
+      if(r === null) return;
+      _finishRoll(sides, r);
+    });
+  } else {
+    _finishRoll(sides, Math.floor(Math.random()*sides)+1);
+  }
+}
+function _finishRoll(sides, r){
   $('rollnum').textContent=r;
   $('rollnum').style.color=r===sides?'#c9a54e':r===1?'#8b0000':'#58180d';
   $('rolldtl').textContent='d'+sides;
@@ -1649,11 +1809,21 @@ function roll(sides){
 function rollX(){
   const c=parseInt(prompt('Dice count:','1'))||1;
   const s=parseInt(prompt('Sides:','20'))||20;
-  let t=0;const rs=[];
-  for(let i=0;i<c;i++){const r=Math.floor(Math.random()*s)+1;rs.push(r);t+=r;}
-  $('rollnum').textContent=t; $('rollnum').style.color='var(--accent)';
-  $('rolldtl').textContent=c+'d'+s+' ['+rs.join(', ')+']';
-  addRH(c+'d'+s+' → '+t); send({type:'roll:result',rollType:'die',formula:c+'d'+s,result:rs,total:t});
+  if(usePhysicalDice){
+    // Prompt for total of all dice
+    promptDiceRoll('Roll '+c+'d'+s+' (enter total)', c+'d'+s).then(t => {
+      if(t === null) return;
+      $('rollnum').textContent=t; $('rollnum').style.color='var(--accent)';
+      $('rolldtl').textContent=c+'d'+s+' = '+t+' (physical)';
+      addRH(c+'d'+s+' → '+t); send({type:'roll:result',rollType:'die',formula:c+'d'+s,result:[t],total:t});
+    });
+  } else {
+    let t=0;const rs=[];
+    for(let i=0;i<c;i++){const r=Math.floor(Math.random()*s)+1;rs.push(r);t+=r;}
+    $('rollnum').textContent=t; $('rollnum').style.color='var(--accent)';
+    $('rolldtl').textContent=c+'d'+s+' ['+rs.join(', ')+']';
+    addRH(c+'d'+s+' → '+t); send({type:'roll:result',rollType:'die',formula:c+'d'+s,result:rs,total:t});
+  }
 }
 
 function addRH(txt){
@@ -1663,7 +1833,16 @@ function addRH(txt){
 
 // ── ROLL CHECK (ability/save/skill) ─────────────────────────────────
 function rollCheck(label, modifier, type) {
-  const d20 = Math.floor(Math.random()*20)+1;
+  if(usePhysicalDice){
+    promptDiceRoll(label, 'd20').then(d20 => {
+      if(d20 === null) return;
+      _finishRollCheck(label, modifier, type, d20);
+    });
+  } else {
+    _finishRollCheck(label, modifier, type, Math.floor(Math.random()*20)+1);
+  }
+}
+function _finishRollCheck(label, modifier, type, d20){
   const total = d20 + modifier;
   const crit = d20 === 20, fumble = d20 === 1;
   const color = crit ? '#c9a54e' : fumble ? '#8b0000' : '#58180d';
@@ -2258,6 +2437,14 @@ function showTab(n){
 function showApp(){$('overlay').classList.add('hidden');$('app').classList.add('visible');}
 
 connect();
+
+// Init physical dice toggle visual state
+(function(){
+  const tog=$('physdice-toggle');
+  if(tog){tog.checked=usePhysicalDice;}
+  const knob=$('physdice-knob');
+  if(knob && usePhysicalDice) knob.style.left='20px';
+})();
 
 // ============================================================
 // PLAYER MAP — Canvas 2D (view + own-token drag)

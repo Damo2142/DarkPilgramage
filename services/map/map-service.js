@@ -258,6 +258,70 @@ class MapService {
       res.json(mapDef?.walls || []);
     });
 
+    // POST /api/map/walls/toggle-door — open/close a door
+    // body: { index, playerId? (for lock picking), dmOverride? }
+    app.post('/api/map/walls/toggle-door', (req, res) => {
+      if (!this.activeMapId) return res.status(400).json({ error: 'No active map' });
+      const mapDef = this.maps.get(this.activeMapId);
+      if (!mapDef?.walls) return res.status(404).json({ error: 'No walls' });
+
+      const { index, playerId, dmOverride } = req.body;
+      if (index == null || !mapDef.walls[index]) return res.status(400).json({ error: 'Invalid wall index' });
+
+      const wall = mapDef.walls[index];
+      if (wall.type !== 'door') return res.status(400).json({ error: 'Not a door' });
+
+      // If door is locked and player is trying to open (not DM override)
+      if (wall.locked && wall.lockDC && !wall.open && !dmOverride) {
+        if (!playerId) {
+          return res.json({ index, locked: true, lockDC: wall.lockDC, message: 'Door is locked (DC ' + wall.lockDC + ')' });
+        }
+        // Auto-roll thieves' tools / sleight-of-hand check
+        const charData = this.state.get(`players.${playerId}.character`);
+        const skillData = charData?.skills?.['sleight-of-hand'];
+        const modifier = skillData ? skillData.modifier : 0;
+        const roll = Math.floor(Math.random() * 20) + 1;
+        const total = roll + modifier;
+        const success = total >= wall.lockDC;
+        const modStr = modifier >= 0 ? '+' + modifier : '' + modifier;
+
+        this.bus.dispatch('dm:whisper', {
+          text: `${charData?.name || playerId} picks lock DC${wall.lockDC}: d20(${roll}) ${modStr} = ${total} — ${success ? 'SUCCESS' : 'FAIL'}`,
+          priority: 2, category: 'rules'
+        });
+
+        if (success) {
+          wall.locked = false;
+          wall.open = true;
+          this.bus.dispatch('dm:private_message', {
+            playerId, text: 'You pick the lock! The door opens.', durationMs: 4000
+          });
+          this.bus.dispatch('dm:private_message', {
+            playerId: 'all', text: 'A door clicks open...', durationMs: 3000
+          });
+          return res.json({ index, open: true, unlocked: true, roll, total, dc: wall.lockDC });
+        } else {
+          this.bus.dispatch('dm:private_message', {
+            playerId, text: 'The lock holds firm.', durationMs: 3000
+          });
+          return res.json({ index, open: false, unlocked: false, roll, total, dc: wall.lockDC });
+        }
+      }
+
+      // Normal toggle (unlocked or DM override)
+      if (dmOverride && wall.locked) wall.locked = false;
+      wall.open = !wall.open;
+      console.log(`[MapService] Door ${index} ${wall.open ? 'opened' : 'closed'}`);
+
+      this.bus.dispatch('dm:private_message', {
+        playerId: 'all',
+        text: wall.open ? 'A door creaks open...' : 'A door slams shut.',
+        durationMs: 3000
+      });
+
+      res.json({ index, open: wall.open });
+    });
+
     // POST /api/map/walls — save walls for active map
     app.post('/api/map/walls', (req, res) => {
       if (!this.activeMapId) return res.status(400).json({ error: 'No active map' });
@@ -943,9 +1007,34 @@ class MapService {
 
   /**
    * Check if a movement path is blocked by any wall segment (line-line intersection)
+   * Walls block movement unless they are open doors.
+   * Windows always block movement. Doors block when closed.
    */
   _pathBlockedByWall(x1, y1, x2, y2, walls) {
     for (const wall of walls) {
+      const type = wall.type || 'wall';
+      // Open doors don't block movement
+      if (type === 'door' && wall.open) continue;
+      // All other walls/doors/windows block movement
+      if (this._linesIntersect(x1, y1, x2, y2, wall.x1, wall.y1, wall.x2, wall.y2)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Check if vision is blocked by walls between two points.
+   * Windows and open doors allow vision through. Closed doors and walls block.
+   */
+  _visionBlockedByWall(x1, y1, x2, y2, walls) {
+    for (const wall of walls) {
+      const type = wall.type || 'wall';
+      // Windows allow vision through
+      if (type === 'window') continue;
+      // Open doors allow vision through
+      if (type === 'door' && wall.open) continue;
+      // Walls and closed doors block vision
       if (this._linesIntersect(x1, y1, x2, y2, wall.x1, wall.y1, wall.x2, wall.y2)) {
         return true;
       }
@@ -1001,9 +1090,9 @@ class MapService {
 
       const dist = Math.sqrt((x - zCenterX) ** 2 + (y - zCenterY) ** 2);
       if (dist <= visionPx) {
-        // Check if line of sight is blocked by walls
+        // Check if line of sight is blocked by walls (vision rules — windows/open doors allow)
         const blocked = mapDef.walls?.length > 0 &&
-          this._pathBlockedByWall(x, y, zCenterX, zCenterY, mapDef.walls);
+          this._visionBlockedByWall(x, y, zCenterX, zCenterY, mapDef.walls);
         if (!blocked) {
           zone.revealed = true;
           changed = true;

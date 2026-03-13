@@ -494,7 +494,31 @@
     "Draconic",
     "Common"
   ],
-  "_syncedAt": "2026-03-12T23:42:38.189Z",
+  "backstory": {
+    "personalityTraits": null,
+    "ideals": null,
+    "bonds": null,
+    "flaws": null,
+    "backstoryText": "The original Spurt was born in the Underdark. His life was short but memorable. He fashioned his own tools and weapons. He befriended an able party of adventurers and helped them for a short time before a fire giant squashed him like a bug. Although Spurt lived only eleven days, his spurt of heroism inspired other kobolds to adopt his name and pursue adventurous lives.\n\nSpurt the Sorcerer is one of many Spurts in the multiverse. Her gift for Wild Sorcery stems from prolonged exposure to Underdark radiation. She’s on a quest to find others who are ready to go on adventures, but she has yet to find any trustworthy friends.",
+    "allies": null,
+    "organizations": null,
+    "enemies": null,
+    "otherNotes": null
+  },
+  "appearance": {
+    "gender": "Female",
+    "age": null,
+    "height": null,
+    "weight": null,
+    "size": null,
+    "eyes": null,
+    "hair": null,
+    "skin": null,
+    "faith": null,
+    "description": "Spurt is a russet-colored kobold who collects critters and has several on her person, including a skunk in a wooden cage, several wasps in a bag, and centipedes in a basket. Although she can aggravate enemies by releasing these critters, she has no control over their behavior."
+  },
+  "patron": "Wild Magic Sorcery",
+  "_syncedAt": "2026-03-13T10:20:14.609Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/162472191"
 }

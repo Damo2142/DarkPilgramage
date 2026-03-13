@@ -163,18 +163,7 @@
       "ritual": false,
       "concentration": true,
       "prepared": false,
-      "description": "You place a curse on a creature that you can see within range. Until the spell ends, you deal an extra 1d6 Necrotic damage to the target whenever you hit it with an attack roll. Also, choose one abili",
-      "damage": "1d6",
-      "damageType": "necrotic",
-      "castingTime": "1 bonus action",
-      "range": "90 feet",
-      "components": "V, S, M (the petrified eye of a newt)",
-      "duration": "Concentration, up to 1 hour",
-      "classes": [
-        "Warlock"
-      ],
-      "higherLevel": "Duration increases with higher slots: 8 hours at 3rd, 24 hours at 5th.",
-      "_enriched": true
+      "description": "You place a curse on a creature that you can see within range. Until the spell ends, you deal an extra 1d6 Necrotic damage to the target whenever you hit it with an attack roll. Also, choose one abili"
     },
     {
       "name": "Eldritch Blast",
@@ -183,18 +172,7 @@
       "ritual": false,
       "concentration": false,
       "prepared": true,
-      "description": "You hurl a beam of crackling energy. Make a ranged spell attack against one creature or object in range. On a hit, the target takes 1d10 Force damage.\r\nCantrip Upgrade. The spell creates two beams at ",
-      "damage": "1d10",
-      "damageType": "force",
-      "castingTime": "1 action",
-      "range": "120 feet",
-      "components": "V, S",
-      "duration": "Instantaneous",
-      "classes": [
-        "Warlock"
-      ],
-      "higherLevel": "Additional beams at 5th (2), 11th (3), and 17th (4) level.",
-      "_enriched": true
+      "description": "You hurl a beam of crackling energy. Make a ranged spell attack against one creature or object in range. On a hit, the target takes 1d10 Force damage.\r\nCantrip Upgrade. The spell creates two beams at "
     },
     {
       "name": "Prestidigitation",
@@ -203,18 +181,7 @@
       "ritual": false,
       "concentration": false,
       "prepared": true,
-      "description": "You create a magical effect within range. Choose the effect from the options below. If you cast this spell multiple times, you can have up to three of its non-instantaneous effects active at a time.\r\n",
-      "castingTime": "1 action",
-      "range": "10 feet",
-      "components": "V, S",
-      "duration": "Up to 1 hour",
-      "classes": [
-        "Bard",
-        "Sorcerer",
-        "Warlock",
-        "Wizard"
-      ],
-      "_enriched": true
+      "description": "You create a magical effect within range. Choose the effect from the options below. If you cast this spell multiple times, you can have up to three of its non-instantaneous effects active at a time.\r\n"
     },
     {
       "name": "Hellish Rebuke",
@@ -232,17 +199,7 @@
       "ritual": false,
       "concentration": false,
       "prepared": false,
-      "description": "Briefly surrounded by silvery mist, you teleport up to 30 feet to an unoccupied space that you can see.",
-      "castingTime": "1 bonus action",
-      "range": "Self",
-      "components": "V",
-      "duration": "Instantaneous",
-      "classes": [
-        "Sorcerer",
-        "Warlock",
-        "Wizard"
-      ],
-      "_enriched": true
+      "description": "Briefly surrounded by silvery mist, you teleport up to 30 feet to an unoccupied space you can see."
     },
     {
       "name": "Mirror Image",
@@ -251,17 +208,7 @@
       "ritual": false,
       "concentration": false,
       "prepared": false,
-      "description": "Three illusory duplicates of yourself appear in your space. Until the spell ends, the duplicates move with you and mimic your actions, shifting position so it’s impossible to track which image is real",
-      "castingTime": "1 action",
-      "range": "Self",
-      "components": "V, S",
-      "duration": "1 minute",
-      "classes": [
-        "Sorcerer",
-        "Warlock",
-        "Wizard"
-      ],
-      "_enriched": true
+      "description": "Three illusory duplicates of yourself appear in your space. Until the spell ends, the duplicates move with you and mimic your actions, shifting position so it’s impossible to track which image is real"
     }
   ],
   "attacks": [],
@@ -311,14 +258,14 @@
     {
       "name": "Leather",
       "quantity": 1,
-      "equipped": true,
+      "equipped": false,
       "type": "Armor",
       "weight": 10
     },
     {
       "name": "Dagger",
       "quantity": 1,
-      "equipped": true,
+      "equipped": false,
       "type": "Weapon",
       "weight": 1
     },
@@ -346,14 +293,14 @@
     {
       "name": "Clothes, Common",
       "quantity": 1,
-      "equipped": true,
+      "equipped": false,
       "type": "Other Gear",
       "weight": 3
     },
     {
       "name": "Backpack",
       "quantity": 1,
-      "equipped": true,
+      "equipped": false,
       "type": "Other Gear",
       "weight": 5
     },
@@ -367,14 +314,14 @@
     {
       "name": "Orb",
       "quantity": 1,
-      "equipped": true,
+      "equipped": false,
       "type": "Other Gear",
       "weight": 3
     },
     {
       "name": "Crowbar",
       "quantity": 1,
-      "equipped": true,
+      "equipped": false,
       "type": "Other Gear",
       "weight": 5
     },
@@ -388,7 +335,7 @@
     {
       "name": "Holy Water (flask)",
       "quantity": 1,
-      "equipped": true,
+      "equipped": false,
       "type": "Other Gear",
       "weight": 1
     },
@@ -402,7 +349,7 @@
     {
       "name": "Mirror, Steel",
       "quantity": 1,
-      "equipped": true,
+      "equipped": false,
       "type": "Other Gear",
       "weight": 0.5
     },
@@ -416,63 +363,63 @@
     {
       "name": "Tinderbox",
       "quantity": 1,
-      "equipped": true,
+      "equipped": false,
       "type": "Other Gear",
       "weight": 1
     },
     {
       "name": "Torch",
       "quantity": 3,
-      "equipped": true,
+      "equipped": false,
       "type": "Other Gear",
       "weight": 1
     },
     {
       "name": "Stake (Wooden)",
       "quantity": 9,
-      "equipped": true,
+      "equipped": false,
       "type": "Other Gear",
       "weight": 0
     },
     {
       "name": "Holy Symbol",
       "quantity": 1,
-      "equipped": true,
+      "equipped": false,
       "type": "Other Gear",
       "weight": 0
     },
     {
       "name": "Oil",
       "quantity": 10,
-      "equipped": true,
+      "equipped": false,
       "type": "Other Gear",
       "weight": 1
     },
     {
       "name": "Parchment",
       "quantity": 10,
-      "equipped": true,
+      "equipped": false,
       "type": "Other Gear",
       "weight": 0
     },
     {
       "name": "Tinderbox",
       "quantity": 1,
-      "equipped": true,
+      "equipped": false,
       "type": "Other Gear",
       "weight": 1
     },
     {
       "name": "Book",
       "quantity": 1,
-      "equipped": true,
+      "equipped": false,
       "type": "Other Gear",
       "weight": 5
     },
     {
       "name": "Lamp",
       "quantity": 1,
-      "equipped": true,
+      "equipped": false,
       "type": "Other Gear",
       "weight": 1
     },
@@ -506,7 +453,31 @@
     "Celestial",
     "Elvish"
   ],
-  "_syncedAt": "2026-03-13T00:09:08.424Z",
+  "backstory": {
+    "personalityTraits": "I don’t run from evil. Evil runs from me.\nI put no trust in divine beings.",
+    "ideals": "I have a dark calling that puts me above the law. (Chaotic)",
+    "bonds": "A terrible guilt consumes me. I hope that I can find redemption through my actions.",
+    "flaws": "I talk to spirits that no one else can see.",
+    "backstoryText": "Barry Frascht comes from a family that has assisted supernatural beings for generations, many times unknowingly. Sometimes through kindness, sometimes through stubbornness or bad decisions, the Fraschts repeatedly interfered with events that shaped the balance of the cosmos.\n\nOver time, many powerful entities came to owe the family favors.\n\nBarry’s parents understood this strange legacy, but they died when Barry was young. Barry grew up believing the supernatural was nonsense.\n\nUnknown to him, cosmic forces assigned a genie to watch over him and keep him from accidentally causing catastrophic events. Barry believes the genie is an imaginary friend.",
+    "allies": "The Genie (Barry’s “Imaginary Friend”)\nA genie assigned by cosmic powers to watch over Barry.\nActs as Barry’s exhausted best friend, babysitter, and reluctant guardian.\nBarry believes the genie is imaginary.",
+    "organizations": "“The Frascht Family Debt”\nA loose supernatural understanding that Barry’s family is owed favors by many powerful beings across the planes.",
+    "enemies": "Unknown",
+    "otherNotes": null
+  },
+  "appearance": {
+    "gender": "male",
+    "age": 40,
+    "height": "5'11\"",
+    "weight": 180,
+    "size": null,
+    "eyes": "gray or hazel",
+    "hair": "messy brown hair",
+    "skin": "lightly weathered / sun-touched",
+    "faith": "Imaginary friend says gods exist",
+    "description": null
+  },
+  "patron": "Fiend Patron",
+  "_syncedAt": "2026-03-13T10:20:14.692Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/162702065"
 }

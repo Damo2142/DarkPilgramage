@@ -251,6 +251,32 @@ class MapService {
       res.json({ playerId, mapId });
     });
 
+    // GET /api/map/walls — get walls for active map
+    app.get('/api/map/walls', (req, res) => {
+      if (!this.activeMapId) return res.json([]);
+      const mapDef = this.maps.get(this.activeMapId);
+      res.json(mapDef?.walls || []);
+    });
+
+    // POST /api/map/walls — save walls for active map
+    app.post('/api/map/walls', (req, res) => {
+      if (!this.activeMapId) return res.status(400).json({ error: 'No active map' });
+      const mapDef = this.maps.get(this.activeMapId);
+      if (!mapDef) return res.status(404).json({ error: 'Map not found' });
+
+      mapDef.walls = req.body.walls || [];
+      // Persist to file
+      const mapsDir = path.join(__dirname, '..', '..', 'config', 'maps');
+      try {
+        fs.writeFileSync(path.join(mapsDir, `${this.activeMapId}.json`), JSON.stringify(mapDef, null, 2));
+        this.maps.set(this.activeMapId, mapDef);
+        console.log(`[MapService] Saved ${mapDef.walls.length} walls to ${this.activeMapId}`);
+        res.json({ saved: mapDef.walls.length });
+      } catch (e) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
     // DELETE /api/map/:mapId — delete a map config and optionally its image
     app.delete('/api/map/:mapId', (req, res) => {
       const mapId = req.params.mapId;

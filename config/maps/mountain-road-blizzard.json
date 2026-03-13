@@ -56,7 +56,10 @@
       "image": "dire-wolf.png",
       "visible": false,
       "hidden": true,
-      "hp": { "current": 37, "max": 37 },
+      "hp": {
+        "current": 37,
+        "max": 37
+      },
       "ac": 14,
       "actorSlug": "dire-wolf"
     },
@@ -68,7 +71,10 @@
       "image": "wolf.png",
       "visible": false,
       "hidden": true,
-      "hp": { "current": 11, "max": 11 },
+      "hp": {
+        "current": 11,
+        "max": 11
+      },
       "ac": 13,
       "actorSlug": "wolf"
     },
@@ -80,7 +86,10 @@
       "image": "wolf.png",
       "visible": false,
       "hidden": true,
-      "hp": { "current": 11, "max": 11 },
+      "hp": {
+        "current": 11,
+        "max": 11
+      },
       "ac": 13,
       "actorSlug": "wolf"
     },
@@ -92,9 +101,26 @@
       "image": "swarm-of-bats.png",
       "visible": false,
       "hidden": true,
-      "hp": { "current": 22, "max": 22 },
+      "hp": {
+        "current": 22,
+        "max": 22
+      },
       "ac": 12,
       "actorSlug": "swarm-of-bats"
+    },
+    "jerome": {
+      "name": "Barry Goodfellow Frascht",
+      "type": "pc",
+      "x": 736,
+      "y": 128,
+      "image": "jerome.webp",
+      "visible": true,
+      "hp": {
+        "current": 18,
+        "max": 18,
+        "temp": 0
+      },
+      "ac": 11
     }
   },
   "playerSpawns": {

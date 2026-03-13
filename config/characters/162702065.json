@@ -311,14 +311,14 @@
     {
       "name": "Leather",
       "quantity": 1,
-      "equipped": false,
+      "equipped": true,
       "type": "Armor",
       "weight": 10
     },
     {
       "name": "Dagger",
       "quantity": 1,
-      "equipped": false,
+      "equipped": true,
       "type": "Weapon",
       "weight": 1
     },
@@ -346,14 +346,14 @@
     {
       "name": "Clothes, Common",
       "quantity": 1,
-      "equipped": false,
+      "equipped": true,
       "type": "Other Gear",
       "weight": 3
     },
     {
       "name": "Backpack",
       "quantity": 1,
-      "equipped": false,
+      "equipped": true,
       "type": "Other Gear",
       "weight": 5
     },
@@ -367,14 +367,14 @@
     {
       "name": "Orb",
       "quantity": 1,
-      "equipped": false,
+      "equipped": true,
       "type": "Other Gear",
       "weight": 3
     },
     {
       "name": "Crowbar",
       "quantity": 1,
-      "equipped": false,
+      "equipped": true,
       "type": "Other Gear",
       "weight": 5
     },
@@ -388,7 +388,7 @@
     {
       "name": "Holy Water (flask)",
       "quantity": 1,
-      "equipped": false,
+      "equipped": true,
       "type": "Other Gear",
       "weight": 1
     },
@@ -402,7 +402,7 @@
     {
       "name": "Mirror, Steel",
       "quantity": 1,
-      "equipped": false,
+      "equipped": true,
       "type": "Other Gear",
       "weight": 0.5
     },
@@ -416,63 +416,63 @@
     {
       "name": "Tinderbox",
       "quantity": 1,
-      "equipped": false,
+      "equipped": true,
       "type": "Other Gear",
       "weight": 1
     },
     {
       "name": "Torch",
       "quantity": 3,
-      "equipped": false,
+      "equipped": true,
       "type": "Other Gear",
       "weight": 1
     },
     {
       "name": "Stake (Wooden)",
       "quantity": 9,
-      "equipped": false,
+      "equipped": true,
       "type": "Other Gear",
       "weight": 0
     },
     {
       "name": "Holy Symbol",
       "quantity": 1,
-      "equipped": false,
+      "equipped": true,
       "type": "Other Gear",
       "weight": 0
     },
     {
       "name": "Oil",
       "quantity": 10,
-      "equipped": false,
+      "equipped": true,
       "type": "Other Gear",
       "weight": 1
     },
     {
       "name": "Parchment",
       "quantity": 10,
-      "equipped": false,
+      "equipped": true,
       "type": "Other Gear",
       "weight": 0
     },
     {
       "name": "Tinderbox",
       "quantity": 1,
-      "equipped": false,
+      "equipped": true,
       "type": "Other Gear",
       "weight": 1
     },
     {
       "name": "Book",
       "quantity": 1,
-      "equipped": false,
+      "equipped": true,
       "type": "Other Gear",
       "weight": 5
     },
     {
       "name": "Lamp",
       "quantity": 1,
-      "equipped": false,
+      "equipped": true,
       "type": "Other Gear",
       "weight": 1
     },
@@ -506,7 +506,7 @@
     "Celestial",
     "Elvish"
   ],
-  "_syncedAt": "2026-03-12T23:32:12.176Z",
+  "_syncedAt": "2026-03-13T00:09:08.424Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/162702065"
 }

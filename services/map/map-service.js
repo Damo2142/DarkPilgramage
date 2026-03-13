@@ -7,6 +7,7 @@ class MapService {
     this.orchestrator = null;
     this.maps = new Map();       // mapId -> map definition
     this.activeMapId = null;
+    this.playerMapAssignment = {};  // playerId -> mapId (which floor each player is on)
     this.srdMonsters = [];       // SRD compendium
     this.srdEquipment = [];      // SRD equipment
     this.srdSpells = [];         // SRD spells
@@ -124,26 +125,34 @@ class MapService {
       }
     }
 
-    // Place connected players at spawn points
+    // Place only players assigned to THIS map at spawn points
+    // If no assignments exist yet (first load), assign all players to this map
     const players = this.state.get('players') || {};
+    const hasAnyAssignment = Object.keys(this.playerMapAssignment).length > 0;
     const spawns = map.playerSpawns?.spread || [];
     let spawnIdx = 0;
     for (const playerId of Object.keys(players)) {
-      if (!tokenState[playerId]) {
-        const spawn = spawns[spawnIdx] || map.playerSpawns?.default || { x: 280, y: 350 };
-        const charData = players[playerId]?.character || {};
-        tokenState[playerId] = {
-          id: playerId,
-          name: charData.name || playerId,
-          type: 'pc',
-          x: spawn.x,
-          y: spawn.y,
-          image: `${playerId}.webp`,
-          visible: true,
-          hp: charData.hp || { current: 20, max: 20 },
-          ac: charData.ac || 10
-        };
-        spawnIdx++;
+      // Only add player token if they're assigned to this map (or no assignments yet)
+      const assignedMap = this.playerMapAssignment[playerId];
+      if (!hasAnyAssignment || assignedMap === mapId) {
+        if (!tokenState[playerId]) {
+          const spawn = spawns[spawnIdx] || map.playerSpawns?.default || { x: 280, y: 350 };
+          const charData = players[playerId]?.character || {};
+          tokenState[playerId] = {
+            id: playerId,
+            name: charData.name || playerId,
+            type: 'pc',
+            x: spawn.x,
+            y: spawn.y,
+            image: `${playerId}.webp`,
+            visible: true,
+            hp: charData.hp || { current: 20, max: 20 },
+            ac: charData.ac || 10
+          };
+          spawnIdx++;
+        }
+        // Track assignment
+        this.playerMapAssignment[playerId] = mapId;
       }
     }
 
@@ -226,6 +235,20 @@ class MapService {
     // GET /api/map/floor-links — get zones that link to other maps
     app.get('/api/map/floor-links', (req, res) => {
       res.json(this.getFloorLinks());
+    });
+
+    // GET /api/map/player-assignments — which map each player is on
+    app.get('/api/map/player-assignments', (req, res) => {
+      res.json(this.playerMapAssignment);
+    });
+
+    // POST /api/map/player-assignment — assign a player to a map
+    // body: { playerId, mapId }
+    app.post('/api/map/player-assignment', (req, res) => {
+      const { playerId, mapId } = req.body || {};
+      if (!playerId || !mapId) return res.status(400).json({ error: 'playerId and mapId required' });
+      this.playerMapAssignment[playerId] = mapId;
+      res.json({ playerId, mapId });
     });
 
     // DELETE /api/map/:mapId — delete a map config and optionally its image
@@ -797,11 +820,46 @@ class MapService {
     const mapDef = this.maps.get(this.activeMapId);
     const grid = mapDef?.gridSize || 70;
     const half = grid / 2;
-    const snappedX = Math.floor((x - half) / grid) * grid + half;
-    const snappedY = Math.floor((y - half) / grid) * grid + half;
+    let snappedX = Math.floor((x - half) / grid) * grid + half;
+    let snappedY = Math.floor((y - half) / grid) * grid + half;
 
     const oldX = token.x;
     const oldY = token.y;
+
+    // Movement rate enforcement (PC tokens only, during combat)
+    if (token.type === 'pc') {
+      const combat = this.state.get('combat');
+      if (combat && combat.active) {
+        const charData = this.state.get(`players.${tokenId}.character`);
+        const speed = charData?.speed || 30;
+        const maxSquares = Math.floor(speed / 5);
+        const dx = Math.abs(snappedX - oldX) / grid;
+        const dy = Math.abs(snappedY - oldY) / grid;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > maxSquares) {
+          // Clamp to max movement range
+          const scale = maxSquares / dist;
+          snappedX = Math.floor((oldX + (snappedX - oldX) * scale - half) / grid) * grid + half;
+          snappedY = Math.floor((oldY + (snappedY - oldY) * scale - half) / grid) * grid + half;
+          this.bus.dispatch('dm:whisper', {
+            text: `${token.name} tried to move ${Math.round(dist * 5)}ft but speed is ${speed}ft — clamped`,
+            priority: 4, category: 'rules'
+          });
+        }
+      }
+    }
+
+    // Wall collision check — block movement through walls
+    if (mapDef?.walls && mapDef.walls.length > 0) {
+      if (this._pathBlockedByWall(oldX, oldY, snappedX, snappedY, mapDef.walls)) {
+        // Movement blocked — stay at old position
+        this.bus.dispatch('dm:whisper', {
+          text: `${token.name} movement blocked by wall`,
+          priority: 5, category: 'rules'
+        });
+        return { tokenId, x: oldX, y: oldY, blocked: true };
+      }
+    }
 
     this.state.set(`map.tokens.${tokenId}.x`, snappedX);
     this.state.set(`map.tokens.${tokenId}.y`, snappedY);
@@ -816,6 +874,9 @@ class MapService {
         previousZone: oldZone || null
       });
     }
+
+    // Auto-reveal fog based on vision
+    this._checkVisionReveal(tokenId, snappedX, snappedY);
 
     this.bus.dispatch('map:token_moved', {
       tokenId,
@@ -854,6 +915,83 @@ class MapService {
     return inside;
   }
 
+  /**
+   * Check if a movement path is blocked by any wall segment (line-line intersection)
+   */
+  _pathBlockedByWall(x1, y1, x2, y2, walls) {
+    for (const wall of walls) {
+      if (this._linesIntersect(x1, y1, x2, y2, wall.x1, wall.y1, wall.x2, wall.y2)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Line segment intersection test
+   */
+  _linesIntersect(ax1, ay1, ax2, ay2, bx1, by1, bx2, by2) {
+    const d = (bx2 - bx1) * (ay2 - ay1) - (by2 - by1) * (ax2 - ax1);
+    if (Math.abs(d) < 0.0001) return false;
+    const t = ((bx1 - ax1) * (ay2 - ay1) - (by1 - ay1) * (ax2 - ax1)) / d;
+    const u = -((ax2 - ax1) * (by1 - ay1) - (ay2 - ay1) * (bx1 - ax1)) / d;
+    return t > 0.01 && t < 0.99 && u > 0.01 && u < 0.99;
+  }
+
+  /**
+   * Auto-reveal fog zones based on token vision range
+   * Called after token movement — reveals zones the token can see into
+   */
+  _checkVisionReveal(tokenId, x, y) {
+    const token = this.state.get(`map.tokens.${tokenId}`);
+    if (!token || token.type !== 'pc') return;
+
+    const mapDef = this.maps.get(this.activeMapId);
+    if (!mapDef) return;
+    const grid = mapDef.gridSize || 70;
+
+    // Get vision range from character data (darkvision or normal)
+    const charData = this.state.get(`players.${tokenId}.character`);
+    const darkvision = charData?.senses?.darkvision || 0;
+    const normalVision = 60; // Default 60ft normal vision in lit areas
+    const visionFt = Math.max(normalVision, darkvision);
+    const visionPx = (visionFt / 5) * grid;
+
+    const zones = this.state.get('map.zones') || [];
+    let changed = false;
+
+    for (const zone of zones) {
+      if (zone.revealed) continue;
+
+      // Calculate distance from token to zone center
+      let zCenterX, zCenterY;
+      if (zone.points && zone.points.length >= 3) {
+        zCenterX = zone.points.reduce((s, p) => s + p.x, 0) / zone.points.length;
+        zCenterY = zone.points.reduce((s, p) => s + p.y, 0) / zone.points.length;
+      } else {
+        zCenterX = zone.x + (zone.w || 0) / 2;
+        zCenterY = zone.y + (zone.h || 0) / 2;
+      }
+
+      const dist = Math.sqrt((x - zCenterX) ** 2 + (y - zCenterY) ** 2);
+      if (dist <= visionPx) {
+        // Check if line of sight is blocked by walls
+        const blocked = mapDef.walls?.length > 0 &&
+          this._pathBlockedByWall(x, y, zCenterX, zCenterY, mapDef.walls);
+        if (!blocked) {
+          zone.revealed = true;
+          changed = true;
+          console.log(`[MapService] Vision reveal: ${token.name} sees ${zone.name || zone.id}`);
+        }
+      }
+    }
+
+    if (changed) {
+      this.state.set('map.zones', zones);
+      this.bus.dispatch('map:zones_vision_revealed', { tokenId, mapId: this.activeMapId });
+    }
+  }
+
   _setupEventListeners() {
     // When HP updates, sync to map token
     this.bus.subscribe('hp:update', (env) => {
@@ -864,10 +1002,19 @@ class MapService {
       }
     }, 'map');
 
-    // When a new player connects, add their token if not present
+    // When a new player connects, add their token if they're assigned to the active map
     this.bus.subscribe('player:connected', (env) => {
       const { playerId } = env.data;
       if (!this.activeMapId) return;
+
+      // If player has no map assignment, assign them to the active map
+      if (!this.playerMapAssignment[playerId]) {
+        this.playerMapAssignment[playerId] = this.activeMapId;
+      }
+
+      // Only add token if player is assigned to the currently active map
+      if (this.playerMapAssignment[playerId] !== this.activeMapId) return;
+
       const existing = this.state.get(`map.tokens.${playerId}`);
       if (existing) return;
 
@@ -892,7 +1039,7 @@ class MapService {
 
       this.state.set(`map.tokens.${playerId}`, token);
       this.bus.dispatch('map:token_added', { token });
-      console.log(`[MapService] Added token for player ${playerId}`);
+      console.log(`[MapService] Added token for player ${playerId} on ${this.activeMapId}`);
     }, 'map');
 
     // Character assignment updates token name/HP
@@ -1056,6 +1203,10 @@ class MapService {
         x: spawn.x,
         y: spawn.y
       };
+      // Update player map assignment
+      if (tok.type === 'pc') {
+        this.playerMapAssignment[tid] = targetMapId;
+      }
       spawnIdx++;
     }
 

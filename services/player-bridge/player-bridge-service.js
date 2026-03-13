@@ -243,6 +243,21 @@ class PlayerBridgeService {
         });
       }
 
+      // Forward full map replacement (path='map' without dot)
+      if (statePath === 'map' && typeof value === 'object' && value) {
+        const filtered = { ...value };
+        if (filtered.tokens) {
+          const ft = {};
+          for (const [id, tok] of Object.entries(filtered.tokens)) {
+            if (!tok || tok.hidden) continue;
+            ft[id] = tok.type === 'npc' ? { ...tok, name: 'Unknown' } : tok;
+          }
+          filtered.tokens = ft;
+        }
+        this._broadcast({ type: 'map:full_update', map: filtered });
+        return;
+      }
+
       if (statePath.startsWith('scene.') || statePath.startsWith('combat.') || statePath.startsWith('map.')) {
         // Filter hidden tokens from player view
         if (statePath === 'map.tokens' && typeof value === 'object') {
@@ -372,6 +387,48 @@ class PlayerBridgeService {
     // Push available NPCs to players on session start
     this.bus.subscribe('session:started', () => {
       this._broadcastAvailableNpcs();
+    }, 'player-bridge');
+
+    // Forward audio events to remote players (SFX/ambience streaming)
+    this.bus.subscribe('audio:play_sound', (env) => {
+      const { url, volume, category } = env.data;
+      this._broadcast({ type: 'audio:play', url, volume, category });
+    }, 'player-bridge');
+
+    this.bus.subscribe('audio:ambience_change', (env) => {
+      const { url, volume, crossfade } = env.data;
+      this._broadcast({ type: 'audio:ambience', url, volume, crossfade });
+    }, 'player-bridge');
+
+    // Forward map events to all players
+    this.bus.subscribe('map:activated', (env) => {
+      // Build filtered map state and push to all players
+      try {
+        const mapState = this.state.get('map') || {};
+        const filtered = { ...mapState };
+        if (filtered.tokens) {
+          const ft = {};
+          for (const [id, tok] of Object.entries(filtered.tokens)) {
+            if (!tok || tok.hidden) continue;
+            ft[id] = tok.type === 'npc' ? { ...tok, name: 'Unknown' } : tok;
+          }
+          filtered.tokens = ft;
+        }
+        this._broadcast({ type: 'map:full_update', map: filtered });
+      } catch (e) {
+        console.error('[PlayerBridge] Error broadcasting map:activated:', e.message);
+      }
+    }, 'player-bridge');
+
+    this.bus.subscribe('map:token_added', (env) => {
+      const { token } = env.data;
+      if (!token || token.hidden) return;
+      const safe = token.type === 'npc' ? { ...token, name: 'Unknown' } : token;
+      this._broadcast({ type: 'map:token_added', token: safe });
+    }, 'player-bridge');
+
+    this.bus.subscribe('map:token_removed', (env) => {
+      this._broadcast({ type: 'map:token_removed', tokenId: env.data.tokenId });
     }, 'player-bridge');
 
     // Forward combat events to all players

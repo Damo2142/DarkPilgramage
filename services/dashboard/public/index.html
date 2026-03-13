@@ -1373,9 +1373,11 @@
             <span style="font-size:11px;color:var(--accent);font-family:Cinzel,serif;">Floor Transitions</span>
           </div>
           <div id="floor-links" style="font-size:10px;margin-top:4px;"></div>
+          <div id="player-floor-assignments" style="font-size:10px;margin-top:4px;color:var(--text-dim);"></div>
           <div style="display:flex;gap:4px;margin-top:4px;">
             <select id="floor-target" style="flex:1;font-size:10px;padding:3px;"></select>
-            <button class="sm" onclick="transitionFloor()" style="font-size:9px;">Go</button>
+            <button class="sm" onclick="transitionFloor()" style="font-size:9px;">Move All PCs</button>
+            <button class="sm" onclick="viewFloor()" style="font-size:9px;">View Only</button>
           </div>
         </div>
         <div>
@@ -1604,6 +1606,7 @@
       case 'map:activated':
         addTranscript({ speaker: 'system', text: `Map loaded: ${msg.data.name}` });
         VTT.loadMap();
+        loadFloorLinks();
         break;
       case 'map:token_moved':
         VTT.onStateUpdate(`map.tokens.${msg.data.tokenId}.x`, msg.data.x);
@@ -4644,12 +4647,35 @@
         sel.innerHTML = maps.map(function(m) { return '<option value="' + m.id + '"' + (m.active ? ' disabled' : '') + '>' + esc(m.name) + (m.active ? ' (current)' : '') + '</option>'; }).join('');
       }
     } catch(e) {}
+    // Show player floor assignments
+    try {
+      var resp3 = await fetch('/api/map/player-assignments');
+      var assignments = await resp3.json();
+      var el2 = document.getElementById('player-floor-assignments');
+      if (el2) {
+        var entries = Object.entries(assignments);
+        if (!entries.length) { el2.innerHTML = ''; return; }
+        el2.innerHTML = 'Players: ' + entries.map(function(e) {
+          var mapName = e[1]; // mapId
+          return '<span style="color:var(--text);">' + esc(e[0]) + '</span>→<span style="color:var(--accent);">' + esc(mapName) + '</span>';
+        }).join(', ');
+      }
+    } catch(e) {}
   }
   async function transitionFloor() {
     var target = document.getElementById('floor-target').value;
     if (!target) return;
     await fetch('/api/map/floor-transition', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetMapId: target }) });
     addTranscript({ speaker: 'system', text: 'Floor transition → ' + target });
+    VTT.loadMap();
+    loadFloorLinks();
+  }
+  async function viewFloor() {
+    var target = document.getElementById('floor-target').value;
+    if (!target) return;
+    await fetch('/api/map/load/' + target, { method: 'POST' });
+    addTranscript({ speaker: 'system', text: 'DM viewing floor: ' + target + ' (players not moved)' });
+    VTT.loadMap();
     loadFloorLinks();
   }
   async function showJoinQR() {

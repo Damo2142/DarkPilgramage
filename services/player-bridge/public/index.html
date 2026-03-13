@@ -664,6 +664,33 @@ function handle(m){
       if(m.data&&m.data.combat) renderCombatTracker(m.data.combat);
       showAttackNotification(m.data);
       break;
+    // Audio streaming for remote players
+    case 'audio:play':
+      if(m.url) { const a=new Audio(m.url); a.volume=m.volume||0.5; a.play().catch(()=>{}); }
+      break;
+    case 'audio:ambience':
+      if(m.url) {
+        if(!window._ambience) window._ambience=new Audio();
+        window._ambience.src=m.url; window._ambience.loop=true; window._ambience.volume=m.volume||0.3;
+        window._ambience.play().catch(()=>{});
+      }
+      break;
+    // Map sync events
+    case 'map:full_update':
+      if(m.map) PlayerMap.loadFromState(m.map);
+      break;
+    case 'map:token_added':
+      if(m.token && !m.token.hidden) {
+        PlayerMap.tokens[m.token.id] = m.token;
+        PlayerMap.render();
+      }
+      break;
+    case 'map:token_removed':
+      if(m.tokenId) {
+        delete PlayerMap.tokens[m.tokenId];
+        PlayerMap.render();
+      }
+      break;
   }
 }
 
@@ -759,7 +786,7 @@ function addTmp(){const a=parseInt($('tmpamt').value)||1;tmpH=Math.max(tmpH,a);r
 function buildAtks(){
   if(!char.inventory)return[];
   const prof=char.proficiencyBonus||2, sm=abilMod('str'), dm=abilMod('dex');
-  return char.inventory.filter(i=>i.type==='weapon').map(w=>{
+  return char.inventory.filter(i=>i.type&&i.type.toLowerCase()==='weapon').map(w=>{
     let toHit=sm+prof,dmgDice='1d4',dmgMod=sm,dmgType='bludgeoning',range='5ft';
     const n=w.name.toLowerCase();
     if(n.includes('dagger')){toHit=dm+prof;dmgMod=dm;dmgDice='1d4';dmgType='piercing';range='20/60ft';}
@@ -773,15 +800,29 @@ function renderAtks(){
   if(!attacks.length&&!(char._source==='ddb'))attacks=buildAtks();
   const sm=char.spellcastingAbility||'cha', smm=abilMod(sm), prof=char.proficiencyBonus||2;
   const sabar='<div class="spellbar"><span>Spell Atk: <strong>'+fmt(smm+prof)+'</strong></span><span>Save DC: <strong>'+(8+smm+prof)+'</strong></span><span>Ability: <strong>'+sm.toUpperCase()+'</strong></span></div>';
-  $('atklist').innerHTML=sabar+attacks.map((a,i)=>{
+  const locked=combatState&&combatState.active&&!isMyTurn();
+  const lockStyle=locked?' style="opacity:0.4;pointer-events:none;"':'';
+  const lockLabel=locked?' (Not your turn)':'';
+  $('atklist').innerHTML=sabar+(locked?'<div style="text-align:center;color:var(--red);font-size:12px;padding:4px;">Wait for your turn to attack</div>':'')+attacks.map((a,i)=>{
     const dmg=a.dmgDice&&a.dmgDice!=='—'?a.dmgDice+(a.dmgMod>=0?'+'+a.dmgMod:a.dmgMod):String(a.dmgMod);
     return '<div class="atk-card"><div class="atk-hdr"><span class="atk-name">'+esc(a.name)+'</span><div style="display:flex;gap:4px;"><span style="font-size:10px;color:var(--text-dim);background:var(--surface3);border-radius:3px;padding:1px 5px;">'+esc(a.range||'5ft')+'</span><span style="cursor:pointer;color:var(--red);font-size:12px;" onclick="rmAtk('+i+')">✕</span></div></div>'
       +'<div class="atk-stats"><div class="atk-stat"><div class="asl">To Hit</div><div class="asv">'+fmt(a.toHit)+'</div></div><div class="atk-stat"><div class="asl">Damage</div><div class="asv">'+esc(dmg)+'</div></div><div class="atk-stat"><div class="asl">Type</div><div class="asv" style="font-size:10px;">'+esc(a.dmgType||'—')+'</div></div></div>'
-      +'<button class="roll-btn" onclick="rollAtk('+i+')">⚔ Roll Attack</button></div>';
+      +'<button class="roll-btn" onclick="rollAtk('+i+')"'+lockStyle+'>⚔ Roll Attack'+lockLabel+'</button></div>';
   }).join('');
 }
 
+function isMyTurn(){
+  if(!combatState||!combatState.active) return true; // Outside combat, allow attacks
+  const cur=combatState.currentTurn;
+  const order=combatState.turnOrder||[];
+  return cur>=0 && order[cur] && order[cur].id===PID;
+}
+
 function rollAtk(i){
+  if(combatState && combatState.active && !isMyTurn()){
+    showToast('Combat','It is not your turn!',3000);
+    return;
+  }
   const a=attacks[i], d20=Math.floor(Math.random()*20)+1;
   const crit=d20===20, miss=d20===1, toHit=d20+(a.toHit||0);
   let dmgN=0,dmgS='';
@@ -1022,6 +1063,11 @@ function enrichSpellsFromSRD(){
 
 function castSpell(idx){
   const s=spells[idx];if(!s)return;
+  // Turn lock: block offensive spells during combat if not your turn
+  if(combatState && combatState.active && !isMyTurn() && s.damage){
+    showToast('Combat','It is not your turn!',3000);
+    return;
+  }
   const sa=char.spellcastingAbility||'cha', sm=abilMod(sa), prof=char.proficiencyBonus||2;
   const saveDC=8+sm+prof, atkMod=sm+prof;
 
@@ -1746,6 +1792,8 @@ function renderCombatTracker(combat){
   }
   // Show target section when combat is active
   updateTargetSection();
+  // Re-render attacks to update turn lock state
+  if(attacks.length) renderAtks();
 
   const container=$('ctp-order');
   container.innerHTML=order.map((c,i)=>{

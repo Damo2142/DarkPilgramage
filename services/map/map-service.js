@@ -170,7 +170,9 @@ class MapService {
       gridSize: map.gridSize,
       width: map.width,
       height: map.height,
-      zones
+      zones,
+      walls: (map.walls || []).filter(w => w.x1 !== null),
+      lights: map.lights || []
     });
     this.state.set('map.tokens', tokenState);
 
@@ -201,7 +203,9 @@ class MapService {
           gridSize: mapDef.gridSize,
           width: mapDef.width,
           height: mapDef.height,
-          zones: this.state.get('map.zones') || mapDef.zones || []
+          zones: this.state.get('map.zones') || mapDef.zones || [],
+          walls: this.state.get('map.walls') || (mapDef.walls || []).filter(w => w.x1 !== null),
+          lights: mapDef.lights || []
         },
         tokens
       });
@@ -293,6 +297,8 @@ class MapService {
         if (success) {
           wall.locked = false;
           wall.open = true;
+          // Broadcast updated walls for dynamic lighting
+          this.state.set('map.walls', mapDef.walls.filter(w => w.x1 !== null));
           this.bus.dispatch('dm:private_message', {
             playerId, text: 'You pick the lock! The door opens.', durationMs: 4000
           });
@@ -312,6 +318,9 @@ class MapService {
       if (dmOverride && wall.locked) wall.locked = false;
       wall.open = !wall.open;
       console.log(`[MapService] Door ${index} ${wall.open ? 'opened' : 'closed'}`);
+
+      // Broadcast updated walls for dynamic lighting
+      this.state.set('map.walls', mapDef.walls.filter(w => w.x1 !== null));
 
       this.bus.dispatch('dm:private_message', {
         playerId: 'all',
@@ -334,6 +343,8 @@ class MapService {
       try {
         fs.writeFileSync(path.join(mapsDir, `${this.activeMapId}.json`), JSON.stringify(mapDef, null, 2));
         this.maps.set(this.activeMapId, mapDef);
+        // Broadcast updated walls for dynamic lighting
+        this.state.set('map.walls', mapDef.walls.filter(w => w.x1 !== null));
         console.log(`[MapService] Saved ${mapDef.walls.length} walls to ${this.activeMapId}`);
         res.json({ saved: mapDef.walls.length });
       } catch (e) {
@@ -373,11 +384,11 @@ class MapService {
     // POST /api/map/token/move — move a token
     // body: { tokenId, x, y }
     app.post('/api/map/token/move', (req, res) => {
-      const { tokenId, x, y } = req.body || {};
+      const { tokenId, x, y, force } = req.body || {};
       if (!tokenId || typeof x !== 'number' || typeof y !== 'number') {
         return res.status(400).json({ error: 'tokenId, x, y required' });
       }
-      const result = this._moveToken(tokenId, x, y);
+      const result = this._moveToken(tokenId, x, y, { force: force !== false });
       if (!result) return res.status(404).json({ error: 'Token not found' });
       res.json(result);
     });
@@ -498,6 +509,69 @@ class MapService {
       res.json({ removed: removed.id });
     });
 
+    // === LIGHT MANAGEMENT ===
+
+    // POST /api/map/light/add — add a light source
+    app.post('/api/map/light/add', (req, res) => {
+      const { x, y, range, color } = req.body || {};
+      if (x == null || y == null) return res.status(400).json({ error: 'x, y required' });
+      const lights = this.state.get('map.lights') || [];
+      const light = { x, y, range: range || 700, color: color || 'ffeccd8b' };
+      lights.push(light);
+      this.state.set('map.lights', lights);
+      // Also update map definition
+      const mapDef = this.maps.get(this.activeMapId);
+      if (mapDef) mapDef.lights = lights;
+      this.bus.dispatch('map:light_added', { light, index: lights.length - 1 });
+      res.json({ index: lights.length - 1, light });
+    });
+
+    // POST /api/map/light/update — update a light source
+    app.post('/api/map/light/update', (req, res) => {
+      const { index, x, y, range, color } = req.body || {};
+      if (index == null) return res.status(400).json({ error: 'index required' });
+      const lights = this.state.get('map.lights') || [];
+      if (index < 0 || index >= lights.length) return res.status(404).json({ error: 'Light not found' });
+      if (x != null) lights[index].x = x;
+      if (y != null) lights[index].y = y;
+      if (range != null) lights[index].range = range;
+      if (color != null) lights[index].color = color;
+      this.state.set('map.lights', lights);
+      const mapDef = this.maps.get(this.activeMapId);
+      if (mapDef) mapDef.lights = lights;
+      res.json({ index, light: lights[index] });
+    });
+
+    // DELETE /api/map/light/:index — remove a light
+    app.delete('/api/map/light/:index', (req, res) => {
+      const index = parseInt(req.params.index);
+      const lights = this.state.get('map.lights') || [];
+      if (isNaN(index) || index < 0 || index >= lights.length) return res.status(404).json({ error: 'Light not found' });
+      const removed = lights.splice(index, 1)[0];
+      this.state.set('map.lights', lights);
+      const mapDef = this.maps.get(this.activeMapId);
+      if (mapDef) mapDef.lights = lights;
+      res.json({ removed, remaining: lights.length });
+    });
+
+    // POST /api/map/lights/save — persist lights to map file
+    app.post('/api/map/lights/save', (req, res) => {
+      if (!this.activeMapId) return res.status(400).json({ error: 'No active map' });
+      const mapDef = this.maps.get(this.activeMapId);
+      if (!mapDef) return res.status(404).json({ error: 'Map not found' });
+      const lights = this.state.get('map.lights') || [];
+      mapDef.lights = lights;
+      const mapsDir = path.join(__dirname, '..', '..', 'config', 'maps');
+      try {
+        fs.writeFileSync(path.join(mapsDir, `${this.activeMapId}.json`), JSON.stringify(mapDef, null, 2));
+        this.maps.set(this.activeMapId, mapDef);
+        console.log(`[MapService] Saved ${lights.length} lights to ${this.activeMapId}`);
+        res.json({ saved: lights.length });
+      } catch (e) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
     // POST /api/map/save — save a new or updated map definition
     // body: { id, name, image, gridSize, width, height, zones, tokens, playerSpawns }
     app.post('/api/map/save', (req, res) => {
@@ -536,6 +610,10 @@ class MapService {
         delete mapDef.tokens[id].id; // id is the key
       }
       mapDef.zones = zones;
+
+      // Save lights from state
+      const lights = this.state.get('map.lights');
+      if (lights) mapDef.lights = lights;
 
       const mapsDir = path.join(__dirname, '..', '..', 'config', 'maps');
       try {
@@ -902,12 +980,14 @@ class MapService {
     app.use('/assets', express.static(assetsDir));
   }
 
-  _moveToken(tokenId, x, y) {
+  _moveToken(tokenId, x, y, opts = {}) {
     const token = this.state.get(`map.tokens.${tokenId}`);
     if (!token) return null;
 
-    // Snap to grid
-    const mapDef = this.maps.get(this.activeMapId);
+    // Use the player's assigned map (not the DM's active map) for walls/grid
+    const playerMapId = (token.type === 'pc' && this.playerMapAssignment[tokenId])
+      ? this.playerMapAssignment[tokenId] : this.activeMapId;
+    const mapDef = this.maps.get(playerMapId);
     const grid = mapDef?.gridSize || 70;
     const half = grid / 2;
     let snappedX = Math.floor((x - half) / grid) * grid + half;
@@ -939,8 +1019,8 @@ class MapService {
       }
     }
 
-    // Wall collision check — block movement through walls
-    if (mapDef?.walls && mapDef.walls.length > 0) {
+    // Wall collision check — block movement through walls (player moves only, not DM)
+    if (!opts.force && mapDef?.walls && mapDef.walls.length > 0) {
       if (this._pathBlockedByWall(oldX, oldY, snappedX, snappedY, mapDef.walls)) {
         // Movement blocked — stay at old position
         this.bus.dispatch('dm:whisper', {
@@ -965,8 +1045,7 @@ class MapService {
       });
     }
 
-    // Auto-reveal fog based on vision
-    this._checkVisionReveal(tokenId, snappedX, snappedY);
+    // Dynamic lighting replaces zone-based fog reveal — vision computed client-side
 
     this.bus.dispatch('map:token_moved', {
       tokenId,

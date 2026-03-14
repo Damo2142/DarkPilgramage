@@ -694,6 +694,15 @@ function handle(m){
       if(m.path==='character.hp.temp'){tmpH=m.value||0;renderHp();}
       if(m.path.startsWith('map.')) PlayerMap.onStateUpdate(m.path,m.value);
       break;
+    case 'map:move_rejected':
+      // Server rejected the move (wall etc) — snap token back
+      if(m.tokenId && PlayerMap.tokens[m.tokenId]){
+        PlayerMap.tokens[m.tokenId].x=m.x; PlayerMap.tokens[m.tokenId].y=m.y;
+        delete PlayerMap._visionCache[m.tokenId];
+        PlayerMap.render();
+        showToast('System','Movement blocked — path obstructed',2000);
+      }
+      break;
     case 'dread:update': updDread(m.score||0); break;
     case 'horror:effect': applyHorror(m.effect,m.payload,m.durationMs); break;
     case 'horror:clear': clearHorror(); break;
@@ -783,7 +792,10 @@ function loadChar(c){
   if(c.spells&&c.spells.length){spells=c.spells.map(s=>({...s, level:s.level||0, concentration:!!s.concentration, ritual:!!s.ritual, school:s.school||'', description:s.description||''}));}
   // Populate features from DDB sync data (format: {name,source,description})
   if(c.features&&c.features.length){feats=c.features.map(f=>({name:f.name,src:f.source||'',desc:f.description||''}));}
-  renderHp(); renderAbil(); renderSaves(); renderSkills(); renderAtks(); renderSpells(); renderInv(); renderFeats(); renderConds(); renderBackground();
+  renderHp(); renderAbil(); renderSaves(); renderSkills(); renderSpells(); renderInv(); renderFeats(); renderConds(); renderBackground();
+  // Rebuild weapon attacks and AC from equipped items, then render
+  rebuildWeaponAtks();
+  recalcEquipAC();
   $('notes-area').value=localStorage.getItem('dpnotes_'+PID)||'';
   // Enrich spells with SRD data (damage, save, AOE, etc.)
   enrichSpellsFromSRD();
@@ -1510,6 +1522,24 @@ function togEq(idx){
   if(!it.equipped) it.attuned=false;
   renderInv();
   syncInventory();
+  // Rebuild attacks when equipping/unequipping weapons
+  if(it.type&&it.type.toLowerCase()==='weapon') rebuildWeaponAtks();
+}
+
+function rebuildWeaponAtks(){
+  const prof=char.proficiencyBonus||2, sm=abilMod('str'), dm=abilMod('dex');
+  // Remove auto-generated weapon attacks (keep custom/spell attacks)
+  attacks=attacks.filter(a=>a._custom||a._spell);
+  // Add attacks for equipped weapons
+  for(const w of (char.inventory||[])){
+    if(!w.equipped||!w.type||w.type.toLowerCase()!=='weapon') continue;
+    const fin=(w.properties||[]).includes('finesse');
+    const ranged=(w.subtype||'').includes('ranged');
+    const statKey=ranged?'dex':(fin?(dm>=sm?'dex':'str'):'str');
+    const mod=abilMod(statKey);
+    attacks.push({name:w.name,toHit:mod+prof,dmgDice:w.damage||'1d4',dmgMod:mod,dmgType:w.damageType||'',range:w.range||'5ft'});
+  }
+  renderAtks();
 }
 
 function togAttune(idx){
@@ -2447,16 +2477,83 @@ connect();
 })();
 
 // ============================================================
+// ============================================================
+// VISION ENGINE — 2D raycasting for dynamic lighting
+// ============================================================
+const VisionEngine = {
+  // Compute visibility polygon from origin with max range, blocked by wall segments
+  computeVisibility(ox, oy, maxRange, walls) {
+    const segments = [];
+    for (const wall of walls) {
+      const type = wall.type || 'wall';
+      if (type === 'window') continue;
+      if (type === 'door' && wall.open) continue;
+      if (wall.x1 == null || wall.y1 == null) continue;
+      segments.push([wall.x1, wall.y1, wall.x2, wall.y2]);
+    }
+
+    const EPS = 0.00001;
+    const angles = [];
+
+    // Cast rays toward wall endpoints (with epsilon offsets to peek around corners)
+    for (const seg of segments) {
+      for (let i = 0; i < 4; i += 2) {
+        const dx = seg[i] - ox, dy = seg[i+1] - oy;
+        if (dx*dx + dy*dy > maxRange * maxRange * 2.25) continue;
+        const a = Math.atan2(dy, dx);
+        angles.push(a - EPS, a, a + EPS);
+      }
+    }
+
+    // Boundary circle points (every 5 degrees for smooth edge)
+    for (let i = 0; i < 72; i++) {
+      angles.push((i / 72) * Math.PI * 2 - Math.PI);
+    }
+
+    angles.sort((a, b) => a - b);
+
+    // For each angle, find closest wall intersection
+    const polygon = [];
+    for (const angle of angles) {
+      const rdx = Math.cos(angle), rdy = Math.sin(angle);
+      let closestT = maxRange;
+
+      for (const seg of segments) {
+        const t = VisionEngine._raySegIntersect(ox, oy, rdx, rdy, seg[0], seg[1], seg[2], seg[3]);
+        if (t !== null && t > 0 && t < closestT) closestT = t;
+      }
+
+      polygon.push({ x: ox + rdx * closestT, y: oy + rdy * closestT });
+    }
+
+    return polygon;
+  },
+
+  _raySegIntersect(ox, oy, rdx, rdy, x1, y1, x2, y2) {
+    const sdx = x2 - x1, sdy = y2 - y1;
+    const denom = rdx * sdy - rdy * sdx;
+    if (Math.abs(denom) < 0.0001) return null;
+    const t = (sdx * (oy - y1) - sdy * (ox - x1)) / denom;
+    const u = (rdx * (oy - y1) - rdy * (ox - x1)) / denom;
+    if (t < 0 || u < 0 || u > 1) return null;
+    return t;
+  }
+};
+
 // PLAYER MAP — Canvas 2D (view + own-token drag)
 // ============================================================
 const PlayerMap = {
   canvas: null, ctx: null,
   mapData: null, tokens: {}, zones: [], tokenLabels: {},
+  walls: [], lights: [],
   cam: { x: 0, y: 0, zoom: 1 },
   dragging: null, panning: false,
   panStart: { x: 0, y: 0, camX: 0, camY: 0 },
   _lastPinchDist: 0,
-  _fogAnim: {},  // { zoneId: { start, duration } }
+  _lightCanvas: null,
+  _visionCache: {},   // tokenId -> { x, y, polygon }
+  _lightVisCache: null,  // cached light visibility polygons (null = needs recompute)
+  _wallsVersion: 0,    // increments when walls change
 
   init() {
     this.canvas = $('player-map-canvas');
@@ -2491,6 +2588,11 @@ const PlayerMap = {
     this.mapData = { id: mapState.id, name: mapState.name, image: mapState.image, gridSize: mapState.gridSize || 70, width: mapState.width || 1400, height: mapState.height || 1050 };
     this.tokens = mapState.tokens || {};
     this.zones = (mapState.zones || []).map(z => ({ ...z }));
+    this.walls = mapState.walls || [];
+    this.lights = mapState.lights || [];
+    this._visionCache = {};
+    this._lightVisCache = null;
+    this._wallsVersion++;
     this.cam.zoom = 0.3;
 
     if (mapState.image) {
@@ -2503,47 +2605,88 @@ const PlayerMap = {
   },
 
   onStateUpdate(path, value) {
-    if (path === 'map.tokens' && typeof value === 'object') { this.tokens = value; this.render(); }
+    if (path === 'map.tokens' && typeof value === 'object') { this.tokens = value; this._visionCache = {}; this.render(); }
+    else if (path === 'map.walls' && Array.isArray(value)) {
+      this.walls = value; this._wallsVersion++; this._visionCache = {}; this._lightVisCache = null; this.render();
+    }
+    else if (path === 'map.lights' && Array.isArray(value)) {
+      this.lights = value; this._lightVisCache = null; this.render();
+    }
     else if (path === 'map.zones' && Array.isArray(value)) {
-      // Check for newly revealed zones to animate
-      for (const newZ of value) {
-        const oldZ = this.zones.find(z => z.id === newZ.id);
-        if (newZ.revealed && (!oldZ || !oldZ.revealed)) {
-          this._fogAnim[newZ.id] = { start: performance.now(), duration: 800 };
-        }
-      }
       this.zones = value.map(z => ({ ...z }));
-      this._startFogAnimation();
       this.render();
     }
     else if (path.startsWith('map.tokens.')) {
       const parts = path.replace('map.tokens.','').split('.');
       const tid = parts[0];
-      if (parts.length === 1) { this.tokens[tid] = value; }
+      if (parts.length === 1) { this.tokens[tid] = value; delete this._visionCache[tid]; }
       else {
         if (!this.tokens[tid]) this.tokens[tid] = {};
         let obj = this.tokens[tid];
         for (let i = 1; i < parts.length - 1; i++) { if (!obj[parts[i]]) obj[parts[i]] = {}; obj = obj[parts[i]]; }
         obj[parts[parts.length-1]] = value;
+        if (parts[1] === 'x' || parts[1] === 'y' || parts[1] === 'light') delete this._visionCache[tid];
       }
       this.render();
     }
   },
 
-  _startFogAnimation() {
-    if (this._fogAnimFrame) return;
-    const animate = () => {
-      const now = performance.now();
-      let active = false;
-      for (const [id, anim] of Object.entries(this._fogAnim)) {
-        if (now - anim.start < anim.duration) active = true;
-        else delete this._fogAnim[id];
+  // Dynamic lighting helper: compute vision polygon for a PC
+  // 5e rules: without darkvision, only see lit areas. With darkvision, see DVrange in dark (greyscale).
+  // Carried light sources (torch etc) create light centered on the token.
+  _getVisionPoly(id, tok) {
+    const gs = this.mapData.gridSize;
+    const dv = tok.darkvision || 0;
+    const dvPx = (dv / 5) * gs;
+
+    // Token's own carried light (torch, lantern, etc.)
+    const carried = tok.light;
+    const carriedBright = carried ? carried.bright : 0;
+    const carriedTotal = carried ? (carried.bright + carried.dim) : 0;
+
+    // Determine max possible vision range:
+    // - Darkvision range, OR
+    // - Carried light total range, OR
+    // - Farthest map light that could reach this token
+    const dimExtPx = (15 / 5) * gs;
+    let maxLightReach = carriedTotal;
+    for (const light of this.lights) {
+      const dx = light.x - tok.x, dy = light.y - tok.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const totalRange = light.range + dimExtPx;
+      if (dist < totalRange) {
+        maxLightReach = Math.max(maxLightReach, totalRange);
       }
-      this.render();
-      if (active) this._fogAnimFrame = requestAnimationFrame(animate);
-      else this._fogAnimFrame = null;
-    };
-    this._fogAnimFrame = requestAnimationFrame(animate);
+    }
+    const visionPx = Math.max(dvPx, maxLightReach);
+
+    if (visionPx <= 0) {
+      // No darkvision, no light — blind
+      return { polygon: [], visionPx: 0, dvPx, carriedBright, carriedTotal, darkvision: false };
+    }
+
+    const cached = this._visionCache[id];
+    if (cached && cached.x === tok.x && cached.y === tok.y && cached.visionPx === visionPx) {
+      return { polygon: cached.polygon, visionPx, dvPx, carriedBright, carriedTotal, darkvision: dv > 0 };
+    }
+
+    const poly = VisionEngine.computeVisibility(tok.x, tok.y, visionPx, this.walls);
+    this._visionCache[id] = { x: tok.x, y: tok.y, visionPx, polygon: poly };
+    return { polygon: poly, visionPx, dvPx, carriedBright, carriedTotal, darkvision: dv > 0 };
+  },
+
+  // Dynamic lighting helper: get cached light visibility polygons
+  _getLightPolys() {
+    if (this._lightVisCache !== null) return this._lightVisCache;
+    this._lightVisCache = [];
+    const gs = this.mapData.gridSize;
+    const dimExtPx = (15 / 5) * gs; // 15ft dim light extension
+    for (const light of this.lights) {
+      const totalRange = light.range + dimExtPx;
+      const poly = VisionEngine.computeVisibility(light.x, light.y, totalRange, this.walls);
+      this._lightVisCache.push({ x: light.x, y: light.y, brightPx: light.range, totalPx: totalRange, polygon: poly });
+    }
+    return this._lightVisCache;
   },
 
   render() {
@@ -2577,9 +2720,8 @@ const PlayerMap = {
     for (let gx = 0; gx <= mw; gx += gs) { ctx.beginPath(); ctx.moveTo(gx-mw/2, -mh/2); ctx.lineTo(gx-mw/2, mh/2); ctx.stroke(); }
     for (let gy = 0; gy <= mh; gy += gs) { ctx.beginPath(); ctx.moveTo(-mw/2, gy-mh/2); ctx.lineTo(mw/2, gy-mh/2); ctx.stroke(); }
 
-    // Tokens — hide if inside an unrevealed zone, show otherwise
+    // Tokens — all non-hidden tokens drawn (visibility handled by dynamic lighting fog)
     for (const [id, tok] of Object.entries(this.tokens)) {
-      if (this._isInUnrevealedZone(tok.x, tok.y)) continue;
       const x = tok.x - mw/2, y = tok.y - mh/2, r = gs * 0.4;
       const hp = tok.hp || {current:1,max:1};
       const hpPct = Math.max(0, hp.current/hp.max);
@@ -2603,33 +2745,8 @@ const PlayerMap = {
       ctx.fillStyle=labelColor; ctx.fillText(displayName, x, y+r+ns*0.8);
     }
 
-    // Fog of war — black over unrevealed zones
-    const now = performance.now();
-    for (const zone of this.zones) {
-      const anim = this._fogAnim[zone.id];
-      let fogAlpha = 1;
-      if (zone.revealed) {
-        if (anim) {
-          const elapsed = now - anim.start;
-          fogAlpha = Math.max(0, 1 - (elapsed / anim.duration));
-        } else {
-          fogAlpha = 0;
-        }
-      }
-      if (fogAlpha > 0) {
-        ctx.fillStyle = `rgba(5,5,8,${fogAlpha})`;
-        const pts = zone.points;
-        if (pts && pts.length >= 3) {
-          ctx.beginPath();
-          ctx.moveTo(pts[0].x - mw/2, pts[0].y - mh/2);
-          for (let pi = 1; pi < pts.length; pi++) ctx.lineTo(pts[pi].x - mw/2, pts[pi].y - mh/2);
-          ctx.closePath();
-          ctx.fill();
-        } else {
-          ctx.fillRect(zone.x - mw/2, zone.y - mh/2, zone.w, zone.h);
-        }
-      }
-    }
+    // ── DYNAMIC LIGHTING ─────────────────────────────────────────────
+    this._renderDynamicLighting(ctx, mw, mh);
 
     // Spell AOE visualization (placed or targeting preview)
     var aoeData = _spellAOE;
@@ -2712,28 +2829,206 @@ const PlayerMap = {
     ctx.restore();
   },
 
-  _isInRevealedZone(tx, ty) {
-    for (const z of this.zones) {
-      if (!z.revealed) continue;
-      if (z.points && z.points.length >= 3) {
-        if (this._pointInPolygon(tx, ty, z.points)) return true;
-      } else {
-        if (tx >= z.x && tx < z.x + z.w && ty >= z.y && ty < z.y + z.h) return true;
-      }
-    }
-    return false;
-  },
+  _renderDynamicLighting(ctx, mw, mh) {
+    const gs = this.mapData.gridSize;
+    const gradFt = 15;
+    const gradPx = (gradFt / 5) * gs;
 
-  _isInUnrevealedZone(tx, ty) {
-    for (const z of this.zones) {
-      if (z.revealed) continue;
-      if (z.points && z.points.length >= 3) {
-        if (this._pointInPolygon(tx, ty, z.points)) return true;
-      } else {
-        if (!z.revealed && tx >= z.x && tx < z.x + z.w && ty >= z.y && ty < z.y + z.h) return true;
+    // Vision from this player's own token only
+    const myTok = this.tokens[PID];
+    if (!myTok || myTok.x == null || myTok.y == null) {
+      ctx.fillStyle = 'rgba(5,5,8,0.97)';
+      ctx.fillRect(-mw/2, -mh/2, mw, mh);
+      return;
+    }
+
+    const vis = this._getVisionPoly(PID, myTok);
+    if (vis.polygon.length < 3) {
+      // No vision (no darkvision, no light) — total darkness
+      ctx.fillStyle = 'rgba(5,5,8,0.97)';
+      ctx.fillRect(-mw/2, -mh/2, mw, mh);
+      return;
+    }
+
+    const lightPolys = this._getLightPolys().slice(); // copy so we can add carried
+    const hasDV = vis.darkvision;
+    const dvPx = vis.dvPx || 0;
+    const mx = myTok.x, my = myTok.y;
+
+    // Add carried light source (torch, lantern etc) centered on token
+    if (vis.carriedTotal > 0) {
+      const cPoly = VisionEngine.computeVisibility(mx, my, vis.carriedTotal, this.walls);
+      lightPolys.push({ x: mx, y: my, brightPx: vis.carriedBright, totalPx: vis.carriedTotal, polygon: cPoly });
+    }
+
+    // ── 1. Greyscale tint on darkvision areas (unlit parts of vision) ──
+    if (hasDV) {
+      const tintScale = Math.min(1, 2048 / Math.max(mw, mh));
+      const tw = Math.ceil(mw * tintScale), th = Math.ceil(mh * tintScale);
+      if (!this._lightCanvas) this._lightCanvas = document.createElement('canvas');
+      if (this._lightCanvas.width !== tw || this._lightCanvas.height !== th) {
+        this._lightCanvas.width = tw; this._lightCanvas.height = th;
+      }
+      const lctx = this._lightCanvas.getContext('2d');
+      lctx.clearRect(0, 0, tw, th);
+      lctx.save();
+      lctx.scale(tintScale, tintScale);
+
+      // Fill with desaturating tint (simulates greyscale darkvision)
+      lctx.fillStyle = 'rgba(8, 8, 20, 0.55)';
+      lctx.fillRect(0, 0, mw, mh);
+
+      // Cut out light source areas (remove tint → full color near lights)
+      lctx.globalCompositeOperation = 'destination-out';
+      for (const lp of lightPolys) {
+        if (lp.polygon.length < 3) continue;
+        lctx.save();
+        lctx.beginPath();
+        lctx.moveTo(lp.polygon[0].x, lp.polygon[0].y);
+        for (let i = 1; i < lp.polygon.length; i++) lctx.lineTo(lp.polygon[i].x, lp.polygon[i].y);
+        lctx.closePath();
+        lctx.clip();
+        const grad = lctx.createRadialGradient(lp.x, lp.y, 0, lp.x, lp.y, lp.totalPx);
+        grad.addColorStop(0, 'rgba(0,0,0,1)');
+        const brightRatio = Math.min(0.95, lp.brightPx / lp.totalPx);
+        grad.addColorStop(brightRatio, 'rgba(0,0,0,0.8)');
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        lctx.fillStyle = grad;
+        lctx.beginPath();
+        lctx.arc(lp.x, lp.y, lp.totalPx, 0, Math.PI * 2);
+        lctx.fill();
+        lctx.restore();
+      }
+
+      // Clip tint to vision polygon
+      lctx.globalCompositeOperation = 'destination-in';
+      lctx.beginPath();
+      lctx.moveTo(vis.polygon[0].x, vis.polygon[0].y);
+      for (let i = 1; i < vis.polygon.length; i++) lctx.lineTo(vis.polygon[i].x, vis.polygon[i].y);
+      lctx.closePath();
+      lctx.fillStyle = 'rgba(0,0,0,1)';
+      lctx.fill();
+      lctx.restore();
+
+      ctx.drawImage(this._lightCanvas, -mw/2, -mh/2, mw, mh);
+    }
+
+    // ── 2. Fog — solid black outside visible area ──
+    // Uses offscreen canvas with compositing to avoid even-odd overlap artifacts
+    const fogScale = Math.min(1, 2048 / Math.max(mw, mh));
+    const fw = Math.ceil(mw * fogScale), fh = Math.ceil(mh * fogScale);
+    if (!this._fogCanvas) this._fogCanvas = document.createElement('canvas');
+    if (this._fogCanvas.width !== fw || this._fogCanvas.height !== fh) {
+      this._fogCanvas.width = fw; this._fogCanvas.height = fh;
+    }
+    const fctx = this._fogCanvas.getContext('2d');
+    fctx.clearRect(0, 0, fw, fh);
+    fctx.save();
+    fctx.scale(fogScale, fogScale);
+
+    // Start with full black fog
+    fctx.fillStyle = 'rgba(5,5,8,0.97)';
+    fctx.fillRect(0, 0, mw, mh);
+
+    // Cut out visible areas using destination-out (overlaps merge correctly)
+    fctx.globalCompositeOperation = 'destination-out';
+    if (hasDV) {
+      // Darkvision PC sees their full vision polygon
+      fctx.beginPath();
+      fctx.moveTo(vis.polygon[0].x, vis.polygon[0].y);
+      for (let i = 1; i < vis.polygon.length; i++) fctx.lineTo(vis.polygon[i].x, vis.polygon[i].y);
+      fctx.closePath();
+      fctx.fillStyle = 'rgba(0,0,0,1)';
+      fctx.fill();
+    } else {
+      // No darkvision — only see lit areas
+      for (const lp of lightPolys) {
+        if (lp.polygon.length < 3) continue;
+        const dx = lp.x - mx, dy = lp.y - my;
+        if (dx*dx + dy*dy > (vis.visionPx + lp.totalPx) * (vis.visionPx + lp.totalPx)) continue;
+        fctx.beginPath();
+        fctx.moveTo(lp.polygon[0].x, lp.polygon[0].y);
+        for (let i = 1; i < lp.polygon.length; i++) fctx.lineTo(lp.polygon[i].x, lp.polygon[i].y);
+        fctx.closePath();
+        fctx.fillStyle = 'rgba(0,0,0,1)';
+        fctx.fill();
       }
     }
-    return false;
+    fctx.restore();
+    ctx.drawImage(this._fogCanvas, -mw/2, -mh/2, mw, mh);
+
+    // ── 3. Soft gradient at vision/light edges ──
+    if (hasDV && vis.visionPx > gradPx) {
+      // Darkvision edge fade
+      const cx = mx - mw/2, cy = my - mh/2;
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(vis.polygon[0].x - mw/2, vis.polygon[0].y - mh/2);
+      for (let i = 1; i < vis.polygon.length; i++) ctx.lineTo(vis.polygon[i].x - mw/2, vis.polygon[i].y - mh/2);
+      ctx.closePath();
+      ctx.clip();
+      const grad = ctx.createRadialGradient(cx, cy, Math.max(0, vis.visionPx - gradPx), cx, cy, vis.visionPx);
+      grad.addColorStop(0, 'rgba(5,5,8,0)');
+      grad.addColorStop(1, 'rgba(5,5,8,0.9)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, vis.visionPx, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else if (!hasDV) {
+      // Non-darkvision: fade at light edges
+      for (const lp of lightPolys) {
+        if (lp.polygon.length < 3 || lp.totalPx <= gradPx) continue;
+        const cx = lp.x - mw/2, cy = lp.y - mh/2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(lp.polygon[0].x - mw/2, lp.polygon[0].y - mh/2);
+        for (let i = 1; i < lp.polygon.length; i++) ctx.lineTo(lp.polygon[i].x - mw/2, lp.polygon[i].y - mh/2);
+        ctx.closePath();
+        ctx.clip();
+        const grad = ctx.createRadialGradient(cx, cy, Math.max(0, lp.totalPx - gradPx), cx, cy, lp.totalPx);
+        grad.addColorStop(0, 'rgba(5,5,8,0)');
+        grad.addColorStop(1, 'rgba(5,5,8,0.85)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, lp.totalPx, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // ── 4. Warm glow from light sources (atmospheric) ──
+    for (const lp of lightPolys) {
+      if (lp.polygon.length < 3) continue;
+      const cx = lp.x - mw/2, cy = lp.y - mh/2;
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(lp.polygon[0].x - mw/2, lp.polygon[0].y - mh/2);
+      for (let i = 1; i < lp.polygon.length; i++) ctx.lineTo(lp.polygon[i].x - mw/2, lp.polygon[i].y - mh/2);
+      ctx.closePath();
+      ctx.clip();
+      // Clip to vision
+      ctx.beginPath();
+      if (hasDV) {
+        ctx.moveTo(vis.polygon[0].x - mw/2, vis.polygon[0].y - mh/2);
+        for (let i = 1; i < vis.polygon.length; i++) ctx.lineTo(vis.polygon[i].x - mw/2, vis.polygon[i].y - mh/2);
+        ctx.closePath();
+      } else {
+        ctx.moveTo(lp.polygon[0].x - mw/2, lp.polygon[0].y - mh/2);
+        for (let i = 1; i < lp.polygon.length; i++) ctx.lineTo(lp.polygon[i].x - mw/2, lp.polygon[i].y - mh/2);
+        ctx.closePath();
+      }
+      ctx.clip();
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, lp.brightPx);
+      grad.addColorStop(0, 'rgba(255,230,180,0.07)');
+      grad.addColorStop(0.6, 'rgba(255,210,150,0.03)');
+      grad.addColorStop(1, 'rgba(255,200,130,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, lp.brightPx, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
   },
 
   _pointInPolygon(px, py, pts) {

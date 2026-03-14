@@ -13,6 +13,7 @@ class PlayerBridgeService {
     this.server = null;
     this.wss = null;
     this.players = new Map();
+    this.playerMaps = {};  // playerId -> mapId (which map each player is viewing)
   }
 
   async init(orchestrator) {
@@ -208,11 +209,87 @@ class PlayerBridgeService {
     }
   }
 
+  _updateTokenLight(playerId, inventory) {
+    // 5e light sources: torch (20ft bright/20ft dim), lantern (30/30), lamp (15/30), candle (5/5)
+    const lightItems = {
+      'torch': { bright: 20, dim: 20 },
+      'lantern': { bright: 30, dim: 30 },
+      'hooded lantern': { bright: 30, dim: 30 },
+      'bullseye lantern': { bright: 60, dim: 60 },
+      'lamp': { bright: 15, dim: 30 },
+      'candle': { bright: 5, dim: 5 },
+      'light': { bright: 20, dim: 20 }  // Light cantrip
+    };
+    let bestLight = null;
+    for (const item of inventory) {
+      if (!item.equipped) continue;
+      const name = (item.name || '').toLowerCase();
+      for (const [key, val] of Object.entries(lightItems)) {
+        if (name.includes(key)) {
+          if (!bestLight || val.bright > bestLight.bright) bestLight = { ...val, name: item.name };
+        }
+      }
+    }
+    const gs = this.state.get('map.gridSize') || 70;
+    if (bestLight) {
+      const lightData = {
+        bright: (bestLight.bright / 5) * gs,
+        dim: (bestLight.dim / 5) * gs
+      };
+      this.state.set(`map.tokens.${playerId}.light`, lightData);
+      console.log(`[PlayerBridge] Token light for ${playerId}: bright=${lightData.bright}px dim=${lightData.dim}px (${bestLight.name || 'unknown'})`);
+    } else {
+      this.state.set(`map.tokens.${playerId}.light`, null);
+    }
+  }
+
+  _persistCharacterField(playerId, field, value) {
+    try {
+      const charSvc = this.orchestrator.getService('characters');
+      if (!charSvc) return;
+      const assignments = charSvc.getAssignments();
+      const charId = assignments[playerId];
+      if (!charId) return;
+      const char = charSvc.getCharacter(charId);
+      if (!char) return;
+      char[field] = value;
+      charSvc.saveCharacter(String(charId), char);
+    } catch (e) {
+      console.warn(`[PlayerBridge] Could not persist ${field} for ${playerId}:`, e.message);
+    }
+  }
+
   _pushCharactersToPlayers() {
     for (const [playerId] of this.players) {
       const char = this._lookupCharacter(playerId);
       if (char) {
         this.state.set(`players.${playerId}.character`, char);
+        // Ensure PC token exists with proper type and darkvision for dynamic lighting
+        const existing = this.state.get(`map.tokens.${playerId}`);
+        const dvRange = char.senses?.darkvision || (char.features?.some(f => f.name === 'Darkvision') ? 60 : 0);
+        if (!existing || !existing.type) {
+          // Token stub or missing — set full PC token properties
+          const mapState = this.state.get('map') || {};
+          const spawns = mapState.playerSpawns?.spread || [];
+          const spawn = spawns[0] || mapState.playerSpawns?.default || { x: 280, y: 350 };
+          this.state.set(`map.tokens.${playerId}`, {
+            ...(existing || {}),
+            id: playerId,
+            name: char.name || playerId,
+            type: 'pc',
+            x: existing?.x || spawn.x,
+            y: existing?.y || spawn.y,
+            image: `${playerId}.webp`,
+            visible: true,
+            hp: char.hp || { current: 20, max: 20 },
+            ac: char.ac || 10,
+            darkvision: dvRange
+          });
+        } else {
+          this.state.set(`map.tokens.${playerId}.darkvision`, dvRange);
+        }
+        // Update token light from equipped items
+        if (char.inventory) this._updateTokenLight(playerId, char.inventory);
         this._sendToPlayer(playerId, { type: 'character:update', character: char });
         console.log('[PlayerBridge] Pushed character update to ' + playerId + ': ' + char.name);
       }
@@ -244,7 +321,9 @@ class PlayerBridgeService {
       }
 
       // Forward full map replacement (path='map' without dot)
+      // Only send to players assigned to this map — don't disrupt players on other maps
       if (statePath === 'map' && typeof value === 'object' && value) {
+        const newMapId = value.id;
         const filtered = { ...value };
         if (filtered.tokens) {
           const ft = {};
@@ -254,19 +333,32 @@ class PlayerBridgeService {
           }
           filtered.tokens = ft;
         }
-        this._broadcast({ type: 'map:full_update', map: filtered });
+        // Only send to players on this map
+        for (const [pid] of this.players) {
+          if (this.playerMaps[pid] === newMapId || !this.playerMaps[pid]) {
+            this.playerMaps[pid] = newMapId;
+            this._sendToPlayer(pid, { type: 'map:full_update', map: filtered });
+          }
+        }
         return;
       }
 
-      if (statePath.startsWith('scene.') || statePath.startsWith('combat.') || statePath.startsWith('map.')) {
+      if (statePath.startsWith('scene.') || statePath.startsWith('combat.')) {
+        this._broadcast({ type: 'state:update', path: statePath, value });
+      }
+
+      if (statePath.startsWith('map.')) {
+        // Map changes only go to players on the DM's active map
+        const activeMapId = this.state.get('map.id');
+        const msg = { type: 'state:update', path: statePath, value };
+
         // Filter hidden tokens from player view
         if (statePath === 'map.tokens' && typeof value === 'object') {
           const filtered = {};
           for (const [id, tok] of Object.entries(value)) {
             if (!tok.hidden) filtered[id] = tok;
           }
-          this._broadcast({ type: 'state:update', path: statePath, value: filtered });
-          return;
+          msg.value = filtered;
         }
         // Filter individual hidden token updates
         try {
@@ -276,14 +368,20 @@ class PlayerBridgeService {
             const tok = this.state.get(`map.tokens.${tid}`);
             if (tok && tok.hidden) return;
           }
-          // Strip NPC names from player view (players see "Unknown" for NPCs)
+          // Strip NPC names from player view
           if (statePath.match(/^map\.tokens\.[^.]+$/) && value && value.type === 'npc') {
-            value = Object.assign({}, value, { name: 'Unknown' });
+            msg.value = Object.assign({}, value, { name: 'Unknown' });
           }
         } catch (e) {
           console.error('[PlayerBridge] Error filtering state update:', e.message);
         }
-        this._broadcast({ type: 'state:update', path: statePath, value });
+
+        // Only send to players on the active map
+        for (const [pid] of this.players) {
+          if (this.playerMaps[pid] === activeMapId) {
+            this._sendToPlayer(pid, msg);
+          }
+        }
       }
     }, 'player-bridge');
 
@@ -400,11 +498,11 @@ class PlayerBridgeService {
       this._broadcast({ type: 'audio:ambience', url, volume, crossfade });
     }, 'player-bridge');
 
-    // Forward map events to all players
+    // Forward map events only to players on the activated map
     this.bus.subscribe('map:activated', (env) => {
-      // Build filtered map state and push to all players
       try {
         const mapState = this.state.get('map') || {};
+        const activatedMapId = mapState.id;
         const filtered = { ...mapState };
         if (filtered.tokens) {
           const ft = {};
@@ -414,7 +512,12 @@ class PlayerBridgeService {
           }
           filtered.tokens = ft;
         }
-        this._broadcast({ type: 'map:full_update', map: filtered });
+        // Only send to players assigned to this map
+        for (const [pid] of this.players) {
+          if (this.playerMaps[pid] === activatedMapId) {
+            this._sendToPlayer(pid, { type: 'map:full_update', map: filtered });
+          }
+        }
       } catch (e) {
         console.error('[PlayerBridge] Error broadcasting map:activated:', e.message);
       }
@@ -424,11 +527,21 @@ class PlayerBridgeService {
       const { token } = env.data;
       if (!token || token.hidden) return;
       const safe = token.type === 'npc' ? { ...token, name: 'Unknown' } : token;
-      this._broadcast({ type: 'map:token_added', token: safe });
+      const activeMapId = this.state.get('map.id');
+      for (const [pid] of this.players) {
+        if (this.playerMaps[pid] === activeMapId) {
+          this._sendToPlayer(pid, { type: 'map:token_added', token: safe });
+        }
+      }
     }, 'player-bridge');
 
     this.bus.subscribe('map:token_removed', (env) => {
-      this._broadcast({ type: 'map:token_removed', tokenId: env.data.tokenId });
+      const activeMapId = this.state.get('map.id');
+      for (const [pid] of this.players) {
+        if (this.playerMaps[pid] === activeMapId) {
+          this._sendToPlayer(pid, { type: 'map:token_removed', tokenId: env.data.tokenId });
+        }
+      }
     }, 'player-bridge');
 
     // Forward combat events to all players
@@ -469,7 +582,12 @@ class PlayerBridgeService {
     this.state.set(`players.${playerId}.connected`, true);
     this.state.set(`players.${playerId}.deviceId`, playerId);
 
-    console.log(`[PlayerBridge] ${playerId} connected (${this.players.size} players online)`);
+    // Track which map this player is on
+    const mapSvc = this.orchestrator.getService('map');
+    const activeMapId = this.state.get('map.id');
+    this.playerMaps[playerId] = (mapSvc?.playerMapAssignment?.[playerId]) || activeMapId || null;
+
+    console.log(`[PlayerBridge] ${playerId} connected (${this.players.size} players online, map: ${this.playerMaps[playerId]})`);
     this.bus.dispatch('player:connected', { playerId });
 
     // Broadcast updated player list to all players after a short delay
@@ -486,12 +604,32 @@ class PlayerBridgeService {
       if (existingHp && typeof existingHp.current === 'number') {
         characterData.hp = { ...characterData.hp, current: existingHp.current };
       }
+      // Preserve inventory equipped/attuned state from state if reconnecting
+      const existingInv = this.state.get(`players.${playerId}.character.inventory`);
+      if (existingInv && Array.isArray(existingInv) && existingInv.length > 0) {
+        // Merge equipped/attuned flags from state into fresh character data by item name
+        const stateMap = {};
+        for (const item of existingInv) {
+          if (item.name) stateMap[item.name] = { equipped: item.equipped, attuned: item.attuned };
+        }
+        for (const item of (characterData.inventory || [])) {
+          const saved = stateMap[item.name];
+          if (saved) {
+            if (saved.equipped) item.equipped = true;
+            if (saved.attuned) item.attuned = true;
+          }
+        }
+      }
       this.state.set(`players.${playerId}.character`, characterData);
       console.log('[PlayerBridge] Sending character ' + characterData.name + ' to ' + playerId);
+      // Update token light from equipped light sources on connect
+      if (characterData.inventory) {
+        this._updateTokenLight(playerId, characterData.inventory);
+      }
     }
     const initPlayer = Object.assign({}, playerState || {}, characterData ? { character: characterData } : {});
 
-    // Build map state for player (filter hidden tokens, hide NPC names)
+    // Build map state for player (use their assigned map, not necessarily DM's active map)
     let playerMapState = {};
     try {
       const mapState = this.state.get('map') || {};
@@ -513,14 +651,16 @@ class PlayerBridgeService {
     }
 
     try {
-      ws.send(JSON.stringify({
+      const initMsg = JSON.stringify({
         type: 'init',
         playerId,
         player: initPlayer,
         scene: sceneState || {},
         combat: combatState || {},
         map: playerMapState
-      }));
+      });
+      console.log(`[PlayerBridge] Sending init to ${playerId} (${initMsg.length} bytes, hasChar=${!!characterData})`);
+      ws.send(initMsg);
     } catch (e) {
       console.error('[PlayerBridge] Error sending init:', e.message);
     }
@@ -545,7 +685,12 @@ class PlayerBridgeService {
       }
     });
 
-    ws.on('close', () => {
+    ws.on('error', (err) => {
+      console.error(`[PlayerBridge] WS error for ${playerId}:`, err.message);
+    });
+
+    ws.on('close', (code, reason) => {
+      console.log(`[PlayerBridge] ${playerId} WS close code=${code} reason=${reason || 'none'}`);
       this.state.set(`players.${playerId}.connected`, false);
       this.players.delete(playerId);
       console.log(`[PlayerBridge] ${playerId} disconnected (${this.players.size} players online)`);
@@ -655,7 +800,19 @@ class PlayerBridgeService {
           break;
         }
         const mapSvc = this.orchestrator.getService('map');
-        if (mapSvc) mapSvc._moveToken(msg.tokenId, msg.x, msg.y);
+        if (mapSvc) {
+          const result = mapSvc._moveToken(msg.tokenId, msg.x, msg.y);
+          if (result && result.blocked) {
+            // Movement was blocked by wall — send rejection so client snaps back
+            this._sendToPlayer(playerId, {
+              type: 'map:move_rejected',
+              tokenId: msg.tokenId,
+              x: result.x,
+              y: result.y,
+              reason: 'wall'
+            });
+          }
+        }
         break;
       }
 
@@ -663,6 +820,8 @@ class PlayerBridgeService {
         this.state.set(`players.${playerId}.character.inventory`, msg.inventory || []);
         if (msg.currency) this.state.set(`players.${playerId}.character.currency`, msg.currency);
         this.bus.dispatch('player:inventory_update', { playerId });
+        // Update token light from equipped light sources (torch, lantern, etc.)
+        this._updateTokenLight(playerId, msg.inventory || []);
         break;
 
       case 'spells:update':

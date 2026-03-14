@@ -208,11 +208,35 @@ class CharacterService {
   }
 
   // Save player's current character state back to disk
+  _calcAC(char) {
+    const dexMod = char.abilities?.dex?.modifier ?? 0;
+    let ac = 10 + dexMod;
+    const equipped = (char.inventory || []).filter(i => i.equipped);
+    const armor = equipped.find(i => i.acType && i.acType !== 'shield');
+    if (armor) {
+      if (armor.acType === 'light') ac = armor.ac + dexMod;
+      else if (armor.acType === 'medium') ac = armor.ac + Math.min(2, dexMod);
+      else if (armor.acType === 'heavy') ac = armor.ac;
+    }
+    const shield = equipped.find(i => i.acType === 'shield');
+    if (shield) ac += shield.ac || 2;
+    // Magic item AC bonuses
+    for (const item of equipped) {
+      if (!item.modifiers?.acBonus) continue;
+      if (item.attunement && !item.attuned) continue;
+      ac += item.modifiers.acBonus;
+    }
+    return ac;
+  }
+
   _persistPlayerCharacter(playerId) {
     const charData = this.state.get('players.' + playerId + '.character');
     if (!charData) return;
     const id = charData.ddbId || charData.foundryId;
     if (!id) return;
+    // Recalculate AC from equipped items
+    charData.ac = this._calcAC(charData);
+    this.state.set('players.' + playerId + '.character.ac', charData.ac);
     this.saveCharacter(String(id), charData);
   }
 
@@ -280,12 +304,34 @@ class CharacterService {
 
     const char = this._mapDdbCharacter(json.data, ddbId);
 
-    // Preserve current HP if character already exists (don't overwrite mid-session changes)
+    // Preserve local state if character already exists (don't overwrite mid-session changes)
     const existing = this.getCharacter(String(ddbId));
-    if (existing && existing.hp) {
-      char.hp.current = existing.hp.current;
-      char.hp.temp = existing.hp.temp || 0;
+    if (existing) {
+      // Preserve HP
+      if (existing.hp) {
+        char.hp.current = existing.hp.current;
+        char.hp.temp = existing.hp.temp || 0;
+      }
+      // Preserve local equipped/attuned state (player may have changed these in-session)
+      if (existing.inventory && existing.inventory.length > 0) {
+        const localState = {};
+        for (const item of existing.inventory) {
+          if (item.name && (item.equipped || item.attuned)) {
+            localState[item.name] = { equipped: item.equipped, attuned: item.attuned };
+          }
+        }
+        for (const item of char.inventory) {
+          const saved = localState[item.name];
+          if (saved) {
+            item.equipped = saved.equipped || item.equipped;
+            item.attuned = saved.attuned || item.attuned;
+          }
+        }
+      }
     }
+
+    // Recalculate AC based on current equipped items
+    char.ac = this._calcAC(char);
 
     this.saveCharacter(String(ddbId), char);
     console.log('[DDB] Synced: ' + char.name + ' (' + char.race + ' ' + char.class + ' ' + char.level + ')');
@@ -430,14 +476,56 @@ class CharacterService {
       return true;
     });
 
-    // Inventory
-    const inventory = (d.inventory || []).map(item => ({
-      name: item.definition?.name || 'Unknown',
-      quantity: item.quantity || 1,
-      equipped: item.equipped || false,
-      type: item.definition?.filterType || item.definition?.type || 'Item',
-      weight: item.definition?.weight || 0
-    }));
+    // Inventory — include full equipment stats for AC/attack calculation
+    const inventory = (d.inventory || []).map(item => {
+      const def = item.definition || {};
+      const entry = {
+        name: def.name || 'Unknown',
+        quantity: item.quantity || 1,
+        equipped: item.equipped || false,
+        type: def.filterType || def.type || 'Item',
+        weight: def.weight || 0,
+        rarity: def.rarity || null,
+        magic: def.magic || false
+      };
+      // Armor stats
+      if (def.armorClass) {
+        entry.ac = def.armorClass;
+        const armorType = def.type || '';
+        if (armorType === 'Light Armor') entry.acType = 'light';
+        else if (armorType === 'Medium Armor') entry.acType = 'medium';
+        else if (armorType === 'Heavy Armor') entry.acType = 'heavy';
+        else if (armorType === 'Shield') entry.acType = 'shield';
+      }
+      // Weapon stats
+      if (def.filterType === 'Weapon' || def.attackType) {
+        entry.damage = def.damage?.diceString || null;
+        entry.damageType = def.damageType || null;
+        entry.subtype = (def.attackType === 2) ? 'ranged' : 'melee';
+        entry.properties = (def.properties || []).map(p => p.name?.toLowerCase()).filter(Boolean);
+        entry.range = def.range ? (def.range + (def.longRange ? '/' + def.longRange : '') + 'ft') : '5ft';
+      }
+      // Attunement
+      if (def.canAttune || def.requiresAttunement) {
+        entry.attunement = true;
+        entry.attuned = item.isAttuned || false;
+      }
+      // Magic item modifiers (AC bonus, etc)
+      const grantedMods = (def.grantedModifiers || []);
+      if (grantedMods.length) {
+        entry.modifiers = {};
+        for (const mod of grantedMods) {
+          if (mod.type === 'bonus' && mod.subType === 'armor-class') {
+            entry.modifiers.acBonus = mod.value;
+          }
+        }
+      }
+      // Cursed items
+      if (def.canBeCursed || (def.description || '').toLowerCase().includes('cursed')) {
+        entry.cursed = true;
+      }
+      return entry;
+    });
 
     // Currency
     const currency = {
@@ -520,6 +608,9 @@ class CharacterService {
       spells,
       attacks,
       features: uniqueFeatures,
+      senses: {
+        darkvision: uniqueFeatures.some(f => f.name === 'Darkvision') ? 60 : 0
+      },
       inventory,
       conditions: [],
       currency,

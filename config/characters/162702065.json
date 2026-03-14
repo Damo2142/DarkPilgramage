@@ -18,7 +18,7 @@
     "max": 18,
     "temp": 0
   },
-  "ac": 11,
+  "ac": 12,
   "speed": 30,
   "initiative": 1,
   "proficiencyBonus": 2,
@@ -163,7 +163,18 @@
       "ritual": false,
       "concentration": true,
       "prepared": false,
-      "description": "You place a curse on a creature that you can see within range. Until the spell ends, you deal an extra 1d6 Necrotic damage to the target whenever you hit it with an attack roll. Also, choose one abili"
+      "description": "You place a curse on a creature that you can see within range. Until the spell ends, you deal an extra 1d6 Necrotic damage to the target whenever you hit it with an attack roll. Also, choose one abili",
+      "damage": "1d6",
+      "damageType": "necrotic",
+      "castingTime": "1 bonus action",
+      "range": "90 feet",
+      "components": "V, S, M (the petrified eye of a newt)",
+      "duration": "Concentration, up to 1 hour",
+      "classes": [
+        "Warlock"
+      ],
+      "higherLevel": "Duration increases with higher slots: 8 hours at 3rd, 24 hours at 5th.",
+      "_enriched": true
     },
     {
       "name": "Eldritch Blast",
@@ -172,7 +183,18 @@
       "ritual": false,
       "concentration": false,
       "prepared": true,
-      "description": "You hurl a beam of crackling energy. Make a ranged spell attack against one creature or object in range. On a hit, the target takes 1d10 Force damage.\r\nCantrip Upgrade. The spell creates two beams at "
+      "description": "You hurl a beam of crackling energy. Make a ranged spell attack against one creature or object in range. On a hit, the target takes 1d10 Force damage.\r\nCantrip Upgrade. The spell creates two beams at ",
+      "damage": "1d10",
+      "damageType": "force",
+      "castingTime": "1 action",
+      "range": "120 feet",
+      "components": "V, S",
+      "duration": "Instantaneous",
+      "classes": [
+        "Warlock"
+      ],
+      "higherLevel": "Additional beams at 5th (2), 11th (3), and 17th (4) level.",
+      "_enriched": true
     },
     {
       "name": "Prestidigitation",
@@ -181,7 +203,18 @@
       "ritual": false,
       "concentration": false,
       "prepared": true,
-      "description": "You create a magical effect within range. Choose the effect from the options below. If you cast this spell multiple times, you can have up to three of its non-instantaneous effects active at a time.\r\n"
+      "description": "You create a magical effect within range. Choose the effect from the options below. If you cast this spell multiple times, you can have up to three of its non-instantaneous effects active at a time.\r\n",
+      "castingTime": "1 action",
+      "range": "10 feet",
+      "components": "V, S",
+      "duration": "Up to 1 hour",
+      "classes": [
+        "Bard",
+        "Sorcerer",
+        "Warlock",
+        "Wizard"
+      ],
+      "_enriched": true
     },
     {
       "name": "Hellish Rebuke",
@@ -199,7 +232,17 @@
       "ritual": false,
       "concentration": false,
       "prepared": false,
-      "description": "Briefly surrounded by silvery mist, you teleport up to 30 feet to an unoccupied space you can see."
+      "description": "Briefly surrounded by silvery mist, you teleport up to 30 feet to an unoccupied space that you can see.",
+      "castingTime": "1 bonus action",
+      "range": "Self",
+      "components": "V",
+      "duration": "Instantaneous",
+      "classes": [
+        "Sorcerer",
+        "Warlock",
+        "Wizard"
+      ],
+      "_enriched": true
     },
     {
       "name": "Mirror Image",
@@ -208,7 +251,17 @@
       "ritual": false,
       "concentration": false,
       "prepared": false,
-      "description": "Three illusory duplicates of yourself appear in your space. Until the spell ends, the duplicates move with you and mimic your actions, shifting position so it’s impossible to track which image is real"
+      "description": "Three illusory duplicates of yourself appear in your space. Until the spell ends, the duplicates move with you and mimic your actions, shifting position so it’s impossible to track which image is real",
+      "castingTime": "1 action",
+      "range": "Self",
+      "components": "V, S",
+      "duration": "1 minute",
+      "classes": [
+        "Sorcerer",
+        "Warlock",
+        "Wizard"
+      ],
+      "_enriched": true
     }
   ],
   "attacks": [],
@@ -254,188 +307,273 @@
       "description": ""
     }
   ],
+  "senses": {
+    "darkvision": 0
+  },
   "inventory": [
     {
       "name": "Leather",
       "quantity": 1,
-      "equipped": false,
+      "equipped": true,
       "type": "Armor",
-      "weight": 10
+      "weight": 10,
+      "rarity": "Common",
+      "magic": false,
+      "ac": 11,
+      "acType": "light"
     },
     {
       "name": "Dagger",
       "quantity": 1,
-      "equipped": false,
+      "equipped": true,
       "type": "Weapon",
-      "weight": 1
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false,
+      "damage": "1d4",
+      "damageType": "Piercing",
+      "subtype": "melee",
+      "properties": [
+        "finesse",
+        "light",
+        "thrown",
+        "nick"
+      ],
+      "range": "20/60ft"
     },
     {
       "name": "Dagger",
       "quantity": 1,
-      "equipped": false,
+      "equipped": true,
       "type": "Weapon",
-      "weight": 1
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false,
+      "damage": "1d4",
+      "damageType": "Piercing",
+      "subtype": "melee",
+      "properties": [
+        "finesse",
+        "light",
+        "thrown",
+        "nick"
+      ],
+      "range": "20/60ft"
     },
     {
       "name": "Sickle",
       "quantity": 1,
-      "equipped": false,
+      "equipped": true,
       "type": "Weapon",
-      "weight": 2
+      "weight": 2,
+      "rarity": "Common",
+      "magic": false,
+      "damage": "1d4",
+      "damageType": "Slashing",
+      "subtype": "melee",
+      "properties": [
+        "light",
+        "nick"
+      ],
+      "range": "5/5ft"
     },
     {
       "name": "Chest",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 25
+      "weight": 25,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Clothes, Common",
       "quantity": 1,
-      "equipped": false,
+      "equipped": true,
       "type": "Other Gear",
-      "weight": 3
+      "weight": 3,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Backpack",
       "quantity": 1,
-      "equipped": false,
+      "equipped": true,
       "type": "Other Gear",
-      "weight": 5
+      "weight": 5,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Book",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 5
+      "weight": 5,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Orb",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 3
+      "weight": 3,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Crowbar",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 5
+      "weight": 5,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Hammer",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 3
+      "weight": 3,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Holy Water (flask)",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 1
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Manacles",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 6
+      "weight": 6,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Mirror, Steel",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 0.5
+      "weight": 0.5,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Oil (flask)",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 1
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Tinderbox",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 1
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Torch",
       "quantity": 3,
-      "equipped": false,
+      "equipped": true,
       "type": "Other Gear",
-      "weight": 1
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Stake (Wooden)",
       "quantity": 9,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 0
+      "weight": 0,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Holy Symbol",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 0
+      "weight": 0,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Oil",
       "quantity": 10,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 1
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Parchment",
       "quantity": 10,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 0
+      "weight": 0,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Tinderbox",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 1
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Book",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 5
+      "weight": 5,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Lamp",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 1
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Ink Pen",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 0
+      "weight": 0,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Ink",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 0
+      "weight": 0,
+      "rarity": "Common",
+      "magic": false
     }
   ],
   "conditions": [],
@@ -477,7 +615,7 @@
     "description": null
   },
   "patron": "Fiend Patron",
-  "_syncedAt": "2026-03-13T10:20:14.692Z",
+  "_syncedAt": "2026-03-14T12:05:58.864Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/162702065"
 }

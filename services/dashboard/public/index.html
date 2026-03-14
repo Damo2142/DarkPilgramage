@@ -1183,9 +1183,37 @@
         </div>
         <div style="font-size:10px;color:var(--text-dim);margin-bottom:4px;">
           <span id="wall-count">0</span> walls |
-          <label><input type="checkbox" id="show-walls-cb" checked onchange="VTT.render()" style="accent-color:var(--accent);"> Show</label>
+          <label><input type="checkbox" id="show-walls-cb" checked onchange="VTT.render()" style="accent-color:var(--accent);"> Show</label> |
+          <label><input type="checkbox" id="vision-preview-cb" onchange="VTT.render()" style="accent-color:#c9a54e;"> Player Vision</label>
         </div>
         <div id="wall-list" style="font-size:10px;color:var(--text-dim);max-height:120px;overflow-y:auto;"></div>
+      </div>
+      </div>
+
+      <div class="panel-section" data-panel="lights">
+      <div class="section-header"><span class="drag-handle">⠿</span>Map Lights</div>
+      <div style="padding:4px 8px;">
+        <div style="display:flex;gap:4px;margin-bottom:6px;">
+          <button class="sm" id="place-light-btn" onclick="toggleLightPlaceMode()" style="flex:1">Place Light</button>
+          <button class="sm" onclick="clearAllLights()" style="font-size:9px;">Clear</button>
+          <button class="sm primary" onclick="saveLights()" style="font-size:9px;">Save</button>
+        </div>
+        <div style="font-size:10px;color:var(--text-dim);margin-bottom:4px;">
+          <span id="light-count">0</span> lights |
+          Range: <input type="number" id="light-range-input" value="700" min="100" max="2000" step="100" style="width:50px;font-size:10px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);padding:1px 3px;">
+        </div>
+        <div id="light-list" style="font-size:10px;color:var(--text-dim);max-height:120px;overflow-y:auto;"></div>
+      </div>
+      </div>
+
+      <div class="panel-section" data-panel="player-maps">
+      <div class="section-header"><span class="drag-handle">⠿</span>Player Maps</div>
+      <div style="padding:4px 8px;">
+        <div style="font-size:10px;color:var(--text-dim);margin-bottom:4px;">Move players between maps</div>
+        <div id="player-map-list" style="font-size:10px;"></div>
+        <div style="display:flex;gap:4px;margin-top:4px;">
+          <button class="sm primary" onclick="refreshPlayerMaps()" style="flex:1;font-size:9px;">Refresh</button>
+        </div>
       </div>
       </div>
 
@@ -3384,6 +3412,54 @@
   }
 
   // ============================================================
+  // VISION ENGINE — 2D raycasting for dynamic lighting preview
+  // ============================================================
+  const VisionEngine = {
+    computeVisibility(ox, oy, maxRange, walls) {
+      const segments = [];
+      for (const wall of walls) {
+        const type = wall.type || 'wall';
+        if (type === 'window') continue;
+        if (type === 'door' && wall.open) continue;
+        if (wall.x1 == null || wall.y1 == null) continue;
+        segments.push([wall.x1, wall.y1, wall.x2, wall.y2]);
+      }
+      const EPS = 0.00001;
+      const angles = [];
+      for (const seg of segments) {
+        for (let i = 0; i < 4; i += 2) {
+          const dx = seg[i] - ox, dy = seg[i+1] - oy;
+          if (dx*dx + dy*dy > maxRange * maxRange * 2.25) continue;
+          const a = Math.atan2(dy, dx);
+          angles.push(a - EPS, a, a + EPS);
+        }
+      }
+      for (let i = 0; i < 72; i++) angles.push((i / 72) * Math.PI * 2 - Math.PI);
+      angles.sort((a, b) => a - b);
+      const polygon = [];
+      for (const angle of angles) {
+        const rdx = Math.cos(angle), rdy = Math.sin(angle);
+        let closestT = maxRange;
+        for (const seg of segments) {
+          const t = VisionEngine._raySegIntersect(ox, oy, rdx, rdy, seg[0], seg[1], seg[2], seg[3]);
+          if (t !== null && t > 0 && t < closestT) closestT = t;
+        }
+        polygon.push({ x: ox + rdx * closestT, y: oy + rdy * closestT });
+      }
+      return polygon;
+    },
+    _raySegIntersect(ox, oy, rdx, rdy, x1, y1, x2, y2) {
+      const sdx = x2 - x1, sdy = y2 - y1;
+      const denom = rdx * sdy - rdy * sdx;
+      if (Math.abs(denom) < 0.0001) return null;
+      const t = (sdx * (oy - y1) - sdy * (ox - x1)) / denom;
+      const u = (rdx * (oy - y1) - rdy * (ox - x1)) / denom;
+      if (t < 0 || u < 0 || u > 1) return null;
+      return t;
+    }
+  };
+
+  // ============================================================
   // VTT MAP ENGINE — Canvas 2D
   // ============================================================
   const VTT = {
@@ -3469,8 +3545,10 @@
           img.src = '/assets/maps/' + data.map.image;
         }
 
-        // Load walls for this map
+        // Load walls and lights for this map
         loadWalls();
+        loadLights();
+        refreshPlayerMaps();
 
         this.render();
       } catch(e) {
@@ -3531,29 +3609,27 @@
         ctx.beginPath(); ctx.moveTo(-mw/2, y - mh/2); ctx.lineTo(mw/2, y - mh/2); ctx.stroke();
       }
 
-      // Fog of war (DM sees dimmed overlay for unrevealed zones)
-      const fogAlpha = this.colors.fogOpacity ?? 0.4;
+      // Zone outlines (DM reference — zones no longer control visibility)
       for (const zone of (this.mapData.zones || [])) {
-        const pts = zone.points;  // polygon zones have points array
+        const pts = zone.points;
         if (pts && pts.length >= 3) {
-          // Polygon zone
           ctx.beginPath();
           ctx.moveTo(pts[0].x - mw/2, pts[0].y - mh/2);
           for (let pi = 1; pi < pts.length; pi++) ctx.lineTo(pts[pi].x - mw/2, pts[pi].y - mh/2);
           ctx.closePath();
-          if (!zone.revealed) { ctx.fillStyle = `rgba(0,0,0,${fogAlpha})`; ctx.fill(); }
-          ctx.strokeStyle = zone.revealed ? 'rgba(48,160,80,0.3)' : 'rgba(160,48,48,0.3)';
+          ctx.strokeStyle = 'rgba(80,120,200,0.25)';
           ctx.lineWidth = 1; ctx.stroke();
         } else {
-          // Rectangle zone
-          if (!zone.revealed) {
-            ctx.fillStyle = `rgba(0,0,0,${fogAlpha})`;
-            ctx.fillRect(zone.x - mw/2, zone.y - mh/2, zone.w, zone.h);
-          }
-          ctx.strokeStyle = zone.revealed ? 'rgba(48,160,80,0.3)' : 'rgba(160,48,48,0.3)';
+          ctx.strokeStyle = 'rgba(80,120,200,0.25)';
           ctx.lineWidth = 1;
           ctx.strokeRect(zone.x - mw/2, zone.y - mh/2, zone.w, zone.h);
         }
+      }
+
+      // Player Vision Preview (dynamic lighting from player perspective)
+      var visionPreview = document.getElementById('vision-preview-cb');
+      if (visionPreview && visionPreview.checked) {
+        this._renderVisionPreview(ctx, mw, mh);
       }
 
       // Zone labels (drawn on top of fog)
@@ -3586,13 +3662,18 @@
             if (w.open) ctx.setLineDash([4, 6]); else ctx.setLineDash([]);
             ctx.beginPath(); ctx.moveTo(wx1, wy1); ctx.lineTo(wx2, wy2); ctx.stroke();
             ctx.setLineDash([]);
-            // Lock icon if locked
-            if (w.lockDC && w.locked) {
-              var dcx = (wx1+wx2)/2, dcy = (wy1+wy2)/2;
-              ctx.fillStyle = '#ff4444'; ctx.font = 'bold ' + Math.max(10, gs*0.2) + 'px sans-serif';
-              ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-              ctx.fillText('🔒DC' + w.lockDC, dcx, dcy - gs*0.15);
-            }
+            // Door label with index and state
+            var dcx = (wx1+wx2)/2, dcy = (wy1+wy2)/2;
+            var doorLabel = 'D' + (wi+1);
+            if (w.lockDC && w.locked) doorLabel += ' 🔒DC' + w.lockDC;
+            else if (w.open) doorLabel += ' Open';
+            else doorLabel += ' Closed';
+            ctx.fillStyle = w.locked ? '#ff4444' : w.open ? 'rgba(100,200,80,0.9)' : 'rgba(220,180,80,0.9)';
+            ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.lineWidth = 2;
+            ctx.font = 'bold ' + Math.max(9, gs*0.12) + 'px sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.strokeText(doorLabel, dcx, dcy - gs*0.18);
+            ctx.fillText(doorLabel, dcx, dcy - gs*0.18);
           } else if (wtype === 'window') {
             // Window: blue, thin
             ctx.strokeStyle = 'rgba(64,128,200,0.8)';
@@ -3600,6 +3681,13 @@
             ctx.setLineDash([3, 3]);
             ctx.beginPath(); ctx.moveTo(wx1, wy1); ctx.lineTo(wx2, wy2); ctx.stroke();
             ctx.setLineDash([]);
+            // Window label
+            var wcx = (wx1+wx2)/2, wcy = (wy1+wy2)/2;
+            ctx.fillStyle = 'rgba(100,160,220,0.9)'; ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.lineWidth = 2;
+            ctx.font = 'bold ' + Math.max(9, gs*0.12) + 'px sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.strokeText('W' + (wi+1), wcx, wcy - gs*0.15);
+            ctx.fillText('W' + (wi+1), wcx, wcy - gs*0.15);
           } else {
             // Wall: red, solid
             ctx.strokeStyle = 'rgba(220,40,40,0.7)';
@@ -3611,6 +3699,32 @@
           ctx.fillStyle = dotColor;
           ctx.beginPath(); ctx.arc(wx1, wy1, 3, 0, Math.PI*2); ctx.fill();
           ctx.beginPath(); ctx.arc(wx2, wy2, 3, 0, Math.PI*2); ctx.fill();
+        }
+      }
+
+      // Light sources — small glowing circles on DM map
+      if ((!showWalls || showWalls.checked) && this.mapData && this.mapData.lights) {
+        for (var li = 0; li < this.mapData.lights.length; li++) {
+          var light = this.mapData.lights[li];
+          var lx = light.x - mw/2, ly = light.y - mh/2;
+          var lr = Math.min(light.range || 200, 800);
+          // Soft glow circle
+          var lgr = ctx.createRadialGradient(lx, ly, 0, lx, ly, lr);
+          lgr.addColorStop(0, 'rgba(255,220,120,0.12)');
+          lgr.addColorStop(0.5, 'rgba(255,200,80,0.04)');
+          lgr.addColorStop(1, 'rgba(255,180,60,0)');
+          ctx.fillStyle = lgr;
+          ctx.beginPath(); ctx.arc(lx, ly, lr, 0, Math.PI*2); ctx.fill();
+          // Center dot
+          ctx.fillStyle = 'rgba(255,200,80,0.8)';
+          ctx.beginPath(); ctx.arc(lx, ly, 4, 0, Math.PI*2); ctx.fill();
+          // Light index label
+          ctx.fillStyle = 'rgba(255,220,100,0.95)';
+          ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.lineWidth = 2;
+          ctx.font = 'bold ' + Math.max(9, gs*0.12) + 'px sans-serif';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.strokeText('L' + (li+1), lx, ly - 10);
+          ctx.fillText('L' + (li+1), lx, ly - 10);
         }
       }
 
@@ -3708,6 +3822,61 @@
       }
 
       ctx.restore();
+    },
+
+    _renderVisionPreview(ctx, mw, mh) {
+      const gs = this.mapData.gridSize;
+      const walls = mapWalls || [];
+      const lights = this.mapData.lights || [];
+      const gradPx = (15 / 5) * gs;
+      const dimExtPx = (15 / 5) * gs;
+
+      // Collect PC visions
+      const pcVisions = [];
+      for (const [id, tok] of Object.entries(this.tokens)) {
+        if (tok.type !== 'pc') continue;
+        const dv = tok.darkvision || 0;
+        const visionFt = Math.max(60, dv);
+        const visionPx = (visionFt / 5) * gs;
+        const poly = VisionEngine.computeVisibility(tok.x, tok.y, visionPx, walls);
+        pcVisions.push({ x: tok.x, y: tok.y, visionPx, polygon: poly });
+      }
+
+      if (pcVisions.length === 0) return;
+
+      // Fog: black over non-visible
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(-mw/2, -mh/2, mw, mh);
+      for (const vis of pcVisions) {
+        if (vis.polygon.length < 3) continue;
+        ctx.moveTo(vis.polygon[0].x - mw/2, vis.polygon[0].y - mh/2);
+        for (let i = 1; i < vis.polygon.length; i++) ctx.lineTo(vis.polygon[i].x - mw/2, vis.polygon[i].y - mh/2);
+        ctx.closePath();
+      }
+      ctx.fillStyle = 'rgba(5,5,8,0.7)';
+      ctx.fill('evenodd');
+      ctx.restore();
+
+      // Soft gradient at edges
+      for (const vis of pcVisions) {
+        if (vis.polygon.length < 3 || vis.visionPx <= gradPx) continue;
+        const cx = vis.x - mw/2, cy = vis.y - mh/2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(vis.polygon[0].x - mw/2, vis.polygon[0].y - mh/2);
+        for (let i = 1; i < vis.polygon.length; i++) ctx.lineTo(vis.polygon[i].x - mw/2, vis.polygon[i].y - mh/2);
+        ctx.closePath();
+        ctx.clip();
+        const grad = ctx.createRadialGradient(cx, cy, Math.max(0, vis.visionPx - gradPx), cx, cy, vis.visionPx);
+        grad.addColorStop(0, 'rgba(5,5,8,0)');
+        grad.addColorStop(1, 'rgba(5,5,8,0.6)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, vis.visionPx, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     },
 
     _renderToken(ctx, id, tok, mw, mh) {
@@ -3826,6 +3995,13 @@
 
       if (e.button === 0) {
         // Wall drawing mode — click to set start/end points
+        // Light placement mode — click to place light
+        if (lightPlaceMode) {
+          const { x, y } = this.screenToMap(sx, sy);
+          addLightAtPos(x, y);
+          toggleLightPlaceMode();
+          return;
+        }
         if (wallDrawMode) {
           const { x, y } = this.screenToMap(sx, sy);
           const gs = this.mapData?.gridSize || 1;
@@ -3856,6 +4032,21 @@
           zoneDrawRect = null;
           return;
         }
+        // Check for light source click (drag to move)
+        const { x: clickX, y: clickY } = this.screenToMap(sx, sy);
+        var hitLight = -1;
+        if (mapLights && mapLights.length) {
+          for (var li = 0; li < mapLights.length; li++) {
+            var dx = mapLights[li].x - clickX, dy = mapLights[li].y - clickY;
+            if (Math.sqrt(dx*dx + dy*dy) < 30) { hitLight = li; break; }
+          }
+        }
+        if (hitLight >= 0) {
+          draggingLight = hitLight;
+          this.container.classList.add('dragging-token');
+          return;
+        }
+
         const tokenId = this._getTokenAt(sx, sy);
         if (tokenId) {
           // Start dragging token
@@ -3898,6 +4089,14 @@
         const y2 = Math.round(Math.max(zoneDrawStart.y, y) / gs) * gs;
         zoneDrawRect = { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
         this.render();
+      } else if (draggingLight !== null && draggingLight >= 0) {
+        const { x: lmx, y: lmy } = this.screenToMap(sx, sy);
+        if (mapLights[draggingLight]) {
+          mapLights[draggingLight].x = Math.round(lmx);
+          mapLights[draggingLight].y = Math.round(lmy);
+          if (this.mapData) this.mapData.lights = mapLights;
+          this.render();
+        }
       } else if (this.dragging) {
         const { x: mx, y: my } = this.screenToMap(sx, sy);
         const tok = this.tokens[this.dragging.tokenId];
@@ -3931,6 +4130,26 @@
         return;
       }
       if (zoneDrawMode) { zoneDrawStart = null; zoneDrawRect = null; return; }
+
+      // Light drag complete — save position
+      if (draggingLight !== null && draggingLight >= 0) {
+        var dli = draggingLight;
+        draggingLight = null;
+        this.container.classList.remove('dragging-token');
+        if (mapLights[dli]) {
+          mapLights[dli].x = Math.round(mapLights[dli].x);
+          mapLights[dli].y = Math.round(mapLights[dli].y);
+          if (this.mapData) this.mapData.lights = mapLights;
+          fetch('/api/map/light/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ index: dli, x: mapLights[dli].x, y: mapLights[dli].y })
+          }).catch(console.error);
+          renderLightList();
+          this.render();
+        }
+        return;
+      }
 
       if (this.dragging) {
         // Snap and send to server
@@ -4203,6 +4422,13 @@
         if (this.selectedToken === tokenId) {
           this._showInspector(tokenId);
         }
+        this.render();
+      } else if (path === 'map.walls' && Array.isArray(value)) {
+        mapWalls = value;
+        renderWallList();
+        this.render();
+      } else if (path === 'map.lights' && Array.isArray(value)) {
+        if (this.mapData) this.mapData.lights = value;
         this.render();
       } else if (path === 'map.zones') {
         if (state.map) state.map.zones = value;
@@ -5396,10 +5622,9 @@
 
   // ESC cancels wall drawing
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && wallDrawMode) {
-      wallDrawStart = null;
-      wallDrawPreview = null;
-      toggleWallDrawMode();
+    if (e.key === 'Escape') {
+      if (wallDrawMode) { wallDrawStart = null; wallDrawPreview = null; toggleWallDrawMode(); }
+      if (lightPlaceMode) toggleLightPlaceMode();
     }
   });
 
@@ -5444,6 +5669,165 @@
       w.locked = true;
     }
     renderWallList();
+  }
+
+  // ─── LIGHT EDITING ────────────────────────────────────────────────
+  var lightPlaceMode = false;
+  var mapLights = []; // [{x, y, range, color}, ...]
+  var draggingLight = null; // index of light being dragged
+
+  function toggleLightPlaceMode() {
+    lightPlaceMode = !lightPlaceMode;
+    var btn = document.getElementById('place-light-btn');
+    if (lightPlaceMode) {
+      if (wallDrawMode) toggleWallDrawMode();
+      if (zoneDrawMode) toggleZoneDrawMode();
+      if (polyDrawMode) togglePolyDrawMode();
+      btn.classList.add('primary');
+      btn.textContent = 'Click to Place...';
+      VTT.canvas.style.cursor = 'crosshair';
+    } else {
+      btn.classList.remove('primary');
+      btn.textContent = 'Place Light';
+      VTT.canvas.style.cursor = '';
+    }
+  }
+
+  function addLightAtPos(x, y) {
+    var px = Math.round(x);
+    var py = Math.round(y);
+    var snappedX = px;
+    var snappedY = py;
+    var range = parseInt(document.getElementById('light-range-input')?.value) || 700;
+    fetch('/api/map/light/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ x: snappedX, y: snappedY, range: range })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      mapLights.push(d.light);
+      if (VTT.mapData) VTT.mapData.lights = mapLights;
+      renderLightList();
+      VTT.render();
+    }).catch(console.error);
+  }
+
+  function removeLight(idx) {
+    fetch('/api/map/light/' + idx, { method: 'DELETE' })
+      .then(function(r) { return r.json(); })
+      .then(function() {
+        mapLights.splice(idx, 1);
+        if (VTT.mapData) VTT.mapData.lights = mapLights;
+        renderLightList();
+        VTT.render();
+      }).catch(console.error);
+  }
+
+  function updateLightRange(idx) {
+    var range = prompt('Light range in pixels (700 = 5 squares):', mapLights[idx]?.range || 700);
+    if (range === null) return;
+    var rangeNum = parseInt(range);
+    if (isNaN(rangeNum) || rangeNum < 50) return;
+    fetch('/api/map/light/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ index: idx, range: rangeNum })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      mapLights[idx] = d.light;
+      if (VTT.mapData) VTT.mapData.lights = mapLights;
+      renderLightList();
+      VTT.render();
+    }).catch(console.error);
+  }
+
+  function clearAllLights() {
+    if (!mapLights.length) return;
+    if (!confirm('Remove all ' + mapLights.length + ' lights?')) return;
+    // Remove all one by one from back
+    var promises = [];
+    for (var i = mapLights.length - 1; i >= 0; i--) {
+      promises.push(fetch('/api/map/light/' + i, { method: 'DELETE' }));
+    }
+    Promise.all(promises).then(function() {
+      mapLights = [];
+      if (VTT.mapData) VTT.mapData.lights = [];
+      renderLightList();
+      VTT.render();
+    }).catch(console.error);
+  }
+
+  function saveLights() {
+    fetch('/api/map/lights/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}'
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      addTranscript({ speaker: 'system', text: 'Saved ' + (d.saved || 0) + ' lights to map' });
+    }).catch(console.error);
+  }
+
+  function loadLights() {
+    if (VTT.mapData && VTT.mapData.lights) {
+      mapLights = VTT.mapData.lights.slice();
+    } else {
+      mapLights = [];
+    }
+    renderLightList();
+  }
+
+  function renderLightList() {
+    var el = document.getElementById('light-list');
+    var countEl = document.getElementById('light-count');
+    if (countEl) countEl.textContent = mapLights.length;
+    if (!el) return;
+    if (!mapLights.length) { el.innerHTML = 'No lights'; return; }
+    el.innerHTML = mapLights.map(function(l, i) {
+      var gs = VTT.mapData?.gridSize || 140;
+      var gx = Math.floor(l.x / gs);
+      var gy = Math.floor(l.y / gs);
+      return '<div style="display:flex;justify-content:space-between;padding:1px 0;align-items:center;">'
+        + '<span style="color:#ffc848;cursor:pointer;" onclick="updateLightRange(' + i + ')">💡 Light ' + (i+1) + ' [' + gx + ',' + gy + '] r=' + l.range + '</span>'
+        + '<span style="cursor:pointer;color:var(--red);" onclick="removeLight(' + i + ')">✕</span></div>';
+    }).join('');
+  }
+
+  // ─── PLAYER MAP MANAGEMENT ────────────────────────────────────────
+  function refreshPlayerMaps() {
+    Promise.all([
+      fetch('/api/map/player-assignments').then(function(r) { return r.json(); }),
+      fetch('/api/map/list').then(function(r) { return r.json(); })
+    ]).then(function(results) {
+      var assignments = results[0];
+      var maps = results[1];
+      var el = document.getElementById('player-map-list');
+      if (!el) return;
+      var players = Object.keys(assignments);
+      if (!players.length) { el.innerHTML = '<span style="color:var(--text-dim)">No players connected</span>'; return; }
+      var mapOpts = maps.map(function(m) { return '<option value="' + m.id + '">' + esc(m.name) + '</option>'; }).join('');
+      el.innerHTML = players.map(function(pid) {
+        var currentMap = assignments[pid] || 'unknown';
+        var mapName = maps.find(function(m) { return m.id === currentMap; });
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0;gap:4px;">'
+          + '<span style="color:var(--accent);">' + esc(pid) + '</span>'
+          + '<select style="font-size:9px;flex:1;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);padding:1px;" onchange="movePlayerToMap(\'' + pid + '\', this.value)">'
+          + maps.map(function(m) { return '<option value="' + m.id + '"' + (m.id === currentMap ? ' selected' : '') + '>' + esc(m.name) + '</option>'; }).join('')
+          + '</select>'
+          + '<button class="sm" style="font-size:9px;padding:1px 4px;" onclick="movePlayerToMap(\'' + pid + '\', this.previousElementSibling.value)">Move</button>'
+          + '</div>';
+      }).join('');
+    }).catch(console.error);
+  }
+
+  function movePlayerToMap(playerId, mapId) {
+    // Assign player to the target map without switching DM view
+    fetch('/api/map/player-assignment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ playerId: playerId, mapId: mapId })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.error) { addTranscript({ speaker: 'system', text: 'Error: ' + d.error }); return; }
+      addTranscript({ speaker: 'system', text: 'Assigned ' + playerId + ' to map: ' + mapId });
+      refreshPlayerMaps();
+    }).catch(console.error);
   }
 
   /* === SCENE MANAGEMENT === */

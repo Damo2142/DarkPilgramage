@@ -305,181 +305,253 @@
       "description": ""
     }
   ],
+  "senses": {
+    "darkvision": 60
+  },
   "inventory": [
     {
       "name": "Scorpion Staff",
       "quantity": 1,
       "equipped": true,
       "type": "Weapon",
-      "weight": 4
+      "weight": 4,
+      "rarity": "Common",
+      "magic": true,
+      "damage": "1d6",
+      "damageType": "Bludgeoning",
+      "subtype": "melee",
+      "properties": [
+        "versatile",
+        "topple"
+      ],
+      "range": "5/5ft",
+      "modifiers": {}
     },
     {
       "name": "Dagger",
       "quantity": 1,
       "equipped": true,
       "type": "Weapon",
-      "weight": 1
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false,
+      "damage": "1d4",
+      "damageType": "Piercing",
+      "subtype": "melee",
+      "properties": [
+        "finesse",
+        "light",
+        "thrown",
+        "nick"
+      ],
+      "range": "20/60ft"
     },
     {
       "name": "Alchemist's Supplies",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 8
+      "weight": 8,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Backpack",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 5
+      "weight": 5,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Carpenter's Tools",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 6
+      "weight": 6,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Tinker's Tools",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 10
+      "weight": 10,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Weaver's Tools",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 5
+      "weight": 5,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Acid",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 1
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Alchemist's Fire",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 1
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Crystal",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 1
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Bedroll",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 7
+      "weight": 7,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Mess Kit",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 1
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Rations (1 day)",
       "quantity": 10,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 2
+      "weight": 2,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Rope, Hempen (50 feet)",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 10
+      "weight": 10,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Tinderbox",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 1
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Torch",
       "quantity": 10,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 1
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Waterskin",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 5
+      "weight": 5,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Oil",
       "quantity": 2,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 1
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Rations",
       "quantity": 10,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 2
+      "weight": 2,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Rope",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 5
+      "weight": 5,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Tinderbox",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 1
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Torch",
       "quantity": 10,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 1
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Waterskin",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 5
+      "weight": 5,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Caltrops",
       "quantity": 20,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 2
+      "weight": 2,
+      "rarity": "Common",
+      "magic": false
     },
     {
       "name": "Crowbar",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 5
+      "weight": 5,
+      "rarity": "Common",
+      "magic": false
     }
   ],
   "conditions": [],
@@ -518,7 +590,7 @@
     "description": "Spurt is a russet-colored kobold who collects critters and has several on her person, including a skunk in a wooden cage, several wasps in a bag, and centipedes in a basket. Although she can aggravate enemies by releasing these critters, she has no control over their behavior."
   },
   "patron": "Wild Magic Sorcery",
-  "_syncedAt": "2026-03-13T10:20:14.609Z",
+  "_syncedAt": "2026-03-14T12:05:57.025Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/162472191"
 }

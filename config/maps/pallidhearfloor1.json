@@ -2,229 +2,420 @@
   "id": "pallidhearfloor1",
   "name": "Pallid Hart — Ground Floor",
   "image": "pallidhearfloor1.png",
-  "gridSize": 256,
-  "width": 8960,
-  "height": 5120,
+  "gridSize": 140,
+  "width": 4900,
+  "height": 2800,
   "source": "dungeondraft",
   "dd2vttFormat": 0.3,
   "walls": [
     {
-      "x1": null,
-      "y1": null,
-      "x2": null,
-      "y2": null
+      "x1": 4340,
+      "y1": 560,
+      "x2": 4340,
+      "y2": 770,
+      "type": "wall"
     },
     {
-      "x1": null,
-      "y1": null,
-      "x2": null,
-      "y2": null
+      "x1": 4340,
+      "y1": 910,
+      "x2": 4340,
+      "y2": 1400,
+      "type": "wall"
     },
     {
-      "x1": null,
-      "y1": null,
-      "x2": null,
-      "y2": null
+      "x1": 4340,
+      "y1": 1540,
+      "x2": 4340,
+      "y2": 2240,
+      "type": "wall"
     },
     {
-      "x1": null,
-      "y1": null,
-      "x2": null,
-      "y2": null
+      "x1": 4340,
+      "y1": 1120,
+      "x2": 4550,
+      "y2": 1120,
+      "type": "wall"
     },
     {
-      "x1": null,
-      "y1": null,
-      "x2": null,
-      "y2": null
+      "x1": 4690,
+      "y1": 1120,
+      "x2": 4900,
+      "y2": 1120,
+      "type": "wall"
+    },
+    {
+      "x1": 3780,
+      "y1": 1120,
+      "x2": 3780,
+      "y2": 560,
+      "type": "wall"
+    },
+    {
+      "x1": 4340,
+      "y1": 1120,
+      "x2": 4060,
+      "y2": 1120,
+      "type": "wall"
+    },
+    {
+      "x1": 3920,
+      "y1": 1120,
+      "x2": 3780,
+      "y2": 1120,
+      "type": "wall"
+    },
+    {
+      "x1": 1120,
+      "y1": 700,
+      "x2": 1120,
+      "y2": 560,
+      "type": "wall"
+    },
+    {
+      "x1": 1120,
+      "y1": 560,
+      "x2": 4900,
+      "y2": 560,
+      "type": "wall"
+    },
+    {
+      "x1": 4900,
+      "y1": 560,
+      "x2": 4900,
+      "y2": 2240,
+      "type": "wall"
+    },
+    {
+      "x1": 4900,
+      "y1": 2240,
+      "x2": 1960,
+      "y2": 2240,
+      "type": "wall"
+    },
+    {
+      "x1": 1960,
+      "y1": 2240,
+      "x2": 1960,
+      "y2": 2660,
+      "type": "wall"
+    },
+    {
+      "x1": 1960,
+      "y1": 2660,
+      "x2": 1540,
+      "y2": 2660,
+      "type": "wall"
+    },
+    {
+      "x1": 1540,
+      "y1": 2660,
+      "x2": 1540,
+      "y2": 2240,
+      "type": "wall"
+    },
+    {
+      "x1": 1540,
+      "y1": 2240,
+      "x2": 980,
+      "y2": 2240,
+      "type": "wall"
+    },
+    {
+      "x1": 980,
+      "y1": 2240,
+      "x2": 980,
+      "y2": 1400,
+      "type": "wall"
+    },
+    {
+      "x1": 980,
+      "y1": 1400,
+      "x2": 1540,
+      "y2": 1400,
+      "type": "wall"
+    },
+    {
+      "x1": 1540,
+      "y1": 1400,
+      "x2": 1540,
+      "y2": 1120,
+      "type": "wall"
+    },
+    {
+      "x1": 1540,
+      "y1": 1120,
+      "x2": 1120,
+      "y2": 1120,
+      "type": "wall"
+    },
+    {
+      "x1": 1120,
+      "y1": 1120,
+      "x2": 1120,
+      "y2": 980,
+      "type": "wall"
+    },
+    {
+      "x1": 4340,
+      "y1": 770,
+      "x2": 4340,
+      "y2": 910,
+      "type": "door",
+      "open": false,
+      "locked": true,
+      "lockDC": 15
+    },
+    {
+      "x1": 4340,
+      "y1": 1400,
+      "x2": 4340,
+      "y2": 1540,
+      "type": "door",
+      "open": false,
+      "locked": true,
+      "lockDC": 15
+    },
+    {
+      "x1": 4550,
+      "y1": 1120,
+      "x2": 4690,
+      "y2": 1120,
+      "type": "door",
+      "open": false,
+      "locked": true,
+      "lockDC": 15
+    },
+    {
+      "x1": 4060,
+      "y1": 1120,
+      "x2": 3920,
+      "y2": 1120,
+      "type": "door",
+      "open": false,
+      "locked": false
+    },
+    {
+      "x1": 1120,
+      "y1": 980,
+      "x2": 1120,
+      "y2": 840,
+      "type": "door",
+      "open": false,
+      "locked": false
+    },
+    {
+      "x1": 1120,
+      "y1": 840,
+      "x2": 1120,
+      "y2": 700,
+      "type": "door",
+      "open": false,
+      "locked": false
+    },
+    {
+      "x1": 2660,
+      "y1": 2240,
+      "x2": 2800,
+      "y2": 2240,
+      "type": "window"
+    },
+    {
+      "x1": 3220,
+      "y1": 560,
+      "x2": 3360,
+      "y2": 560,
+      "type": "window"
+    },
+    {
+      "x1": 1960,
+      "y1": 560,
+      "x2": 2100,
+      "y2": 560,
+      "type": "window"
+    },
+    {
+      "x1": 2380,
+      "y1": 560,
+      "x2": 2520,
+      "y2": 560,
+      "type": "window"
+    },
+    {
+      "x1": 3360,
+      "y1": 2240,
+      "x2": 3500,
+      "y2": 2240,
+      "type": "window"
     }
   ],
   "lights": [
     {
-      "x": 3404,
-      "y": 1638,
-      "range": 1536,
+      "x": 3097,
+      "y": 2125,
+      "range": 700,
       "color": "ffeccd8b"
     },
     {
-      "x": 4652,
-      "y": 1366,
-      "range": 1536,
+      "x": 3710,
+      "y": 608,
+      "range": 700,
       "color": "ffeccd8b"
     },
     {
-      "x": 5860,
-      "y": 1374,
-      "range": 1536,
+      "x": 1200,
+      "y": 645,
+      "range": 700,
       "color": "ffeccd8b"
     },
     {
-      "x": 6844,
-      "y": 1370,
-      "range": 1536,
+      "x": 1193,
+      "y": 1054,
+      "range": 700,
       "color": "ffeccd8b"
     },
     {
-      "x": 6648,
-      "y": 2414,
-      "range": 1536,
+      "x": 1572,
+      "y": 1264,
+      "range": 700,
       "color": "ffeccd8b"
     },
     {
-      "x": 5604,
-      "y": 2998,
-      "range": 1536,
+      "x": 1896,
+      "y": 2239,
+      "range": 700,
       "color": "ffeccd8b"
     },
     {
-      "x": 5560,
-      "y": 2382,
-      "range": 1536,
+      "x": 1601,
+      "y": 2271,
+      "range": 700,
       "color": "ffeccd8b"
     },
     {
-      "x": 6100,
-      "y": 2394,
-      "range": 1536,
+      "x": 4282,
+      "y": 1644,
+      "range": 700,
       "color": "ffeccd8b"
     },
     {
-      "x": 6048,
-      "y": 3450,
-      "range": 1536,
+      "x": 3825,
+      "y": 2182,
+      "range": 700,
       "color": "ffeccd8b"
     },
     {
-      "x": 5496,
-      "y": 3230,
-      "range": 1536,
+      "x": 4390,
+      "y": 1191,
+      "range": 700,
       "color": "ffeccd8b"
     },
     {
-      "x": 5488,
-      "y": 3754,
-      "range": 1536,
+      "x": 4290,
+      "y": 961,
+      "range": 700,
       "color": "ffeccd8b"
     },
     {
-      "x": 3404,
-      "y": 2686,
-      "range": 1536,
+      "x": 4856,
+      "y": 591,
+      "range": 700,
       "color": "ffeccd8b"
     },
     {
-      "x": 4492,
-      "y": 3898,
-      "range": 1536,
-      "color": "ffecb48b"
-    },
-    {
-      "x": 2708,
-      "y": 1908,
-      "range": 1536,
-      "color": "ffeccd8b"
-    },
-    {
-      "x": 2704,
-      "y": 2412,
-      "range": 1536,
-      "color": "ffeccd8b"
-    },
-    {
-      "x": 3052,
-      "y": 1856,
-      "range": 1536,
+      "x": 2581,
+      "y": 633,
+      "range": 700,
       "color": "ffeccd8b"
     }
   ],
   "portals": [
     {
-      "x": 3328,
-      "y": 2176,
+      "x": 4340,
+      "y": 840,
       "closed": true,
       "bounds": [
         {
-          "x": 3328,
-          "y": 2048
+          "x": 4340,
+          "y": 770
         },
         {
-          "x": 3328,
-          "y": 2304
+          "x": 4340,
+          "y": 910
         }
       ]
     },
     {
-      "x": 6400,
-      "y": 1536,
+      "x": 4340,
+      "y": 1470,
       "closed": true,
       "bounds": [
         {
-          "x": 6400,
-          "y": 1664
+          "x": 4340,
+          "y": 1400
         },
         {
-          "x": 6400,
-          "y": 1408
+          "x": 4340,
+          "y": 1540
         }
       ]
     },
     {
-      "x": 6400,
-      "y": 2432,
+      "x": 4620,
+      "y": 1120,
       "closed": true,
       "bounds": [
         {
-          "x": 6400,
-          "y": 2560
+          "x": 4550,
+          "y": 1120
         },
         {
-          "x": 6400,
-          "y": 2304
+          "x": 4690,
+          "y": 1120
         }
       ]
     },
     {
-      "x": 5376,
-      "y": 2688,
+      "x": 3990,
+      "y": 1120,
       "closed": true,
       "bounds": [
         {
-          "x": 5376,
-          "y": 2560
+          "x": 4060,
+          "y": 1120
         },
         {
-          "x": 5376,
-          "y": 2816
+          "x": 3920,
+          "y": 1120
         }
       ]
     },
     {
-      "x": 2816,
-      "y": 2176,
+      "x": 1120,
+      "y": 910,
       "closed": true,
       "bounds": [
         {
-          "x": 2816,
-          "y": 2304
+          "x": 1120,
+          "y": 980
         },
         {
-          "x": 2816,
-          "y": 2048
+          "x": 1120,
+          "y": 840
         }
       ]
     },
     {
-      "x": 7424,
-      "y": 1664,
+      "x": 1120,
+      "y": 770,
       "closed": true,
       "bounds": [
         {
-          "x": 7424,
-          "y": 1536
+          "x": 1120,
+          "y": 840
         },
         {
-          "x": 7424,
-          "y": 1792
+          "x": 1120,
+          "y": 700
         }
       ]
     }
@@ -284,8 +475,8 @@
     "marta-mmmq6srj1": {
       "name": "Marta Kowalski",
       "type": "npc",
-      "x": 6272,
-      "y": 896,
+      "x": 3990,
+      "y": 1330,
       "image": "marta.png",
       "visible": true,
       "hidden": false,
@@ -299,8 +490,8 @@
     "patron-farmer-mmmq6srj2": {
       "name": "Old Gregor",
       "type": "npc",
-      "x": 3968,
-      "y": 2688,
+      "x": 3570,
+      "y": 1330,
       "image": "patron-farmer.png",
       "visible": true,
       "hidden": false,
@@ -314,8 +505,8 @@
     "patron-merchant-mmmq6srj3": {
       "name": "Henryk the Merchant",
       "type": "npc",
-      "x": 3712,
-      "y": 1408,
+      "x": 3430,
+      "y": 1470,
       "image": "patron-merchant.png",
       "visible": true,
       "hidden": false,
@@ -329,8 +520,8 @@
     "patron-minstrel-mmmq6srj4": {
       "name": "Katya Voss",
       "type": "npc",
-      "x": 4224,
-      "y": 1664,
+      "x": 2870,
+      "y": 1470,
       "image": "patron-minstrel.png",
       "visible": true,
       "hidden": false,
@@ -344,8 +535,8 @@
     "patron-pilgrim-mmmq6srk5": {
       "name": "Brother Aldric",
       "type": "npc",
-      "x": 3200,
-      "y": 2944,
+      "x": 2590,
+      "y": 1330,
       "image": "patron-pilgrim.png",
       "visible": true,
       "hidden": false,
@@ -359,8 +550,8 @@
     "swarm-of-rats-mmmq6srk8": {
       "name": "Swarm of Rats",
       "type": "npc",
-      "x": 7808,
-      "y": 2176,
+      "x": 4410,
+      "y": 2170,
       "image": "swarm-of-rats.png",
       "visible": false,
       "hidden": true,
@@ -374,8 +565,8 @@
     "vladislav-mmmq6srl10": {
       "name": "Vladislav Dragan",
       "type": "npc",
-      "x": 1152,
-      "y": 2944,
+      "x": 1050,
+      "y": 1890,
       "image": "vladislav.png",
       "visible": true,
       "hidden": false,
@@ -389,8 +580,8 @@
     "werewolf-mmmq6srl11": {
       "name": "Tomas Birkov",
       "type": "npc",
-      "x": 6272,
-      "y": 1408,
+      "x": 3710,
+      "y": 1750,
       "image": "werewolf.png",
       "visible": true,
       "hidden": false,
@@ -404,8 +595,8 @@
     "spurt-ai-pc": {
       "name": "Spurt the Sorcerer",
       "type": "pc",
-      "x": 4480,
-      "y": 2688,
+      "x": 1890,
+      "y": 1190,
       "image": "spurt.png",
       "visible": true,
       "hidden": false,

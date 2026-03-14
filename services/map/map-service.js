@@ -252,6 +252,51 @@ class MapService {
       const { playerId, mapId } = req.body || {};
       if (!playerId || !mapId) return res.status(400).json({ error: 'playerId and mapId required' });
       this.playerMapAssignment[playerId] = mapId;
+
+      // Push the target map's full state to the player
+      const targetMap = this.maps.get(mapId);
+      if (targetMap) {
+        // Build map state matching what loadFromState expects
+        const mapState = {
+          id: mapId,
+          name: targetMap.name,
+          image: targetMap.image,
+          gridSize: targetMap.gridSize || 70,
+          width: targetMap.width || 1400,
+          height: targetMap.height || 1050,
+          walls: targetMap.walls || [],
+          lights: targetMap.lights || [],
+          zones: targetMap.zones || [],
+          tokens: {}
+        };
+        // Include tokens from the target map's definition (these aren't in state if DM is on a different map)
+        if (targetMap.tokens) {
+          for (const [tid, tok] of Object.entries(targetMap.tokens)) {
+            if (!tok.hidden) {
+              mapState.tokens[tid] = tok.type === 'npc' ? { ...tok, name: 'Unknown' } : tok;
+            }
+          }
+        }
+        // Include tokens from state that are assigned to this map
+        const allTokens = this.state.get('map.tokens') || {};
+        for (const [tid, tok] of Object.entries(allTokens)) {
+          const tokMap = this.playerMapAssignment[tid] || this.activeMapId;
+          if (tokMap === mapId && !tok.hidden) {
+            mapState.tokens[tid] = tok.type === 'npc' ? { ...tok, name: 'Unknown' } : tok;
+          }
+        }
+        // Ensure the player's own token is included
+        if (!mapState.tokens[playerId]) {
+          // Check state first, then map def
+          const stateTok = allTokens[playerId];
+          const mapTok = targetMap.tokens?.[playerId];
+          if (stateTok) mapState.tokens[playerId] = stateTok;
+          else if (mapTok) mapState.tokens[playerId] = mapTok;
+        }
+        this.bus.dispatch('map:player_map_change', { playerId, mapState });
+        console.log(`[MapService] Pushed map ${mapId} (${targetMap.name}) to player ${playerId} — ${mapState.walls.length} walls, ${mapState.lights.length} lights`);
+      }
+
       res.json({ playerId, mapId });
     });
 
@@ -302,14 +347,15 @@ class MapService {
           this.bus.dispatch('dm:private_message', {
             playerId, text: 'You pick the lock! The door opens.', durationMs: 4000
           });
-          this.bus.dispatch('dm:private_message', {
-            playerId: 'all', text: 'A door clicks open...', durationMs: 3000
-          });
+          // Notify nearby players they hear the door
+          this._notifyNearDoor(wall, mapDef, playerId);
           return res.json({ index, open: true, unlocked: true, roll, total, dc: wall.lockDC });
         } else {
           this.bus.dispatch('dm:private_message', {
             playerId, text: 'The lock holds firm.', durationMs: 3000
           });
+          // Nearby players might hear the failed attempt (rattling)
+          this._notifyNearDoor(wall, mapDef, playerId, true);
           return res.json({ index, open: false, unlocked: false, roll, total, dc: wall.lockDC });
         }
       }
@@ -322,11 +368,8 @@ class MapService {
       // Broadcast updated walls for dynamic lighting
       this.state.set('map.walls', mapDef.walls.filter(w => w.x1 !== null));
 
-      this.bus.dispatch('dm:private_message', {
-        playerId: 'all',
-        text: wall.open ? 'A door creaks open...' : 'A door slams shut.',
-        durationMs: 3000
-      });
+      // Notify nearby players (within hearing range of the door)
+      this._notifyNearDoor(wall, mapDef);
 
       res.json({ index, open: wall.open });
     });
@@ -528,7 +571,7 @@ class MapService {
 
     // POST /api/map/light/update — update a light source
     app.post('/api/map/light/update', (req, res) => {
-      const { index, x, y, range, color } = req.body || {};
+      const { index, x, y, range, color, enabled } = req.body || {};
       if (index == null) return res.status(400).json({ error: 'index required' });
       const lights = this.state.get('map.lights') || [];
       if (index < 0 || index >= lights.length) return res.status(404).json({ error: 'Light not found' });
@@ -536,6 +579,7 @@ class MapService {
       if (y != null) lights[index].y = y;
       if (range != null) lights[index].range = range;
       if (color != null) lights[index].color = color;
+      if (enabled !== undefined) lights[index].enabled = enabled;
       this.state.set('map.lights', lights);
       const mapDef = this.maps.get(this.activeMapId);
       if (mapDef) mapDef.lights = lights;
@@ -981,12 +1025,23 @@ class MapService {
   }
 
   _moveToken(tokenId, x, y, opts = {}) {
-    const token = this.state.get(`map.tokens.${tokenId}`);
-    if (!token) return null;
+    let token = this.state.get(`map.tokens.${tokenId}`);
 
-    // Use the player's assigned map (not the DM's active map) for walls/grid
-    const playerMapId = (token.type === 'pc' && this.playerMapAssignment[tokenId])
+    // Determine which map this token is on (need this before we have the token object)
+    const playerMapId = this.playerMapAssignment[tokenId]
       ? this.playerMapAssignment[tokenId] : this.activeMapId;
+    const isOnActiveMap = playerMapId === this.activeMapId;
+
+    // If token not in state (DM viewing different map), use map definition
+    if (!token) {
+      const fallbackMap = this.maps.get(playerMapId);
+      if (fallbackMap?.tokens?.[tokenId]) {
+        token = fallbackMap.tokens[tokenId];
+      } else {
+        return null;
+      }
+    }
+
     const mapDef = this.maps.get(playerMapId);
     const grid = mapDef?.gridSize || 70;
     const half = grid / 2;
@@ -1031,18 +1086,28 @@ class MapService {
       }
     }
 
-    this.state.set(`map.tokens.${tokenId}.x`, snappedX);
-    this.state.set(`map.tokens.${tokenId}.y`, snappedY);
+    // Update state (only if token is on the DM's active map)
+    if (isOnActiveMap) {
+      this.state.set(`map.tokens.${tokenId}.x`, snappedX);
+      this.state.set(`map.tokens.${tokenId}.y`, snappedY);
+    }
+    // Always update map definition so position persists across map switches
+    if (mapDef?.tokens?.[tokenId]) {
+      mapDef.tokens[tokenId].x = snappedX;
+      mapDef.tokens[tokenId].y = snappedY;
+    }
 
-    // Check if token entered a new zone
-    const zone = this._getZoneAt(snappedX, snappedY);
-    const oldZone = this._getZoneAt(oldX, oldY);
-    if (zone?.id !== oldZone?.id) {
-      this.bus.dispatch('map:zone_enter', {
-        tokenId,
-        zone: zone || null,
-        previousZone: oldZone || null
-      });
+    // Check if token entered a new zone (only on active map — zones use activeMapId internally)
+    if (isOnActiveMap) {
+      const zone = this._getZoneAt(snappedX, snappedY);
+      const oldZone = this._getZoneAt(oldX, oldY);
+      if (zone?.id !== oldZone?.id) {
+        this.bus.dispatch('map:zone_enter', {
+          tokenId,
+          zone: zone || null,
+          previousZone: oldZone || null
+        });
+      }
     }
 
     // Dynamic lighting replaces zone-based fog reveal — vision computed client-side
@@ -1123,13 +1188,77 @@ class MapService {
 
   /**
    * Line segment intersection test
+   * t = parameter along movement path (0=start, 1=end)
+   * u = parameter along wall segment (0=start, 1=end)
+   * Tight epsilon on t (don't block if token starts/ends right on a wall)
+   * Include wall endpoints (u >= 0, u <= 1) so adjacent wall/door segments have no gaps
    */
   _linesIntersect(ax1, ay1, ax2, ay2, bx1, by1, bx2, by2) {
-    const d = (bx2 - bx1) * (ay2 - ay1) - (by2 - by1) * (ax2 - ax1);
+    const dax = ax2 - ax1, day = ay2 - ay1;
+    const dbx = bx2 - bx1, dby = by2 - by1;
+    const d = dax * dby - day * dbx;
     if (Math.abs(d) < 0.0001) return false;
-    const t = ((bx1 - ax1) * (ay2 - ay1) - (by1 - ay1) * (ax2 - ax1)) / d;
-    const u = -((ax2 - ax1) * (by1 - ay1) - (ay2 - ay1) * (bx1 - ax1)) / d;
-    return t > 0.01 && t < 0.99 && u > 0.01 && u < 0.99;
+    const t = ((bx1 - ax1) * dby - (by1 - ay1) * dbx) / d;
+    const u = ((bx1 - ax1) * day - (by1 - ay1) * dax) / d;
+    return t > 0.01 && t < 0.99 && u >= -0.001 && u <= 1.001;
+  }
+
+  /**
+   * Notify players near a door about sounds.
+   * Hearing range: 60ft (12 squares) through open air, 30ft (6 squares) through walls.
+   * @param {object} wall - the door wall object
+   * @param {object} mapDef - the map definition
+   * @param {string} excludePlayer - player who caused the sound (already knows)
+   * @param {boolean} failedAttempt - true if this is a failed lock pick (quieter)
+   */
+  _notifyNearDoor(wall, mapDef, excludePlayer, failedAttempt) {
+    const doorX = (wall.x1 + wall.x2) / 2;
+    const doorY = (wall.y1 + wall.y2) / 2;
+    const grid = mapDef.gridSize || 140;
+    const hearingRange = (failedAttempt ? 20 : 60) / 5 * grid; // 20ft for rattling, 60ft for open/close
+
+    // Check all PC tokens on this map
+    const allTokens = this.state.get('map.tokens') || {};
+    for (const [tokenId, tok] of Object.entries(allTokens)) {
+      if (tok.type !== 'pc') continue;
+      if (tokenId === excludePlayer) continue;
+      // Check the token is on the same map
+      const tokMap = this.playerMapAssignment[tokenId] || this.activeMapId;
+      if (tokMap !== mapDef.id) continue;
+
+      const dx = tok.x - doorX, dy = tok.y - doorY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > hearingRange) continue;
+
+      // Player is in range — pick message based on distance and wall blocking
+      const wallsBetween = this._visionBlockedByWall(tok.x, tok.y, doorX, doorY, mapDef.walls || []);
+      let text;
+      if (failedAttempt) {
+        text = wallsBetween
+          ? 'You hear faint metallic scratching nearby...'
+          : 'You hear someone fiddling with a lock...';
+      } else if (wall.open) {
+        text = wallsBetween
+          ? 'You hear a door creak open somewhere nearby.'
+          : 'A door creaks open nearby.';
+      } else {
+        text = wallsBetween
+          ? 'You hear a door slam shut somewhere nearby.'
+          : 'A door slams shut nearby.';
+      }
+
+      this.bus.dispatch('dm:private_message', {
+        playerId: tokenId, text, durationMs: 4000
+      });
+    }
+
+    // Always tell the DM
+    const doorLabel = `Door ${mapDef.walls.indexOf(wall) + 1}`;
+    const action = failedAttempt ? 'lock pick attempt (failed)' : (wall.open ? 'opened' : 'closed');
+    this.bus.dispatch('dm:whisper', {
+      text: `${doorLabel} ${action}` + (excludePlayer ? ` by ${excludePlayer}` : ''),
+      priority: 5, category: 'environment'
+    });
   }
 
   /**
@@ -1326,6 +1455,16 @@ class MapService {
             durationMs: 12000
           });
         }
+        // Auto-send handout if check has a document/handout defined
+        if (check.handout) {
+          this.bus.dispatch('handout:send', {
+            playerId,
+            title: check.handout.title || 'Found Document',
+            text: check.handout.text || check.successText,
+            image: check.handout.image || null,
+            preview: (check.handout.text || check.successText || '').slice(0, 80)
+          });
+        }
         // Send detailed DM whisper if provided
         if (check.dmWhisper) {
           this.bus.dispatch('dm:whisper', {
@@ -1424,6 +1563,7 @@ class MapService {
     if (!mapDef) return [];
 
     const links = [];
+    // Check zones with transitionTo
     for (const zone of (mapDef.zones || [])) {
       if (zone.transitionTo) {
         const targetMap = this.maps.get(zone.transitionTo);
@@ -1435,6 +1575,19 @@ class MapService {
           x: zone.x, y: zone.y
         });
       }
+    }
+    // Check floorLinks array in map definition
+    for (const link of (mapDef.floorLinks || [])) {
+      const targetMapId = link.targetMapId || link.targetMap;
+      if (!targetMapId) continue;
+      const targetMap = this.maps.get(targetMapId);
+      links.push({
+        label: link.label || link.name || 'Floor Link',
+        targetMapId,
+        targetMapName: targetMap?.name || targetMapId,
+        x: link.x, y: link.y,
+        spawnPoint: link.spawnPoint || null
+      });
     }
     return links;
   }

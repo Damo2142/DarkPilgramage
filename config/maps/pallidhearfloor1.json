@@ -611,16 +611,11 @@
   },
   "floorLinks": [
     {
-      "targetMapId": "pallid-hart-cellar",
-      "label": "Down to Cellar",
-      "x": 6400,
-      "y": 1024
-    },
-    {
-      "targetMapId": "pallid-hart-upper",
+      "targetMapId": "pallidheart2",
       "label": "Up to Upper Floor",
-      "x": 5760,
-      "y": 3840
+      "x": 3850,
+      "y": 1890,
+      "spawnPoint": { "x": 1680, "y": 1190 }
     }
   ],
   "playerSpawns": {

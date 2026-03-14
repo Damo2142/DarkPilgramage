@@ -14,6 +14,7 @@ class PlayerBridgeService {
     this.wss = null;
     this.players = new Map();
     this.playerMaps = {};  // playerId -> mapId (which map each player is viewing)
+    this._bootTime = Date.now().toString(36); // unique per server start
   }
 
   async init(orchestrator) {
@@ -535,6 +536,16 @@ class PlayerBridgeService {
       }
     }, 'player-bridge');
 
+    // Player assigned to a different map — send them the full map state
+    this.bus.subscribe('map:player_map_change', (env) => {
+      const { playerId, mapState } = env.data;
+      if (this.players.has(playerId)) {
+        this.playerMaps[playerId] = mapState.id;
+        this._sendToPlayer(playerId, { type: 'map:full_update', map: mapState });
+        console.log(`[PlayerBridge] Sent map ${mapState.id} to ${playerId}`);
+      }
+    }, 'player-bridge');
+
     this.bus.subscribe('map:token_removed', (env) => {
       const activeMapId = this.state.get('map.id');
       for (const [pid] of this.players) {
@@ -654,6 +665,7 @@ class PlayerBridgeService {
       const initMsg = JSON.stringify({
         type: 'init',
         playerId,
+        serverBoot: this._bootTime,
         player: initPlayer,
         scene: sceneState || {},
         combat: combatState || {},
@@ -813,6 +825,16 @@ class PlayerBridgeService {
             });
           }
         }
+        break;
+      }
+
+      case 'map:token_facing': {
+        // Players can only change their own token's facing
+        if (msg.tokenId !== playerId) break;
+        const facing = typeof msg.facing === 'number' ? msg.facing : 0;
+        this.state.set(`map.tokens.${playerId}.facing`, facing);
+        // Broadcast facing change to all players
+        this.bus.dispatch('map:token_facing', { tokenId: playerId, facing });
         break;
       }
 

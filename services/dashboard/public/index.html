@@ -1553,11 +1553,15 @@
   let state = {};
   let currentAtmo = '';
 
+  var _dashConnected = false;
   function connect() {
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     ws = new WebSocket(`${proto}//${location.host}`);
 
     ws.onopen = () => {
+      // Auto-reload on reconnect (picks up HTML changes after server restart)
+      if (_dashConnected) { location.reload(); return; }
+      _dashConnected = true;
       document.getElementById('overlay').classList.add('connected');
       document.getElementById('ws-dot').className = 'dot green';
       document.getElementById('ws-label').textContent = 'Connected';
@@ -1660,6 +1664,12 @@
       case 'map:token_moved':
         VTT.onStateUpdate(`map.tokens.${msg.data.tokenId}.x`, msg.data.x);
         VTT.onStateUpdate(`map.tokens.${msg.data.tokenId}.y`, msg.data.y);
+        break;
+      case 'map:token_facing':
+        if (msg.data.tokenId && VTT.tokens[msg.data.tokenId]) {
+          VTT.tokens[msg.data.tokenId].facing = msg.data.facing;
+          VTT.render();
+        }
         break;
       case 'map:token_added':
         if (msg.data?.token) {
@@ -3670,10 +3680,10 @@
             else doorLabel += ' Closed';
             ctx.fillStyle = w.locked ? '#ff4444' : w.open ? 'rgba(100,200,80,0.9)' : 'rgba(220,180,80,0.9)';
             ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.lineWidth = 2;
-            ctx.font = 'bold ' + Math.max(9, gs*0.12) + 'px sans-serif';
+            ctx.font = 'bold ' + Math.max(12, gs*0.22) + 'px sans-serif';
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.strokeText(doorLabel, dcx, dcy - gs*0.18);
-            ctx.fillText(doorLabel, dcx, dcy - gs*0.18);
+            ctx.strokeText(doorLabel, dcx, dcy - gs*0.25);
+            ctx.fillText(doorLabel, dcx, dcy - gs*0.25);
           } else if (wtype === 'window') {
             // Window: blue, thin
             ctx.strokeStyle = 'rgba(64,128,200,0.8)';
@@ -3684,7 +3694,7 @@
             // Window label
             var wcx = (wx1+wx2)/2, wcy = (wy1+wy2)/2;
             ctx.fillStyle = 'rgba(100,160,220,0.9)'; ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.lineWidth = 2;
-            ctx.font = 'bold ' + Math.max(9, gs*0.12) + 'px sans-serif';
+            ctx.font = 'bold ' + Math.max(12, gs*0.22) + 'px sans-serif';
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.strokeText('W' + (wi+1), wcx, wcy - gs*0.15);
             ctx.fillText('W' + (wi+1), wcx, wcy - gs*0.15);
@@ -3708,23 +3718,27 @@
           var light = this.mapData.lights[li];
           var lx = light.x - mw/2, ly = light.y - mh/2;
           var lr = Math.min(light.range || 200, 800);
-          // Soft glow circle
-          var lgr = ctx.createRadialGradient(lx, ly, 0, lx, ly, lr);
-          lgr.addColorStop(0, 'rgba(255,220,120,0.12)');
-          lgr.addColorStop(0.5, 'rgba(255,200,80,0.04)');
-          lgr.addColorStop(1, 'rgba(255,180,60,0)');
-          ctx.fillStyle = lgr;
-          ctx.beginPath(); ctx.arc(lx, ly, lr, 0, Math.PI*2); ctx.fill();
-          // Center dot
-          ctx.fillStyle = 'rgba(255,200,80,0.8)';
-          ctx.beginPath(); ctx.arc(lx, ly, 4, 0, Math.PI*2); ctx.fill();
+          var isDisabled = light.enabled === false;
+          // Soft glow circle (dimmed if disabled)
+          if (!isDisabled) {
+            var lgr = ctx.createRadialGradient(lx, ly, 0, lx, ly, lr);
+            lgr.addColorStop(0, 'rgba(255,220,120,0.12)');
+            lgr.addColorStop(0.5, 'rgba(255,200,80,0.04)');
+            lgr.addColorStop(1, 'rgba(255,180,60,0)');
+            ctx.fillStyle = lgr;
+            ctx.beginPath(); ctx.arc(lx, ly, lr, 0, Math.PI*2); ctx.fill();
+          }
+          // Center dot (grey if disabled, yellow if on)
+          ctx.fillStyle = isDisabled ? 'rgba(100,100,100,0.6)' : 'rgba(255,200,80,0.8)';
+          ctx.beginPath(); ctx.arc(lx, ly, isDisabled ? 3 : 4, 0, Math.PI*2); ctx.fill();
           // Light index label
           ctx.fillStyle = 'rgba(255,220,100,0.95)';
           ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.lineWidth = 2;
-          ctx.font = 'bold ' + Math.max(9, gs*0.12) + 'px sans-serif';
+          ctx.font = 'bold ' + Math.max(12, gs*0.22) + 'px sans-serif';
           ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.strokeText('L' + (li+1), lx, ly - 10);
-          ctx.fillText('L' + (li+1), lx, ly - 10);
+          var loff = Math.max(14, gs*0.15);
+          ctx.strokeText('L' + (li+1), lx, ly - loff);
+          ctx.fillText('L' + (li+1), lx, ly - loff);
         }
       }
 
@@ -3941,6 +3955,25 @@
         ctx.font = `bold ${r*0.9}px Cinzel, serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(label, x, y);
+      }
+
+      // Facing direction indicator (arrow on token edge)
+      if (tok.facing != null) {
+        const fAngle = tok.facing;
+        const arrowLen = r * 0.5;
+        const arrowX = x + Math.cos(fAngle) * r;
+        const arrowY = y + Math.sin(fAngle) * r;
+        ctx.save();
+        ctx.translate(arrowX, arrowY);
+        ctx.rotate(fAngle);
+        ctx.beginPath();
+        ctx.moveTo(arrowLen * 0.5, 0);
+        ctx.lineTo(-arrowLen * 0.3, -arrowLen * 0.35);
+        ctx.lineTo(-arrowLen * 0.3, arrowLen * 0.35);
+        ctx.closePath();
+        ctx.fillStyle = tok.type === 'pc' ? '#c9a54e' : '#e0c060';
+        ctx.fill();
+        ctx.restore();
       }
 
       // Name label below (matches player map style)
@@ -4967,7 +5000,8 @@
       if (!el) return;
       if (!links.length) { el.innerHTML = '<span style="color:var(--text-dim);">No floor links on this map</span>'; return; }
       el.innerHTML = links.map(function(l) {
-        return '<div style="padding:2px 0;">' + esc(l.zoneName) + ' → <span style="color:var(--accent);">' + esc(l.targetMapName) + '</span></div>';
+        var name = l.label || l.zoneName || 'Link';
+        return '<div style="padding:2px 0;cursor:pointer;" onclick="transitionToLink(\'' + esc(l.targetMapId) + '\',' + JSON.stringify(l.spawnPoint) + ')">' + esc(name) + ' → <span style="color:var(--accent);">' + esc(l.targetMapName) + '</span></div>';
       }).join('');
     } catch(e) {}
     // Also populate floor target selector
@@ -4999,6 +5033,15 @@
     if (!target) return;
     await fetch('/api/map/floor-transition', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetMapId: target }) });
     addTranscript({ speaker: 'system', text: 'Floor transition → ' + target });
+    VTT.loadMap();
+    loadFloorLinks();
+  }
+  async function transitionToLink(targetMapId, spawnPoint) {
+    if (!targetMapId) return;
+    var body = { targetMapId: targetMapId };
+    if (spawnPoint) body.spawnPoint = spawnPoint;
+    await fetch('/api/map/floor-transition', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    addTranscript({ speaker: 'system', text: 'Floor transition → ' + targetMapId });
     VTT.loadMap();
     loadFloorLinks();
   }
@@ -5582,15 +5625,17 @@
   function toggleDoor(idx) {
     var w = mapWalls[idx];
     if (!w || w.type !== 'door') return;
-    w.open = !w.open;
-    // Also tell the server
+    // Tell server (dmOverride bypasses locks)
     fetch('/api/map/walls/toggle-door', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ index: idx })
+      body: JSON.stringify({ index: idx, dmOverride: true })
+    }).then(function(r) { return r.json(); }).then(function(res) {
+      w.open = res.open;
+      if (res.open) { w.locked = false; }
+      renderWallList();
+      VTT.render();
     }).catch(console.error);
-    renderWallList();
-    VTT.render();
   }
 
   function clearAllWalls() {
@@ -5739,6 +5784,21 @@
     }).catch(console.error);
   }
 
+  function toggleLight(idx) {
+    if (!mapLights[idx]) return;
+    var newState = mapLights[idx].enabled !== false ? false : true;
+    fetch('/api/map/light/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ index: idx, enabled: newState })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      mapLights[idx] = d.light;
+      if (VTT.mapData) VTT.mapData.lights = mapLights;
+      renderLightList();
+      VTT.render();
+    }).catch(console.error);
+  }
+
   function clearAllLights() {
     if (!mapLights.length) return;
     if (!confirm('Remove all ' + mapLights.length + ' lights?')) return;
@@ -5784,9 +5844,13 @@
       var gs = VTT.mapData?.gridSize || 140;
       var gx = Math.floor(l.x / gs);
       var gy = Math.floor(l.y / gs);
-      return '<div style="display:flex;justify-content:space-between;padding:1px 0;align-items:center;">'
-        + '<span style="color:#ffc848;cursor:pointer;" onclick="updateLightRange(' + i + ')">💡 Light ' + (i+1) + ' [' + gx + ',' + gy + '] r=' + l.range + '</span>'
-        + '<span style="cursor:pointer;color:var(--red);" onclick="removeLight(' + i + ')">✕</span></div>';
+      var isOff = l.enabled === false;
+      var icon = isOff ? '⚫' : '💡';
+      var col = isOff ? 'var(--text-dim)' : '#ffc848';
+      return '<div style="display:flex;justify-content:space-between;padding:1px 0;align-items:center;gap:2px;">'
+        + '<span style="color:' + col + ';cursor:pointer;flex:1;" onclick="updateLightRange(' + i + ')">' + icon + ' L' + (i+1) + ' [' + gx + ',' + gy + '] r=' + l.range + '</span>'
+        + '<span style="cursor:pointer;color:' + (isOff ? 'var(--text-dim)' : 'var(--green)') + ';font-size:9px;" onclick="toggleLight(' + i + ')">[' + (isOff ? 'OFF' : 'ON') + ']</span>'
+        + '<span style="cursor:pointer;color:var(--red);margin-left:2px;" onclick="removeLight(' + i + ')">✕</span></div>';
     }).join('');
   }
 

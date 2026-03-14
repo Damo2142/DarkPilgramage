@@ -44,6 +44,10 @@ class AIEngine {
 
     // Initialize subsystems
     this.context = new ContextBuilder(this.state, this.config);
+    const mapService = this.orchestrator.getService('map');
+    if (mapService) {
+      this.context.setMapService(mapService);
+    }
     this.npc = new NpcHandler(this.gemini, this.context, this.bus, this.state, this.config);
     this.atmosphere = new AtmosphereAdvisor(this.gemini, this.context, this.bus, this.state, this.config);
     this.story = new StoryTracker(this.gemini, this.context, this.bus, this.state, this.config);

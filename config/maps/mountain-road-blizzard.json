@@ -120,7 +120,11 @@
         "max": 18,
         "temp": 0
       },
-      "ac": 11
+      "ac": 11,
+      "light": {
+        "bright": 256,
+        "dim": 256
+      }
     }
   },
   "playerSpawns": {

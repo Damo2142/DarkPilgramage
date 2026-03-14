@@ -148,7 +148,8 @@
       "y2": 1680,
       "type": "door",
       "open": false,
-      "locked": false
+      "locked": true,
+      "lockDC": 15
     },
     {
       "x1": 2380,
@@ -157,7 +158,8 @@
       "y2": 1680,
       "type": "door",
       "open": false,
-      "locked": false
+      "locked": true,
+      "lockDC": 15
     },
     {
       "x1": 560,
@@ -166,7 +168,8 @@
       "y2": 980,
       "type": "door",
       "open": false,
-      "locked": false
+      "locked": true,
+      "lockDC": 25
     },
     {
       "x1": 1260,
@@ -175,7 +178,8 @@
       "y2": 840,
       "type": "door",
       "open": false,
-      "locked": false
+      "lockDC": 15,
+      "locked": true
     },
     {
       "x1": 1960,
@@ -184,7 +188,8 @@
       "y2": 840,
       "type": "door",
       "open": false,
-      "locked": false
+      "locked": true,
+      "lockDC": 15
     },
     {
       "x1": 2660,
@@ -193,10 +198,138 @@
       "y2": 840,
       "type": "door",
       "open": false,
-      "locked": false
+      "locked": true,
+      "lockDC": 15
     }
   ],
-  "lights": [],
+  "lights": [
+    {
+      "x": 2915,
+      "y": 902,
+      "range": 700,
+      "color": "ffeccd8b",
+      "enabled": true
+    },
+    {
+      "x": 2785,
+      "y": 1607,
+      "range": 700,
+      "color": "ffeccd8b",
+      "enabled": true
+    },
+    {
+      "x": 2785,
+      "y": 1742,
+      "range": 700,
+      "color": "ffeccd8b",
+      "enabled": false
+    },
+    {
+      "x": 2119,
+      "y": 1737,
+      "range": 700,
+      "color": "ffeccd8b",
+      "enabled": false
+    },
+    {
+      "x": 1820,
+      "y": 1617,
+      "range": 700,
+      "color": "ffeccd8b",
+      "enabled": true
+    },
+    {
+      "x": 1575,
+      "y": 1752,
+      "range": 700,
+      "color": "ffeccd8b",
+      "enabled": false
+    },
+    {
+      "x": 1088,
+      "y": 1742,
+      "range": 700,
+      "color": "ffeccd8b",
+      "enabled": false
+    },
+    {
+      "x": 1097,
+      "y": 1612,
+      "range": 700,
+      "color": "ffeccd8b",
+      "enabled": true
+    },
+    {
+      "x": 499,
+      "y": 913,
+      "range": 700,
+      "color": "ffeccd8b",
+      "enabled": true
+    },
+    {
+      "x": 350,
+      "y": 556,
+      "range": 700,
+      "color": "ffeccd8b",
+      "enabled": true
+    },
+    {
+      "x": 904,
+      "y": 450,
+      "range": 700,
+      "color": "ffeccd8b",
+      "enabled": true
+    },
+    {
+      "x": 350,
+      "y": 1453,
+      "range": 700,
+      "color": "ffeccd8b",
+      "enabled": true
+    },
+    {
+      "x": 427,
+      "y": 1048,
+      "range": 700,
+      "color": "ffeccd8b",
+      "enabled": true
+    },
+    {
+      "x": 1324,
+      "y": 204,
+      "range": 700,
+      "color": "ffeccd8b",
+      "enabled": false
+    },
+    {
+      "x": 2057,
+      "y": 195,
+      "range": 700,
+      "color": "ffeccd8b",
+      "enabled": false
+    },
+    {
+      "x": 2732,
+      "y": 200,
+      "range": 700,
+      "color": "ffeccd8b",
+      "enabled": false
+    },
+    {
+      "x": 2377,
+      "y": 899,
+      "range": 700,
+      "color": "ffeccd8b",
+      "enabled": true
+    },
+    {
+      "x": 1662,
+      "y": 906,
+      "range": 700,
+      "color": "ffeccd8b",
+      "enabled": true
+    }
+  ],
   "portals": [
     {
       "x": 1400,
@@ -364,7 +497,11 @@
           "dc": 13,
           "successText": "Under the mattress: a torn journal page. 'They come at night. The innkeeper watches. Do not drink the wine.'",
           "failText": "The room appears to have been used recently but nothing unusual stands out.",
-          "triggerOnce": true
+          "triggerOnce": true,
+          "handout": {
+            "title": "Torn Journal Page",
+            "text": "The handwriting is shaky, written in haste:\n\n'They come at night. The innkeeper watches. Do not drink the wine. The cellar — something lives down there. I heard it scratching. Pacing. God forgive me, I think it was a man once.\n\nIf you find this, leave. Leave before dark. Before HE notices you.'\n\nThe rest of the page is torn away."
+          }
         }
       ]
     },
@@ -383,14 +520,20 @@
           "dc": 14,
           "successText": "You hear faint scratching from inside the walls. Something is alive in there.",
           "failText": "The room is unpleasant but quiet.",
-          "triggerOnce": true
+          "triggerOnce": true,
+          "triggered": [
+            "jerome"
+          ]
         },
         {
           "skill": "investigation",
           "dc": 15,
           "successText": "The dark stains are blood — lots of it, poorly cleaned. A loose floorboard conceals a hole down to the ground floor.",
           "failText": "Old stains. Could be wine, could be worse.",
-          "triggerOnce": true
+          "triggerOnce": true,
+          "triggered": [
+            "jerome"
+          ]
         }
       ]
     },
@@ -409,7 +552,11 @@
           "dc": 11,
           "successText": "The travel bag belongs to a merchant named Henryk. His journal mentions hearing screams from the cellar two nights ago.",
           "failText": "Someone left in a hurry.",
-          "triggerOnce": true
+          "triggerOnce": true,
+          "handout": {
+            "title": "Henryk's Travel Journal",
+            "text": "Entry dated three days ago:\n\n'Arrived at the Pallid Hart. The innkeeper Marta seems nervous — keeps glancing at the cellar door. A hooded man sits alone in the corner. He never eats. Never drinks.\n\nI heard screams from the cellar last night. Marta says it was the wind. It was NOT the wind.\n\nTwo guests have vanished since I arrived. The innkeeper says they left at dawn. I saw no tracks in the snow.\n\nI must leave at first light. Something is very wrong here.'"
+          }
         }
       ]
     },
@@ -428,7 +575,11 @@
           "dc": 16,
           "successText": "Behind a loose stone in the fireplace: a pouch of silver coins stamped with an unfamiliar crest, and a letter sealed with black wax. The letter reads: 'Keep them fed. He grows impatient.'",
           "failText": "A tidy room. Marta keeps her things in order.",
-          "triggerOnce": true
+          "triggerOnce": true,
+          "handout": {
+            "title": "Sealed Letter (Black Wax)",
+            "text": "The black wax seal bears a sigil — a bat over a crescent moon.\n\nThe letter is written in elegant, archaic script:\n\n'Marta,\n\nKeep them fed. He grows impatient. The gathering at Houska approaches and the Master requires strength. Do not fail us again.\n\nSend word when the next travelers arrive. We will need at least three before the moon turns.\n\nThe Three Seats await.\n\n— V.D.'"
+          }
         },
         {
           "skill": "perception",
@@ -444,8 +595,8 @@
     "vampire-spawn-upper": {
       "name": "Vampire Spawn",
       "type": "npc",
-      "x": 1330,
-      "y": 490,
+      "x": 1190,
+      "y": 770,
       "image": "vampire-spawn.png",
       "visible": false,
       "hidden": true,
@@ -459,8 +610,8 @@
     "swarm-bats-upper": {
       "name": "Swarm of Bats",
       "type": "npc",
-      "x": 490,
-      "y": 630,
+      "x": 2310,
+      "y": 490,
       "image": "swarm-of-bats.png",
       "visible": false,
       "hidden": true,
@@ -485,20 +636,35 @@
       },
       "ac": 10,
       "actorSlug": "swarm-of-rats"
+    },
+    "jerome": {
+      "name": "Barry Goodfellow Frascht",
+      "type": "pc",
+      "x": 1330,
+      "y": 910,
+      "image": "jerome.webp",
+      "visible": true,
+      "hp": {
+        "current": 18,
+        "max": 18,
+        "temp": 0
+      },
+      "ac": 12,
+      "light": {
+        "bright": 560,
+        "dim": 560
+      }
     }
   },
   "floorLinks": [
     {
-      "id": "stairs-down",
-      "name": "Stairs to Ground Floor",
-      "targetMap": "pallidheart",
+      "targetMapId": "pallidhearfloor1",
+      "label": "Down to Ground Floor",
       "x": 1680,
       "y": 1120,
-      "w": 280,
-      "h": 280,
       "spawnPoint": {
-        "x": 1750,
-        "y": 1400
+        "x": 3850,
+        "y": 1890
       }
     }
   ],

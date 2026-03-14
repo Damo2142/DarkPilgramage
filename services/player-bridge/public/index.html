@@ -427,6 +427,7 @@
     <div id="zone-banner" style="display:none;position:absolute;top:0;left:0;right:0;background:rgba(15,15,20,0.9);border-bottom:2px solid var(--accent-dim);padding:10px 14px;text-align:center;z-index:10;">
       <div style="font-family:Cinzel,serif;color:var(--accent);font-size:13px;" id="zone-banner-text"></div>
     </div>
+    <button id="rotate-btn" onclick="PlayerMap._toggleRotateMode()" style="position:absolute;bottom:8px;right:8px;z-index:10;background:rgba(30,30,40,0.85);color:#aaa;border:1px solid #555;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;">Rotate</button>
   </div>
   <!-- STATS -->
   <div class="panel active" id="panel-stats">
@@ -670,6 +671,7 @@ function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 // ── WS ──────────────────────────────────────────────────────────────
+var _serverBoot = null; // track server boot time to detect restarts
 function connect(){
   ws=new WebSocket(WSU);
   ws.onopen=()=>$('conn-dot').classList.add('on');
@@ -682,6 +684,15 @@ function send(d){if(ws&&ws.readyState===1)ws.send(JSON.stringify(d));}
 function handle(m){
   switch(m.type){
     case 'init':
+      // Auto-reload on server restart (picks up HTML changes without manual refresh)
+      if (m.serverBoot) {
+        if (_serverBoot && _serverBoot !== m.serverBoot) {
+          console.log('[Player] Server restarted, reloading page...');
+          location.reload();
+          return;
+        }
+        _serverBoot = m.serverBoot;
+      }
       if(m.player&&m.player.character)loadChar(m.player.character);
       if(m.player&&m.player.dread)updDread(m.player.dread.score||0);
       if(m.map) PlayerMap.loadFromState(m.map);
@@ -2482,7 +2493,8 @@ connect();
 // ============================================================
 const VisionEngine = {
   // Compute visibility polygon from origin with max range, blocked by wall segments
-  computeVisibility(ox, oy, maxRange, walls) {
+  // Optional facing (radians) and fovAngle (radians, e.g. 200deg = 3.49rad) to limit field of view
+  computeVisibility(ox, oy, maxRange, walls, facing, fovAngle) {
     const segments = [];
     for (const wall of walls) {
       const type = wall.type || 'wall';
@@ -2491,6 +2503,17 @@ const VisionEngine = {
       if (wall.x1 == null || wall.y1 == null) continue;
       segments.push([wall.x1, wall.y1, wall.x2, wall.y2]);
     }
+
+    const useFOV = facing != null && fovAngle != null && fovAngle < Math.PI * 2;
+    const halfFOV = useFOV ? fovAngle / 2 : Math.PI;
+
+    // Normalize angle difference to [-PI, PI]
+    const angleDiff = (a, b) => {
+      let d = a - b;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      return d;
+    };
 
     const EPS = 0.00001;
     const angles = [];
@@ -2501,20 +2524,41 @@ const VisionEngine = {
         const dx = seg[i] - ox, dy = seg[i+1] - oy;
         if (dx*dx + dy*dy > maxRange * maxRange * 2.25) continue;
         const a = Math.atan2(dy, dx);
+        if (useFOV && Math.abs(angleDiff(a, facing)) > halfFOV + 0.05) continue;
         angles.push(a - EPS, a, a + EPS);
       }
     }
 
-    // Boundary circle points (every 5 degrees for smooth edge)
-    for (let i = 0; i < 72; i++) {
-      angles.push((i / 72) * Math.PI * 2 - Math.PI);
+    if (useFOV) {
+      // FOV arc boundary rays + intermediate rays within FOV
+      const fovStart = facing - halfFOV;
+      const fovEnd = facing + halfFOV;
+      angles.push(fovStart, fovStart + EPS, fovEnd - EPS, fovEnd);
+      // Arc points within FOV (every 3 degrees for smooth edge)
+      const steps = Math.ceil(fovAngle / (Math.PI / 60));
+      for (let i = 0; i <= steps; i++) {
+        const a = fovStart + (i / steps) * fovAngle;
+        angles.push(a);
+      }
+    } else {
+      // Full 360 boundary circle points (every 5 degrees for smooth edge)
+      for (let i = 0; i < 72; i++) {
+        angles.push((i / 72) * Math.PI * 2 - Math.PI);
+      }
     }
 
     angles.sort((a, b) => a - b);
 
+    // Filter to FOV range
+    const filtered = useFOV
+      ? angles.filter(a => Math.abs(angleDiff(a, facing)) <= halfFOV + EPS)
+      : angles;
+
     // For each angle, find closest wall intersection
     const polygon = [];
-    for (const angle of angles) {
+    if (useFOV) polygon.push({ x: ox, y: oy }); // Start at origin for FOV wedge
+
+    for (const angle of filtered) {
       const rdx = Math.cos(angle), rdy = Math.sin(angle);
       let closestT = maxRange;
 
@@ -2567,9 +2611,19 @@ const PlayerMap = {
     this.canvas.addEventListener('touchmove', (e) => this._onTouchMove(e), { passive: false });
     this.canvas.addEventListener('touchend', (e) => this._onTouchEnd(e));
 
-    this.canvas.addEventListener('mousedown', (e) => this._onMouseDown(e));
-    this.canvas.addEventListener('mousemove', (e) => this._onMouseMove(e));
-    this.canvas.addEventListener('mouseup', (e) => this._onMouseUp(e));
+    this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    this.canvas.addEventListener('mousedown', (e) => {
+      if (e.button === 2) { this._startRotation(e); return; }
+      this._onMouseDown(e);
+    });
+    this.canvas.addEventListener('mousemove', (e) => {
+      if (this._rotating) { this._updateRotation(e); return; }
+      this._onMouseMove(e);
+    });
+    this.canvas.addEventListener('mouseup', (e) => {
+      if (this._rotating) { this._endRotation(); return; }
+      this._onMouseUp(e);
+    });
     this.canvas.addEventListener('wheel', (e) => { e.preventDefault(); const f=e.deltaY>0?0.9:1.1; this.cam.zoom=Math.max(0.1,Math.min(5,this.cam.zoom*f)); this.render(); }, { passive: false });
   },
 
@@ -2625,10 +2679,37 @@ const PlayerMap = {
         let obj = this.tokens[tid];
         for (let i = 1; i < parts.length - 1; i++) { if (!obj[parts[i]]) obj[parts[i]] = {}; obj = obj[parts[i]]; }
         obj[parts[parts.length-1]] = value;
-        if (parts[1] === 'x' || parts[1] === 'y' || parts[1] === 'light') delete this._visionCache[tid];
+        if (parts[1] === 'x' || parts[1] === 'y' || parts[1] === 'light' || parts[1] === 'facing') delete this._visionCache[tid];
       }
       this.render();
     }
+  },
+
+  // Client-side wall collision check — mirrors server _pathBlockedByWall logic
+  // Returns null if clear, or { type, index, wall } of the first blocking segment
+  _pathBlockedByWalls(x1, y1, x2, y2) {
+    for (let i = 0; i < this.walls.length; i++) {
+      const wall = this.walls[i];
+      const type = wall.type || 'wall';
+      if (type === 'door' && wall.open) continue; // open doors passable
+      if (this._lineIntersects(x1, y1, x2, y2, wall.x1, wall.y1, wall.x2, wall.y2)) {
+        return { type, index: i, wall, locked: !!wall.locked };
+      }
+    }
+    return null;
+  },
+
+  // Line segment intersection test (used for movement collision + LOS checks)
+  // t = parameter along ray/path, u = parameter along wall segment
+  // Include wall endpoints (u >= 0, u <= 1) so adjacent wall/door segments have no gaps
+  _lineIntersects(ax1, ay1, ax2, ay2, bx1, by1, bx2, by2) {
+    const dax = ax2 - ax1, day = ay2 - ay1;
+    const dbx = bx2 - bx1, dby = by2 - by1;
+    const d = dax * dby - day * dbx;
+    if (Math.abs(d) < 0.0001) return false;
+    const t = ((bx1 - ax1) * dby - (by1 - ay1) * dbx) / d;
+    const u = ((bx1 - ax1) * day - (by1 - ay1) * dax) / d;
+    return t > 0.001 && t < 0.999 && u >= -0.001 && u <= 1.001;
   },
 
   // Dynamic lighting helper: compute vision polygon for a PC
@@ -2651,6 +2732,7 @@ const PlayerMap = {
     const dimExtPx = (15 / 5) * gs;
     let maxLightReach = carriedTotal;
     for (const light of this.lights) {
+      if (light.enabled === false) continue; // Skip disabled lights
       const dx = light.x - tok.x, dy = light.y - tok.y;
       const dist = Math.sqrt(dx*dx + dy*dy);
       const totalRange = light.range + dimExtPx;
@@ -2665,13 +2747,16 @@ const PlayerMap = {
       return { polygon: [], visionPx: 0, dvPx, carriedBright, carriedTotal, darkvision: false };
     }
 
+    const facing = tok.facing != null ? tok.facing : 0;
     const cached = this._visionCache[id];
-    if (cached && cached.x === tok.x && cached.y === tok.y && cached.visionPx === visionPx) {
+    if (cached && cached.x === tok.x && cached.y === tok.y && cached.visionPx === visionPx && cached.facing === facing) {
       return { polygon: cached.polygon, visionPx, dvPx, carriedBright, carriedTotal, darkvision: dv > 0 };
     }
 
-    const poly = VisionEngine.computeVisibility(tok.x, tok.y, visionPx, this.walls);
-    this._visionCache[id] = { x: tok.x, y: tok.y, visionPx, polygon: poly };
+    // Use token facing direction for FOV (200 degree binocular field)
+    const fovAngle = 200 * (Math.PI / 180); // 200 degree human binocular FOV
+    const poly = VisionEngine.computeVisibility(tok.x, tok.y, visionPx, this.walls, facing, fovAngle);
+    this._visionCache[id] = { x: tok.x, y: tok.y, visionPx, facing, polygon: poly };
     return { polygon: poly, visionPx, dvPx, carriedBright, carriedTotal, darkvision: dv > 0 };
   },
 
@@ -2682,6 +2767,7 @@ const PlayerMap = {
     const gs = this.mapData.gridSize;
     const dimExtPx = (15 / 5) * gs; // 15ft dim light extension
     for (const light of this.lights) {
+      if (light.enabled === false) continue; // Skip disabled lights
       const totalRange = light.range + dimExtPx;
       const poly = VisionEngine.computeVisibility(light.x, light.y, totalRange, this.walls);
       this._lightVisCache.push({ x: light.x, y: light.y, brightPx: light.range, totalPx: totalRange, polygon: poly });
@@ -2722,7 +2808,10 @@ const PlayerMap = {
 
     // Tokens — all non-hidden tokens drawn (visibility handled by dynamic lighting fog)
     for (const [id, tok] of Object.entries(this.tokens)) {
-      const x = tok.x - mw/2, y = tok.y - mh/2, r = gs * 0.4;
+      // Use drag visual position if token is being dragged, otherwise real position
+      const drawX = (this.dragging && this.dragging.tokenId === id && tok._dragVisualX != null) ? tok._dragVisualX : tok.x;
+      const drawY = (this.dragging && this.dragging.tokenId === id && tok._dragVisualY != null) ? tok._dragVisualY : tok.y;
+      const x = drawX - mw/2, y = drawY - mh/2, r = gs * 0.4;
       const hp = tok.hp || {current:1,max:1};
       const hpPct = Math.max(0, hp.current/hp.max);
       ctx.beginPath(); ctx.arc(x,y,r+3,0,Math.PI*2); ctx.strokeStyle='rgba(60,60,70,0.6)'; ctx.lineWidth=3; ctx.stroke();
@@ -2734,6 +2823,24 @@ const PlayerMap = {
       ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
       ctx.fillStyle = tok.type==='pc' ? (isMe?'#4080c0':'#2a5580') : '#c9a54e'; ctx.fill();
       if (isMe) { ctx.strokeStyle='#c9a54e'; ctx.lineWidth=2; ctx.stroke(); }
+      // Facing direction indicator (arrow on token edge)
+      if (tok.type === 'pc') {
+        const fAngle = tok.facing != null ? tok.facing : 0;
+        const arrowLen = r * 0.5;
+        const arrowX = x + Math.cos(fAngle) * r;
+        const arrowY = y + Math.sin(fAngle) * r;
+        ctx.save();
+        ctx.translate(arrowX, arrowY);
+        ctx.rotate(fAngle);
+        ctx.beginPath();
+        ctx.moveTo(arrowLen * 0.5, 0);
+        ctx.lineTo(-arrowLen * 0.3, -arrowLen * 0.35);
+        ctx.lineTo(-arrowLen * 0.3, arrowLen * 0.35);
+        ctx.closePath();
+        ctx.fillStyle = isMe ? '#c9a54e' : '#88aacc';
+        ctx.fill();
+        ctx.restore();
+      }
       var displayName = this.tokenLabels[id] || tok.name || id;
       var letter = displayName === 'Unknown' ? '?' : displayName.charAt(0).toUpperCase();
       ctx.fillStyle='#fff'; ctx.font=`bold ${r*0.9}px Cinzel,serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
@@ -2831,8 +2938,7 @@ const PlayerMap = {
 
   _renderDynamicLighting(ctx, mw, mh) {
     const gs = this.mapData.gridSize;
-    const gradFt = 15;
-    const gradPx = (gradFt / 5) * gs;
+    const gradPx = (15 / 5) * gs;
 
     // Vision from this player's own token only
     const myTok = this.tokens[PID];
@@ -2844,21 +2950,37 @@ const PlayerMap = {
 
     const vis = this._getVisionPoly(PID, myTok);
     if (vis.polygon.length < 3) {
-      // No vision (no darkvision, no light) — total darkness
       ctx.fillStyle = 'rgba(5,5,8,0.97)';
       ctx.fillRect(-mw/2, -mh/2, mw, mh);
       return;
     }
 
-    const lightPolys = this._getLightPolys().slice(); // copy so we can add carried
     const hasDV = vis.darkvision;
     const dvPx = vis.dvPx || 0;
     const mx = myTok.x, my = myTok.y;
 
-    // Add carried light source (torch, lantern etc) centered on token
+    // Filter light polys to only those the player has line-of-sight to
+    const allLightPolys = this._getLightPolys();
+    const visibleLightPolys = [];
+    for (const lp of allLightPolys) {
+      // Check if player can see this light source (no wall/closed door blocking)
+      let blocked = false;
+      for (const wall of this.walls) {
+        const wt = wall.type || 'wall';
+        if (wt === 'window') continue; // windows allow vision
+        if (wt === 'door' && wall.open) continue; // open doors allow vision
+        if (this._lineIntersects(mx, my, lp.x, lp.y, wall.x1, wall.y1, wall.x2, wall.y2)) {
+          blocked = true;
+          break;
+        }
+      }
+      if (!blocked) visibleLightPolys.push(lp);
+    }
+
+    // Add carried light source (torch, lantern etc) — always visible to self
     if (vis.carriedTotal > 0) {
       const cPoly = VisionEngine.computeVisibility(mx, my, vis.carriedTotal, this.walls);
-      lightPolys.push({ x: mx, y: my, brightPx: vis.carriedBright, totalPx: vis.carriedTotal, polygon: cPoly });
+      visibleLightPolys.push({ x: mx, y: my, brightPx: vis.carriedBright, totalPx: vis.carriedTotal, polygon: cPoly, carried: true });
     }
 
     // ── 1. Greyscale tint on darkvision areas (unlit parts of vision) ──
@@ -2874,13 +2996,12 @@ const PlayerMap = {
       lctx.save();
       lctx.scale(tintScale, tintScale);
 
-      // Fill with desaturating tint (simulates greyscale darkvision)
       lctx.fillStyle = 'rgba(8, 8, 20, 0.55)';
       lctx.fillRect(0, 0, mw, mh);
 
-      // Cut out light source areas (remove tint → full color near lights)
+      // Cut out light areas (destination-out merges overlaps correctly)
       lctx.globalCompositeOperation = 'destination-out';
-      for (const lp of lightPolys) {
+      for (const lp of visibleLightPolys) {
         if (lp.polygon.length < 3) continue;
         lctx.save();
         lctx.beginPath();
@@ -2890,8 +3011,7 @@ const PlayerMap = {
         lctx.clip();
         const grad = lctx.createRadialGradient(lp.x, lp.y, 0, lp.x, lp.y, lp.totalPx);
         grad.addColorStop(0, 'rgba(0,0,0,1)');
-        const brightRatio = Math.min(0.95, lp.brightPx / lp.totalPx);
-        grad.addColorStop(brightRatio, 'rgba(0,0,0,0.8)');
+        grad.addColorStop(Math.min(0.95, lp.brightPx / lp.totalPx), 'rgba(0,0,0,0.8)');
         grad.addColorStop(1, 'rgba(0,0,0,0)');
         lctx.fillStyle = grad;
         lctx.beginPath();
@@ -2900,7 +3020,7 @@ const PlayerMap = {
         lctx.restore();
       }
 
-      // Clip tint to vision polygon
+      // Clip to vision polygon
       lctx.globalCompositeOperation = 'destination-in';
       lctx.beginPath();
       lctx.moveTo(vis.polygon[0].x, vis.polygon[0].y);
@@ -2914,7 +3034,7 @@ const PlayerMap = {
     }
 
     // ── 2. Fog — solid black outside visible area ──
-    // Uses offscreen canvas with compositing to avoid even-odd overlap artifacts
+    // Offscreen canvas with destination-out so overlapping lights merge cleanly
     const fogScale = Math.min(1, 2048 / Math.max(mw, mh));
     const fw = Math.ceil(mw * fogScale), fh = Math.ceil(mh * fogScale);
     if (!this._fogCanvas) this._fogCanvas = document.createElement('canvas');
@@ -2926,14 +3046,13 @@ const PlayerMap = {
     fctx.save();
     fctx.scale(fogScale, fogScale);
 
-    // Start with full black fog
+    // Full black fog
     fctx.fillStyle = 'rgba(5,5,8,0.97)';
     fctx.fillRect(0, 0, mw, mh);
 
-    // Cut out visible areas using destination-out (overlaps merge correctly)
+    // Cut out visible areas
     fctx.globalCompositeOperation = 'destination-out';
     if (hasDV) {
-      // Darkvision PC sees their full vision polygon
       fctx.beginPath();
       fctx.moveTo(vis.polygon[0].x, vis.polygon[0].y);
       for (let i = 1; i < vis.polygon.length; i++) fctx.lineTo(vis.polygon[i].x, vis.polygon[i].y);
@@ -2941,8 +3060,17 @@ const PlayerMap = {
       fctx.fillStyle = 'rgba(0,0,0,1)';
       fctx.fill();
     } else {
-      // No darkvision — only see lit areas
-      for (const lp of lightPolys) {
+      // No darkvision — only see lit areas within player's FOV
+      // Clip to vision polygon so player can't see outside their FOV
+      fctx.save();
+      if (vis.polygon.length >= 3) {
+        fctx.beginPath();
+        fctx.moveTo(vis.polygon[0].x, vis.polygon[0].y);
+        for (let i = 1; i < vis.polygon.length; i++) fctx.lineTo(vis.polygon[i].x, vis.polygon[i].y);
+        fctx.closePath();
+        fctx.clip();
+      }
+      for (const lp of visibleLightPolys) {
         if (lp.polygon.length < 3) continue;
         const dx = lp.x - mx, dy = lp.y - my;
         if (dx*dx + dy*dy > (vis.visionPx + lp.totalPx) * (vis.visionPx + lp.totalPx)) continue;
@@ -2953,52 +3081,81 @@ const PlayerMap = {
         fctx.fillStyle = 'rgba(0,0,0,1)';
         fctx.fill();
       }
+      fctx.restore();
     }
     fctx.restore();
     ctx.drawImage(this._fogCanvas, -mw/2, -mh/2, mw, mh);
 
-    // ── 3. Soft gradient at vision/light edges ──
+    // ── 3. Soft edge gradient ──
+    // Use SINGLE offscreen canvas pass so overlapping gradients don't double-darken
+    if (!this._gradCanvas) this._gradCanvas = document.createElement('canvas');
+    if (this._gradCanvas.width !== fw || this._gradCanvas.height !== fh) {
+      this._gradCanvas.width = fw; this._gradCanvas.height = fh;
+    }
+    const gctx = this._gradCanvas.getContext('2d');
+    gctx.clearRect(0, 0, fw, fh);
+    gctx.save();
+    gctx.scale(fogScale, fogScale);
+
     if (hasDV && vis.visionPx > gradPx) {
-      // Darkvision edge fade
-      const cx = mx - mw/2, cy = my - mh/2;
-      ctx.save();
+      // Single gradient for darkvision edge
+      gctx.fillStyle = 'rgba(5,5,8,0.8)';
+      gctx.fillRect(0, 0, mw, mh);
+      gctx.globalCompositeOperation = 'destination-out';
+      const grad = gctx.createRadialGradient(mx, my, 0, mx, my, vis.visionPx);
+      grad.addColorStop(0, 'rgba(0,0,0,1)');
+      grad.addColorStop(Math.max(0, 1 - gradPx / vis.visionPx), 'rgba(0,0,0,1)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      gctx.fillStyle = grad;
+      gctx.beginPath();
+      gctx.arc(mx, my, vis.visionPx, 0, Math.PI * 2);
+      gctx.fill();
+      // Also cut out where fog already covers (don't double-darken)
+      gctx.globalCompositeOperation = 'destination-out';
+      gctx.drawImage(this._fogCanvas, 0, 0, mw, mh);
+    } else if (!hasDV && visibleLightPolys.length > 0) {
+      // Non-darkvision: paint edge darkening for ALL lights at once, clipped to FOV
+      if (vis.polygon.length >= 3) {
+        gctx.beginPath();
+        gctx.moveTo(vis.polygon[0].x, vis.polygon[0].y);
+        for (let i = 1; i < vis.polygon.length; i++) gctx.lineTo(vis.polygon[i].x, vis.polygon[i].y);
+        gctx.closePath();
+        gctx.clip();
+      }
+      gctx.fillStyle = 'rgba(5,5,8,0.7)';
+      gctx.fillRect(0, 0, mw, mh);
+      // Cut out bright cores of each light (destination-out merges overlaps)
+      gctx.globalCompositeOperation = 'destination-out';
+      for (const lp of visibleLightPolys) {
+        if (lp.polygon.length < 3) continue;
+        const grad = gctx.createRadialGradient(lp.x, lp.y, 0, lp.x, lp.y, lp.totalPx);
+        grad.addColorStop(0, 'rgba(0,0,0,1)');
+        const brt = Math.min(0.85, lp.brightPx / lp.totalPx);
+        grad.addColorStop(brt, 'rgba(0,0,0,0.9)');
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        gctx.fillStyle = grad;
+        gctx.beginPath();
+        gctx.arc(lp.x, lp.y, lp.totalPx, 0, Math.PI * 2);
+        gctx.fill();
+      }
+      // Don't darken where fog already covers
+      gctx.globalCompositeOperation = 'destination-out';
+      gctx.drawImage(this._fogCanvas, 0, 0, mw, mh);
+    }
+    gctx.restore();
+    ctx.drawImage(this._gradCanvas, -mw/2, -mh/2, mw, mh);
+
+    // ── 4. Warm glow from light sources (atmospheric) ──
+    // Clip warm glow to player's FOV
+    ctx.save();
+    if (!hasDV && vis.polygon.length >= 3) {
       ctx.beginPath();
       ctx.moveTo(vis.polygon[0].x - mw/2, vis.polygon[0].y - mh/2);
       for (let i = 1; i < vis.polygon.length; i++) ctx.lineTo(vis.polygon[i].x - mw/2, vis.polygon[i].y - mh/2);
       ctx.closePath();
       ctx.clip();
-      const grad = ctx.createRadialGradient(cx, cy, Math.max(0, vis.visionPx - gradPx), cx, cy, vis.visionPx);
-      grad.addColorStop(0, 'rgba(5,5,8,0)');
-      grad.addColorStop(1, 'rgba(5,5,8,0.9)');
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(cx, cy, vis.visionPx, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    } else if (!hasDV) {
-      // Non-darkvision: fade at light edges
-      for (const lp of lightPolys) {
-        if (lp.polygon.length < 3 || lp.totalPx <= gradPx) continue;
-        const cx = lp.x - mw/2, cy = lp.y - mh/2;
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(lp.polygon[0].x - mw/2, lp.polygon[0].y - mh/2);
-        for (let i = 1; i < lp.polygon.length; i++) ctx.lineTo(lp.polygon[i].x - mw/2, lp.polygon[i].y - mh/2);
-        ctx.closePath();
-        ctx.clip();
-        const grad = ctx.createRadialGradient(cx, cy, Math.max(0, lp.totalPx - gradPx), cx, cy, lp.totalPx);
-        grad.addColorStop(0, 'rgba(5,5,8,0)');
-        grad.addColorStop(1, 'rgba(5,5,8,0.85)');
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(cx, cy, lp.totalPx, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
     }
-
-    // ── 4. Warm glow from light sources (atmospheric) ──
-    for (const lp of lightPolys) {
+    for (const lp of visibleLightPolys) {
       if (lp.polygon.length < 3) continue;
       const cx = lp.x - mw/2, cy = lp.y - mh/2;
       ctx.save();
@@ -3029,6 +3186,7 @@ const PlayerMap = {
       ctx.fill();
       ctx.restore();
     }
+    ctx.restore(); // restore FOV clip for warm glow
   },
 
   _pointInPolygon(px, py, pts) {
@@ -3095,6 +3253,52 @@ const PlayerMap = {
   },
   _onTouchEnd(e) { if(e.changedTouches.length){const t=e.changedTouches[0];this._endInteraction(t.clientX,t.clientY);} if(e.touches.length<2)this._lastPinchDist=0; },
 
+  // ── Token facing rotation (right-click-drag or touch rotate button) ──
+  _rotating: false,
+  _rotateMode: false, // touch rotate mode (toggled by button)
+
+  _toggleRotateMode() {
+    this._rotateMode = !this._rotateMode;
+    const btn = document.getElementById('rotate-btn');
+    if (btn) {
+      btn.style.background = this._rotateMode ? 'rgba(201,165,78,0.4)' : 'rgba(30,30,40,0.85)';
+      btn.style.color = this._rotateMode ? '#c9a54e' : '#aaa';
+      btn.textContent = this._rotateMode ? 'Rotate ON' : 'Rotate';
+    }
+  },
+
+  _startRotation(e) {
+    const myTok = this.tokens[PID];
+    if (!myTok) return;
+    this._rotating = true;
+    const r = this.canvas.getBoundingClientRect();
+    const sx = e.clientX - r.left, sy = e.clientY - r.top;
+    const {x: mx, y: my} = this.screenToMap(sx, sy);
+    const angle = Math.atan2(my - myTok.y, mx - myTok.x);
+    myTok.facing = angle;
+    delete this._visionCache[PID];
+    this.render();
+  },
+
+  _updateRotation(e) {
+    const myTok = this.tokens[PID];
+    if (!myTok || !this._rotating) return;
+    const r = this.canvas.getBoundingClientRect();
+    const sx = e.clientX - r.left, sy = e.clientY - r.top;
+    const {x: mx, y: my} = this.screenToMap(sx, sy);
+    myTok.facing = Math.atan2(my - myTok.y, mx - myTok.x);
+    delete this._visionCache[PID];
+    this.render();
+  },
+
+  _endRotation() {
+    this._rotating = false;
+    const myTok = this.tokens[PID];
+    if (myTok && myTok.facing != null) {
+      send({type: 'map:token_facing', tokenId: PID, facing: myTok.facing});
+    }
+  },
+
   _startInteraction(sx, sy, cx, cy) {
     // AOE targeting mode — click to place
     if (_aoeTargeting) {
@@ -3102,11 +3306,24 @@ const PlayerMap = {
       placeAOE(mx, my);
       return;
     }
+    // Touch rotate mode — start rotation instead of drag
+    if (this._rotateMode) {
+      const myTok = this.tokens[PID];
+      if (myTok) {
+        this._rotating = true;
+        const {x: mx, y: my} = this.screenToMap(sx, sy);
+        myTok.facing = Math.atan2(my - myTok.y, mx - myTok.x);
+        delete this._visionCache[PID];
+        this.render();
+        return;
+      }
+    }
     this._tapStart = { sx, sy, cx, cy, time: Date.now() };
     const tid = this._getMyTokenAt(sx, sy);
     if (tid) {
       const {x:mx,y:my}=this.screenToMap(sx,sy);
       const tok=this.tokens[tid];
+      tok._dragStartX = tok.x; tok._dragStartY = tok.y;
       this.dragging={tokenId:tid, offsetX:tok.x-mx, offsetY:tok.y-my};
     } else {
       this.panning=true;
@@ -3124,10 +3341,26 @@ const PlayerMap = {
       this.render();
       return;
     }
+    // Touch rotate mode
+    if (this._rotating) {
+      const myTok = this.tokens[PID];
+      if (myTok) {
+        const {x: mx, y: my} = this.screenToMap(sx, sy);
+        myTok.facing = Math.atan2(my - myTok.y, mx - myTok.x);
+        delete this._visionCache[PID];
+        this.render();
+      }
+      return;
+    }
     if (this.dragging) {
       const {x:mx,y:my}=this.screenToMap(sx,sy);
       const tok=this.tokens[this.dragging.tokenId];
-      if(tok){tok.x=mx+this.dragging.offsetX;tok.y=my+this.dragging.offsetY;this.render();}
+      if(tok){
+        // Track drag visual position separately — vision stays anchored to start
+        tok._dragVisualX=mx+this.dragging.offsetX;
+        tok._dragVisualY=my+this.dragging.offsetY;
+        this.render();
+      }
     } else if (this.panning) {
       this.cam.x=this.panStart.camX+(cx-this.panStart.x);
       this.cam.y=this.panStart.camY+(cy-this.panStart.y);
@@ -3137,12 +3370,39 @@ const PlayerMap = {
 
   _endInteraction(cx, cy) {
     if (_aoeTargeting) return; // handled in _startInteraction
+    if (this._rotating) {
+      this._rotating = false;
+      const myTok = this.tokens[PID];
+      if (myTok && myTok.facing != null) {
+        send({type: 'map:token_facing', tokenId: PID, facing: myTok.facing});
+      }
+      return;
+    }
     if (this.dragging) {
       const tok=this.tokens[this.dragging.tokenId];
       if(tok){
         const gs=this.mapData.gridSize;
-        tok.x=Math.floor(tok.x/gs)*gs+gs/2; tok.y=Math.floor(tok.y/gs)*gs+gs/2;
-        send({type:'map:move_token',tokenId:this.dragging.tokenId,x:tok.x,y:tok.y});
+        const oldX = tok._dragStartX, oldY = tok._dragStartY;
+        // Snap drop position to grid (use drag visual position, not anchored position)
+        const dropX = tok._dragVisualX != null ? tok._dragVisualX : tok.x;
+        const dropY = tok._dragVisualY != null ? tok._dragVisualY : tok.y;
+        const newX=Math.floor(dropX/gs)*gs+gs/2;
+        const newY=Math.floor(dropY/gs)*gs+gs/2;
+        // Clean up drag visual state
+        delete tok._dragVisualX; delete tok._dragVisualY;
+        // Client-side wall collision check — block immediately without server round-trip
+        const blocked = (this.walls.length > 0 && oldX != null) ? this._pathBlockedByWalls(oldX, oldY, newX, newY) : null;
+        if (blocked) {
+          tok.x = oldX; tok.y = oldY;
+          if (blocked.type === 'door') {
+            // Door interaction — prompt player
+            this._promptDoor(blocked, oldX, oldY, newX, newY, this.dragging.tokenId);
+          } else {
+            showToast('System','Movement blocked — solid wall',2000);
+          }
+        } else {
+          this._completeMoveToken(tok, oldX, oldY, newX, newY, this.dragging.tokenId);
+        }
       }
       this.dragging=null; this.render();
     } else if (this._tapStart && Date.now() - this._tapStart.time < 300) {
@@ -3152,6 +3412,85 @@ const PlayerMap = {
     }
     this.panning=false;
     this._tapStart=null;
+  },
+
+  // Complete a token move — update position, auto-face, send to server
+  _completeMoveToken(tok, oldX, oldY, newX, newY, tokenId) {
+    tok.x = newX; tok.y = newY;
+    if (tokenId === PID && oldX != null) {
+      const dx = newX - oldX, dy = newY - oldY;
+      if (dx*dx + dy*dy > 1) {
+        tok.facing = Math.atan2(dy, dx);
+        delete this._visionCache[PID];
+        send({type: 'map:token_facing', tokenId: PID, facing: tok.facing});
+      }
+    }
+    delete this._visionCache[tokenId];
+    send({type:'map:move_token', tokenId, x: newX, y: newY});
+    this.render();
+  },
+
+  // Prompt player when movement is blocked by a door
+  _promptDoor(blocked, oldX, oldY, newX, newY, tokenId) {
+    const isLocked = blocked.locked;
+    // Build modal
+    const overlay = document.createElement('div');
+    overlay.className = 'door-prompt-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#1a1a2e;border:2px solid #c9a54e;border-radius:12px;padding:24px;max-width:320px;text-align:center;font-family:Cinzel,serif;color:#e8e0d0;';
+    const icon = isLocked ? '🔒' : '🚪';
+    const title = isLocked ? 'Locked Door' : 'Closed Door';
+    const desc = isLocked ? 'This door is locked. Attempt to pick the lock?' : 'This door is closed. Open it?';
+    box.innerHTML = `<div style="font-size:36px;margin-bottom:8px;">${icon}</div>`
+      + `<div style="font-size:18px;font-weight:bold;margin-bottom:8px;">${title}</div>`
+      + `<div style="font-size:14px;color:#a09880;margin-bottom:20px;font-family:Source Sans 3,sans-serif;">${desc}</div>`
+      + `<div style="display:flex;gap:12px;justify-content:center;"></div>`;
+    const btnRow = box.lastElementChild;
+
+    const makeBtn = (label, accent, cb) => {
+      const btn = document.createElement('button');
+      btn.textContent = label;
+      btn.style.cssText = `padding:8px 20px;border-radius:6px;border:1px solid ${accent};background:${accent}22;color:${accent};font-family:Cinzel,serif;font-size:14px;cursor:pointer;`;
+      btn.onmouseenter = () => btn.style.background = accent + '44';
+      btn.onmouseleave = () => btn.style.background = accent + '22';
+      btn.onclick = () => { overlay.remove(); cb(); };
+      return btn;
+    };
+
+    const actionLabel = isLocked ? 'Pick Lock' : 'Open';
+    btnRow.appendChild(makeBtn(actionLabel, '#c9a54e', () => {
+      // Call door toggle API
+      fetch('/api/map/walls/toggle-door', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ index: blocked.index, playerId: PID, dmOverride: false })
+      }).then(r => r.json()).then(res => {
+        if (res.open) {
+          // Door opened — update local wall state and complete the move
+          if (this.walls[blocked.index]) {
+            this.walls[blocked.index].open = true;
+            this.walls[blocked.index].locked = false;
+            this._wallsVersion++; this._visionCache = {}; this._lightVisCache = null;
+          }
+          const tok = this.tokens[tokenId];
+          if (tok) this._completeMoveToken(tok, oldX, oldY, newX, newY, tokenId);
+          showToast('System', isLocked ? 'Lock picked! Door opens.' : 'Door opened.', 2500);
+        } else if (res.locked) {
+          // Still locked (no pick attempt yet — shouldn't happen with playerId)
+          showToast('System', 'The door is locked.', 2500);
+        } else if (res.unlocked === false) {
+          // Pick attempt failed
+          showToast('System', `Lock pick failed (rolled ${res.total} vs DC ${res.dc})`, 3500);
+        }
+        this.render();
+      }).catch(() => showToast('System','Could not reach the door.',2000));
+    }));
+    btnRow.appendChild(makeBtn('Leave it', '#888', () => { /* do nothing */ }));
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    // Close on overlay click outside box
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
   },
 };
 

@@ -160,7 +160,7 @@ class ContextBuilder {
     const tokens = map.tokens || {};
     const zones = map.zones || [];
     const gs = map.gridSize || 70;
-    const parts = [`Map: ${map.name || map.id} (${Math.round(map.width/gs)}x${Math.round(map.height/gs)} grid)`];
+    const parts = [`Active Map: ${map.name || map.id} (${Math.round(map.width/gs)}x${Math.round(map.height/gs)} grid)`];
 
     // Token positions — convert pixel coords to grid squares
     const tokenList = Object.entries(tokens);
@@ -192,7 +192,42 @@ class ContextBuilder {
       parts.push('Map zones: ' + zones.map(z => z.name || z.id).join(', '));
     }
 
+    // Include tokens from non-active maps (so AI always knows where everyone is)
+    try {
+      const mapSvc = this._getMapService();
+      if (mapSvc) {
+        for (const [mapId, mapDef] of mapSvc.maps) {
+          if (mapId === map.id) continue; // Already included above
+          const otherTokens = mapDef.tokens || {};
+          const otherEntries = Object.entries(otherTokens);
+          if (otherEntries.length) {
+            const mgs = mapDef.gridSize || 70;
+            parts.push(`\nOther Map: ${mapDef.name || mapId}`);
+            for (const [id, tok] of otherEntries) {
+              const gx = Math.round((tok.x || 0) / mgs);
+              const gy = Math.round((tok.y || 0) / mgs);
+              const hp = tok.hp ? ` HP:${tok.hp.current}/${tok.hp.max}` : '';
+              const hidden = tok.hidden ? ' [HIDDEN]' : '';
+              parts.push(`  ${tok.name || id}: (${gx},${gy})${hp}${hidden}`);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // Map service not available — skip cross-map tokens
+    }
+
     return parts.join('\n');
+  }
+
+  _getMapService() {
+    // Access map service via state's orchestrator reference if available
+    if (this._mapService) return this._mapService;
+    return null;
+  }
+
+  setMapService(mapSvc) {
+    this._mapService = mapSvc;
   }
 
   _formatWorldState() {

@@ -379,6 +379,20 @@
 <div id="horror-layer"></div>
 <div id="dread-vignette"></div>
 <div id="toast-layer"></div>
+<!-- Persistent wound body overlay — always visible, lower right -->
+<div id="wound-overlay" onclick="WoundPanel.toggleOverlay()" style="position:fixed;bottom:12px;right:12px;z-index:90;cursor:pointer;opacity:0.7;transition:opacity 0.2s;">
+  <svg viewBox="0 0 120 260" width="48" height="104" style="filter:drop-shadow(0 0 4px rgba(0,0,0,0.8));">
+    <ellipse id="wo-head" cx="60" cy="28" rx="18" ry="22" fill="#1a3a1a" stroke="#222" stroke-width="1.5"/>
+    <path id="wo-torso" d="M38,52 L82,52 L86,140 L34,140 Z" fill="#1a3a1a" stroke="#222" stroke-width="1.5"/>
+    <path id="wo-rightArm" d="M34,56 L22,56 L10,110 L14,112 L24,70 L34,80 Z" fill="#1a3a1a" stroke="#222" stroke-width="1.5"/>
+    <path id="wo-leftArm" d="M86,56 L98,56 L110,110 L106,112 L96,70 L86,80 Z" fill="#1a3a1a" stroke="#222" stroke-width="1.5"/>
+    <path id="wo-rightLeg" d="M38,140 L54,140 L52,210 L56,250 L44,250 L46,210 L34,170 Z" fill="#1a3a1a" stroke="#222" stroke-width="1.5"/>
+    <path id="wo-leftLeg" d="M66,140 L82,140 L86,170 L74,210 L76,250 L64,250 L68,210 Z" fill="#1a3a1a" stroke="#222" stroke-width="1.5"/>
+  </svg>
+</div>
+<div id="wound-overlay-detail" style="display:none;position:fixed;bottom:12px;right:68px;z-index:91;background:rgba(10,10,18,0.95);border:1px solid #333;border-radius:8px;padding:10px 12px;max-width:200px;font-size:11px;color:#e8e0d0;">
+  <div id="wo-detail-text" style="font-style:italic;line-height:1.5;"></div>
+</div>
 <div id="app">
   <div id="topbar">
     <div><div class="char-title" id="cname">—</div><div class="char-sub" id="csub">—</div></div>
@@ -2677,16 +2691,65 @@ const WoundPanel = {
 
   update(wounds) {
     this.wounds = wounds;
+    // Update full panel SVG
     for (const [limb, state] of Object.entries(wounds)) {
       const el = document.getElementById('wb-' + limb);
-      if (!el) continue;
-      el.setAttribute('fill', WOUND_COLORS[state]);
-      el.classList.remove('wound-3', 'wound-4');
-      if (state === 3) el.classList.add('wound-3');
-      if (state === 4) el.classList.add('wound-4');
+      if (el) {
+        el.setAttribute('fill', WOUND_COLORS[state]);
+        el.classList.remove('wound-3', 'wound-4');
+        if (state === 3) el.classList.add('wound-3');
+        if (state === 4) el.classList.add('wound-4');
+      }
+      // Update overlay mini SVG
+      const ol = document.getElementById('wo-' + limb);
+      if (ol) {
+        ol.setAttribute('fill', WOUND_COLORS[state]);
+        ol.classList.remove('wound-3', 'wound-4');
+        if (state === 3) ol.classList.add('wound-3');
+        if (state === 4) ol.classList.add('wound-4');
+      }
     }
+    // Update overlay opacity — brighter when injured
+    const worst = Math.max(...Object.values(wounds));
+    const overlay = document.getElementById('wound-overlay');
+    if (overlay) overlay.style.opacity = worst > 0 ? '1' : '0.5';
     if (this.selected) this.select(this.selected);
     this._renderSummary();
+    this._updateOverlayDetail();
+  },
+
+  toggleOverlay() {
+    const detail = document.getElementById('wound-overlay-detail');
+    if (!detail) return;
+    if (detail.style.display === 'none') {
+      this._updateOverlayDetail();
+      detail.style.display = 'block';
+      setTimeout(() => { document.addEventListener('click', this._closeOverlay); }, 10);
+    } else {
+      detail.style.display = 'none';
+    }
+  },
+
+  _closeOverlay(e) {
+    const detail = document.getElementById('wound-overlay-detail');
+    const overlay = document.getElementById('wound-overlay');
+    if (detail && !detail.contains(e.target) && !overlay.contains(e.target)) {
+      detail.style.display = 'none';
+      document.removeEventListener('click', WoundPanel._closeOverlay);
+    }
+  },
+
+  _updateOverlayDetail() {
+    const el = document.getElementById('wo-detail-text');
+    if (!el) return;
+    const injured = Object.entries(this.wounds).filter(([,v]) => v > 0);
+    if (injured.length === 0) {
+      el.textContent = 'You are uninjured.';
+    } else {
+      el.innerHTML = injured.map(([limb, state]) =>
+        '<div style="margin-bottom:4px;"><span style="color:' + WOUND_COLORS[state] + ';font-weight:bold;">' + LIMB_LABELS[limb] + ':</span> ' + WOUND_DESC[limb][state] + '</div>'
+      ).join('');
+    }
   },
 
   select(limb) {

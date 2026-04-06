@@ -181,19 +181,54 @@ class AIEngine {
       await this.autonomy._executeNpcAction(npcId, npcState, env.data);
     }, 'ai-engine');
 
-    // Player-to-NPC private chat (Feature 49)
+    // Player-to-NPC private chat (Feature 49) + System 8 speak input
     this.bus.subscribe('npc:player_chat', async (env) => {
       const { playerId, npcId, npcName, text } = env.data;
-      console.log(`[AIEngine] NPC chat: ${playerId} → ${npcId}: "${text}"`);
+      const playerName = this.state.get(`players.${playerId}.character.name`) || playerId;
+      console.log(`[AIEngine] NPC chat: ${playerName} → ${npcName}: "${text}"`);
       try {
-        const response = await this.npc.generateDialogue(npcId, `Player ${playerId} says directly to ${npcName}: "${text}". Respond in character.`);
-        if (response) {
-          this.bus.dispatch('npc:chat_reply', { playerId, npcId, npcName, text: response });
-          // Also log to DM dashboard
+        const npcBrief = this._getNpcBrief(npcId, npcName);
+        const recentContext = this.context._recentTranscript.slice(-10).map(t => `[${t.speaker}]: ${t.text}`).join('\n');
+        const worldTime = this.state.get('world.gameTime') || 'unknown';
+        const scene = this.state.get('scene') || {};
+
+        const prompt = `${playerName} says directly to ${npcName}: "${text}"
+
+## NPC Character Brief
+${npcBrief}
+
+## Current Scene
+Location: ${scene.name || 'The Bleeding Raven Tavern'}
+Game time: ${worldTime}
+Atmosphere: ${scene.atmosphereProfile || 'tavern_warm'}
+
+## Recent Events
+${recentContext || '(session just started)'}
+
+## Instructions
+Respond AS ${npcName}. The first character of your response MUST be an opening quotation mark (") followed by ${npcName}'s spoken words. A brief action beat may follow the dialogue after an em dash, but speech always comes first.
+
+CORRECT: "You are kind to ask. It has been... a difficult few weeks." — her hands find the apron again.
+WRONG: Marta whispers, "You are kind" — never begin with a name + verb.
+WRONG: Marta flinches — never respond with only an action.
+
+Stay strictly within what ${npcName} knows. 1-3 sentences of dialogue typical.`;
+
+        const result = await this.npc.generateDialogue(npcId, prompt);
+        const replyText = result?.text || null;
+        if (replyText) {
+          this.bus.dispatch('npc:chat_reply', { playerId, npcId, npcName, text: replyText });
           this.bus.dispatch('dm:whisper', {
-            text: `[NPC Chat] ${playerId} → ${npcName}: "${text}" | ${npcName}: "${response}"`,
+            text: `[NPC Chat] ${playerName} → ${npcName}: "${text}" | ${npcName}: "${replyText}"`,
             priority: 4,
             category: 'story'
+          });
+          // Also show in HAL panel
+          this.bus.dispatch('hal:response', {
+            query: `${playerName} → ${npcName}: "${text}"`,
+            response: `${npcName}: ${replyText}`,
+            timestamp: Date.now(),
+            source: 'npc_chat'
           });
         } else {
           this.bus.dispatch('npc:chat_reply', { playerId, npcId, npcName, text: '*says nothing, just stares*' });
@@ -211,11 +246,14 @@ class AIEngine {
     }, 'ai-engine');
 
     // Wound tier change → AI flavour description
+    this._lastWoundTier = {}; // { playerId: tier }
     this.bus.subscribe('wounds:updated', async (env) => {
       const { playerId, wounds, tier, hpPct } = env.data;
       if (tier === undefined || !this.gemini?.available) return;
-      // Only generate on tier escalation (damage, not healing)
-      if (tier <= 0) return;
+      // Only generate on tier escalation (damage, not healing, not same tier)
+      const prevTier = this._lastWoundTier[playerId] || 0;
+      this._lastWoundTier[playerId] = tier;
+      if (tier <= prevTier || tier <= 0) return;
 
       // Find what caused the damage from recent transcript
       const recent = this.context._recentTranscript.slice(-5);
@@ -236,6 +274,113 @@ class AIEngine {
       } catch (e) {
         console.error('[AIEngine] Wound description error:', e.message);
       }
+    }, 'ai-engine');
+
+    // ── Equipment degradation AI reminders ──
+    this.bus.subscribe('equipment:degraded', (env) => {
+      const { charName, itemName, conditionLabel, condition } = env.data;
+      if (condition === 3) { // Damaged
+        this.bus.dispatch('dm:whisper', {
+          text: `${charName}'s ${itemName} is damaged. One more bad roll and it breaks.`,
+          priority: 3, category: 'equipment'
+        });
+      } else if (condition === 4) { // Broken
+        this.bus.dispatch('dm:whisper', {
+          text: `${charName}'s ${itemName} has broken. Cannot use it.`,
+          priority: 2, category: 'equipment'
+        });
+      }
+    }, 'ai-engine');
+
+    this.bus.subscribe('equipment:updated', (env) => {
+      const { charName, ammoType, ammoCount, componentName, remaining, healerKit } = env.data;
+
+      // Low ammo warning
+      if (ammoType && ammoCount !== undefined && ammoCount <= 3 && ammoCount > 0) {
+        this.bus.dispatch('dm:whisper', {
+          text: `Only ${ammoCount} ${ammoType} left in ${charName}'s quiver.`,
+          priority: 3, category: 'equipment'
+        });
+      } else if (ammoType && ammoCount === 0) {
+        this.bus.dispatch('dm:whisper', {
+          text: `${charName} is out of ${ammoType}.`,
+          priority: 2, category: 'equipment'
+        });
+      }
+
+      // Component consumed — check if it was the last one
+      if (componentName && remaining === 0) {
+        const eq = this.state.get(`players.${env.data.playerId}.equipment`);
+        const comp = eq?.components?.[componentName];
+        const spellNames = comp?.spells?.join(', ') || 'unknown spell';
+        this.bus.dispatch('dm:whisper', {
+          text: `Last ${componentName} consumed. ${charName} cannot cast ${spellNames}.`,
+          priority: 2, category: 'equipment'
+        });
+      }
+
+      // Low healer's kit
+      if (healerKit && healerKit.charges === 2) {
+        this.bus.dispatch('dm:whisper', {
+          text: `Two healer's kit charges left for ${charName}.`,
+          priority: 3, category: 'equipment'
+        });
+      } else if (healerKit && healerKit.charges === 0) {
+        this.bus.dispatch('dm:whisper', {
+          text: `${charName}'s healer's kit is empty.`,
+          priority: 2, category: 'equipment'
+        });
+      }
+    }, 'ai-engine');
+
+    // ── Stamina tier change narration (System 6) ──
+    this.bus.subscribe('stamina:tier_change', (env) => {
+      const { charName, state: newState } = env.data;
+      const msgs = {
+        winded: `${charName}'s breath is coming harder now.`,
+        exhausted: `${charName} is flagging. Their movements are slowing.`,
+        spent: `${charName} is running on nothing. Won't last much longer.`,
+        collapsed: `${charName} goes down — exhaustion, not death. They need help.`
+      };
+      if (msgs[newState]) {
+        this.bus.dispatch('dm:whisper', { text: msgs[newState], priority: 2, category: 'stamina' });
+      }
+
+      // Vladislav contempt when party exhausted or worse
+      if ((newState === 'exhausted' || newState === 'spent' || newState === 'collapsed') && this.gemini?.available) {
+        const combat = this.state.get('combat');
+        if (combat?.active) {
+          const inCombat = combat.turnOrder?.some(c => c.id === 'vladislav' || c.name === 'Vladislav');
+          if (inCombat) {
+            this._vladislavContempt(charName, newState);
+          }
+        }
+      }
+    }, 'ai-engine');
+
+    // ── Hit narration (System 6) — every hit gets a one-sentence AI description ──
+    this.bus.subscribe('combat:hit_location', async (env) => {
+      if (!this.gemini?.available) return;
+      const { targetName, severity, location, damage, damageType } = env.data;
+      const locStr = location ? ` to the ${location}` : '';
+      const prompt = `One sentence: a ${severity} ${damageType || ''} hit${locStr} on ${targetName}. Gothic, evocative, under 20 words. No HP, no numbers, no game terms. Just what it looks like.`;
+      try {
+        const desc = await this.gemini.generate(prompt, '', { maxTokens: 40, temperature: 0.9 });
+        if (desc) {
+          this.bus.dispatch('dm:whisper', { text: desc.trim(), priority: 3, category: 'combat' });
+          this.bus.dispatch('hal:response', { query: `[Hit: ${targetName}]`, response: desc.trim(), timestamp: Date.now(), source: 'auto' });
+        }
+      } catch (e) { console.error('[AIEngine] Hit narration error:', e.message); }
+    }, 'ai-engine');
+
+    // ── Morale break narration (System 7) ──
+    this.bus.subscribe('combat:morale_break', async (env) => {
+      const { combatantName, reason } = env.data;
+      // Narrate via Echo TTS — not as a game mechanic
+      this.bus.dispatch('voice:speak', {
+        text: `${combatantName} turns and runs, fear overtaking whatever resolve remained.`,
+        profile: 'narrator', device: 'all'
+      });
     }, 'ai-engine');
 
     // Start NPC autonomy engine
@@ -431,6 +576,127 @@ Be specific and actionable. Format as JSON: {gaps:[], warnings:[], suggestions:[
     return null;
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // NPC CHARACTER BRIEFS (Session 0)
+  // ═══════════════════════════════════════════════════════════════
+
+  _getNpcBrief(npcId, npcName) {
+    const briefs = {
+      marta: `Marta Kowalski — Terrified innkeeper.
+Her husband Piotr vanished into the cellar 3 weeks ago and has not come back.
+She knows something is wrong down there but cannot bring herself to say it.
+She deflects questions about Piotr with excuses — he is resting, he is ill, he needed time alone.
+She is watching the hooded stranger in the corner with barely concealed fear.
+She speaks in short sentences. She does not finish thoughts that lead somewhere dark.
+She is warm to guests by instinct but her warmth keeps cracking.
+She never mentions the cellar unless pushed hard. Even then she changes the subject.
+Sample voice: "You are kind to ask. I am — yes. It has been a difficult week is all. Can I bring you something warm?"`,
+
+      vladislav: `Vladislav Dragan — Ancient vampire. Has not fed in several days by choice — he is being patient.
+Cultured, unhurried, contemptuous of mortal urgency. He finds humans faintly amusing.
+He speaks in long measured sentences. He never raises his voice.
+He deflects personal questions with questions of his own — elegant, never defensive.
+He knows exactly who Barry Frascht is by name and bloodline. He does not reveal this immediately.
+He has not moved from his corner all evening. He will not explain why.
+He is watching the cellar door. He is watching Tomas. He is watching the players.
+Sample voice: "A difficult night to be abroad. You chose this inn deliberately, I wonder, or did the storm choose it for you?"`,
+
+      tomas: `Tomas Birkov — Cursed werewolf, 3 months into the curse. Desperate, ashamed, barely holding it together.
+He needs to get to the cellar before moonrise to chain himself. He will not say why.
+He is brusque and dismissive — not rude by nature but he does not have time for conversation.
+He keeps looking at the window. He keeps looking at the cellar door.
+His hands shake slightly. He is sweating despite sitting near no fire.
+Sample voice: "I am fine. Leave it. Is there a back room in this place — somewhere quiet a man can sit alone?"`,
+
+      gregor: `Old Gregor — Grim old farmer. Fatalist. Has seen things in these mountains.
+Speaks in short dark observations. Quotes old proverbs. Not afraid of death.
+He saw the pallid hart — the white stag of death — on the road tonight. He takes it as a sign.
+He will share local legends if asked. He knows about the Frascht name.
+Sample voice: "White stag on the road tonight. My grandfather saw one the night his village burned. Some signs you do not need to read twice."`,
+
+      aldric: `Brother Aldric — Devout pilgrim priest. Genuinely faithful, not performatively so.
+He is frightened but his faith steadies him. He does not panic.
+He has sensed something wrong in this room since he arrived. He cannot name it.
+He has holy water. He will share it if he trusts the asker.
+Sample voice: "I have said three prayers since sitting down. The candles keep guttering. God is present here — but so is something else."`,
+
+      katya: `Katya Voss — Sharp-eyed minstrel. The most observant person in the room after Vladislav.
+She stopped her song because she saw something in the brass plate. She will not say what directly.
+She drops lore through songs and ballads — never as a lecture.
+She is testing the players to see if they are trustworthy before she shares what she knows.
+Sample voice: "There is an old song about this road. The fourth verse is not one I sing in company. Not yet anyway."`,
+
+      henryk: `Henryk — Nervous merchant. Self-interested. Not brave.
+He noticed the stranger does not eat. He will pay for an escort at dawn.
+He talks too much when scared. He will tell the players useful things by accident.
+Sample voice: "I do not mean to pry but that man in the corner — has anyone seen him eat? I have been watching. I have not seen him eat."`,
+
+      spurt: `Spurt — Kobold Wild Magic Sorcerer. Excitable, terrified, loyal, chaotic.
+Speaks in broken Common with occasional Draconic. Refers to himself in third person sometimes.
+His wild magic surges unpredictably. He means well but causes chaos.
+Sample voice: "Spurt knows this is bad place. Spurt's tail is all prickly. But Spurt stays! Spurt is brave now!"`
+    };
+
+    // Try exact match, then first-name match
+    const lower = (npcId || '').toLowerCase();
+    if (briefs[lower]) return briefs[lower];
+
+    const nameKey = (npcName || '').toLowerCase().split(' ')[0];
+    if (briefs[nameKey]) return briefs[nameKey];
+
+    // Fallback: use whatever we know from state
+    const npcState = this.state?.get(`npcs.${npcId}`) || {};
+    return `${npcName || npcId} — ${npcState.role || 'NPC'}. Disposition: ${npcState.disposition || 'neutral'}. ${npcState.personality || ''} ${npcState.voiceNotes || ''}`.trim();
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // VLADISLAV CONTEMPT (System 6)
+  // ═══════════════════════════════════════════════════════════════
+
+  async _vladislavContempt(charName, staminaState) {
+    if (!this.gemini?.available) return;
+    // Cooldown: max once per 2 minutes
+    if (this._lastVladContempt && Date.now() - this._lastVladContempt < 120000) return;
+    this._lastVladContempt = Date.now();
+
+    try {
+      const prompt = `Vladislav the vampire is watching ${charName} become ${staminaState} in combat. He is patient, contemptuous, ancient. Generate ONE line of dialogue he murmurs — under 15 words, dripping with cold amusement. He knows he just has to wait.`;
+      const line = await this.gemini.generate(prompt, '', { maxTokens: 30, temperature: 0.9 });
+      if (line) {
+        this.bus.dispatch('voice:speak', { text: line.trim(), profile: 'vladislav', device: 'dining_room' });
+        this.bus.dispatch('hal:response', { query: '[Vladislav]', response: line.trim(), timestamp: Date.now(), source: 'auto' });
+      }
+    } catch (e) { console.error('[AIEngine] Vladislav contempt error:', e.message); }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // RECAP (System 10)
+  // ═══════════════════════════════════════════════════════════════
+
+  async generateRecap() {
+    if (!this.gemini?.available) return null;
+
+    const transcript = this.context._recentTranscript.slice(-60); // ~10 min worth
+    if (transcript.length === 0) return 'No transcript data available for recap.';
+
+    const text = transcript.map(t => `[${t.speaker}]: ${t.text}`).join('\n');
+    const prompt = `Read this D&D session transcript and write a 3-sentence recap of what happened. Factual and narrative — who did what, where things stand. No game mechanics. Under 60 words total.\n\nTranscript:\n${text.slice(-3000)}`;
+
+    try {
+      const recap = await this.gemini.generate(
+        'You are a session recorder for a gothic horror D&D campaign. Write concise narrative recaps.',
+        prompt,
+        { maxTokens: 120, temperature: 0.6 }
+      );
+      if (recap) {
+        this.bus.dispatch('dm:whisper', { text: `Recap: ${recap.trim()}`, priority: 3, category: 'recap' });
+        this.bus.dispatch('hal:response', { query: '[Session Recap]', response: recap.trim(), timestamp: Date.now(), source: 'recap' });
+        return recap.trim();
+      }
+    } catch (e) { console.error('[AIEngine] Recap error:', e.message); }
+    return null;
+  }
+
   _setupRoutes() {
     const app = this.orchestrator.getService('dashboard')?.app;
     if (!app) return;
@@ -446,6 +712,12 @@ Be specific and actionable. Format as JSON: {gaps:[], warnings:[], suggestions:[
     // HAL history
     app.get('/api/hal/history', (req, res) => {
       res.json({ history: this._halHistory.slice(-8) });
+    });
+
+    // Recap (System 10)
+    app.post('/api/recap', async (req, res) => {
+      const recap = await this.generateRecap();
+      res.json({ ok: !!recap, recap });
     });
 
     // Feature 69: Improv Generator

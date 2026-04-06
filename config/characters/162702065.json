@@ -14,7 +14,7 @@
   "background": "Haunted One",
   "alignment": "CN",
   "hp": {
-    "current": 3,
+    "current": 18,
     "max": 18,
     "temp": 0
   },
@@ -615,7 +615,7 @@
     "description": null
   },
   "patron": "Fiend Patron",
-  "_syncedAt": "2026-04-06T14:40:20.642Z",
+  "_syncedAt": "2026-04-06T20:09:13.743Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/162702065"
 }

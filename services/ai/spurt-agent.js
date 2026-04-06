@@ -143,6 +143,45 @@ class SpurtAgent {
       this.bus.dispatch('spurt:surge_result', surge);
     }, 'spurt-agent');
 
+    // System 11: Spurt wound reactions — party member reaches Broken/Crippled
+    this.bus.subscribe('wounds:updated', async (env) => {
+      const { playerId, wounds, tier } = env.data;
+      if (!tier || tier < 3) return; // Only Broken (3) or Crippled (4)
+      if (playerId === this._spurtId) return; // Don't react to own wounds
+
+      const charName = this.state.get(`players.${playerId}.character.name`) || playerId;
+      const dread = this._getSpurtDread();
+
+      let prompt;
+      if (dread <= 40) {
+        prompt = `A party member (${charName}) just got badly hurt (wound tier: ${tier === 3 ? 'Broken' : 'Crippled'}). Spurt is concerned and scared but tries to help. React in character, under 15 words.`;
+      } else if (dread <= 60) {
+        prompt = `${charName} is badly wounded. Spurt moves closer, uses Prestidigitation to clean the wound, asks rapid panicked questions. Under 15 words.`;
+      } else if (dread <= 80) {
+        prompt = `${charName} is horribly wounded. Spurt mixes Common and Draconic, suggests setting something on fire to cauterize it, laughs nervously. Under 15 words.`;
+      } else {
+        prompt = `${charName} is critically wounded. Spurt addresses the wound directly in Draconic, produces a cantrip flame, attempts reckless field surgery with magic. Under 15 words.`;
+      }
+
+      const dialogue = await this._generateDialogue(prompt, true);
+      if (dialogue) {
+        // Deliver via Echo TTS in dining room
+        this.bus.dispatch('voice:speak', { text: dialogue, profile: 'spurt', device: 'dining_room' });
+      }
+    }, 'spurt-agent');
+
+    // Stamina-aware combat: catch breath when spent, press forward when fresh
+    this.bus.subscribe('stamina:tier_change', async (env) => {
+      if (env.data.playerId !== this._spurtId) return;
+      const newState = env.data.state;
+      if (newState === 'spent') {
+        this.bus.dispatch('dm:whisper', {
+          text: 'Spurt is spent — will try to Catch Breath next turn.',
+          priority: 3, category: 'story'
+        });
+      }
+    }, 'spurt-agent');
+
     console.log('[SpurtAgent] Ready — Spurt the Sorcerer is listening');
   }
 

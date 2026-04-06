@@ -525,7 +525,338 @@ class CombatService {
     };
 
     this.bus.dispatch('combat:attack_result', { ...result, combat: this._getCombatState() });
+
+    // ── Hit Location, Bleeding, Massive Damage, Morale ──
+    if (hit && appliedDamage > 0 && target) {
+      this._processHitLocation(attackerId, targetId, appliedDamage, damageType, crit);
+      this._checkMassiveDamage(targetId, appliedDamage);
+      this._checkMorale(targetId, combat);
+    }
+
     return result;
+  }
+
+  // ── Hit Location System ─────────────────────────────────────────────
+  _rollD6() { return Math.floor(Math.random() * 6) + 1; }
+  _rollD4() { return Math.floor(Math.random() * 4) + 1; }
+
+  _processHitLocation(attackerId, targetId, damage, damageType, crit) {
+    const combat = this._getCombatState();
+    const target = combat.turnOrder.find(x => x.id === targetId);
+    if (!target) return;
+
+    const currentHp = target.hp.current + damage; // HP before this hit was applied
+    const pct = damage / currentHp;
+
+    let severity;
+    if (pct < 0.25) severity = 'graze';
+    else if (pct <= 0.50) severity = 'wound';
+    else severity = 'devastating';
+
+    // Graze = narrative only
+    if (severity === 'graze') {
+      this.bus.dispatch('combat:hit_location', {
+        attackerId, targetId, targetName: target.name, damage, severity,
+        location: null, consequence: null
+      });
+      return;
+    }
+
+    // Roll hit location
+    const locRoll = this._rollD6();
+    const locations = ['head', 'torso', 'leftArm', 'rightArm', 'leftLeg', 'rightLeg'];
+    const location = locations[locRoll - 1];
+
+    // Devastating hits spike party dread
+    if (severity === 'devastating' && target.type === 'pc') {
+      const players = this.state.get('players') || {};
+      for (const pid of Object.keys(players)) {
+        const currentDread = this.state.get(`players.${pid}.dread.score`) || 0;
+        this.state.updateDread(pid, Math.min(100, currentDread + 15));
+      }
+    }
+
+    // Build consequence description
+    const consequence = this._getHitConsequence(location, severity, target);
+
+    // Dispatch for AI narration and DM whisper
+    this.bus.dispatch('combat:hit_location', {
+      attackerId, targetId, targetName: target.name,
+      damage, severity, location, consequence, damageType
+    });
+
+    // Whisper mechanical effect to DM
+    this.bus.dispatch('dm:whisper', {
+      text: `${severity.toUpperCase()} hit on ${target.name}'s ${location}. ${consequence.mechanical}`,
+      priority: 2, category: 'combat'
+    });
+
+    // Apply wound to character wound state if PC
+    if (target.type === 'pc') {
+      const wounds = this.state.get(`players.${targetId}.wounds`) || {};
+      const currentTier = wounds[location] || 0;
+      const newTier = Math.min(4, currentTier + (severity === 'devastating' ? 2 : 1));
+      wounds[location] = newTier;
+      this.state.set(`players.${targetId}.wounds`, wounds);
+      this.bus.dispatch('wounds:updated', { playerId: targetId, wounds, location });
+    }
+
+    // Devastating torso/limb hits may cause bleeding
+    if (severity === 'devastating' && location !== 'head') {
+      this._startBleeding(targetId, location);
+    }
+  }
+
+  _getHitConsequence(location, severity, target) {
+    const consequences = {
+      head: {
+        wound: { mechanical: 'WIS save DC12 or Disoriented (next action wasted)', save: 'wis', dc: 12 },
+        devastating: { mechanical: 'Stunned until end of next turn. WIS save DC15 or attacks random target.', save: 'wis', dc: 15, condition: 'stunned' }
+      },
+      torso: {
+        wound: { mechanical: 'CON save DC12 or lose concentration + bonus action', save: 'con', dc: 12 },
+        devastating: { mechanical: 'CON save DC15 or Incapacitated until end of next turn. Begin Bleeding.', save: 'con', dc: 15, condition: 'incapacitated', bleeding: true }
+      },
+      leftArm: {
+        wound: { mechanical: 'Shield AC halved this round', effect: 'shield_halved' },
+        devastating: { mechanical: 'Shield arm useless this combat. Shield dropped.', effect: 'shield_lost' }
+      },
+      rightArm: {
+        wound: { mechanical: 'Disadvantage on attacks this round. DEX save DC12 or drop weapon.', save: 'dex', dc: 12 },
+        devastating: { mechanical: 'Cannot attack with that arm this combat. Weapon dropped.', effect: 'arm_disabled' }
+      },
+      leftLeg: {
+        wound: { mechanical: 'Speed halved until end of next turn', effect: 'speed_halved' },
+        devastating: { mechanical: 'Speed 0 until bandaged or healed. Begin Bleeding.', effect: 'speed_zero', bleeding: true }
+      },
+      rightLeg: {
+        wound: { mechanical: 'Speed halved until end of next turn', effect: 'speed_halved' },
+        devastating: { mechanical: 'Speed 0 until bandaged or healed. Begin Bleeding.', effect: 'speed_zero', bleeding: true }
+      }
+    };
+
+    return consequences[location]?.[severity] || { mechanical: 'No specific consequence' };
+  }
+
+  // ── Bleeding System ─────────────────────────────────────────────────
+
+  _startBleeding(combatantId, location) {
+    const combat = this._getCombatState();
+    const c = combat.turnOrder.find(x => x.id === combatantId);
+    if (!c) return;
+
+    if (!c._bleeding) c._bleeding = [];
+    if (!c._bleeding.includes(location)) {
+      c._bleeding.push(location);
+    }
+    if (!c.conditions.includes('bleeding')) {
+      c.conditions.push('bleeding');
+    }
+    this._setCombatState(combat);
+
+    this.bus.dispatch('combat:bleeding_started', {
+      combatantId, combatantName: c.name, location
+    });
+    this.bus.dispatch('dm:whisper', {
+      text: `${c.name} is BLEEDING from ${location}. Medicine DC10 to stop (DC8 with help). Costs 1 healer's kit charge.`,
+      priority: 2, category: 'combat'
+    });
+  }
+
+  _processBleedingTick(combatant) {
+    if (!combatant._bleeding || combatant._bleeding.length === 0) return;
+
+    const d4 = this._rollD4();
+    this.modifyHp(combatant.id, -d4);
+
+    this.bus.dispatch('combat:bleeding_tick', {
+      playerId: combatant.id, combatantName: combatant.name,
+      damage: d4, locations: combatant._bleeding
+    });
+    this.bus.dispatch('dm:whisper', {
+      text: `${combatant.name} takes ${d4} bleeding damage. Still bleeding from: ${combatant._bleeding.join(', ')}`,
+      priority: 3, category: 'combat'
+    });
+  }
+
+  stopBleeding(combatantId, location) {
+    const combat = this._getCombatState();
+    const c = combat.turnOrder.find(x => x.id === combatantId);
+    if (!c || !c._bleeding) return null;
+
+    if (location) {
+      c._bleeding = c._bleeding.filter(l => l !== location);
+    } else {
+      c._bleeding = []; // stop all bleeding
+    }
+
+    if (c._bleeding.length === 0) {
+      c.conditions = c.conditions.filter(x => x !== 'bleeding');
+    }
+
+    this._setCombatState(combat);
+    this.bus.dispatch('combat:bleeding_stopped', {
+      combatantId, combatantName: c.name, location: location || 'all'
+    });
+    return c;
+  }
+
+  // ── Massive Damage Shock ────────────────────────────────────────────
+
+  _checkMassiveDamage(targetId, damage) {
+    const combat = this._getCombatState();
+    const target = combat.turnOrder.find(x => x.id === targetId);
+    if (!target || target.hp.current <= 0) return; // already at 0, death saves handle it
+
+    const hpBeforeHit = target.hp.current + damage;
+    const threshold = hpBeforeHit * 0.5;
+    if (damage < threshold) return;
+
+    // Check immunity
+    const npcState = this.state.get(`npcs.${targetId}`);
+    if (npcState?.shockImmune) return; // Undead, Vladislav
+
+    // Calculate DC: 10 + 1 per 10% above 50% threshold
+    const pctAbove = ((damage / hpBeforeHit) - 0.5) * 100;
+    const dc = Math.min(18, 10 + Math.floor(pctAbove / 10));
+
+    // Check advantage (werewolf etc)
+    const hasAdvantage = npcState?.shockAdvantage || false;
+    const hasDisadvantage = npcState?.shockDisadvantage || false;
+
+    this.bus.dispatch('combat:massive_damage', {
+      targetId, targetName: target.name, damage, hpBefore: hpBeforeHit,
+      dc, hasAdvantage, hasDisadvantage, type: target.type
+    });
+
+    this.bus.dispatch('dm:whisper', {
+      text: `MASSIVE HIT — ${target.name} needs CON save DC${dc} or goes into shock.${hasAdvantage ? ' (advantage)' : ''}`,
+      priority: 1, category: 'combat'
+    });
+  }
+
+  /**
+   * DM clicks Pass or Fail for shock save
+   */
+  resolveShockSave(combatantId, passed) {
+    const combat = this._getCombatState();
+    const c = combat.turnOrder.find(x => x.id === combatantId);
+    if (!c) return null;
+
+    if (passed) {
+      // Loses next bonus action, stamina drain
+      this.bus.dispatch('combat:shock_save_passed', {
+        playerId: combatantId, combatantName: c.name
+      });
+      this.bus.dispatch('dm:whisper', {
+        text: `${c.name} takes the blow and stays on their feet — barely. Lost bonus action.`,
+        priority: 2, category: 'combat'
+      });
+    } else {
+      // Falls unconscious from shock for 1d4 rounds (not dying)
+      const rounds = this._rollD4();
+      if (!c.conditions.includes('shocked')) c.conditions.push('shocked');
+      c._shockRoundsLeft = rounds;
+
+      this._setCombatState(combat);
+      this._syncConditionsToToken(combatantId, c.conditions);
+
+      // Start bleeding from torso/limb automatically
+      this._startBleeding(combatantId, 'torso');
+
+      this.bus.dispatch('combat:shock_failed', {
+        playerId: combatantId, combatantName: c.name, rounds
+      });
+      this.bus.dispatch('dm:whisper', {
+        text: `${c.name} goes into SHOCK — unconscious ${rounds} rounds. Medicine DC8 to rouse. Bleeding started.`,
+        priority: 1, category: 'combat'
+      });
+    }
+    return c;
+  }
+
+  /**
+   * Rouse a shocked combatant (Medicine DC8 by another character)
+   */
+  rouseFromShock(combatantId) {
+    const combat = this._getCombatState();
+    const c = combat.turnOrder.find(x => x.id === combatantId);
+    if (!c) return null;
+
+    c.conditions = c.conditions.filter(x => x !== 'shocked');
+    delete c._shockRoundsLeft;
+    this._setCombatState(combat);
+    this._syncConditionsToToken(combatantId, c.conditions);
+
+    // Immediately gains Exhausted stamina state
+    const staminaSvc = this.orchestrator.getService('stamina');
+    if (staminaSvc) staminaSvc.setStaminaState(combatantId, 'exhausted');
+
+    this.bus.dispatch('dm:whisper', {
+      text: `${c.name} roused from shock. Immediately exhausted.`,
+      priority: 2, category: 'combat'
+    });
+    return c;
+  }
+
+  // ── Enemy Morale ────────────────────────────────────────────────────
+
+  _checkMorale(targetId, combat) {
+    // Only check morale for NPCs after they take damage
+    const c = combat.turnOrder.find(x => x.id === targetId);
+    if (!c || c.type !== 'npc' || !c.isAlive) return;
+
+    const npcState = this.state.get(`npcs.${targetId}`) || {};
+    const profile = npcState.moraleProfile || 'normal';
+    if (profile === 'fearless') return;
+
+    // INT check — only INT 6+ considers fleeing
+    const mapSvc = this.orchestrator.getService('map');
+    const actor = c.actorSlug ? (mapSvc?.customActors?.get(c.actorSlug) || mapSvc?.srdMonsters?.get(c.actorSlug)) : null;
+    const intScore = actor?.intelligence || 10;
+    if (intScore < 6) return;
+
+    const hpPct = c.hp.current / c.hp.max;
+    const threshold = profile === 'cowardly' ? 0.75 : profile === 'disciplined' ? 0.25 : 0.50;
+    if (hpPct > threshold) return;
+
+    // Check if ally dropped this combat
+    const allyDropped = combat.turnOrder.some(x =>
+      x.type === 'npc' && x.id !== targetId && !x.isAlive
+    );
+
+    // Check outnumbered
+    const aliveNpcs = combat.turnOrder.filter(x => x.type === 'npc' && x.isAlive).length;
+    const alivePcs = combat.turnOrder.filter(x => x.type === 'pc' && x.isAlive).length;
+    const outnumbered = alivePcs >= aliveNpcs * 2;
+
+    if (hpPct <= threshold || allyDropped || outnumbered) {
+      // WIS save DC12
+      const wisScore = actor?.wisdom || 10;
+      const wisMod = Math.floor((wisScore - 10) / 2);
+      const d20 = this._rollD20();
+      let roll = d20 + wisMod;
+
+      // Disciplined get advantage
+      if (profile === 'disciplined') {
+        const d20b = this._rollD20();
+        roll = Math.max(d20 + wisMod, d20b + wisMod);
+      }
+
+      const fled = roll < 12;
+
+      if (fled) {
+        this.bus.dispatch('combat:morale_break', {
+          combatantId: targetId, combatantName: c.name,
+          reason: hpPct <= threshold ? 'wounded' : allyDropped ? 'ally_fallen' : 'outnumbered',
+          roll, dc: 12
+        });
+        this.bus.dispatch('dm:whisper', {
+          text: `MORALE BREAK: ${c.name} fails WIS save (${roll} vs DC12) — will Disengage and flee!`,
+          priority: 2, category: 'combat'
+        });
+      }
+    }
   }
 
   /**
@@ -773,6 +1104,33 @@ class CombatService {
       if (!c) return res.status(404).json({ error: 'Combatant not found' });
       const loot = await this._generateLoot(c);
       res.json(loot);
+    });
+
+    // POST /api/combat/shock-save — DM resolves massive damage shock save
+    app.post('/api/combat/shock-save', (req, res) => {
+      const { combatantId, passed } = req.body || {};
+      if (!combatantId || passed === undefined) return res.status(400).json({ error: 'combatantId and passed required' });
+      const result = this.resolveShockSave(combatantId, passed);
+      if (!result) return res.status(404).json({ error: 'Combatant not found' });
+      res.json({ ok: true, result });
+    });
+
+    // POST /api/combat/rouse — rouse a shocked combatant
+    app.post('/api/combat/rouse', (req, res) => {
+      const { combatantId } = req.body || {};
+      if (!combatantId) return res.status(400).json({ error: 'combatantId required' });
+      const result = this.rouseFromShock(combatantId);
+      if (!result) return res.status(404).json({ error: 'Combatant not found' });
+      res.json({ ok: true });
+    });
+
+    // POST /api/combat/stop-bleeding — stop bleeding on a combatant
+    app.post('/api/combat/stop-bleeding', (req, res) => {
+      const { combatantId, location } = req.body || {};
+      if (!combatantId) return res.status(400).json({ error: 'combatantId required' });
+      const result = this.stopBleeding(combatantId, location);
+      if (!result) return res.status(404).json({ error: 'Combatant not found or not bleeding' });
+      res.json({ ok: true });
     });
 
     // NOTE: attack, npc-roll, and actions routes are registered in
@@ -1065,6 +1423,24 @@ Respond with JSON: { "items": [{ "name": "...", "description": "...", "type": "w
       // Process condition expiry at start of turn
       this._processConditionExpiry(combat);
       this._setCombatState(combat);
+
+      // Process bleeding at start of bleeding creature's turn
+      if (current._bleeding && current._bleeding.length > 0) {
+        this._processBleedingTick(current);
+      }
+
+      // Process shock countdown
+      if (current._shockRoundsLeft && current._shockRoundsLeft > 0) {
+        current._shockRoundsLeft--;
+        if (current._shockRoundsLeft <= 0) {
+          this.rouseFromShock(current.id);
+        } else {
+          this.bus.dispatch('dm:whisper', {
+            text: `${current.name} is in shock — ${current._shockRoundsLeft} round(s) remaining. Medicine DC8 to rouse.`,
+            priority: 3, category: 'combat'
+          });
+        }
+      }
 
       // Death save automation for PCs at 0 HP
       if (current.type === 'pc' && current.hp.current === 0) {

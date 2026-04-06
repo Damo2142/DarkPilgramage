@@ -86,25 +86,43 @@ class NpcHandler {
       // No NPC config file, that's fine
     }
 
+    const dialogueFormatRule = `\n\nCRITICAL FORMAT RULE: Your response must BEGIN with spoken dialogue in quotation marks. Never begin with a character name followed by a verb. Never begin with a stage direction or physical action. The first character of your response must be an opening quotation mark.
+Correct: "You are kind to ask. It has been a difficult week." — she looks away.
+Wrong: Marta whispers, "You are kind"
+Wrong: Marta flinches, her eyes darting to the door`;
+
     const prompt = manualPrompt
-      ? `The DM wants ${npc.name} to say something about: "${manualPrompt}"\n\n${contextStr}`
-      : `Based on the recent dialogue, generate what ${npc.name} would say next. If ${npc.name} would not naturally speak right now, respond with just "SILENCE".\n\n${contextStr}`;
+      ? `${manualPrompt}${dialogueFormatRule}\n\n${contextStr}`
+      : `Based on the recent dialogue, generate what ${npc.name} would say next. If ${npc.name} would not naturally speak right now, respond with just "SILENCE".${dialogueFormatRule}\n\n${contextStr}`;
 
     const response = await this.gemini.generate(
       this._systemPrompt + npcNotes,
       prompt,
-      { maxTokens: 300, temperature: 0.85 }
+      { maxTokens: 400, temperature: 0.85 }
     );
+
+    console.log(`[NpcHandler] Raw Gemini response for ${npc.name}: "${response}"`);
 
     if (!response || response.trim() === 'SILENCE') return null;
 
     // Clean up the response
     let dialogue = response.trim();
-    // Remove quotes if the AI wrapped them
-    dialogue = dialogue.replace(/^["']|["']$/g, '');
-    // Remove character name prefix if AI added it
-    const namePrefix = new RegExp(`^${npc.name}:\\s*`, 'i');
+    // Remove character name prefix if AI added it (e.g. "Marta: ...")
+    const namePrefix = new RegExp(`^${npc.name}[:\\s]+`, 'i');
     dialogue = dialogue.replace(namePrefix, '');
+    // Remove first-name prefix too
+    const firstName = (npc.name || '').split(' ')[0];
+    if (firstName.length > 2) {
+      const firstNamePrefix = new RegExp(`^${firstName}[:\\s]+`, 'i');
+      dialogue = dialogue.replace(firstNamePrefix, '');
+    }
+    // Only strip wrapping quotes if the ENTIRE response is a single quoted string
+    // (i.e. starts with " and ends with " with no em dash action beat after)
+    if (/^["'].*["']$/.test(dialogue) && !dialogue.includes('—')) {
+      dialogue = dialogue.replace(/^["']|["']$/g, '');
+    }
+
+    console.log(`[NpcHandler] Cleaned dialogue for ${npc.name}: "${dialogue}"`);
 
     const id = `npc-${++this._dialogueId}`;
     const suggestion = {
@@ -243,13 +261,16 @@ class NpcHandler {
     return `You are an NPC dialogue generator for a gothic horror D&D campaign set in 1274 Central Europe called "The Dark Pilgrimage."
 
 RULES:
-- Respond ONLY with the NPC's spoken dialogue — no narration, no actions, no quotes
+- Every response MUST contain actual spoken dialogue — words the NPC says out loud
+- Format: "[What they say]" — [one brief physical beat if appropriate, optional]
+- NEVER respond with only a physical action, stage direction, or narration
+- The spoken words are the response. An action beat may follow but never replaces speech.
 - Stay in character based on the NPC's personality, knowledge, and disposition
 - Use period-appropriate speech — medieval Central European setting
-- Keep responses concise (1-3 sentences typical, longer for important reveals)
-- NPCs should NOT reveal information they wouldn't know or share
+- Keep responses concise (1-3 sentences of dialogue typical, longer for important reveals)
+- NPCs must NOT reveal information they would not know or willingly share
 - Horror tone: atmospheric and unsettling, never gratuitous
-- If the NPC would not speak, respond with just "SILENCE"`;
+- If the NPC would genuinely not speak, respond with just "SILENCE"`;
   }
 
   getStats() {

@@ -71,7 +71,21 @@ class GeminiClient {
       }
 
       const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      // Check for multi-part responses and concatenate all parts
+      const parts = data.candidates?.[0]?.content?.parts;
+      if (!parts || parts.length === 0) {
+        console.warn('[GeminiClient] No content parts in response');
+        return null;
+      }
+      const text = parts.map(p => p.text || '').join('');
+
+      // Log finish reason if not normal
+      const finishReason = data.candidates?.[0]?.finishReason;
+      if (finishReason && finishReason !== 'STOP') {
+        console.warn(`[GeminiClient] Finish reason: ${finishReason} (may indicate truncation)`);
+      }
+
       return text || null;
 
     } catch (err) {
@@ -131,7 +145,14 @@ class GeminiClient {
       }
 
       const data = await response.json();
-      return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+      const parts = data.candidates?.[0]?.content?.parts;
+      if (!parts || parts.length === 0) return null;
+      const text = parts.map(p => p.text || '').join('');
+      const finishReason = data.candidates?.[0]?.finishReason;
+      if (finishReason && finishReason !== 'STOP') {
+        console.warn(`[GeminiClient] Chat finish reason: ${finishReason}`);
+      }
+      return text || null;
 
     } catch (err) {
       console.error(`[GeminiClient] Chat request failed: ${err.message}`);

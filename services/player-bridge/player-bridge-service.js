@@ -490,6 +490,31 @@ class PlayerBridgeService {
       }
     }, 'player-bridge');
 
+    // Camera frame relay: forward player camera frames to dashboard
+    this.bus.subscribe('player:camera_frame', (env) => {
+      // Forward to dashboard clients only (not other players)
+      const dashSvc = this.orchestrator.getService('dashboard');
+      if (dashSvc) {
+        dashSvc._broadcast({ type: 'player:camera_frame', playerId: env.data.playerId, frame: env.data.frame });
+      }
+    }, 'player-bridge');
+
+    // Stamina updates to players
+    this.bus.subscribe('stamina:updated', (env) => {
+      const { playerId } = env.data;
+      if (playerId) {
+        this._sendToPlayer(playerId, { type: 'stamina:updated', data: env.data });
+      }
+    }, 'player-bridge');
+
+    // Equipment condition updates
+    this.bus.subscribe('equipment:updated', (env) => {
+      const { playerId } = env.data;
+      if (playerId) {
+        this._sendToPlayer(playerId, { type: 'equipment:updated', data: env.data });
+      }
+    }, 'player-bridge');
+
     // NPC chat reply (Feature 49)
     this.bus.subscribe('npc:chat_reply', (env) => {
       const { playerId, npcId, npcName, text } = env.data;
@@ -911,6 +936,47 @@ class PlayerBridgeService {
         });
         break;
       }
+
+      case 'speak': {
+        // System 8: Auto-detect NPC name in player speech and route accordingly
+        const text = (msg.text || '').trim();
+        if (!text) break;
+        const npcs = this.state.get('npcs') || {};
+        let matchedNpcId = null;
+        let matchedNpcName = null;
+        const lowerText = text.toLowerCase();
+        // Check for NPC names in the message
+        for (const [nid, npc] of Object.entries(npcs)) {
+          const name = (npc.name || nid).toLowerCase();
+          if (lowerText.includes(name)) {
+            matchedNpcId = nid;
+            matchedNpcName = npc.name || nid;
+            break;
+          }
+        }
+        // Also check for 'spurt'
+        if (!matchedNpcId && lowerText.includes('spurt')) {
+          matchedNpcId = 'spurt';
+          matchedNpcName = 'Spurt';
+        }
+
+        if (matchedNpcId) {
+          console.log(`[PlayerBridge] ${playerId} speaks to ${matchedNpcName}: "${text}"`);
+          this.bus.dispatch('npc:player_chat', {
+            playerId, npcId: matchedNpcId, npcName: matchedNpcName, text
+          });
+        } else {
+          // No NPC detected — treat as party chat
+          this.bus.dispatch('chat:party', { from: playerId, fromName: this.state.get(`players.${playerId}.character.name`) || playerId, text });
+          this._broadcast({ type: 'chat:party', from: playerId, fromName: this.state.get(`players.${playerId}.character.name`) || playerId, text });
+        }
+        break;
+      }
+
+      case 'camera:frame':
+        // System 9: Player sends camera JPEG snapshot
+        this.bus.dispatch('player:camera_frame', { playerId, frame: msg.frame });
+        break;
 
       case 'ping':
         this._sendToPlayer(playerId, { type: 'pong', ts: Date.now() });

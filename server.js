@@ -12,6 +12,8 @@ const WorldClockService = require('./services/world/world-clock-service');
 const VoiceService = require('./services/audio/voice-service');
 const SoundService = require('./services/audio/sound-service');
 const CampaignService = require('./services/campaign/campaign-service');
+const EquipmentService = require('./services/equipment/equipment-service');
+const StaminaService = require('./services/stamina/stamina-service');
 const { loadConfig } = require('./utils/config-loader');
 
 // Auto-discover session config: CLI arg > config/session-0.json > defaults only
@@ -39,6 +41,8 @@ orchestrator.register(new SoundService());
 orchestrator.register(new AIEngine());
 orchestrator.register(new AtmosphereEngine());
 orchestrator.register(new CampaignService());
+orchestrator.register(new EquipmentService());
+orchestrator.register(new StaminaService());
 
 orchestrator.startAll().catch(err => {
   console.error('Fatal startup error:', err);

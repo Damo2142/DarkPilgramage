@@ -108,15 +108,20 @@ class CharacterService {
     else if (pct <= 0.75) tier = 1;   // Scratched
     else tier = 0;                     // Unharmed
 
+    // Cap all wounds down to the current tier (healing reduces wounds)
+    for (const k of Object.keys(wounds)) {
+      if (wounds[k] > tier) wounds[k] = tier;
+    }
+
     if (tier === 0) {
       // Full health — clear all wounds
       for (const k of Object.keys(wounds)) wounds[k] = 0;
     } else if (tier === 1) {
-      // Scratched — one random limb (keep existing if already scratched+)
+      // Scratched — at least one limb at 1
       const alreadyHurt = limbs.filter(l => wounds[l] >= 1);
       if (alreadyHurt.length === 0) {
         const pick = limbs[Math.floor(Math.random() * limbs.length)];
-        wounds[pick] = Math.max(wounds[pick], 1);
+        wounds[pick] = 1;
       }
     } else if (tier === 2) {
       // Wounded — torso always, one random limb
@@ -133,7 +138,6 @@ class CharacterService {
     } else if (tier === 3) {
       // Broken — torso + multiple limbs
       wounds.torso = Math.max(wounds.torso, 3);
-      // At least 2 limbs at 2+, one at 3
       const shuffled = limbs.sort(() => Math.random() - 0.5);
       wounds[shuffled[0]] = Math.max(wounds[shuffled[0]], 3);
       wounds[shuffled[1]] = Math.max(wounds[shuffled[1]], 2);
@@ -143,12 +147,9 @@ class CharacterService {
       for (const k of Object.keys(wounds)) wounds[k] = 4;
     }
 
-    // Only broadcast if something changed
-    const changed = Object.keys(wounds).some(k => wounds[k] !== prev[k]);
-    if (changed) {
-      this.state.set('players.' + playerId + '.wounds', wounds);
-      this.bus.dispatch('wounds:updated', { playerId, wounds, tier, hpPct: pct });
-    }
+    // Always update state and broadcast so clients stay synced
+    this.state.set('players.' + playerId + '.wounds', wounds);
+    this.bus.dispatch('wounds:updated', { playerId, wounds, tier, hpPct: pct });
   }
 
   async stop() {}
@@ -169,6 +170,9 @@ class CharacterService {
       count++;
     }
     this.state.set('characters.available', characters);
+    if (count > 0) {
+      this.bus.dispatch('characters:loaded', { count });
+    }
     return count;
   }
 

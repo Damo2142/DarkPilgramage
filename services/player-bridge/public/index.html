@@ -381,7 +381,11 @@
 <div id="toast-layer"></div>
 <!-- Persistent wound body overlay — always visible, lower right -->
 <div id="wound-overlay" onclick="WoundPanel.toggleOverlay()" style="position:fixed;bottom:12px;right:12px;z-index:90;cursor:pointer;opacity:0.7;transition:opacity 0.2s;">
-  <svg viewBox="0 0 120 260" width="48" height="104" style="filter:drop-shadow(0 0 4px rgba(0,0,0,0.8));">
+  <svg viewBox="-10 -10 140 280" width="56" height="112" style="filter:drop-shadow(0 0 4px rgba(0,0,0,0.8));">
+    <!-- Stamina ring arc around the body -->
+    <circle id="stamina-ring-bg" cx="60" cy="130" r="68" fill="none" stroke="#222" stroke-width="3" stroke-dasharray="427" stroke-dashoffset="0" opacity="0.3"/>
+    <circle id="stamina-ring" cx="60" cy="130" r="68" fill="none" stroke="#c9a54e" stroke-width="3" stroke-dasharray="427" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 60 130)"/>
+    <!-- Body silhouette -->
     <ellipse id="wo-head" cx="60" cy="28" rx="18" ry="22" fill="#1a3a1a" stroke="#222" stroke-width="1.5"/>
     <path id="wo-torso" d="M38,52 L82,52 L86,140 L34,140 Z" fill="#1a3a1a" stroke="#222" stroke-width="1.5"/>
     <path id="wo-rightArm" d="M34,56 L22,56 L10,110 L14,112 L24,70 L34,80 Z" fill="#1a3a1a" stroke="#222" stroke-width="1.5"/>
@@ -389,6 +393,20 @@
     <path id="wo-rightLeg" d="M38,140 L54,140 L52,210 L56,250 L44,250 L46,210 L34,170 Z" fill="#1a3a1a" stroke="#222" stroke-width="1.5"/>
     <path id="wo-leftLeg" d="M66,140 L82,140 L86,170 L74,210 L76,250 L64,250 L68,210 Z" fill="#1a3a1a" stroke="#222" stroke-width="1.5"/>
   </svg>
+  <style>
+    @keyframes stam-pulse-slow { 0%,100%{opacity:1} 50%{opacity:0.6} }
+    @keyframes stam-pulse-fast { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    @keyframes stam-pulse-rapid { 0%,100%{opacity:1} 50%{opacity:0.15} }
+    .stam-winded #stamina-ring { stroke:#e0a020; animation: stam-pulse-slow 3s ease-in-out infinite; }
+    .stam-exhausted #stamina-ring { stroke:#e06020; animation: stam-pulse-fast 1.5s ease-in-out infinite; }
+    .stam-spent #stamina-ring { stroke:#c02020; animation: stam-pulse-rapid 0.8s ease-in-out infinite; }
+    .stam-collapsed #stamina-ring { stroke:#401010; stroke-dasharray:15 25; animation: none; opacity:0.5; }
+  </style>
+</div>
+<!-- Speak input at bottom -->
+<div id="speak-bar" style="position:fixed;bottom:0;left:0;right:0;z-index:80;background:rgba(10,10,18,0.95);border-top:1px solid #333;padding:6px 8px;display:flex;gap:6px;">
+  <input type="text" id="speak-input" placeholder="Speak..." style="flex:1;padding:6px 10px;background:#1e1e28;border:1px solid #333;border-radius:4px;color:#f0ece6;font-size:12px;font-family:inherit;" onkeydown="if(event.key==='Enter')playerSpeak()">
+  <button onclick="playerSpeak()" style="padding:6px 14px;background:#8a7030;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer;">Send</button>
 </div>
 <div id="wound-overlay-detail" style="display:none;position:fixed;bottom:12px;right:68px;z-index:91;background:rgba(10,10,18,0.95);border:1px solid #333;border-radius:8px;padding:10px 12px;max-width:200px;font-size:11px;color:#e8e0d0;">
   <div id="wo-detail-text" style="font-style:italic;line-height:1.5;"></div>
@@ -432,6 +450,7 @@
     <div class="tab" onclick="showTab('chat')">Chat</div>
     <div class="tab" onclick="showTab('journal')">Journal</div>
     <div class="tab" onclick="showTab('wounds')">Body</div>
+    <div class="tab" onclick="showTab('equip')">Equip</div>
     <div class="tab" onclick="showTab('npcchat')">NPC</div>
     <div class="tab" onclick="showTab('handouts')">Docs</div>
     <div class="tab" onclick="showTab('notes')">Notes</div>
@@ -603,11 +622,57 @@
         <div id="wound-summary" style="margin-top:12px;font-size:11px;"></div>
       </div>
     </div>
+    <div style="border-top:1px solid #333;margin-top:8px;padding-top:8px;">
+      <div style="font-family:Cinzel,serif;font-size:11px;color:var(--text-dim);margin-bottom:6px;">Tend Your Wounds</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button onclick="useHealing('potion',7)" style="flex:1;min-width:80px;padding:6px 8px;font-size:10px;background:#1a2a1a;border:1px solid #2a4a2a;color:#6b8b6b;border-radius:4px;cursor:pointer;font-family:inherit;">Potion</button>
+        <button onclick="useHealing('greater',14)" style="flex:1;min-width:80px;padding:6px 8px;font-size:10px;background:#1a2a1a;border:1px solid #2a4a2a;color:#6b8b6b;border-radius:4px;cursor:pointer;font-family:inherit;">Greater Potion</button>
+        <button onclick="useHealing('superior',28)" style="flex:1;min-width:80px;padding:6px 8px;font-size:10px;background:#1a2a1a;border:1px solid #2a4a2a;color:#6b8b6b;border-radius:4px;cursor:pointer;font-family:inherit;">Superior Potion</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:6px;align-items:center;">
+        <button onclick="useHealingCustom()" style="flex:1;padding:6px 8px;font-size:10px;background:#1a2a1a;border:1px solid #2a4a2a;color:#6b8b6b;border-radius:4px;cursor:pointer;font-family:inherit;">Heal</button>
+        <input type="number" id="heal-amt" min="1" max="999" value="1" style="width:50px;padding:4px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px;text-align:center;">
+        <span style="font-size:9px;color:var(--text-dim);">HP</span>
+      </div>
+      <div id="heal-feedback" style="font-size:10px;color:#6b8b6b;font-style:italic;margin-top:6px;min-height:14px;"></div>
+    </div>
     <style>
       @keyframes wound-pulse-slow { 0%,100%{opacity:1} 50%{opacity:0.5} }
       @keyframes wound-pulse-fast { 0%,100%{opacity:1} 50%{opacity:0.3} }
       .wound-3 { animation: wound-pulse-slow 2s ease-in-out infinite; }
       .wound-4 { animation: wound-pulse-fast 0.8s ease-in-out infinite; }
+    </style>
+  </div>
+  <!-- EQUIPMENT CONDITION -->
+  <div class="panel" id="panel-equip">
+    <div class="st">Equipment Condition</div>
+    <div id="equip-items" style="margin-bottom:8px;"></div>
+    <div id="equip-ammo-section" style="display:none;">
+      <div class="st">Ammunition</div>
+      <div id="equip-ammo"></div>
+    </div>
+    <div id="equip-components-section" style="display:none;">
+      <div class="st">Spell Components</div>
+      <div id="equip-components"></div>
+    </div>
+    <div id="equip-healer-section" style="display:none;">
+      <div class="st">Healer's Kit</div>
+      <div id="equip-healer"></div>
+    </div>
+    <style>
+      .eq-item{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+      .eq-item.broken{opacity:0.5;text-decoration:line-through;color:#666;}
+      .eq-pip{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+      .eq-pip-0{background:#4caf50;} .eq-pip-1{background:#8bc34a;} .eq-pip-2{background:#ffc107;} .eq-pip-3{background:#ff5722;} .eq-pip-4{background:#666;}
+      .eq-name{flex:1;font-size:11px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+      .eq-cond{font-size:9px;color:var(--text-dim);flex-shrink:0;}
+      .eq-ammo-row{display:flex;align-items:center;gap:6px;padding:3px 0;}
+      .eq-ammo-count{font-family:monospace;font-size:13px;color:var(--accent);font-weight:700;min-width:24px;text-align:right;}
+      .eq-ammo-label{font-size:11px;}
+      .eq-comp-item{display:flex;align-items:center;gap:6px;padding:2px 0;font-size:11px;}
+      .eq-comp-item.depleted{text-decoration:line-through;color:#666;}
+      .eq-healer-bar{height:6px;background:#222;border-radius:3px;overflow:hidden;margin:4px 0;}
+      .eq-healer-fill{height:100%;background:#4caf50;border-radius:3px;transition:width 0.3s;}
     </style>
   </div>
   <!-- NPC CHAT -->
@@ -744,6 +809,9 @@ function handle(m){
       if(m.player&&m.player.wounds) WoundPanel.update(m.player.wounds);
       if(m.map) PlayerMap.loadFromState(m.map);
       if(m.combat) renderCombatTracker(m.combat);
+      if(m.player&&m.player.equipment) EquipPanel.update(m.player.equipment);
+      else EquipPanel.refresh();
+      if(m.player&&m.player.stamina) StaminaRing.update(m.player.stamina);
       showApp(); break;
     case 'character:update':
       if(m.character)loadChar(m.character); showApp(); break;
@@ -762,6 +830,8 @@ function handle(m){
       }
       break;
     case 'dread:update': updDread(m.score||0); break;
+    case 'equipment:updated': EquipPanel.refresh(); break;
+    case 'stamina:updated': if(m.data) StaminaRing.update(m.data); break;
     case 'horror:effect': applyHorror(m.effect,m.payload,m.durationMs); break;
     case 'horror:clear': clearHorror(); break;
     case 'npc:dialogue': showToast(m.npc||'NPC',m.text,8000); break;
@@ -921,6 +991,54 @@ function adjHp(dir){
 }
 
 function addTmp(){const a=parseInt($('tmpamt').value)||1;tmpH=Math.max(tmpH,a);renderHp();}
+
+// ── HEALING (narrative interface — no HP numbers shown) ──────────
+const HEAL_MSGS = [
+  'The warmth spreads through you. Something mends.',
+  'You feel bone knit and flesh close. Not whole, but better.',
+  'The potion burns going down, but the pain recedes.',
+  'A wave of relief washes over you. You can breathe again.',
+  'The bleeding slows. The world steadies.',
+  'Strength returns to your limbs. Not all of it. But enough.',
+  'The wound still aches, but the worst of it fades.',
+  'You grit your teeth as torn muscle pulls itself together.'
+];
+
+function useHealing(type, avg) {
+  // Roll actual dice for potions (2d4+2, 4d4+4, 8d4+8)
+  let heal = 0;
+  if (type === 'potion') { for(let i=0;i<2;i++) heal+=Math.ceil(Math.random()*4); heal+=2; }
+  else if (type === 'greater') { for(let i=0;i<4;i++) heal+=Math.ceil(Math.random()*4); heal+=4; }
+  else if (type === 'superior') { for(let i=0;i<8;i++) heal+=Math.ceil(Math.random()*4); heal+=8; }
+  else heal = avg;
+  _applyHeal(heal);
+}
+
+function useHealingCustom() {
+  const amt = parseInt(document.getElementById('heal-amt')?.value) || 1;
+  _applyHeal(amt);
+}
+
+function _applyHeal(amount) {
+  if (amount <= 0) return;
+  const oldHp = hpC;
+  hpC = Math.min(hpM, hpC + amount);
+  const actual = hpC - oldHp;
+  if (actual <= 0) {
+    const fb = document.getElementById('heal-feedback');
+    if (fb) fb.textContent = 'You are already at full strength.';
+    return;
+  }
+  renderHp();
+  fetch('/api/hp/' + PID, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ delta: actual })
+  }).then(r => r.json()).then(d => { hpC = d.current; hpM = d.max; renderHp(); })
+    .catch(e => console.error('[Heal] REST failed:', e));
+  const fb = document.getElementById('heal-feedback');
+  if (fb) fb.textContent = HEAL_MSGS[Math.floor(Math.random() * HEAL_MSGS.length)];
+}
 
 // ── ATTACKS ─────────────────────────────────────────────────────────
 function buildAtks(){
@@ -2520,7 +2638,7 @@ function dismissInspiration() {
 
 // ── TABS ────────────────────────────────────────────────────────────
 function showTab(n){
-  const tabs=['stats','map','combat','spells','skills','inventory','features','background','dice','chat','journal','npcchat','handouts','notes'];
+  const tabs=['stats','map','combat','spells','skills','inventory','features','background','dice','chat','journal','wounds','equip','npcchat','handouts','notes'];
   document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',tabs[i]===n));
   document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+n));
   if(n==='map') PlayerMap.resize();
@@ -2683,6 +2801,91 @@ const WOUND_DESC = {
     'The leg drags. You haul it forward by force of will alone.',
     'Your right leg has given out. You crawl or you do not move.'
   ]
+};
+
+// ═══════════════════════════════════════════════════════════════
+// EQUIPMENT CONDITION PANEL
+// ═══════════════════════════════════════════════════════════════
+const EquipPanel = {
+  _data: null,
+
+  update(data) {
+    this._data = data;
+    this._renderItems(data);
+    this._renderAmmo(data);
+    this._renderComponents(data);
+    this._renderHealer(data);
+  },
+
+  refresh() {
+    if (!PID) return;
+    fetch('/api/equipment/' + PID).then(r => r.json()).then(data => {
+      this.update(data);
+    }).catch(() => {});
+  },
+
+  _renderItems(data) {
+    const el = document.getElementById('equip-items');
+    if (!el) return;
+    const items = (data.items || []).filter(i => i.condition !== null && i.condition !== undefined);
+    if (!items.length) { el.innerHTML = '<div style="font-size:10px;color:var(--text-dim);">No tracked equipment</div>'; return; }
+
+    const labels = ['Pristine','Good','Worn','Damaged','Broken'];
+    el.innerHTML = items.map(item => {
+      const broken = item.condition === 4;
+      return `<div class="eq-item${broken ? ' broken' : ''}">
+        <div class="eq-pip eq-pip-${item.condition}"></div>
+        <div class="eq-name">${item.name}${item.equipped ? '' : ' <span style="font-size:8px;color:#555;">(stowed)</span>'}</div>
+        <div class="eq-cond">${labels[item.condition]}</div>
+      </div>`;
+    }).join('');
+  },
+
+  _renderAmmo(data) {
+    const section = document.getElementById('equip-ammo-section');
+    const el = document.getElementById('equip-ammo');
+    if (!section || !el) return;
+    const ammo = data.ammo || {};
+    const types = Object.entries(ammo);
+    if (!types.length) { section.style.display = 'none'; return; }
+    section.style.display = '';
+    el.innerHTML = types.map(([type, info]) => {
+      const low = info.count <= 3;
+      return `<div class="eq-ammo-row">
+        <span class="eq-ammo-count" style="${low ? 'color:#ff5722;' : ''}">${info.count}</span>
+        <span class="eq-ammo-label">${type} remaining</span>
+      </div>`;
+    }).join('');
+  },
+
+  _renderComponents(data) {
+    const section = document.getElementById('equip-components-section');
+    const el = document.getElementById('equip-components');
+    if (!section || !el) return;
+    const comps = data.components || {};
+    const entries = Object.entries(comps);
+    if (!entries.length) { section.style.display = 'none'; return; }
+    section.style.display = '';
+    el.innerHTML = entries.map(([name, info]) => {
+      const depleted = info.count <= 0;
+      const label = info.costly
+        ? `${name} (${info.goldValue}gp)${info.count > 0 ? '' : ' — CONSUMED'}`
+        : `${name} (${info.count}/${info.maxUses || 10} uses)`;
+      const spells = info.spells ? `<div style="font-size:9px;color:var(--text-dim);margin-left:16px;">Used by: ${info.spells.join(', ')}</div>` : '';
+      return `<div class="eq-comp-item${depleted ? ' depleted' : ''}">${depleted ? '&#10007;' : '&#10003;'} ${label}</div>${spells}`;
+    }).join('');
+  },
+
+  _renderHealer(data) {
+    const section = document.getElementById('equip-healer-section');
+    const el = document.getElementById('equip-healer');
+    if (!section || !el) return;
+    if (!data.healerKit) { section.style.display = 'none'; return; }
+    section.style.display = '';
+    const pct = (data.healerKit.charges / data.healerKit.max) * 100;
+    el.innerHTML = `<div class="eq-healer-bar"><div class="eq-healer-fill" style="width:${pct}%;${pct <= 20 ? 'background:#ff5722;' : ''}"></div></div>
+      <div style="font-size:11px;text-align:center;">${data.healerKit.charges} charges remaining</div>`;
+  }
 };
 
 const WoundPanel = {
@@ -4000,43 +4203,75 @@ document.addEventListener('DOMContentLoaded', () => PlayerMap.init());
   }
 })();
 
-// ── FEATURE 75: CAMERA ENGAGEMENT ────────────────────────────────
-// Periodically capture camera frame and send engagement data
+// ── STAMINA RING ────────────────────────────────────────────────
+const StaminaRing = {
+  update(data) {
+    if (!data) return;
+    const ring = document.getElementById('stamina-ring');
+    const overlay = document.getElementById('wound-overlay');
+    if (!ring || !overlay) return;
+
+    const pct = data.max > 0 ? data.current / data.max : 1;
+    const circumference = 427; // 2 * PI * 68
+    ring.setAttribute('stroke-dashoffset', circumference * (1 - pct));
+
+    // Remove old state classes
+    overlay.classList.remove('stam-winded', 'stam-exhausted', 'stam-spent', 'stam-collapsed');
+    if (data.state === 'winded') overlay.classList.add('stam-winded');
+    else if (data.state === 'exhausted') overlay.classList.add('stam-exhausted');
+    else if (data.state === 'spent') overlay.classList.add('stam-spent');
+    else if (data.state === 'collapsed') overlay.classList.add('stam-collapsed');
+  }
+};
+
+// ── SPEAK INPUT ────────────────────────────────────────────────
+function playerSpeak() {
+  var input = document.getElementById('speak-input');
+  if (!input || !input.value.trim()) return;
+  send({ type: 'speak', text: input.value.trim() });
+  input.value = '';
+}
+
+// ── FEATURE 75: CAMERA WITH DASHBOARD STREAMING ────────────────
 var _cameraStream = null;
 var _cameraInterval = null;
 async function startCameraCapture() {
   if (_cameraStream) return;
   try {
-    _cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 320, height: 240 } });
+    _cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 160, height: 120 } });
     var video = document.createElement('video');
     video.srcObject = _cameraStream;
     video.play();
     var canvas = document.createElement('canvas');
-    canvas.width = 320; canvas.height = 240;
+    canvas.width = 160; canvas.height = 120;
     var ctx = canvas.getContext('2d');
-    // Send frame every 30 seconds
+    // Send frame every 1 second via WebSocket for dashboard thumbnails
     _cameraInterval = setInterval(function() {
-      ctx.drawImage(video, 0, 0, 320, 240);
-      // Simple brightness-based engagement heuristic
-      var imageData = ctx.getImageData(0, 0, 320, 240);
-      var pixels = imageData.data;
-      var brightness = 0, motion = 0;
-      for (var i = 0; i < pixels.length; i += 16) { brightness += pixels[i]; }
-      brightness = brightness / (pixels.length / 16);
-      // Engagement = rough heuristic: if camera is covered or person is still, low engagement
-      var engagement = Math.min(100, Math.max(0, brightness * 1.5));
-      fetch('/api/camera/engagement', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerId: PID, engagement: Math.round(engagement) })
-      }).catch(function(){});
-    }, 30000);
-    console.log('[Camera] Engagement tracking started');
+      ctx.drawImage(video, 0, 0, 160, 120);
+      // Send JPEG frame to dashboard via WS
+      var dataUrl = canvas.toDataURL('image/jpeg', 0.4);
+      send({ type: 'camera:frame', frame: dataUrl });
+      // Also send engagement heuristic every 30th frame
+      if (Math.random() < 0.033) {
+        var imageData = ctx.getImageData(0, 0, 160, 120);
+        var pixels = imageData.data;
+        var brightness = 0;
+        for (var i = 0; i < pixels.length; i += 16) { brightness += pixels[i]; }
+        brightness = brightness / (pixels.length / 16);
+        var engagement = Math.min(100, Math.max(0, brightness * 1.5));
+        fetch('/api/camera/engagement', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playerId: PID, engagement: Math.round(engagement) })
+        }).catch(function(){});
+      }
+    }, 1000);
+    console.log('[Camera] Streaming + engagement started');
   } catch(e) {
     console.log('[Camera] Not available:', e.message);
   }
 }
-// Auto-start camera if permitted (won't prompt — only works if already granted)
+// Auto-start camera if permitted
 if (navigator.permissions) {
   navigator.permissions.query({ name: 'camera' }).then(function(result) {
     if (result.state === 'granted') startCameraCapture();

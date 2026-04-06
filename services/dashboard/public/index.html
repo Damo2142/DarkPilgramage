@@ -839,6 +839,7 @@
       <div id="session-save-info" style="font-size:9px;color:var(--text-dim);padding:2px 4px;"></div>
       <div class="session-bar">
         <button class="danger" onclick="if(confirm('PANIC — Kill all effects?')) send('panic')" style="flex:2">🚨 PANIC</button>
+        <button onclick="DmRecap.generate()" title="AI generates a recap of the last 10 minutes">Recap</button>
       </div>
       </div>
 
@@ -1073,6 +1074,13 @@
       <div class="panel-section" data-panel="wounds">
       <div class="section-header"><span class="drag-handle">⠿</span>Wounds</div>
       <div id="wounds-panel" style="padding:6px 8px;font-size:11px;"></div>
+      </div>
+
+      <div class="panel-section" data-panel="equipment">
+      <div class="section-header"><span class="drag-handle">⠿</span>Equipment</div>
+      <div id="equipment-panel" style="padding:6px 8px;font-size:11px;">
+        <div id="equip-dm-content" style="color:var(--text-dim);">No players loaded</div>
+      </div>
       </div>
 
       <div class="panel-section" data-panel="combat">
@@ -1615,6 +1623,7 @@
           if (p.wounds) DmWounds.onUpdate({ playerId: pid, wounds: p.wounds });
         }
         DmWounds.render();
+        DmEquipment.refresh();
         break;
       case 'state:change':
         setNested(state, msg.data.path, msg.data.value);
@@ -1757,6 +1766,26 @@
         break;
       case 'wounds:updated':
         if (msg.data) DmWounds.onUpdate(msg.data);
+        break;
+      case 'equipment:updated':
+      case 'equipment:degraded':
+        DmEquipment.refresh();
+        break;
+      case 'stamina:updated':
+      case 'stamina:tier_change':
+        if (msg.data) DmStamina.update(msg.data);
+        break;
+      case 'player:camera_frame':
+        if (msg.playerId && msg.frame) DmCamera.onFrame(msg.playerId, msg.frame);
+        break;
+      case 'combat:massive_damage':
+      case 'combat:hit_location':
+      case 'combat:morale_break':
+      case 'combat:bleeding_started':
+      case 'combat:bleeding_stopped':
+      case 'combat:shock_failed':
+        // These are already handled via dm:whisper for earbud
+        // Also log to event stream for visibility
         break;
       case 'hal:thinking':
         HAL.setThinking(true);
@@ -2862,6 +2891,222 @@
   const WOUND_LIMBS = ['head', 'torso', 'leftArm', 'rightArm', 'leftLeg', 'rightLeg'];
   const WOUND_LIMB_SHORT = { head:'Hd', torso:'To', leftArm:'LA', rightArm:'RA', leftLeg:'LL', rightLeg:'RL' };
 
+  // ═══════════════════════════════════════════════════════════════
+  // EQUIPMENT DEGRADATION PANEL
+  // ═══════════════════════════════════════════════════════════════
+  const DmEquipment = {
+    _cache: {}, // playerId -> equipment data
+
+    refresh() {
+      const players = state?.players || {};
+      const ids = Object.keys(players).filter(id => players[id]?.character);
+      if (!ids.length) { document.getElementById('equip-dm-content').innerHTML = '<span style="color:var(--text-dim);">No players loaded</span>'; return; }
+      Promise.all(ids.map(id => fetch('/api/equipment/' + id).then(r => r.json()).then(d => ({ id, data: d })).catch(() => null)))
+        .then(results => {
+          for (const r of results) { if (r) this._cache[r.id] = r.data; }
+          this.render();
+        });
+    },
+
+    render() {
+      const el = document.getElementById('equip-dm-content');
+      if (!el) return;
+      const players = state?.players || {};
+      const ids = Object.keys(this._cache);
+      if (!ids.length) { el.innerHTML = '<span style="color:var(--text-dim);">No equipment tracked</span>'; return; }
+
+      const condColors = ['#4caf50','#8bc34a','#ffc107','#ff5722','#666'];
+      const condLabels = ['Pristine','Good','Worn','Damaged','Broken'];
+      let html = '';
+
+      for (const pid of ids) {
+        const eq = this._cache[pid];
+        const charName = players[pid]?.character?.name || pid;
+        html += `<div style="margin-bottom:8px;"><div style="font-family:Cinzel,serif;font-size:12px;color:var(--accent);margin-bottom:3px;">${charName}</div>`;
+
+        // Items with conditions
+        const items = Object.entries(eq.conditions || {});
+        if (items.length) {
+          for (const [name, cond] of items) {
+            const broken = cond === 4;
+            html += `<div style="display:flex;align-items:center;gap:4px;padding:1px 0;cursor:pointer;${broken ? 'text-decoration:line-through;color:#666;' : ''}" onclick="DmEquipment.adjustItem('${pid}','${name.replace(/'/g,"\\'")}',${cond})">`;
+            html += `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${condColors[cond]};flex-shrink:0;"></span>`;
+            html += `<span style="flex:1;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</span>`;
+            html += `<span style="font-size:9px;color:var(--text-dim);">${condLabels[cond]}</span>`;
+            html += `</div>`;
+          }
+        }
+
+        // Ammo
+        const ammo = Object.entries(eq.ammo || {});
+        for (const [type, info] of ammo) {
+          const low = info.count <= 3;
+          html += `<div style="display:flex;align-items:center;gap:4px;padding:1px 0;">`;
+          html += `<span style="font-size:10px;font-weight:700;color:${low ? '#ff5722' : 'var(--accent)'};min-width:18px;text-align:right;">${info.count}</span>`;
+          html += `<span style="font-size:10px;">${type}</span>`;
+          html += `</div>`;
+        }
+
+        // Components (show status: full/low/empty)
+        const comps = Object.entries(eq.components || {});
+        if (comps.length) {
+          const depleted = comps.filter(([,c]) => c.count <= 0).length;
+          const total = comps.length;
+          const status = depleted === total ? 'empty' : depleted > 0 ? 'low' : 'full';
+          const statusColor = status === 'empty' ? '#ff5722' : status === 'low' ? '#ffc107' : '#4caf50';
+          html += `<div style="display:flex;align-items:center;gap:4px;padding:1px 0;">`;
+          html += `<span style="font-size:10px;">Components:</span>`;
+          html += `<span style="font-size:10px;font-weight:700;color:${statusColor};">${status}</span>`;
+          html += `</div>`;
+        }
+
+        // Healer's kit
+        if (eq.healerKit) {
+          const pct = (eq.healerKit.charges / eq.healerKit.max) * 100;
+          html += `<div style="display:flex;align-items:center;gap:4px;padding:1px 0;">`;
+          html += `<span style="font-size:10px;">Kit:</span>`;
+          html += `<div style="flex:1;height:4px;background:#222;border-radius:2px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${pct <= 20 ? '#ff5722' : '#4caf50'};border-radius:2px;"></div></div>`;
+          html += `<span style="font-size:9px;color:var(--text-dim);">${eq.healerKit.charges}</span>`;
+          html += `</div>`;
+        }
+
+        html += `</div>`;
+      }
+
+      // Maintenance buttons
+      html += `<div style="border-top:1px solid var(--border);padding-top:4px;margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">`;
+      for (const pid of ids) {
+        const charName = players[pid]?.character?.name || pid;
+        html += `<button class="sm" onclick="DmEquipment.longRest('${pid}')" title="Long rest for ${charName}">${charName.split(' ')[0]} Rest</button>`;
+      }
+      html += `</div>`;
+
+      el.innerHTML = html;
+    },
+
+    adjustItem(playerId, itemName, currentCond) {
+      const labels = ['Pristine','Good','Worn','Damaged','Broken'];
+      const options = labels.map((l, i) => `<option value="${i}"${i === currentCond ? ' selected' : ''}>${l}</option>`).join('');
+      const popup = document.createElement('div');
+      popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;z-index:10000;min-width:200px;';
+      popup.innerHTML = `<div style="font-size:12px;color:var(--accent);margin-bottom:6px;">${itemName}</div>
+        <select id="eq-adj-select" style="width:100%;padding:4px;background:var(--surface3);border:1px solid var(--border);color:var(--text);border-radius:3px;font-size:11px;">${options}</select>
+        <div style="display:flex;gap:4px;margin-top:8px;">
+          <button class="sm primary" onclick="DmEquipment._applyCondition('${playerId}','${itemName.replace(/'/g,"\\'")}')">Apply</button>
+          <button class="sm" onclick="this.closest('div[style]').remove()">Cancel</button>
+        </div>`;
+      document.body.appendChild(popup);
+    },
+
+    _applyCondition(playerId, itemName) {
+      const sel = document.getElementById('eq-adj-select');
+      if (!sel) return;
+      const newState = parseInt(sel.value);
+      fetch('/api/equipment/' + playerId + '/' + encodeURIComponent(itemName) + '/condition', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state: newState })
+      }).then(() => { this.refresh(); });
+      sel.closest('div[style]').remove();
+    },
+
+    longRest(playerId) {
+      fetch('/api/equipment/' + playerId + '/long-rest', { method: 'POST' })
+        .then(r => r.json())
+        .then(d => {
+          if (d.repaired && d.repaired.length) {
+            const items = d.repaired.map(r => `${r.name}: ${r.from} → ${r.to}`).join(', ');
+            console.log('[Equipment] Long rest repairs:', items);
+          }
+          this.refresh();
+        });
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════════
+  // RECAP (System 10)
+  // ═══════════════════════════════════════════════════════════════
+  const DmRecap = {
+    generate() {
+      fetch('/api/recap', { method: 'POST' }).then(r => r.json()).then(d => {
+        if (d.recap) {
+          console.log('[Recap]', d.recap);
+        }
+      }).catch(e => console.error('[Recap] Error:', e));
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════════
+  // STAMINA TORCH ICONS (System 5)
+  // ═══════════════════════════════════════════════════════════════
+  const DmStamina = {
+    _cache: {}, // playerId -> stamina data
+
+    update(data) {
+      if (data.playerId) this._cache[data.playerId] = data;
+    },
+
+    renderTorch(playerId) {
+      const stam = this._cache[playerId];
+      if (!stam) return '<span title="No stamina data" style="display:inline-block;width:12px;text-align:center;font-size:10px;opacity:0.3;">🕯</span>';
+
+      const icons = {
+        fresh: { icon: '🔥', title: 'Fresh', style: 'opacity:1;filter:brightness(1.2);' },
+        winded: { icon: '🔥', title: 'Winded', style: 'opacity:0.8;filter:hue-rotate(-10deg) brightness(0.9);' },
+        exhausted: { icon: '🔥', title: 'Exhausted', style: 'opacity:0.6;filter:hue-rotate(-30deg) brightness(0.7);' },
+        spent: { icon: '🔥', title: 'Spent', style: 'opacity:0.4;filter:hue-rotate(-60deg) brightness(0.5);font-size:8px;' },
+        collapsed: { icon: '🕯', title: 'Collapsed', style: 'opacity:0.3;' }
+      };
+      const s = icons[stam.state] || icons.fresh;
+      return `<span title="${s.title}" style="display:inline-block;width:14px;text-align:center;font-size:11px;cursor:pointer;${s.style}" onclick="event.stopPropagation();DmStamina.adjust('${playerId}','${stam.state}')">${s.icon}</span>`;
+    },
+
+    adjust(playerId, currentState) {
+      const states = ['fresh','winded','exhausted','spent','collapsed'];
+      const idx = states.indexOf(currentState);
+      const options = states.map((s,i) => `<option value="${s}"${i===idx?' selected':''}>${s}</option>`).join('');
+      const popup = document.createElement('div');
+      popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;z-index:10000;min-width:180px;';
+      popup.innerHTML = `<div style="font-size:11px;color:var(--accent);margin-bottom:6px;">Stamina Override</div>
+        <select id="stam-adj" style="width:100%;padding:4px;background:var(--surface3);border:1px solid var(--border);color:var(--text);border-radius:3px;font-size:11px;">${options}</select>
+        <div style="display:flex;gap:4px;margin-top:8px;">
+          <button class="sm primary" onclick="DmStamina._apply('${playerId}')">Set</button>
+          <button class="sm" onclick="this.closest('div[style]').remove()">Cancel</button>
+        </div>`;
+      document.body.appendChild(popup);
+    },
+
+    _apply(playerId) {
+      const sel = document.getElementById('stam-adj');
+      if (!sel) return;
+      fetch('/api/stamina/' + playerId, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetState: sel.value })
+      });
+      sel.closest('div[style]').remove();
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════════
+  // CAMERA THUMBNAILS (System 9)
+  // ═══════════════════════════════════════════════════════════════
+  const DmCamera = {
+    _frames: {}, // playerId -> dataUrl
+
+    onFrame(playerId, frame) {
+      this._frames[playerId] = frame;
+      const el = document.getElementById('cam-' + playerId);
+      if (el) el.src = frame;
+    },
+
+    renderThumbnail(playerId) {
+      const frame = this._frames[playerId];
+      if (frame) {
+        return `<img id="cam-${playerId}" src="${frame}" style="width:120px;height:90px;border-radius:4px;border:1px solid #333;object-fit:cover;">`;
+      }
+      return `<div id="cam-${playerId}" style="width:120px;height:90px;border-radius:4px;border:1px solid #333;background:#111;display:flex;align-items:center;justify-content:center;"><span style="font-size:20px;opacity:0.3;">👤</span></div>`;
+    }
+  };
+
   const DmWounds = {
     _state: {}, // { playerId: { head:0, torso:0, ... } }
 
@@ -2888,10 +3133,17 @@
             + 'style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + WOUND_COLORS[s] + ';border:1px solid #555;cursor:pointer;" '
             + 'onclick="DmWounds.edit(\'' + pid + '\',\'' + limb + '\',' + s + ',event)"></span>';
         }).join(' ');
-        return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
-          + '<span style="min-width:70px;color:var(--text);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(name) + '</span>'
+        const torch = DmStamina.renderTorch(pid);
+        const cam = DmCamera.renderThumbnail(pid);
+        return '<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.05);">'
+          + cam
+          + '<div style="flex:1;min-width:0;">'
+          + '<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;">'
+          + torch
+          + '<span style="color:var(--text);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(name) + '</span>'
+          + '</div>'
           + '<span style="display:flex;gap:3px;">' + dots + '</span>'
-          + '</div>';
+          + '</div></div>';
       }).join('');
     },
 
@@ -6887,9 +7139,19 @@
               <div class="cd-row" style="margin-top:8px;"><label>Conditions</label></div>
               <div class="cd-cond-grid">${condBtns}</div>
               ${deathSaveHtml}
+              ${(c._bleeding && c._bleeding.length) ? `
+              <div class="cd-row" style="margin-top:6px;"><label style="color:var(--red-bright);">Bleeding: ${c._bleeding.join(', ')}</label>
+                <button class="sm" onclick="event.stopPropagation();Combat.stopBleeding('${c.id}')" style="font-size:9px;padding:2px 6px;">Stop Bleeding</button>
+              </div>` : ''}
+              ${(c.conditions || []).includes('shocked') ? `
+              <div class="cd-row" style="margin-top:6px;"><label style="color:var(--orange);">SHOCKED (${c._shockRoundsLeft || '?'} rds)</label>
+                <button class="sm" onclick="event.stopPropagation();Combat.rouseFromShock('${c.id}')" style="font-size:9px;padding:2px 6px;">Rouse (Medicine DC8)</button>
+              </div>` : ''}
               ${actionsHtml}
               <div style="margin-top:8px;display:flex;gap:4px;">
-                <button class="sm danger" onclick="event.stopPropagation();Combat.remove('${c.id}')" style="flex:1;padding:5px 10px;font-size:11px;">Remove from Combat</button>
+                <button class="sm" onclick="event.stopPropagation();Combat.shockSave('${c.id}',true)" style="flex:1;padding:5px 8px;font-size:10px;">Shock: Pass</button>
+                <button class="sm danger" onclick="event.stopPropagation();Combat.shockSave('${c.id}',false)" style="flex:1;padding:5px 8px;font-size:10px;">Shock: Fail</button>
+                <button class="sm danger" onclick="event.stopPropagation();Combat.remove('${c.id}')" style="flex:1;padding:5px 10px;font-size:11px;">Remove</button>
               </div>
             </div>`;
         }
@@ -7089,6 +7351,30 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ combatantId: id, result })
+      });
+    },
+
+    async shockSave(id, passed) {
+      await fetch('/api/combat/shock-save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ combatantId: id, passed })
+      });
+    },
+
+    async stopBleeding(id) {
+      await fetch('/api/combat/stop-bleeding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ combatantId: id })
+      });
+    },
+
+    async rouseFromShock(id) {
+      await fetch('/api/combat/rouse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ combatantId: id })
       });
     },
 

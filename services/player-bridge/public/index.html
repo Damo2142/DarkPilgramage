@@ -391,7 +391,7 @@
     <div class="vbox"><div class="vl">Prof</div><div class="vv" id="vprof">—</div></div>
     <div class="vbox" onclick="editVital('inspiration')"><div class="vl">Inspire</div><div class="vv" id="vinsp">☆</div></div>
   </div>
-  <div id="hp-block">
+  <div id="hp-block" style="display:none;">
     <div class="hpr"><span class="hpl">HP</span><div class="hpw"><div class="hpb" id="hpfill" style="width:100%"></div></div><span class="hpt" id="hptxt">—/—</span></div>
     <div class="hpr"><span class="hpl">Temp</span><div class="hpw"><div class="hpb" id="tmpfill" style="width:0%"></div></div><span class="hpt" id="tmptxt">0</span></div>
     <div class="hp-ctrl">
@@ -417,6 +417,7 @@
     <div class="tab" onclick="showTab('dice')">Dice</div>
     <div class="tab" onclick="showTab('chat')">Chat</div>
     <div class="tab" onclick="showTab('journal')">Journal</div>
+    <div class="tab" onclick="showTab('wounds')">Body</div>
     <div class="tab" onclick="showTab('npcchat')">NPC</div>
     <div class="tab" onclick="showTab('handouts')">Docs</div>
     <div class="tab" onclick="showTab('notes')">Notes</div>
@@ -564,6 +565,37 @@
     <div class="st">Quest Journal</div>
     <div id="journal-list" style="min-height:60px;"><div style="color:var(--text-dim);font-size:12px;text-align:center;padding:20px;">No quests yet. Your journey awaits.</div></div>
   </div>
+  <!-- WOUNDS / BODY -->
+  <div class="panel" id="panel-wounds">
+    <div class="st">Condition</div>
+    <div style="display:flex;gap:12px;align-items:flex-start;justify-content:center;padding:8px 0;">
+      <svg id="wound-body" viewBox="0 0 120 260" width="120" height="260" style="flex-shrink:0;">
+        <!-- Head -->
+        <ellipse id="wb-head" cx="60" cy="28" rx="18" ry="22" fill="#1a3a1a" stroke="#333" stroke-width="1" onclick="WoundPanel.select('head')" style="cursor:pointer;"/>
+        <!-- Torso -->
+        <path id="wb-torso" d="M38,52 L82,52 L86,140 L34,140 Z" fill="#1a3a1a" stroke="#333" stroke-width="1" onclick="WoundPanel.select('torso')" style="cursor:pointer;"/>
+        <!-- Left Arm (viewer's left = character's right arm) -->
+        <path id="wb-rightArm" d="M34,56 L22,56 L10,110 L14,112 L24,70 L34,80 Z" fill="#1a3a1a" stroke="#333" stroke-width="1" onclick="WoundPanel.select('rightArm')" style="cursor:pointer;"/>
+        <!-- Right Arm (viewer's right = character's left arm) -->
+        <path id="wb-leftArm" d="M86,56 L98,56 L110,110 L106,112 L96,70 L86,80 Z" fill="#1a3a1a" stroke="#333" stroke-width="1" onclick="WoundPanel.select('leftArm')" style="cursor:pointer;"/>
+        <!-- Left Leg (viewer's left = character's right leg) -->
+        <path id="wb-rightLeg" d="M38,140 L54,140 L52,210 L56,250 L44,250 L46,210 L34,170 Z" fill="#1a3a1a" stroke="#333" stroke-width="1" onclick="WoundPanel.select('rightLeg')" style="cursor:pointer;"/>
+        <!-- Right Leg (viewer's right = character's left leg) -->
+        <path id="wb-leftLeg" d="M66,140 L82,140 L86,170 L74,210 L76,250 L64,250 L68,210 Z" fill="#1a3a1a" stroke="#333" stroke-width="1" onclick="WoundPanel.select('leftLeg')" style="cursor:pointer;"/>
+      </svg>
+      <div style="flex:1;min-width:0;">
+        <div id="wound-limb-name" style="font-family:Cinzel,serif;font-size:14px;color:var(--accent);margin-bottom:6px;">Select a region</div>
+        <div id="wound-desc" style="font-size:12px;color:var(--text-dim);line-height:1.5;font-style:italic;min-height:40px;">Tap any part of the body to see your condition.</div>
+        <div id="wound-summary" style="margin-top:12px;font-size:11px;"></div>
+      </div>
+    </div>
+    <style>
+      @keyframes wound-pulse-slow { 0%,100%{opacity:1} 50%{opacity:0.5} }
+      @keyframes wound-pulse-fast { 0%,100%{opacity:1} 50%{opacity:0.3} }
+      .wound-3 { animation: wound-pulse-slow 2s ease-in-out infinite; }
+      .wound-4 { animation: wound-pulse-fast 0.8s ease-in-out infinite; }
+    </style>
+  </div>
   <!-- NPC CHAT -->
   <div class="panel" id="panel-npcchat">
     <div class="st">Speak with NPC</div>
@@ -695,6 +727,7 @@ function handle(m){
       }
       if(m.player&&m.player.character)loadChar(m.player.character);
       if(m.player&&m.player.dread)updDread(m.player.dread.score||0);
+      if(m.player&&m.player.wounds) WoundPanel.update(m.player.wounds);
       if(m.map) PlayerMap.loadFromState(m.map);
       if(m.combat) renderCombatTracker(m.combat);
       showApp(); break;
@@ -732,6 +765,9 @@ function handle(m){
       break;
     case 'inspiration:gain': showInspiration(m); break;
     case 'player:list': updatePlayerList(m.players||[]); break;
+    case 'wounds:updated':
+      if (m.data && m.data.playerId === PID) WoundPanel.update(m.data.wounds);
+      break;
     case 'combat:started':
     case 'combat:ended':
     case 'combat:next_turn':
@@ -743,7 +779,9 @@ function handle(m){
     case 'combat:combatant_removed':
     case 'combat:death_save':
       if(m.data&&m.data.combat) renderCombatTracker(m.data.combat);
-      if(m.type==='combat:ended') { pendingAttack=null; updateTargetSection(); }
+      if(m.type==='combat:ended') { pendingAttack=null; updateTargetSection(); PlayerMap._resetMovement(); }
+      // Reset movement on turn change (new turn = fresh movement budget)
+      if(m.type==='combat:next_turn'||m.type==='combat:prev_turn'||m.type==='combat:started') PlayerMap._resetMovement();
       break;
     case 'combat:attack_result':
       if(m.data&&m.data.combat) renderCombatTracker(m.data.combat);
@@ -2584,6 +2622,96 @@ const VisionEngine = {
   }
 };
 
+// ── WOUND PANEL ───────────────────────────────────────────────────
+const WOUND_COLORS = ['#1a3a1a', '#6b6b2a', '#b8860b', '#8b1a1a', '#1a0a0a'];
+const WOUND_NAMES = ['Unharmed', 'Scratched', 'Wounded', 'Broken', 'Crippled'];
+const LIMB_LABELS = { head:'Head', torso:'Torso', leftArm:'Left Arm', rightArm:'Right Arm', leftLeg:'Left Leg', rightLeg:'Right Leg' };
+const WOUND_DESC = {
+  head: [
+    'Your head is clear. No injuries.',
+    'A scratch above your brow stings when sweat runs into it.',
+    'Your ears ring. The world tilts when you move too fast.',
+    'Your vision blurs and doubles. Blood mats your hair to your skull.',
+    'You cannot think. The world is a dark tunnel closing around you.'
+  ],
+  torso: [
+    'Your chest rises and falls steadily. No wounds.',
+    'A shallow cut across your ribs. It burns when you breathe deep.',
+    'Something inside shifts when you twist. A wet warmth spreads beneath your shirt.',
+    'You feel a rib shift with every movement. The pain is blinding.',
+    'You cannot straighten. Every breath is a knife. Blood fills your mouth.'
+  ],
+  leftArm: [
+    'Your left arm moves freely. No injuries.',
+    'A graze along your forearm. The skin is raw but functional.',
+    'Your left hand shakes. The grip weakens when you try to hold anything.',
+    'The arm hangs wrong. Something is broken beneath the skin.',
+    'Your left arm is useless. It hangs limp, fingers curled and grey.'
+  ],
+  rightArm: [
+    'Your right arm moves freely. No injuries.',
+    'Torn skin across your knuckles. Blood seeps between your fingers.',
+    'Your sword arm trembles. You can fight, but every swing costs you.',
+    'The bone grinds when you move it. White-hot pain shoots to your shoulder.',
+    'Your right arm is ruined. You cannot grip, cannot lift, cannot strike.'
+  ],
+  leftLeg: [
+    'Your left leg bears weight steadily. No injuries.',
+    'A bruise blooms across your shin. You limp slightly on uneven ground.',
+    'Your left knee buckles without warning. You catch yourself on walls.',
+    'Something tore inside your thigh. Each step leaves a red print.',
+    'You cannot bear weight on it. You fall if you try to run.'
+  ],
+  rightLeg: [
+    'Your right leg bears weight steadily. No injuries.',
+    'A cut across your calf weeps slowly. Walking stings but holds.',
+    'Your right ankle rolls with every other step. The swelling is visible.',
+    'The leg drags. You haul it forward by force of will alone.',
+    'Your right leg has given out. You crawl or you do not move.'
+  ]
+};
+
+const WoundPanel = {
+  wounds: { head:0, torso:0, leftArm:0, rightArm:0, leftLeg:0, rightLeg:0 },
+  selected: null,
+
+  update(wounds) {
+    this.wounds = wounds;
+    for (const [limb, state] of Object.entries(wounds)) {
+      const el = document.getElementById('wb-' + limb);
+      if (!el) continue;
+      el.setAttribute('fill', WOUND_COLORS[state]);
+      el.classList.remove('wound-3', 'wound-4');
+      if (state === 3) el.classList.add('wound-3');
+      if (state === 4) el.classList.add('wound-4');
+    }
+    if (this.selected) this.select(this.selected);
+    this._renderSummary();
+  },
+
+  select(limb) {
+    this.selected = limb;
+    const state = this.wounds[limb] || 0;
+    const nameEl = document.getElementById('wound-limb-name');
+    const descEl = document.getElementById('wound-desc');
+    if (nameEl) nameEl.textContent = LIMB_LABELS[limb] + ' \u2014 ' + WOUND_NAMES[state];
+    if (nameEl) nameEl.style.color = WOUND_COLORS[state] === '#1a3a1a' ? 'var(--accent)' : WOUND_COLORS[state];
+    if (descEl) descEl.textContent = WOUND_DESC[limb][state];
+  },
+
+  _renderSummary() {
+    const el = document.getElementById('wound-summary');
+    if (!el) return;
+    const worst = Math.max(...Object.values(this.wounds));
+    if (worst === 0) { el.innerHTML = '<span style="color:#1a5a1a;">You are uninjured.</span>'; return; }
+    const parts = Object.entries(this.wounds)
+      .filter(([,v]) => v > 0)
+      .map(([k,v]) => '<span style="color:' + WOUND_COLORS[v] + ';">' + LIMB_LABELS[k] + '</span>')
+      .join(', ');
+    el.innerHTML = 'Injured: ' + parts;
+  }
+};
+
 // PLAYER MAP — Canvas 2D (view + own-token drag)
 // ============================================================
 const PlayerMap = {
@@ -2598,6 +2726,18 @@ const PlayerMap = {
   _visionCache: {},   // tokenId -> { x, y, polygon }
   _lightVisCache: null,  // cached light visibility polygons (null = needs recompute)
   _wallsVersion: 0,    // increments when walls change
+
+  // ── MOVEMENT RATE LIMITING ──
+  _moveState: {
+    speedPx: 0,        // max movement in pixels (normal)
+    dashSpeedPx: 0,    // max movement in pixels (dash = double)
+    startX: 0,         // drag start position
+    startY: 0,
+    movedPx: 0,        // distance already moved this turn
+    dashed: false,      // has this combatant dashed this turn?
+    actionSpent: false, // action used for dash?
+    active: false       // is movement limiting active?
+  },
 
   init() {
     this.canvas = $('player-map-canvas');
@@ -2712,6 +2852,156 @@ const PlayerMap = {
     return t > 0.001 && t < 0.999 && u >= -0.001 && u <= 1.001;
   },
 
+  // ── MOVEMENT RATE LIMITING HELPERS ──
+
+  // Check if a point is inside a zone (rect or polygon)
+  _pointInZone(px, py, zone) {
+    if (zone.points && zone.points.length >= 3) {
+      let inside = false;
+      const pts = zone.points;
+      for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+        if ((pts[i].y > py) !== (pts[j].y > py) &&
+            px < (pts[j].x - pts[i].x) * (py - pts[i].y) / (pts[j].y - pts[i].y) + pts[i].x) {
+          inside = !inside;
+        }
+      }
+      return inside;
+    }
+    // Rect zone
+    if (zone.x != null && zone.w != null) {
+      return px >= zone.x && px <= zone.x + zone.w && py >= zone.y && py <= zone.y + zone.h;
+    }
+    return false;
+  },
+
+  // Calculate movement cost in pixels between two points, accounting for difficult terrain zones
+  _movementCost(fromX, fromY, toX, toY) {
+    const rawDist = Math.sqrt((toX - fromX) ** 2 + (toY - fromY) ** 2);
+    // Check if destination is in a difficult terrain zone — double cost
+    const destZones = this.zones.filter(z => z.difficult_terrain && this._pointInZone(toX, toY, z));
+    if (destZones.length > 0) return rawDist * 2;
+    return rawDist;
+  },
+
+  // Get max movement pixels for current character speed during combat
+  _getMovementBudget() {
+    const speed = char.speed || 30;
+    const gs = this.mapData?.gridSize || 70;
+    const squaresFt = 5; // 5ft per grid square
+    const basePx = (speed / squaresFt) * gs;
+    return { basePx, dashPx: basePx * 2 };
+  },
+
+  // Movement is always restricted — speed limits apply at all times
+  _isMovementRestricted() {
+    return true;
+  },
+
+  // Reset movement state at turn start
+  _resetMovement() {
+    this._moveState.movedPx = 0;
+    this._moveState.dashed = false;
+    this._moveState.actionSpent = false;
+    this._moveState.active = false;
+  },
+
+  // Clamp a drag position to movement range boundary
+  _clampToRange(startX, startY, targetX, targetY, maxPx) {
+    const dx = targetX - startX;
+    const dy = targetY - startY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist <= maxPx || dist < 0.001) return { x: targetX, y: targetY };
+    const scale = maxPx / dist;
+    return { x: startX + dx * scale, y: startY + dy * scale };
+  },
+
+  // Show dash prompt modal — returns promise resolving to 'dash' or 'cancel'
+  _promptDash(distFt, speedFt) {
+    return new Promise(resolve => {
+      const overlay = document.createElement('div');
+      overlay.className = 'door-prompt-overlay';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+      const box = document.createElement('div');
+      box.style.cssText = 'background:#1a1a2e;border:2px solid #c9a54e;border-radius:12px;padding:24px;max-width:340px;text-align:center;font-family:Cinzel,serif;color:#e8e0d0;';
+      box.innerHTML = '<div style="font-size:36px;margin-bottom:8px;">\u{1F3C3}</div>'
+        + '<div style="font-size:18px;font-weight:bold;margin-bottom:8px;">Out of Movement</div>'
+        + '<div style="font-size:14px;color:#a09880;margin-bottom:6px;font-family:Source Sans 3,sans-serif;">'
+        + 'That move is ' + Math.round(distFt) + 'ft — your speed is ' + speedFt + 'ft.</div>'
+        + '<div style="font-size:13px;color:#c07030;margin-bottom:20px;font-family:Source Sans 3,sans-serif;">'
+        + 'Dash uses your action to double your movement this turn.</div>'
+        + '<div style="display:flex;gap:12px;justify-content:center;"></div>';
+      const btnRow = box.lastElementChild;
+      const makeBtn = (label, accent, result) => {
+        const btn = document.createElement('button');
+        btn.textContent = label;
+        btn.style.cssText = 'padding:8px 20px;border-radius:6px;border:1px solid ' + accent + ';background:' + accent + '22;color:' + accent + ';font-family:Cinzel,serif;font-size:14px;cursor:pointer;';
+        btn.onmouseenter = () => btn.style.background = accent + '44';
+        btn.onmouseleave = () => btn.style.background = accent + '22';
+        btn.onclick = () => { overlay.remove(); resolve(result); };
+        btn.ontouchend = (e) => { e.preventDefault(); overlay.remove(); resolve(result); };
+        return btn;
+      };
+      btnRow.appendChild(makeBtn('Dash (use action)', '#c07030', 'dash'));
+      btnRow.appendChild(makeBtn('Cancel', '#888', 'cancel'));
+      overlay.appendChild(box);
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); resolve('cancel'); } });
+      document.body.appendChild(overlay);
+    });
+  },
+
+  // Render movement range circle on the canvas during drag
+  _renderMoveRange(ctx, mw, mh) {
+    const ms = this._moveState;
+    if (!ms.active) return;
+    const cx = ms.startX - mw / 2;
+    const cy = ms.startY - mh / 2;
+    const effectiveSpeed = ms.dashed ? ms.dashSpeedPx : ms.speedPx;
+    const remaining = effectiveSpeed - ms.movedPx;
+    const dashRemaining = ms.dashSpeedPx - ms.movedPx;
+
+    // Draw movement range (green = current budget, includes dash if already dashed)
+    if (remaining > 0) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, remaining, 0, Math.PI * 2);
+      ctx.strokeStyle = ms.dashed ? 'rgba(192, 112, 48, 0.5)' : 'rgba(48, 160, 80, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 6]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = ms.dashed ? 'rgba(192, 112, 48, 0.06)' : 'rgba(48, 160, 80, 0.06)';
+      ctx.fill();
+    }
+
+    // Draw dash range (orange) — only if they haven't already dashed
+    if (!ms.dashed && dashRemaining > remaining) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, dashRemaining, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(192, 112, 48, 0.35)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 8]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Draw difficult terrain zones with hatching
+    for (const z of this.zones) {
+      if (!z.difficult_terrain) continue;
+      ctx.save();
+      ctx.globalAlpha = 0.18;
+      ctx.fillStyle = '#c07030';
+      if (z.points && z.points.length >= 3) {
+        ctx.beginPath();
+        ctx.moveTo(z.points[0].x - mw / 2, z.points[0].y - mh / 2);
+        for (let i = 1; i < z.points.length; i++) ctx.lineTo(z.points[i].x - mw / 2, z.points[i].y - mh / 2);
+        ctx.closePath();
+        ctx.fill();
+      } else if (z.x != null && z.w != null) {
+        ctx.fillRect(z.x - mw / 2, z.y - mh / 2, z.w, z.h);
+      }
+      ctx.restore();
+    }
+  },
+
   // Dynamic lighting helper: compute vision polygon for a PC
   // 5e rules: without darkvision, only see lit areas. With darkvision, see DVrange in dark (greyscale).
   // Carried light sources (torch etc) create light centered on the token.
@@ -2806,6 +3096,9 @@ const PlayerMap = {
     for (let gx = 0; gx <= mw; gx += gs) { ctx.beginPath(); ctx.moveTo(gx-mw/2, -mh/2); ctx.lineTo(gx-mw/2, mh/2); ctx.stroke(); }
     for (let gy = 0; gy <= mh; gy += gs) { ctx.beginPath(); ctx.moveTo(-mw/2, gy-mh/2); ctx.lineTo(mw/2, gy-mh/2); ctx.stroke(); }
 
+    // Movement range overlay (during combat drag)
+    this._renderMoveRange(ctx, mw, mh);
+
     // Tokens — all non-hidden tokens drawn (visibility handled by dynamic lighting fog)
     for (const [id, tok] of Object.entries(this.tokens)) {
       // Use drag visual position if token is being dragged, otherwise real position
@@ -2814,6 +3107,18 @@ const PlayerMap = {
       const x = drawX - mw/2, y = drawY - mh/2, r = gs * 0.4;
       const hp = tok.hp || {current:1,max:1};
       const hpPct = Math.max(0, hp.current/hp.max);
+
+      // Movement range: determine if dragged token is beyond range
+      const ms = this._moveState;
+      const isDragging = this.dragging && this.dragging.tokenId === id;
+      let beyondNormal = false, beyondDash = false;
+      if (isDragging && ms.active) {
+        const dragDist = this._movementCost(ms.startX, ms.startY, drawX, drawY);
+        const totalDist = ms.movedPx + dragDist;
+        beyondNormal = totalDist > ms.speedPx;
+        beyondDash = totalDist > ms.dashSpeedPx;
+      }
+
       ctx.beginPath(); ctx.arc(x,y,r+3,0,Math.PI*2); ctx.strokeStyle='rgba(60,60,70,0.6)'; ctx.lineWidth=3; ctx.stroke();
       if (hpPct > 0) {
         ctx.beginPath(); ctx.arc(x,y,r+3,-Math.PI/2,-Math.PI/2+Math.PI*2*hpPct);
@@ -2821,8 +3126,19 @@ const PlayerMap = {
       }
       const isMe = id === PID;
       ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
-      ctx.fillStyle = tok.type==='pc' ? (isMe?'#4080c0':'#2a5580') : '#c9a54e'; ctx.fill();
-      if (isMe) { ctx.strokeStyle='#c9a54e'; ctx.lineWidth=2; ctx.stroke(); }
+      // Ghost color: red if beyond all range, orange if in dash range, normal otherwise
+      if (isDragging && beyondDash) {
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = '#d04040'; ctx.fill();
+        ctx.globalAlpha = 1.0;
+      } else if (isDragging && beyondNormal) {
+        ctx.globalAlpha = 0.7;
+        ctx.fillStyle = '#c07030'; ctx.fill();
+        ctx.globalAlpha = 1.0;
+      } else {
+        ctx.fillStyle = tok.type==='pc' ? (isMe?'#4080c0':'#2a5580') : '#c9a54e'; ctx.fill();
+      }
+      if (isMe && !(isDragging && beyondDash)) { ctx.strokeStyle='#c9a54e'; ctx.lineWidth=2; ctx.stroke(); }
       // Facing direction indicator (arrow on token edge)
       if (tok.type === 'pc') {
         const fAngle = tok.facing != null ? tok.facing : 0;
@@ -2850,6 +3166,22 @@ const PlayerMap = {
       var labelColor = this.tokenLabels[id] ? '#c9e060' : '#f0f0f0';
       ctx.strokeText(displayName, x, y+r+ns*0.8);
       ctx.fillStyle=labelColor; ctx.fillText(displayName, x, y+r+ns*0.8);
+
+      // Movement distance label during combat drag
+      if (isDragging && ms.active) {
+        const dragDist = this._movementCost(ms.startX, ms.startY, drawX, drawY);
+        const totalDist = ms.movedPx + dragDist;
+        const totalFt = Math.round((totalDist / gs) * 5);
+        const speedFt = char.speed || 30;
+        const ftLabel = totalFt + '/' + speedFt + 'ft';
+        const ftSize = Math.max(3, gs * 0.12);
+        ctx.font = 'bold ' + ftSize + 'px Source Sans 3,sans-serif';
+        const ftColor = beyondDash ? '#d04040' : beyondNormal ? '#c07030' : '#30a050';
+        ctx.strokeStyle = 'rgba(0,0,0,0.9)'; ctx.lineWidth = Math.max(1, ftSize * 0.3);
+        ctx.strokeText(ftLabel, x, y - r - ftSize * 0.5);
+        ctx.fillStyle = ftColor;
+        ctx.fillText(ftLabel, x, y - r - ftSize * 0.5);
+      }
     }
 
     // ── DYNAMIC LIGHTING ─────────────────────────────────────────────
@@ -3325,6 +3657,20 @@ const PlayerMap = {
       const tok=this.tokens[tid];
       tok._dragStartX = tok.x; tok._dragStartY = tok.y;
       this.dragging={tokenId:tid, offsetX:tok.x-mx, offsetY:tok.y-my};
+      // Set up movement range overlay + rate limiting
+      const { basePx, dashPx } = this._getMovementBudget();
+      const ms = this._moveState;
+      ms.speedPx = basePx;
+      ms.dashSpeedPx = dashPx;
+      ms.startX = tok.x;
+      ms.startY = tok.y;
+      ms.active = true;
+      // Outside combat: reset per drag, no cumulative tracking
+      if (!combatState || !combatState.active) {
+        ms.movedPx = 0;
+        ms.dashed = false;
+        ms.actionSpent = false;
+      }
     } else {
       this.panning=true;
       this.panStart={x:cx,y:cy,camX:this.cam.x,camY:this.cam.y};
@@ -3357,8 +3703,22 @@ const PlayerMap = {
       const tok=this.tokens[this.dragging.tokenId];
       if(tok){
         // Track drag visual position separately — vision stays anchored to start
-        tok._dragVisualX=mx+this.dragging.offsetX;
-        tok._dragVisualY=my+this.dragging.offsetY;
+        let dragX = mx+this.dragging.offsetX;
+        let dragY = my+this.dragging.offsetY;
+        // Snap to dash boundary if beyond max range
+        const ms = this._moveState;
+        if (ms.active) {
+          const dragDist = this._movementCost(ms.startX, ms.startY, dragX, dragY);
+          const totalDist = ms.movedPx + dragDist;
+          if (totalDist > ms.dashSpeedPx) {
+            const maxDragDist = ms.dashSpeedPx - ms.movedPx;
+            const clamped = this._clampToRange(ms.startX, ms.startY, dragX, dragY, Math.max(0, maxDragDist));
+            dragX = clamped.x;
+            dragY = clamped.y;
+          }
+        }
+        tok._dragVisualX = dragX;
+        tok._dragVisualY = dragY;
         this.render();
       }
     } else if (this.panning) {
@@ -3380,6 +3740,7 @@ const PlayerMap = {
     }
     if (this.dragging) {
       const tok=this.tokens[this.dragging.tokenId];
+      const dragTokenId = this.dragging.tokenId;
       if(tok){
         const gs=this.mapData.gridSize;
         const oldX = tok._dragStartX, oldY = tok._dragStartY;
@@ -3390,21 +3751,86 @@ const PlayerMap = {
         const newY=Math.floor(dropY/gs)*gs+gs/2;
         // Clean up drag visual state
         delete tok._dragVisualX; delete tok._dragVisualY;
+
+        // Movement rate check
+        const ms = this._moveState;
+        if (ms.active && oldX != null) {
+          const moveCost = this._movementCost(oldX, oldY, newX, newY);
+          const totalCost = ms.movedPx + moveCost;
+          const speed = char.speed || 30;
+
+          if (totalCost > ms.speedPx && !ms.dashed) {
+            // Beyond normal range — prompt for dash
+            tok.x = oldX; tok.y = oldY;
+            const totalFt = Math.round((totalCost / gs) * 5);
+            this.dragging = null;
+            ms.active = false;
+            this.render();
+            this._promptDash(totalFt, speed).then(choice => {
+              if (choice === 'dash') {
+                ms.dashed = true;
+                ms.actionSpent = true;
+                ms.dashSpeedPx = ms.speedPx * 2;
+                // Check if the move fits within dash range
+                if (totalCost <= ms.dashSpeedPx) {
+                  // Wall check then complete
+                  const blocked = (this.walls.length > 0) ? this._pathBlockedByWalls(oldX, oldY, newX, newY) : null;
+                  if (blocked) {
+                    tok.x = oldX; tok.y = oldY;
+                    if (blocked.type === 'door') {
+                      this._promptDoor(blocked, oldX, oldY, newX, newY, dragTokenId);
+                    } else {
+                      showToast('System','Movement blocked — solid wall',2000);
+                    }
+                  } else {
+                    ms.movedPx += moveCost;
+                    this._completeMoveToken(tok, oldX, oldY, newX, newY, dragTokenId);
+                    showToast('Combat', 'Dashed! Action spent.', 2500);
+                  }
+                } else {
+                  showToast('System', 'Still too far — even with Dash', 2500);
+                }
+              }
+              // cancel: token stays at old position
+              this.render();
+            });
+            this.panning = false;
+            this._tapStart = null;
+            return;
+          }
+
+          if (totalCost > ms.dashSpeedPx) {
+            // Beyond even dash range — snap back
+            tok.x = oldX; tok.y = oldY;
+            showToast('System', 'Out of movement range', 2000);
+            this.dragging = null;
+            ms.active = false;
+            this.render();
+            this.panning = false;
+            this._tapStart = null;
+            return;
+          }
+
+          // Within range — record movement spent
+          ms.movedPx += moveCost;
+        }
+
         // Client-side wall collision check — block immediately without server round-trip
         const blocked = (this.walls.length > 0 && oldX != null) ? this._pathBlockedByWalls(oldX, oldY, newX, newY) : null;
         if (blocked) {
           tok.x = oldX; tok.y = oldY;
+          if (ms.active) ms.movedPx -= this._movementCost(oldX, oldY, newX, newY); // refund
           if (blocked.type === 'door') {
             // Door interaction — prompt player
-            this._promptDoor(blocked, oldX, oldY, newX, newY, this.dragging.tokenId);
+            this._promptDoor(blocked, oldX, oldY, newX, newY, dragTokenId);
           } else {
             showToast('System','Movement blocked — solid wall',2000);
           }
         } else {
-          this._completeMoveToken(tok, oldX, oldY, newX, newY, this.dragging.tokenId);
+          this._completeMoveToken(tok, oldX, oldY, newX, newY, dragTokenId);
         }
       }
-      this.dragging=null; this.render();
+      this.dragging=null; this._moveState.active = false; this.render();
     } else if (this._tapStart && Date.now() - this._tapStart.time < 300) {
       // Short tap — check if it's on a non-own token for labeling
       const tid = this._getAnyTokenAt(this._tapStart.sx, this._tapStart.sy);

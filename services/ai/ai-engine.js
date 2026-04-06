@@ -1,8 +1,10 @@
 /**
  * AI Engine Service
- * Coordinates Gemini client, NPC dialogue, atmosphere advisor, and story tracking.
+ * Coordinates Gemini client, NPC dialogue, atmosphere advisor, story tracking, and HAL Co-DM.
  */
 
+const fs = require('fs');
+const path = require('path');
 const GeminiClient = require('./gemini-client');
 const ContextBuilder = require('./context-builder');
 const NpcHandler = require('./npc-handler');
@@ -26,6 +28,9 @@ class AIEngine {
     this.autonomy = null;
     this.spurt = null;
     this.pacing = null;
+    // HAL Co-DM direct query system
+    this._halHistory = []; // last 20 exchanges { query, response, timestamp }
+    this._halSystemPrompt = '';
   }
 
   async init(orchestrator) {
@@ -56,6 +61,14 @@ class AIEngine {
     this.spurt = new SpurtAgent(this.gemini, this.context, this.bus, this.state, this.config);
     this.pacing = new PacingMonitor(this.gemini, this.context, this.bus, this.state, this.config);
 
+    // Load HAL system prompt
+    try {
+      this._halSystemPrompt = fs.readFileSync(path.join(__dirname, '../../prompts/hal-codm.md'), 'utf-8');
+    } catch (e) {
+      this._halSystemPrompt = 'You are HAL, the Co-DM assistant. Answer concisely in under 60 words.';
+      console.warn('[AIEngine] Could not load hal-codm.md prompt, using fallback');
+    }
+
     this._setupRoutes();
   }
 
@@ -63,6 +76,18 @@ class AIEngine {
     // Listen for transcript segments — the main input that drives everything
     this.bus.subscribe('transcript:segment', async (env) => {
       const segment = env.data;
+
+      // HAL voice trigger — DM says "HAL ..." at the start of a phrase
+      if (segment.speaker === 'dm' && segment.text) {
+        const halMatch = segment.text.match(/^hal[\s,.:]+(.+)/i);
+        if (halMatch) {
+          const halQuery = halMatch[1].trim();
+          if (halQuery.length > 0) {
+            this.halQuery(halQuery, 'voice');
+            return; // Don't feed HAL queries into the normal NPC/story pipeline
+          }
+        }
+      }
 
       // Feed transcript to context builder
       this.context.addTranscript(segment);
@@ -179,6 +204,40 @@ class AIEngine {
       }
     }, 'ai-engine');
 
+    // HAL voice trigger — DM says "HAL ..." via transcript
+    this.bus.subscribe('hal:query', async (env) => {
+      const { query, source } = env.data;
+      await this.halQuery(query, source || 'voice');
+    }, 'ai-engine');
+
+    // Wound tier change → AI flavour description
+    this.bus.subscribe('wounds:updated', async (env) => {
+      const { playerId, wounds, tier, hpPct } = env.data;
+      if (tier === undefined || !this.gemini?.available) return;
+      // Only generate on tier escalation (damage, not healing)
+      if (tier <= 0) return;
+
+      // Find what caused the damage from recent transcript
+      const recent = this.context._recentTranscript.slice(-5);
+      const causeHint = recent.map(r => r.text).join(' ').slice(-200);
+
+      const playerName = this.state.get('players.' + playerId + '.character.name') || playerId;
+      const changedLimbs = Object.entries(wounds).filter(([, v]) => v === tier);
+      const limbNames = changedLimbs.map(([k]) => k.replace(/([A-Z])/g, ' $1').toLowerCase()).join(', ');
+
+      const prompt = `Generate a single gothic horror wound description for ${playerName}. Affected: ${limbNames}. Severity: ${['unharmed','scratched','wounded','broken','crippled'][tier]}. Recent combat context: "${causeHint}". Under 20 words. Visceral, specific, no game terms. Just the wound description, nothing else.`;
+
+      try {
+        const desc = await this.gemini.generate(prompt, '', { maxTokens: 50, temperature: 0.9 });
+        if (desc) {
+          this.bus.dispatch('dm:whisper', { text: desc.trim(), priority: 3, category: 'wounds' });
+          this.bus.dispatch('hal:response', { query: `[Wound: ${playerName}]`, response: desc.trim(), timestamp: Date.now(), source: 'auto' });
+        }
+      } catch (e) {
+        console.error('[AIEngine] Wound description error:', e.message);
+      }
+    }, 'ai-engine');
+
     // Start NPC autonomy engine
     this.autonomy.start();
 
@@ -210,6 +269,81 @@ class AIEngine {
       spurt: this.spurt.getStats(),
       pacing: this.pacing.getStats()
     };
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // HAL — Co-DM Direct Query System
+  // ═══════════════════════════════════════════════════════════════
+
+  async halQuery(query, source = 'typed') {
+    if (!this.gemini?.available) {
+      const fallback = { query, response: 'Gemini unavailable — HAL offline.', timestamp: Date.now(), source };
+      this._halHistory.push(fallback);
+      this.bus.dispatch('hal:response', fallback);
+      return fallback;
+    }
+
+    // Signal dashboard that a response is incoming
+    this.bus.dispatch('hal:thinking', { query, source });
+
+    // Build full game context
+    const gameContext = this.context.buildNpcContext('dm') || {};
+    const contextStr = this.context.toPromptString(gameContext);
+
+    // Include recent HAL conversation for continuity
+    const recentHal = this._halHistory.slice(-4).map(h =>
+      `DM asked: "${h.query}"\nHAL answered: "${h.response}"`
+    ).join('\n\n');
+
+    const userPrompt = [
+      '## Current Game State',
+      contextStr,
+      recentHal ? `\n## Recent HAL Exchanges\n${recentHal}` : '',
+      `\n## DM Query\n${query}`
+    ].join('\n');
+
+    try {
+      const response = await this.gemini.generate(this._halSystemPrompt, userPrompt, {
+        maxTokens: 150,
+        temperature: 0.7
+      });
+
+      const entry = {
+        query,
+        response: response || 'No response generated.',
+        timestamp: Date.now(),
+        source
+      };
+
+      this._halHistory.push(entry);
+      if (this._halHistory.length > 20) this._halHistory.shift();
+
+      // Whisper to DM earbud
+      this.bus.dispatch('dm:whisper', {
+        text: `HAL: ${entry.response}`,
+        priority: 2,
+        category: 'hal'
+      });
+
+      // Send to dashboard HAL panel
+      this.bus.dispatch('hal:response', entry);
+
+      // Log to session
+      this.bus.dispatch('session:log', {
+        source: 'hal_query',
+        query,
+        response: entry.response,
+        aiSource: source
+      });
+
+      console.log(`[HAL] "${query}" → "${entry.response}"`);
+      return entry;
+    } catch (err) {
+      console.error('[HAL] Query error:', err.message);
+      const errorEntry = { query, response: `Error: ${err.message}`, timestamp: Date.now(), source };
+      this.bus.dispatch('hal:response', errorEntry);
+      return errorEntry;
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -300,6 +434,19 @@ Be specific and actionable. Format as JSON: {gaps:[], warnings:[], suggestions:[
   _setupRoutes() {
     const app = this.orchestrator.getService('dashboard')?.app;
     if (!app) return;
+
+    // HAL Co-DM query
+    app.post('/api/hal/query', async (req, res) => {
+      const { query } = req.body;
+      if (!query) return res.status(400).json({ error: 'query required' });
+      const result = await this.halQuery(query, 'typed');
+      res.json({ ok: true, ...result });
+    });
+
+    // HAL history
+    app.get('/api/hal/history', (req, res) => {
+      res.json({ history: this._halHistory.slice(-8) });
+    });
 
     // Feature 69: Improv Generator
     app.post('/api/ai/improv', async (req, res) => {

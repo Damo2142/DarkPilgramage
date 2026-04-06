@@ -14,7 +14,7 @@
   "background": "Haunted One",
   "alignment": "CN",
   "hp": {
-    "current": 18,
+    "current": 3,
     "max": 18,
     "temp": 0
   },
@@ -488,7 +488,7 @@
     {
       "name": "Torch",
       "quantity": 3,
-      "equipped": true,
+      "equipped": false,
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
@@ -615,7 +615,7 @@
     "description": null
   },
   "patron": "Fiend Patron",
-  "_syncedAt": "2026-03-14T18:56:50.144Z",
+  "_syncedAt": "2026-04-06T14:40:20.642Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/162702065"
 }

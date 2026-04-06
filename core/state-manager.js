@@ -349,6 +349,10 @@ class StateManager {
         lastCheck: null,
         ...(playerData.dread || {})
       },
+      wounds: {
+        head: 0, torso: 0, leftArm: 0, rightArm: 0, leftLeg: 0, rightLeg: 0,
+        ...(playerData.wounds || {})
+      },
       deviceId: playerData.deviceId || null,
       connected: false,
       ...(playerData)

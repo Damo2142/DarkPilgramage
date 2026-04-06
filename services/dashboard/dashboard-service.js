@@ -509,6 +509,18 @@ Answer concisely (2-4 sentences). If it's a rules question, give the D&D 5e rule
       playerBridge.app.handle(req, res);
     });
 
+    // ── Anonymous players toggle (proxied to player bridge) ────────────────
+    this.app.post('/api/players/anonymous', (req, res) => {
+      const playerBridge = this.orchestrator.getService('player-bridge');
+      if (!playerBridge) return res.status(503).json({ error: 'Player bridge unavailable' });
+      playerBridge.app.handle(req, res);
+    });
+    this.app.get('/api/players/anonymous', (req, res) => {
+      const playerBridge = this.orchestrator.getService('player-bridge');
+      if (!playerBridge) return res.status(503).json({ error: 'Player bridge unavailable' });
+      playerBridge.app.handle(req, res);
+    });
+
     // ── Combat attack routes (proxied to combat service) ───────────────────
     // These are defined here rather than in combat-service to ensure they're
     // registered before the server starts listening.

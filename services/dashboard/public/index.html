@@ -772,6 +772,10 @@
             <input type="range" id="vtt-fog-opacity" min="0" max="100" value="40" style="width:60px;height:12px;" oninput="updateVttSettings()">
             <span id="vtt-fog-opacity-val">40%</span>
           </label>
+          <label style="display:flex;align-items:center;gap:3px;" title="Hide PC names from other players">
+            <input type="checkbox" id="anon-players-cb" checked onchange="toggleAnonymousPlayers(this.checked)" style="accent-color:#c9a54e;">
+            Anonymous PCs
+          </label>
         </div>
       </div>
 
@@ -806,6 +810,17 @@
           <label><input type="checkbox" checked onchange="Earbud.categories.npc=this.checked"> NPC dialogue</label>
         </div>
         <button onclick="Earbud.speak('Co-DM online, earbud ready', 3)" style="width:100%;margin-top:6px;font-size:10px;">🔊 Test Voice</button>
+      </div>
+      </div>
+
+      <div class="panel-section" data-panel="hal">
+      <div class="section-header"><span class="drag-handle">⠿</span>HAL <span id="hal-indicator" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#444;margin-left:4px;vertical-align:middle;"></span></div>
+      <div style="display:flex;flex-direction:column;height:280px;">
+        <div id="hal-log" style="flex:1;overflow-y:auto;padding:4px;font-size:11px;font-family:'Source Sans 3',sans-serif;"></div>
+        <div style="display:flex;gap:4px;padding:4px 0 0 0;">
+          <input type="text" id="hal-input" placeholder="Ask HAL..." style="flex:1;padding:4px 8px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px;font-family:inherit;" onkeydown="if(event.key==='Enter')HAL.send()">
+          <button onclick="HAL.send()" style="padding:4px 10px;font-size:10px;">Ask</button>
+        </div>
       </div>
       </div>
 
@@ -1053,6 +1068,11 @@
         </div>
         <div id="sfx-gen-status" style="font-size:9px;color:var(--text-dim);margin-top:3px;"></div>
       </div>
+      </div>
+
+      <div class="panel-section" data-panel="wounds">
+      <div class="section-header"><span class="drag-handle">⠿</span>Wounds</div>
+      <div id="wounds-panel" style="padding:6px 8px;font-size:11px;"></div>
       </div>
 
       <div class="panel-section" data-panel="combat">
@@ -1590,6 +1610,11 @@
         updateAll();
         if (msg.services) renderServices(msg.services);
         if (state.map?.tokens) { VTT.tokens = state.map.tokens; VTT.render(); }
+        // Load initial wound state
+        for (const [pid, p] of Object.entries(state.players || {})) {
+          if (p.wounds) DmWounds.onUpdate({ playerId: pid, wounds: p.wounds });
+        }
+        DmWounds.render();
         break;
       case 'state:change':
         setNested(state, msg.data.path, msg.data.value);
@@ -1729,6 +1754,15 @@
           Earbud.speak(msg.data.text, msg.data.priority || 3);
           addTranscript({ speaker: 'co-dm', text: '🎧 ' + msg.data.text });
         }
+        break;
+      case 'wounds:updated':
+        if (msg.data) DmWounds.onUpdate(msg.data);
+        break;
+      case 'hal:thinking':
+        HAL.setThinking(true);
+        break;
+      case 'hal:response':
+        if (msg.data) HAL.addEntry(msg.data);
         break;
       case 'ai:npc_action':
         if (msg.data) {
@@ -2822,6 +2856,165 @@
   // Priority queue: 1=critical (dread) → 2=rolls → 3=story/nudges
   //                 4=atmosphere → 5=npc alert → 6=npc auto-read
   // ============================================================
+  // ── DM WOUNDS PANEL ────────────────────────────────────────────
+  const WOUND_COLORS = ['#1a5a1a', '#8b8b2a', '#b8860b', '#8b1a1a', '#1a0a0a'];
+  const WOUND_NAMES = ['OK', 'Scratched', 'Wounded', 'Broken', 'Crippled'];
+  const WOUND_LIMBS = ['head', 'torso', 'leftArm', 'rightArm', 'leftLeg', 'rightLeg'];
+  const WOUND_LIMB_SHORT = { head:'Hd', torso:'To', leftArm:'LA', rightArm:'RA', leftLeg:'LL', rightLeg:'RL' };
+
+  const DmWounds = {
+    _state: {}, // { playerId: { head:0, torso:0, ... } }
+
+    onUpdate(data) {
+      const { playerId, wounds } = data;
+      this._state[playerId] = wounds;
+      this.render();
+    },
+
+    render() {
+      const panel = document.getElementById('wounds-panel');
+      if (!panel) return;
+      const players = state.players || {};
+      const playerIds = Object.keys(players).filter(id => players[id]?.character);
+      if (!playerIds.length) { panel.innerHTML = '<span style="color:var(--text-dim);">No players loaded.</span>'; return; }
+
+      panel.innerHTML = playerIds.map(pid => {
+        const name = players[pid]?.character?.name || pid;
+        const w = this._state[pid] || { head:0, torso:0, leftArm:0, rightArm:0, leftLeg:0, rightLeg:0 };
+        const dots = WOUND_LIMBS.map(limb => {
+          const s = w[limb] || 0;
+          const pulseCls = s === 3 ? 'wound-pulse-slow' : s === 4 ? 'wound-pulse-fast' : '';
+          return '<span class="wound-dot ' + pulseCls + '" title="' + WOUND_LIMB_SHORT[limb] + ': ' + WOUND_NAMES[s] + '" '
+            + 'style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + WOUND_COLORS[s] + ';border:1px solid #555;cursor:pointer;" '
+            + 'onclick="DmWounds.edit(\'' + pid + '\',\'' + limb + '\',' + s + ',event)"></span>';
+        }).join(' ');
+        return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
+          + '<span style="min-width:70px;color:var(--text);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(name) + '</span>'
+          + '<span style="display:flex;gap:3px;">' + dots + '</span>'
+          + '</div>';
+      }).join('');
+    },
+
+    edit(playerId, limb, currentState, event) {
+      // Remove any existing popover
+      const existing = document.getElementById('wound-popover');
+      if (existing) existing.remove();
+
+      const pop = document.createElement('div');
+      pop.id = 'wound-popover';
+      pop.style.cssText = 'position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 10px;box-shadow:0 4px 16px rgba(0,0,0,0.6);font-size:11px;';
+      const rect = event.target.getBoundingClientRect();
+      pop.style.left = rect.left + 'px';
+      pop.style.top = (rect.bottom + 4) + 'px';
+
+      const label = WOUND_LIMB_SHORT[limb];
+      pop.innerHTML = '<div style="font-family:Cinzel,serif;font-size:12px;color:var(--accent);margin-bottom:6px;">' + esc(label) + ' \u2014 ' + WOUND_NAMES[currentState] + '</div>'
+        + '<div style="display:flex;gap:4px;">'
+        + '<button class="sm" onclick="DmWounds.set(\'' + playerId + '\',\'' + limb + '\',' + Math.max(0, currentState - 1) + ')" style="padding:3px 8px;">\u2212</button>'
+        + '<span style="min-width:16px;text-align:center;line-height:24px;color:var(--text);">' + currentState + '</span>'
+        + '<button class="sm" onclick="DmWounds.set(\'' + playerId + '\',\'' + limb + '\',' + Math.min(4, currentState + 1) + ')" style="padding:3px 8px;">+</button>'
+        + '</div>';
+
+      document.body.appendChild(pop);
+      const close = (e) => { if (!pop.contains(e.target)) { pop.remove(); document.removeEventListener('click', close); } };
+      setTimeout(() => document.addEventListener('click', close), 10);
+    },
+
+    set(playerId, limb, newState) {
+      fetch('/api/wounds/' + playerId + '/' + limb, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state: newState })
+      }).then(r => r.json()).then(data => {
+        if (data.wounds) { this._state[playerId] = data.wounds; this.render(); }
+        const pop = document.getElementById('wound-popover');
+        if (pop) pop.remove();
+      }).catch(() => {});
+    }
+  };
+
+  // Add wound pulse CSS
+  (function() {
+    const s = document.createElement('style');
+    s.textContent = '@keyframes wp-slow{0%,100%{opacity:1}50%{opacity:0.4}} @keyframes wp-fast{0%,100%{opacity:1}50%{opacity:0.2}} .wound-pulse-slow{animation:wp-slow 2s ease-in-out infinite} .wound-pulse-fast{animation:wp-fast 0.8s ease-in-out infinite}';
+    document.head.appendChild(s);
+  })();
+
+  // ── HAL Co-DM Panel ────────────────────────────────────────────
+  const HAL = {
+    _entries: [],   // { query, response, timestamp, source }
+    _maxEntries: 8,
+    _thinking: false,
+    _pulseInterval: null,
+
+    send() {
+      const input = document.getElementById('hal-input');
+      if (!input) return;
+      const query = input.value.trim();
+      if (!query) return;
+      input.value = '';
+      this.setThinking(true);
+      fetch('/api/hal/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
+      }).catch(() => this.setThinking(false));
+    },
+
+    addEntry(entry) {
+      this.setThinking(false);
+      this._entries.push(entry);
+      if (this._entries.length > this._maxEntries) this._entries.shift();
+      this.render();
+    },
+
+    setThinking(on) {
+      this._thinking = on;
+      const dot = document.getElementById('hal-indicator');
+      if (!dot) return;
+      if (on) {
+        dot.style.background = '#c07030';
+        if (!this._pulseInterval) {
+          let bright = false;
+          this._pulseInterval = setInterval(() => {
+            bright = !bright;
+            dot.style.background = bright ? '#e09050' : '#c07030';
+          }, 400);
+        }
+      } else {
+        if (this._pulseInterval) { clearInterval(this._pulseInterval); this._pulseInterval = null; }
+        dot.style.background = '#30a050';
+        setTimeout(() => { dot.style.background = '#444'; }, 2000);
+      }
+    },
+
+    render() {
+      const log = document.getElementById('hal-log');
+      if (!log) return;
+      log.innerHTML = this._entries.map(e => {
+        const time = new Date(e.timestamp).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+        const srcIcon = e.source === 'voice' ? '🎤' : '⌨';
+        return '<div style="margin-bottom:8px;">'
+          + '<div style="color:#c9a54e;font-size:10px;margin-bottom:2px;">' + srcIcon + ' <span style="color:var(--text-dim);">' + time + '</span> ' + esc(e.query) + '</div>'
+          + '<div style="color:#a0c8e8;padding-left:10px;border-left:2px solid #333;">' + esc(e.response) + '</div>'
+          + '</div>';
+      }).join('');
+      log.scrollTop = log.scrollHeight;
+    },
+
+    loadHistory() {
+      fetch('/api/hal/history').then(r => r.json()).then(data => {
+        if (data.history) {
+          this._entries = data.history;
+          this.render();
+        }
+      }).catch(() => {});
+    }
+  };
+
+  // Load HAL history on page load
+  setTimeout(() => HAL.loadHistory(), 2000);
+
   const Earbud = {
     enabled: true,
     volume: 0.9,
@@ -3482,6 +3675,8 @@
     panning: false,
     panStart: { x: 0, y: 0, camX: 0, camY: 0 },
     selectedToken: null,
+    // Movement range overlay (informational for DM — no enforcement)
+    _dragMoveRange: null, // { startX, startY, speedPx, dashPx } during PC drag in combat
     // Colors
     colors: {
       pc: '#4080c0', npc: '#c9a54e', hidden: '#a03030',
@@ -3795,6 +3990,19 @@
         }
       }
 
+      // Movement range overlay (DM informational — during PC token drag in combat)
+      if (this._dragMoveRange && this.dragging) {
+        const mr = this._dragMoveRange;
+        const cx = mr.startX - mw / 2, cy = mr.startY - mh / 2;
+        ctx.beginPath(); ctx.arc(cx, cy, mr.speedPx, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(48, 160, 80, 0.5)'; ctx.lineWidth = 2;
+        ctx.setLineDash([8, 6]); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(48, 160, 80, 0.06)'; ctx.fill();
+        ctx.beginPath(); ctx.arc(cx, cy, mr.dashPx, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(192, 112, 48, 0.35)'; ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 8]); ctx.stroke(); ctx.setLineDash([]);
+      }
+
       // Tokens
       for (const [id, tok] of Object.entries(this.tokens)) {
         this._renderToken(ctx, id, tok, mw, mh);
@@ -4089,6 +4297,15 @@
           this.selectedToken = tokenId;
           this.container.classList.add('dragging-token');
           this._showInspector(tokenId);
+          // Show movement range overlay for PC tokens
+          this._dragMoveRange = null;
+          if (tok.type === 'pc') {
+            const gs = this.mapData?.gridSize || 70;
+            const charData = state.players?.[tokenId]?.character;
+            const speed = charData?.speed || tok.speed || 30;
+            const basePx = (speed / 5) * gs;
+            this._dragMoveRange = { startX: tok.x, startY: tok.y, speedPx: basePx, dashPx: basePx * 2 };
+          }
         } else {
           // Start panning
           this.panning = true;
@@ -4196,6 +4413,7 @@
         }
         this.container.classList.remove('dragging-token');
         this.dragging = null;
+        this._dragMoveRange = null;
         this.render();
       }
       this.panning = false;
@@ -4250,6 +4468,18 @@
           this.dragging = { tokenId, offsetX: tok.x - mx, offsetY: tok.y - my };
           this.selectedToken = tokenId;
           this._showInspector(tokenId);
+          // Movement range overlay for touch drag
+          this._dragMoveRange = null;
+          if (tok.type === 'pc') {
+            const combat = state.combat;
+            if (combat && combat.active) {
+              const gs = this.mapData?.gridSize || 70;
+              const charData = state.players?.[tokenId]?.character;
+              const speed = charData?.speed || tok.speed || 30;
+              const basePx = (speed / 5) * gs;
+              this._dragMoveRange = { startX: tok.x, startY: tok.y, speedPx: basePx, dashPx: basePx * 2 };
+            }
+          }
         } else {
           this.panning = true;
           this.panStart = { x: t.clientX, y: t.clientY, camX: this.cam.x, camY: this.cam.y };
@@ -4303,6 +4533,7 @@
           this._updateInspectorPos();
         }
         this.dragging = null;
+        this._dragMoveRange = null;
         this.render();
       }
       this.panning = false;
@@ -5498,6 +5729,22 @@
     VTT.render();
     try { localStorage.setItem('vttSettings', JSON.stringify({ gridOp, gridW, nameS, nameOp, fogOp })); } catch(e) {}
   }
+
+  function toggleAnonymousPlayers(enabled) {
+    fetch('/api/players/anonymous', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled })
+    }).then(r => r.json()).then(d => {
+      console.log('[Dashboard] Anonymous players:', d.anonymousPlayers);
+    }).catch(e => console.error('[Dashboard] Anonymous toggle failed:', e));
+  }
+
+  // Load anonymous state on startup
+  fetch('/api/players/anonymous').then(r => r.json()).then(d => {
+    const cb = document.getElementById('anon-players-cb');
+    if (cb) cb.checked = d.anonymousPlayers;
+  }).catch(() => {});
 
   function loadVttSettings() {
     try {

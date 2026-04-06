@@ -15,6 +15,7 @@ class PlayerBridgeService {
     this.players = new Map();
     this.playerMaps = {};  // playerId -> mapId (which map each player is viewing)
     this._bootTime = Date.now().toString(36); // unique per server start
+    this.anonymousPlayers = true; // Hide PC names from other players until DM reveals
   }
 
   async init(orchestrator) {
@@ -161,6 +162,34 @@ class PlayerBridgeService {
         });
       }
       res.json({ ok: true });
+    });
+
+    // Toggle anonymous player names on/off (DM control)
+    this.app.post('/api/players/anonymous', (req, res) => {
+      const { enabled } = req.body || {};
+      this.anonymousPlayers = enabled !== false;
+      console.log(`[PlayerBridge] Anonymous players: ${this.anonymousPlayers}`);
+      // Re-send full map state to all players so names update immediately
+      const mapState = this.state.get('map') || {};
+      for (const [pid] of this.players) {
+        const filtered = { ...mapState };
+        if (filtered.tokens) {
+          const ft = {};
+          for (const [id, tok] of Object.entries(filtered.tokens)) {
+            if (!tok || tok.hidden) continue;
+            let safe = tok.type === 'npc' ? { ...tok, name: 'Unknown' } : tok;
+            safe = this._anonymizeToken(safe, pid);
+            ft[id] = safe;
+          }
+          filtered.tokens = ft;
+        }
+        this._sendToPlayer(pid, { type: 'map:full_update', map: filtered });
+      }
+      res.json({ anonymousPlayers: this.anonymousPlayers });
+    });
+
+    this.app.get('/api/players/anonymous', (req, res) => {
+      res.json({ anonymousPlayers: this.anonymousPlayers });
     });
 
     // Try HTTPS, fall back to HTTP
@@ -325,19 +354,21 @@ class PlayerBridgeService {
       // Only send to players assigned to this map — don't disrupt players on other maps
       if (statePath === 'map' && typeof value === 'object' && value) {
         const newMapId = value.id;
-        const filtered = { ...value };
-        if (filtered.tokens) {
-          const ft = {};
-          for (const [id, tok] of Object.entries(filtered.tokens)) {
-            if (!tok || tok.hidden) continue;
-            ft[id] = tok.type === 'npc' ? { ...tok, name: 'Unknown' } : tok;
-          }
-          filtered.tokens = ft;
-        }
-        // Only send to players on this map
+        // Per-player filtering: each player gets their own view of tokens
         for (const [pid] of this.players) {
           if (this.playerMaps[pid] === newMapId || !this.playerMaps[pid]) {
             this.playerMaps[pid] = newMapId;
+            const filtered = { ...value };
+            if (filtered.tokens) {
+              const ft = {};
+              for (const [id, tok] of Object.entries(filtered.tokens)) {
+                if (!tok || tok.hidden) continue;
+                let safe = tok.type === 'npc' ? { ...tok, name: 'Unknown' } : tok;
+                safe = this._anonymizeToken(safe, pid);
+                ft[id] = safe;
+              }
+              filtered.tokens = ft;
+            }
             this._sendToPlayer(pid, { type: 'map:full_update', map: filtered });
           }
         }
@@ -351,17 +382,8 @@ class PlayerBridgeService {
       if (statePath.startsWith('map.')) {
         // Map changes only go to players on the DM's active map
         const activeMapId = this.state.get('map.id');
-        const msg = { type: 'state:update', path: statePath, value };
 
-        // Filter hidden tokens from player view
-        if (statePath === 'map.tokens' && typeof value === 'object') {
-          const filtered = {};
-          for (const [id, tok] of Object.entries(value)) {
-            if (!tok.hidden) filtered[id] = tok;
-          }
-          msg.value = filtered;
-        }
-        // Filter individual hidden token updates
+        // Filter hidden tokens
         try {
           if (statePath.match(/^map\.tokens\.[^.]+$/) && value && value.hidden) return;
           if (statePath.match(/^map\.tokens\.[^.]+\./)) {
@@ -369,19 +391,33 @@ class PlayerBridgeService {
             const tok = this.state.get(`map.tokens.${tid}`);
             if (tok && tok.hidden) return;
           }
-          // Strip NPC names from player view
-          if (statePath.match(/^map\.tokens\.[^.]+$/) && value && value.type === 'npc') {
-            msg.value = Object.assign({}, value, { name: 'Unknown' });
-          }
         } catch (e) {
           console.error('[PlayerBridge] Error filtering state update:', e.message);
         }
 
-        // Only send to players on the active map
+        // Per-player token filtering (NPC names + anonymous PC names)
         for (const [pid] of this.players) {
-          if (this.playerMaps[pid] === activeMapId) {
-            this._sendToPlayer(pid, msg);
+          if (this.playerMaps[pid] !== activeMapId) continue;
+          const msg = { type: 'state:update', path: statePath, value };
+
+          if (statePath === 'map.tokens' && typeof value === 'object') {
+            const filtered = {};
+            for (const [id, tok] of Object.entries(value)) {
+              if (tok.hidden) continue;
+              let safe = tok.type === 'npc' ? { ...tok, name: 'Unknown' } : tok;
+              safe = this._anonymizeToken(safe, pid);
+              filtered[id] = safe;
+            }
+            msg.value = filtered;
+          } else if (statePath.match(/^map\.tokens\.[^.]+$/) && value) {
+            if (value.type === 'npc') {
+              msg.value = { ...value, name: 'Unknown' };
+            } else {
+              msg.value = this._anonymizeToken(value, pid);
+            }
           }
+
+          this._sendToPlayer(pid, msg);
         }
       }
     }, 'player-bridge');
@@ -504,18 +540,20 @@ class PlayerBridgeService {
       try {
         const mapState = this.state.get('map') || {};
         const activatedMapId = mapState.id;
-        const filtered = { ...mapState };
-        if (filtered.tokens) {
-          const ft = {};
-          for (const [id, tok] of Object.entries(filtered.tokens)) {
-            if (!tok || tok.hidden) continue;
-            ft[id] = tok.type === 'npc' ? { ...tok, name: 'Unknown' } : tok;
-          }
-          filtered.tokens = ft;
-        }
-        // Only send to players assigned to this map
+        // Per-player filtering for anonymous mode
         for (const [pid] of this.players) {
           if (this.playerMaps[pid] === activatedMapId) {
+            const filtered = { ...mapState };
+            if (filtered.tokens) {
+              const ft = {};
+              for (const [id, tok] of Object.entries(filtered.tokens)) {
+                if (!tok || tok.hidden) continue;
+                let safe = tok.type === 'npc' ? { ...tok, name: 'Unknown' } : tok;
+                safe = this._anonymizeToken(safe, pid);
+                ft[id] = safe;
+              }
+              filtered.tokens = ft;
+            }
             this._sendToPlayer(pid, { type: 'map:full_update', map: filtered });
           }
         }
@@ -527,10 +565,11 @@ class PlayerBridgeService {
     this.bus.subscribe('map:token_added', (env) => {
       const { token } = env.data;
       if (!token || token.hidden) return;
-      const safe = token.type === 'npc' ? { ...token, name: 'Unknown' } : token;
       const activeMapId = this.state.get('map.id');
       for (const [pid] of this.players) {
         if (this.playerMaps[pid] === activeMapId) {
+          let safe = token.type === 'npc' ? { ...token, name: 'Unknown' } : token;
+          safe = this._anonymizeToken(safe, pid);
           this._sendToPlayer(pid, { type: 'map:token_added', token: safe });
         }
       }
@@ -541,7 +580,11 @@ class PlayerBridgeService {
       const { playerId, mapState } = env.data;
       if (this.players.has(playerId)) {
         this.playerMaps[playerId] = mapState.id;
-        this._sendToPlayer(playerId, { type: 'map:full_update', map: mapState });
+        const filtered = { ...mapState };
+        if (filtered.tokens) {
+          filtered.tokens = this._anonymizeTokens(filtered.tokens, playerId);
+        }
+        this._sendToPlayer(playerId, { type: 'map:full_update', map: filtered });
         console.log(`[PlayerBridge] Sent map ${mapState.id} to ${playerId}`);
       }
     }, 'player-bridge');
@@ -652,7 +695,7 @@ class PlayerBridgeService {
           if (tok.type === 'npc') {
             filtered[id] = Object.assign({}, tok, { name: 'Unknown' });
           } else {
-            filtered[id] = tok;
+            filtered[id] = this._anonymizeToken(tok, playerId);
           }
         }
         playerMapState.tokens = filtered;
@@ -884,6 +927,24 @@ class PlayerBridgeService {
       audio: audioData,
       timestamp: Date.now()
     });
+  }
+
+  // Anonymize token name: other PCs become "Traveler" when anonymous mode is on
+  _anonymizeToken(tok, forPlayerId) {
+    if (!this.anonymousPlayers) return tok;
+    if (!tok || tok.type !== 'pc') return tok;
+    // Each player sees their own name
+    if (tok.id === forPlayerId) return tok;
+    return { ...tok, name: 'Traveler' };
+  }
+
+  _anonymizeTokens(tokens, forPlayerId) {
+    if (!tokens) return tokens;
+    const result = {};
+    for (const [id, tok] of Object.entries(tokens)) {
+      result[id] = this._anonymizeToken(tok, forPlayerId);
+    }
+    return result;
   }
 
   _sendToPlayer(playerId, data) {

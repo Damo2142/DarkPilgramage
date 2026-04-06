@@ -59,6 +59,96 @@ class CharacterService {
     // Listen for player inventory/spell updates and persist to disk
     this.bus.subscribe('player:inventory_update', (env) => this._persistPlayerCharacter(env.data.playerId), 'characters');
     this.bus.subscribe('player:spells_update', (env) => this._persistPlayerCharacter(env.data.playerId), 'characters');
+
+    // Wound system — compute wound state from HP changes
+    this.bus.subscribe('hp:update', (env) => {
+      const { playerId, current, max } = env.data;
+      if (playerId) this._computeWounds(playerId, current, max);
+    }, 'characters');
+
+    // Wound manual override route
+    const app = this.orchestrator.getService('dashboard')?.app;
+    if (app) {
+      app.put('/api/wounds/:playerId/:limb', (req, res) => {
+        const { playerId, limb } = req.params;
+        const { state: woundState } = req.body;
+        const validLimbs = ['head', 'torso', 'leftArm', 'rightArm', 'leftLeg', 'rightLeg'];
+        if (!validLimbs.includes(limb)) return res.status(400).json({ error: 'Invalid limb' });
+        if (woundState < 0 || woundState > 4) return res.status(400).json({ error: 'State must be 0-4' });
+        const wounds = this.state.get('players.' + playerId + '.wounds') || this._defaultWounds();
+        wounds[limb] = woundState;
+        this.state.set('players.' + playerId + '.wounds', wounds);
+        this.bus.dispatch('wounds:updated', { playerId, wounds });
+        res.json({ ok: true, wounds });
+      });
+
+      app.get('/api/wounds/:playerId', (req, res) => {
+        const wounds = this.state.get('players.' + req.params.playerId + '.wounds') || this._defaultWounds();
+        res.json({ wounds });
+      });
+    }
+  }
+
+  _defaultWounds() {
+    return { head: 0, torso: 0, leftArm: 0, rightArm: 0, leftLeg: 0, rightLeg: 0 };
+  }
+
+  _computeWounds(playerId, current, max) {
+    if (!max || max <= 0) return;
+    const pct = current / max;
+    const prev = this.state.get('players.' + playerId + '.wounds') || this._defaultWounds();
+    const wounds = { ...prev };
+    const limbs = ['head', 'leftArm', 'rightArm', 'leftLeg', 'rightLeg'];
+
+    // Determine overall tier from HP percentage
+    let tier;
+    if (current <= 0) tier = 4;       // Crippled
+    else if (pct <= 0.25) tier = 3;   // Broken
+    else if (pct <= 0.50) tier = 2;   // Wounded
+    else if (pct <= 0.75) tier = 1;   // Scratched
+    else tier = 0;                     // Unharmed
+
+    if (tier === 0) {
+      // Full health — clear all wounds
+      for (const k of Object.keys(wounds)) wounds[k] = 0;
+    } else if (tier === 1) {
+      // Scratched — one random limb (keep existing if already scratched+)
+      const alreadyHurt = limbs.filter(l => wounds[l] >= 1);
+      if (alreadyHurt.length === 0) {
+        const pick = limbs[Math.floor(Math.random() * limbs.length)];
+        wounds[pick] = Math.max(wounds[pick], 1);
+      }
+    } else if (tier === 2) {
+      // Wounded — torso always, one random limb
+      wounds.torso = Math.max(wounds.torso, 2);
+      const alreadyHurt = limbs.filter(l => wounds[l] >= 1);
+      if (alreadyHurt.length === 0) {
+        const pick = limbs[Math.floor(Math.random() * limbs.length)];
+        wounds[pick] = Math.max(wounds[pick], 1);
+      }
+      // Escalate existing wounds
+      for (const l of limbs) {
+        if (wounds[l] > 0 && wounds[l] < 2) wounds[l] = 2;
+      }
+    } else if (tier === 3) {
+      // Broken — torso + multiple limbs
+      wounds.torso = Math.max(wounds.torso, 3);
+      // At least 2 limbs at 2+, one at 3
+      const shuffled = limbs.sort(() => Math.random() - 0.5);
+      wounds[shuffled[0]] = Math.max(wounds[shuffled[0]], 3);
+      wounds[shuffled[1]] = Math.max(wounds[shuffled[1]], 2);
+      if (wounds[shuffled[2]] === 0) wounds[shuffled[2]] = Math.max(wounds[shuffled[2]], 1);
+    } else {
+      // Crippled — everything maxed
+      for (const k of Object.keys(wounds)) wounds[k] = 4;
+    }
+
+    // Only broadcast if something changed
+    const changed = Object.keys(wounds).some(k => wounds[k] !== prev[k]);
+    if (changed) {
+      this.state.set('players.' + playerId + '.wounds', wounds);
+      this.bus.dispatch('wounds:updated', { playerId, wounds, tier, hpPct: pct });
+    }
   }
 
   async stop() {}

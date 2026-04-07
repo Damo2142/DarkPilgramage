@@ -38,6 +38,14 @@ class LightingService {
   async start() {
     this._setupRoutes();
 
+    this.bus.subscribe('state:session_reset', () => {
+      console.log('[Lighting] Session reset — reloading light sources');
+      if (this._fuelInterval) clearInterval(this._fuelInterval);
+      this.lightSources = new Map();
+      this._loadFromConfig(this.config);
+      this._syncToState();
+    }, 'lighting');
+
     this.bus.subscribe('session:started', () => this._onSessionStart(), 'lighting');
     this.bus.subscribe('session:ended', () => this._onSessionEnd(), 'lighting');
 

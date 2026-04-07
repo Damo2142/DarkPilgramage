@@ -40,6 +40,12 @@ class SocialCombatService {
   }
 
   async start() {
+    this.bus.subscribe('state:session_reset', () => {
+      console.log('[SocialCombat] Session reset');
+      this._endSocialCombat();
+      this._stopAmbientTimer();
+    }, 'social-combat');
+
     // Social combat events
     this.bus.subscribe('social-combat:start', (env) => this._startSocialCombat(env.data), 'social-combat');
     this.bus.subscribe('social-combat:action', (env) => this._processAction(env.data), 'social-combat');

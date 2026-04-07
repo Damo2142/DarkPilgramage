@@ -80,6 +80,20 @@ class HorrorService {
   }
 
   async start() {
+    this.bus.subscribe('state:session_reset', () => {
+      console.log('[Horror] Session reset — clearing horror scores and thresholds');
+      this.horrorScores = {};
+      this.triggeredThresholds = {};
+      this.arcProfiles = {};
+      this.watchForTracking = {};
+      const players = this.state.get('players') || {};
+      for (const playerId of Object.keys(players)) {
+        this.horrorScores[playerId] = 0;
+        this.triggeredThresholds[playerId] = new Set();
+      }
+      this._syncToState();
+    }, 'horror');
+
     // Horror trigger events
     this.bus.subscribe('horror:trigger', (env) => {
       this._onHorrorTrigger(env.data);

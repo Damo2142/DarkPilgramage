@@ -66,6 +66,26 @@ class WorldClockService {
     this.bus.subscribe('session:resumed', () => this._onSessionResume(), 'world-clock');
     this.bus.subscribe('session:ended', () => this._onSessionEnd(), 'world-clock');
 
+    // Full reset — reload everything from config
+    this.bus.subscribe('state:session_reset', () => {
+      console.log('[WorldClock] Session reset — reloading from config');
+      if (this._tickInterval) clearInterval(this._tickInterval);
+      this.timedEvents = [];
+      this.environmentalCues = [];
+      this.secrets = new Map();
+      this.npcGoals = new Map();
+      this.branches = new Map();
+      this.discoveries = new Map();
+      this.clues = new Map();
+      this.weather = { current: null, phases: [], lastTransition: null };
+      this.beatAtmosphereMap = new Map();
+      this.futureHooks = new Map();
+      this.reputation = new Map();
+      this.backstories = new Map();
+      this.paused = true;
+      this._loadFromConfig(this.config);
+    }, 'world-clock');
+
     // Scene changes can load new timed events
     this.bus.subscribe('state:change', (env) => {
       if (env.data.path === 'scene.id') {

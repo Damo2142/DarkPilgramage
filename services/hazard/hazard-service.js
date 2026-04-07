@@ -34,6 +34,15 @@ class HazardService {
   }
 
   async start() {
+    this.bus.subscribe('state:session_reset', () => {
+      console.log('[Hazard] Session reset — reloading hazards and standings');
+      this.hazards = new Map();
+      this.npcStandings = new Map();
+      this.reputationTriggers = new Map();
+      this._loadFromConfig(this.config);
+      this._syncToState();
+    }, 'hazard');
+
     // Token movement — check hazard proximity/entry
     this.bus.subscribe('state:change', (env) => {
       if (env.data.path && env.data.path.match(/^map\.tokens\.\w+$/)) {

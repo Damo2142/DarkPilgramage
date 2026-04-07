@@ -36,6 +36,11 @@ class ObservationService {
   }
 
   async start() {
+    this.bus.subscribe('state:session_reset', () => {
+      console.log('[Observation] Session reset — clearing fired observations');
+      this.firedObservations = new Set();
+    }, 'observation');
+
     // Listen for timed events to fire observations
     this.bus.subscribe('world:timed_event', (env) => {
       this._onTimedEvent(env.data);

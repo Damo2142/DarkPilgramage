@@ -16,6 +16,7 @@ const EquipmentService = require('./services/equipment/equipment-service');
 const StaminaService = require('./services/stamina/stamina-service');
 const LightingService = require('./services/lighting/lighting-service');
 const ObservationService = require('./services/observation/observation-service');
+const HorrorService = require('./services/horror/horror-service');
 const { loadConfig } = require('./utils/config-loader');
 
 // Auto-discover session config: CLI arg > config/session-0.json > defaults only
@@ -47,6 +48,7 @@ orchestrator.register(new EquipmentService());
 orchestrator.register(new StaminaService());
 orchestrator.register(new LightingService());
 orchestrator.register(new ObservationService());
+orchestrator.register(new HorrorService());
 
 orchestrator.startAll().catch(err => {
   console.error('Fatal startup error:', err);

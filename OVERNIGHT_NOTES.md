@@ -7,7 +7,7 @@
 ## Build Order
 - [x] SYSTEM A — Darkness and light
 - [x] SYSTEM B — Passive perception and monster tells
-- [ ] SYSTEM C — Psychological horror and character arc tracks
+- [x] SYSTEM C — Psychological horror and character arc tracks
 - [ ] SYSTEM D — Social combat and ambient NPC behavior
 - [ ] SYSTEM E — Environmental hazards, reputation, session continuity
 - [ ] SYSTEM F — NPC dialogue fix and stamina initialization
@@ -68,4 +68,28 @@
 - POST /api/observations/fire tier 2 DC12: Barry sees it (PP 13 >= 12) — PASS
 - POST /api/observations/fire tier 2 DC15: Barry doesn't see it (PP 13 < 15) — PASS
 - Monster tells loaded for hooded-stranger and tomas — PASS
+
+### SYSTEM C — Psychological Horror and Character Arc Tracks
+**Status: PASS**
+**Files created:** `services/horror/horror-service.js`
+**Files modified:** `server.js`
+
+**Built:**
+- HorrorService with per-player horror score 0-100 (hidden from players)
+- 8 horror trigger types with specified amounts
+- 5 threshold effects (20/40/60/80/100) delivered privately
+- WIS save DC14 at 80, Frightened at 100
+- AI-generated character arc profiles via Gemini
+- Barry-specific hardcoded seeds (gregor body, name recognition, stakes, DC15 bonus)
+- Transcript watchFor monitoring with pre-built quick thoughts
+- DM dashboard color coding (green → amber → deep red)
+- REST API: /api/horror, /api/horror/trigger, /api/horror/set, /api/horror/arcs, /api/horror/barry-seed
+
+**Test results:**
+- Server starts: 17 services, horror initialized for 1 player — PASS
+- GET /api/horror returns jerome at 0/green/calm — PASS
+- POST /api/horror/trigger vladislav_feeds: jerome 0→20 — PASS
+- Threshold 20 triggered, private message dispatched — PASS
+- Arc profile generated via Gemini API — PASS
+- DM dashboard color shifts from green to yellow-green — PASS
 

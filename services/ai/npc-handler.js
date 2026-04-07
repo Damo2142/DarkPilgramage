@@ -116,6 +116,8 @@ Wrong: Marta flinches, her eyes darting to the door`;
       const firstNamePrefix = new RegExp(`^${firstName}[:\\s]+`, 'i');
       dialogue = dialogue.replace(firstNamePrefix, '');
     }
+    // Fix double-leading quotes (AI sometimes wraps then adds inner quotes)
+    dialogue = dialogue.replace(/^["']{2,}/, '"');
     // Only strip wrapping quotes if the ENTIRE response is a single quoted string
     // (i.e. starts with " and ends with " with no em dash action beat after)
     if (/^["'].*["']$/.test(dialogue) && !dialogue.includes('—')) {

@@ -10,7 +10,7 @@
 - [x] SYSTEM C — Psychological horror and character arc tracks
 - [x] SYSTEM D — Social combat and ambient NPC behavior
 - [x] SYSTEM E — Environmental hazards, reputation, session continuity
-- [ ] SYSTEM F — NPC dialogue fix and stamina initialization
+- [x] SYSTEM F — NPC dialogue fix and stamina initialization
 - [ ] SYSTEM G — Dashboard visual redesign and player UI fixes
 - [ ] SYSTEM H — Full integration pass and dry run preparation
 
@@ -134,4 +134,27 @@
 - GET /api/hazards returns all 4 hazard zones — PASS
 - GET /api/npc-standings returns marta/tomas/hooded-stranger at 0 — PASS
 - POST /api/npc-standings Marta +5: standing changes to 5 — PASS
+
+### SYSTEM F — NPC Dialogue Fix and Stamina Init
+**Status: PASS**
+**Files modified:** `services/ai/npc-handler.js`
+
+**Built/Fixed:**
+- Fixed double-leading-quote issue in NPC dialogue cleaning (AI sometimes produces `""Oh...`)
+- Verified NPC dialogue pipeline: raw Gemini response logged, cleaned text logged, full dialogue not truncated
+- Verified Marta dialogue: spoken dialogue first, no reference to "father", uses "traveler" as address
+- Verified stamina API: both /api/stamina/jerome and /api/stamina/barry resolve correctly via _resolvePlayerId
+- Stamina init confirmed: jerome/barry → {max:70, current:70, state:'fresh', conMod:2}
+- No "father" references found in config, prompts, or AI service code (already cleaned in prior work)
+
+**Test results:**
+- GET /api/stamina/jerome returns valid JSON — PASS
+- GET /api/stamina/barry resolves to jerome, returns valid JSON — PASS
+- Marta NPC dialogue: full spoken response, no truncation, no father ref — PASS
+- Double-quote fix applied to npc-handler.js cleaning pipeline — FIXED
+
+**Decisions:**
+- The NPC dialogue "truncation" issue from the spec appears to have been already resolved
+- The "father" references were already prohibited in npc-base.md and hal-codm.md prompts
+- No further changes needed to stamina — _resolvePlayerId already handles name fallback
 

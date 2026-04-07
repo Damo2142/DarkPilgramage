@@ -1,7 +1,8 @@
 /**
- * Sound Service — ElevenLabs SFX Integration
+ * Sound Service — ElevenLabs SFX Integration + Pi Speaker Output
  * Generates and caches horror sound effects as MP3 files.
  * Serves them via Express for browser audio playback.
+ * Routes audio to Pi speaker at PI_SPEAKER_URL for room playback.
  * Pre-generates a library of core sounds on first run.
  */
 
@@ -64,6 +65,12 @@ class SoundService {
     this._enabled = false;
     this._generating = false;
     this._generationQueue = [];
+
+    // Pi Speaker state
+    this._piUrl = null;
+    this._piConnected = false;
+    this._piVolume = 80;
+    this._piHealthInterval = null;
   }
 
   async init(orchestrator) {
@@ -80,6 +87,7 @@ class SoundService {
 
   async start() {
     this._apiKey = process.env.ELEVENLABS_API_KEY;
+    this._piUrl = process.env.PI_SPEAKER_URL || null;
 
     if (!this._apiKey) {
       console.warn('[SoundService] No ELEVENLABS_API_KEY in .env — sound generation disabled');
@@ -90,7 +98,16 @@ class SoundService {
       console.log(`[SoundService] ElevenLabs connected — ${this._countCachedSounds()} cached sounds`);
     }
 
+    // Pi Speaker setup
+    if (this._piUrl) {
+      console.log(`[SoundService] Pi speaker: ${this._piUrl}`);
+      this._startPiHealthCheck();
+    } else {
+      console.log('[SoundService] No PI_SPEAKER_URL — room speaker disabled');
+    }
+
     this._subscribeEvents();
+    this._setupRoutes();
 
     // Pre-generate missing core sounds in background
     if (this._enabled) {
@@ -106,14 +123,50 @@ class SoundService {
       await this.generate(name, prompt, duration, loop);
     }, 'sound-service');
 
+    // Play a sound — route to Pi speaker
+    this.bus.subscribe('sound:play', async (env) => {
+      const { file, name, volume, loop } = env.data;
+      const filename = name || (file ? path.basename(file).replace('.mp3', '') : null);
+      if (filename) {
+        await this._piPlay(filename, volume || this._piVolume, loop);
+      }
+    }, 'sound-service');
+
+    // Stop playback on Pi speaker
+    this.bus.subscribe('sound:stop', async () => {
+      await this._piStop();
+    }, 'sound-service');
+
+    // Volume change
+    this.bus.subscribe('sound:volume', async (env) => {
+      const { volume } = env.data;
+      if (volume != null) {
+        this._piVolume = Math.max(0, Math.min(100, volume));
+        await this._piSetVolume(this._piVolume);
+      }
+    }, 'sound-service');
+
     // List available sounds
     this.bus.subscribe('sound:list', () => {
       this.bus.dispatch('sound:library', { sounds: this.listSounds() });
+    }, 'sound-service');
+
+    // Atmosphere changes trigger ambient sound on Pi
+    this.bus.subscribe('atmo:profile_active', async (env) => {
+      const audio = env.data.audio;
+      if (audio?.ambient) {
+        const filename = audio.ambient.replace('.mp3', '').replace(/^\/sounds\//, '');
+        await this._piPlay(filename, audio.ambientVolume || this._piVolume, true);
+      }
     }, 'sound-service');
   }
 
   stop() {
     this._generationQueue = [];
+    if (this._piHealthInterval) {
+      clearInterval(this._piHealthInterval);
+      this._piHealthInterval = null;
+    }
   }
 
   getStatus() {
@@ -123,8 +176,112 @@ class SoundService {
       cachedSounds: this._countCachedSounds(),
       coreSoundsTotal: Object.keys(CORE_SOUNDS).length,
       generating: this._generating,
-      queueLength: this._generationQueue.length
+      queueLength: this._generationQueue.length,
+      piSpeaker: {
+        url: this._piUrl || null,
+        connected: this._piConnected,
+        volume: this._piVolume
+      }
     };
+  }
+
+  // ── Pi Speaker Integration ─────────────────────────────────────────
+
+  async _piPlay(filename, volume, loop) {
+    if (!this._piUrl || !this._piConnected) return;
+
+    // Send just the filename — Pi server knows to fetch from Co-DM assets
+    const body = { file: filename, volume: volume || this._piVolume };
+    if (loop) body.loop = true;
+
+    try {
+      const res = await fetch(`${this._piUrl}/play`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(5000)
+      });
+      if (res.ok) {
+        console.log(`[SoundService] Pi play: ${filename} (vol ${volume}${loop ? ', loop' : ''})`);
+      } else {
+        console.warn(`[SoundService] Pi play failed: ${res.status}`);
+      }
+    } catch (e) {
+      console.warn(`[SoundService] Pi play error: ${e.message}`);
+    }
+  }
+
+  async _piStop() {
+    if (!this._piUrl) return;
+
+    try {
+      await fetch(`${this._piUrl}/stop`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+        signal: AbortSignal.timeout(5000)
+      });
+      console.log('[SoundService] Pi stop');
+    } catch (e) {
+      console.warn(`[SoundService] Pi stop error: ${e.message}`);
+    }
+  }
+
+  async _piSetVolume(volume) {
+    if (!this._piUrl) return;
+
+    try {
+      await fetch(`${this._piUrl}/volume`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ volume }),
+        signal: AbortSignal.timeout(5000)
+      });
+      console.log(`[SoundService] Pi volume: ${volume}`);
+      this.state.set('sound.piVolume', volume);
+    } catch (e) {
+      console.warn(`[SoundService] Pi volume error: ${e.message}`);
+    }
+  }
+
+  _startPiHealthCheck() {
+    // Initial check
+    this._checkPiHealth();
+
+    // Check every 30 seconds
+    this._piHealthInterval = setInterval(() => {
+      this._checkPiHealth();
+    }, 30000);
+  }
+
+  async _checkPiHealth() {
+    if (!this._piUrl) return;
+
+    try {
+      const res = await fetch(`${this._piUrl}/health`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(3000)
+      });
+      const wasConnected = this._piConnected;
+      this._piConnected = res.ok;
+
+      if (this._piConnected && !wasConnected) {
+        console.log('[SoundService] Pi speaker connected');
+        this.bus.dispatch('pi:connected', { url: this._piUrl });
+        this.state.set('sound.piConnected', true);
+      } else if (!this._piConnected && wasConnected) {
+        console.warn('[SoundService] Pi speaker disconnected');
+        this.bus.dispatch('pi:disconnected', { url: this._piUrl });
+        this.state.set('sound.piConnected', false);
+      }
+    } catch (e) {
+      if (this._piConnected) {
+        console.warn('[SoundService] Pi speaker disconnected');
+        this.bus.dispatch('pi:disconnected', { url: this._piUrl });
+      }
+      this._piConnected = false;
+      this.state.set('sound.piConnected', false);
+    }
   }
 
   // ── Public API ─────────────────────────────────────────────────────
@@ -216,6 +373,46 @@ class SoundService {
       console.error(`[SoundService] Generation failed for ${name}: ${err.message}`);
       return null;
     }
+  }
+
+  // ── Routes ─────────────────────────────────────────────────────────
+
+  _setupRoutes() {
+    const app = this.orchestrator.getService('dashboard')?.app;
+    if (!app) return;
+
+    // GET /api/sound/pi — Pi speaker status
+    app.get('/api/sound/pi', (req, res) => {
+      res.json({
+        url: this._piUrl || null,
+        connected: this._piConnected,
+        volume: this._piVolume
+      });
+    });
+
+    // POST /api/sound/pi/play — play sound on Pi
+    app.post('/api/sound/pi/play', async (req, res) => {
+      const { file, volume, loop } = req.body;
+      if (!file) return res.status(400).json({ error: 'file required' });
+      const filename = path.basename(file).replace('.mp3', '');
+      await this._piPlay(filename, volume || this._piVolume, loop);
+      res.json({ ok: true });
+    });
+
+    // POST /api/sound/pi/stop — stop Pi playback
+    app.post('/api/sound/pi/stop', async (req, res) => {
+      await this._piStop();
+      res.json({ ok: true });
+    });
+
+    // POST /api/sound/pi/volume — set Pi volume
+    app.post('/api/sound/pi/volume', async (req, res) => {
+      const { volume } = req.body;
+      if (volume == null) return res.status(400).json({ error: 'volume required' });
+      this._piVolume = Math.max(0, Math.min(100, volume));
+      await this._piSetVolume(this._piVolume);
+      res.json({ ok: true, volume: this._piVolume });
+    });
   }
 
   // ── Pre-generation ────────────────────────────────────────────────

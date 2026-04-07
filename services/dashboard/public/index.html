@@ -710,6 +710,7 @@
       <span><span class="dot green" id="earbud-indicator" title="Earbud TTS"></span>🎧</span>
       <span>Session: <strong id="sess-status">Idle</strong></span>
       <span id="session-timer">00:00:00</span>
+      <span id="pi-speaker-status" title="Room Speaker" style="cursor:pointer;position:relative;" onclick="PiSpeaker.togglePopover()"><span class="dot" id="pi-dot" style="background:#4a3a28;"></span><span style="font-size:11px;color:var(--text-dim);">Speaker</span></span>
       <span id="weather-icon" title="Weather" style="font-size:16px;cursor:help;">☀</span>
       <span id="game-time-display" style="font-family:monospace;color:var(--accent-dim);font-size:12px;">--:--</span>
       <button id="panel-menu-btn" onclick="PanelLayout.toggleMenu()" title="Show/hide panels">&#9776;</button>
@@ -1176,6 +1177,10 @@
         <div class="atmo-btn" onclick="setAtmo('combat')" data-profile="combat"><span class="atmo-dot" style="background:#d04020"></span>Combat</div>
         <div class="atmo-btn" onclick="setAtmo('revelation')" data-profile="revelation"><span class="atmo-dot" style="background:#8080ff"></span>Reveal</div>
         <div class="atmo-btn" onclick="setAtmo('dawn')" data-profile="dawn"><span class="atmo-dot" style="background:#e0c060"></span>Dawn</div>
+      <div id="pi-speaker-vol" style="padding:6px 10px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+        <span style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap;">Room Speaker</span>
+        <input type="range" id="pi-vol-slider" min="0" max="100" value="80" style="flex:1;accent-color:var(--accent);height:4px;" oninput="PiSpeaker.setVolume(this.value)">
+        <span id="pi-vol-label" style="font-size:11px;color:var(--text-dim);min-width:28px;text-align:right;">80</span>
       </div>
       </div>
 
@@ -2007,6 +2012,9 @@
         row.style.borderLeft = `3px solid ${hData.color}`;
       }
     }
+
+    // Pi Speaker status
+    if (state.sound) PiSpeaker.update(state.sound);
 
     // Trust
     ['manual','assisted','autopilot'].forEach(l => {
@@ -3305,6 +3313,59 @@
 
   // Load HAL history on page load
   setTimeout(() => HAL.loadHistory(), 2000);
+
+  // ── Pi Speaker ──
+  const PiSpeaker = {
+    connected: false,
+    volume: 80,
+    _popoverOpen: false,
+
+    update(soundState) {
+      const connected = soundState?.piConnected || false;
+      const dot = document.getElementById('pi-dot');
+      if (dot) {
+        dot.style.background = connected ? 'var(--green, #4a8c4a)' : '#4a3a28';
+        dot.style.boxShadow = connected ? '0 0 4px var(--green, #4a8c4a)' : 'none';
+      }
+      this.connected = connected;
+      if (soundState?.piVolume != null) {
+        this.volume = soundState.piVolume;
+        const slider = document.getElementById('pi-vol-slider');
+        const label = document.getElementById('pi-vol-label');
+        if (slider) slider.value = this.volume;
+        if (label) label.textContent = this.volume;
+      }
+    },
+
+    async setVolume(val) {
+      this.volume = parseInt(val);
+      const label = document.getElementById('pi-vol-label');
+      if (label) label.textContent = this.volume;
+      try {
+        await fetch('/api/sound/pi/volume', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ volume: this.volume })
+        });
+      } catch (e) { /* silent */ }
+    },
+
+    togglePopover() {
+      let pop = document.getElementById('pi-popover');
+      if (pop) { pop.remove(); return; }
+      pop = document.createElement('div');
+      pop.id = 'pi-popover';
+      pop.style.cssText = 'position:absolute;top:36px;right:0;background:var(--surface,#1e1a14);border:1px solid var(--border,#2a2218);border-radius:6px;padding:10px;min-width:180px;z-index:900;box-shadow:0 4px 16px rgba(0,0,0,0.5);';
+      pop.innerHTML = '<div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">Room Speaker</div>'
+        + '<div style="display:flex;align-items:center;gap:6px;">'
+        + '<input type="range" min="0" max="100" value="' + this.volume + '" style="flex:1;accent-color:var(--accent);" oninput="PiSpeaker.setVolume(this.value);document.getElementById(\'pi-vol-slider\').value=this.value;">'
+        + '<span style="font-size:12px;color:var(--text);min-width:28px;">' + this.volume + '</span>'
+        + '</div>'
+        + '<div style="font-size:10px;color:' + (this.connected ? 'var(--green)' : 'var(--red)') + ';margin-top:6px;">' + (this.connected ? 'Connected' : 'Offline') + '</div>';
+      document.getElementById('pi-speaker-status').appendChild(pop);
+      setTimeout(() => { document.addEventListener('click', function rm(e) { if (!pop.contains(e.target) && e.target.id !== 'pi-speaker-status') { pop.remove(); document.removeEventListener('click', rm); } }); }, 10);
+    }
+  };
 
   const Earbud = {
     enabled: true,

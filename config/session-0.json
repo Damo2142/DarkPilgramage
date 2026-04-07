@@ -575,6 +575,106 @@
         "regions": ["orava-mountains", "houska", "cachtice"],
         "enemies": ["church-of-light"]
       }
+    ],
+
+    "lightSources": [
+      {
+        "id": "fireplace",
+        "name": "Common Room Fireplace",
+        "position": { "x": 12, "y": 8 },
+        "brightRadius": 20,
+        "dimRadius": 40,
+        "fuelType": "fireplace",
+        "state": "lit",
+        "canExtinguish": true,
+        "linkedEvent": "fire_dies_completely"
+      },
+      {
+        "id": "sconce-nw",
+        "name": "Wall Sconce (NW Corner)",
+        "position": { "x": 3, "y": 2 },
+        "brightRadius": 10,
+        "dimRadius": 20,
+        "fuelType": "torch",
+        "fuelMinutes": 360,
+        "state": "lit",
+        "startTime": "1274-10-15T17:30:00"
+      },
+      {
+        "id": "sconce-ne",
+        "name": "Wall Sconce (NE Corner)",
+        "position": { "x": 22, "y": 2 },
+        "brightRadius": 10,
+        "dimRadius": 20,
+        "fuelType": "torch",
+        "fuelMinutes": 360,
+        "state": "lit",
+        "startTime": "1274-10-15T17:30:00"
+      },
+      {
+        "id": "sconce-sw",
+        "name": "Wall Sconce (SW Corner)",
+        "position": { "x": 3, "y": 14 },
+        "brightRadius": 10,
+        "dimRadius": 20,
+        "fuelType": "torch",
+        "fuelMinutes": 360,
+        "state": "lit",
+        "startTime": "1274-10-15T17:30:00"
+      },
+      {
+        "id": "sconce-se",
+        "name": "Wall Sconce (SE Corner)",
+        "position": { "x": 22, "y": 14 },
+        "brightRadius": 10,
+        "dimRadius": 20,
+        "fuelType": "torch",
+        "fuelMinutes": 360,
+        "state": "lit",
+        "startTime": "1274-10-15T17:30:00"
+      },
+      {
+        "id": "table-candle-1",
+        "name": "Table Candle (Bar)",
+        "position": { "x": 8, "y": 5 },
+        "brightRadius": 5,
+        "dimRadius": 10,
+        "fuelType": "candle",
+        "fuelMinutes": 60,
+        "state": "lit",
+        "startTime": "1274-10-15T17:30:00"
+      },
+      {
+        "id": "table-candle-2",
+        "name": "Table Candle (Center)",
+        "position": { "x": 12, "y": 10 },
+        "brightRadius": 5,
+        "dimRadius": 10,
+        "fuelType": "candle",
+        "fuelMinutes": 60,
+        "state": "lit",
+        "startTime": "1274-10-15T17:30:00"
+      },
+      {
+        "id": "katya-lantern",
+        "name": "Katya's Lantern",
+        "position": { "x": 16, "y": 6 },
+        "brightRadius": 15,
+        "dimRadius": 30,
+        "fuelType": "lantern",
+        "fuelMinutes": 360,
+        "state": "lit"
+      },
+      {
+        "id": "aldric-symbol",
+        "name": "Brother Aldric's Holy Symbol",
+        "position": { "x": 18, "y": 12 },
+        "brightRadius": 0,
+        "dimRadius": 10,
+        "fuelType": "holy_symbol",
+        "state": "extinguished",
+        "startTime": "1274-10-15T23:00:00"
+      }
     ]
   },
 

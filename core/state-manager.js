@@ -17,7 +17,7 @@ class StateManager {
         startTime: null,
         elapsedMs: 0,
         status: 'idle', // idle | prep | active | paused | ended
-        aiTrustLevel: 'manual' // manual | assisted | autopilot
+        aiTrustLevel: 'autopilot' // manual | assisted | autopilot
       },
       scene: {
         id: null,

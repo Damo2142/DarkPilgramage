@@ -1772,8 +1772,15 @@
         break;
       case 'dm:whisper':
         if (msg.data) {
-          Earbud.speak(msg.data.text, msg.data.priority || 3);
-          addTranscript({ speaker: 'co-dm', text: '🎧 ' + msg.data.text });
+          const pri = msg.data.priority || 3;
+          // Only speak priority 1-2 (critical story/combat) to earbud
+          // Lower priority logs to transcript only — DM reads when ready
+          if (pri <= 2) {
+            Earbud.speak(msg.data.text, pri);
+            addTranscript({ speaker: 'co-dm', text: '🎧 ' + msg.data.text });
+          } else {
+            addTranscript({ speaker: 'co-dm', text: msg.data.text });
+          }
         }
         break;
       case 'wounds:updated':

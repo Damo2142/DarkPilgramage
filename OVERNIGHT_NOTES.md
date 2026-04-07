@@ -6,7 +6,7 @@
 
 ## Build Order
 - [x] SYSTEM A — Darkness and light
-- [ ] SYSTEM B — Passive perception and monster tells
+- [x] SYSTEM B — Passive perception and monster tells
 - [ ] SYSTEM C — Psychological horror and character arc tracks
 - [ ] SYSTEM D — Social combat and ambient NPC behavior
 - [ ] SYSTEM E — Environmental hazards, reputation, session continuity
@@ -47,4 +47,25 @@
 - GET /api/lighting returns all sources with correct data — PASS
 - POST /api/lighting/toggle toggles fireplace lit/extinguished — PASS
 - Bug fix: senses object type handling — FIXED AND VERIFIED
+
+### SYSTEM B — Passive Perception and Monster Tells
+**Status: PASS**
+**Files created:** `services/observation/observation-service.js`
+**Files modified:** `server.js`, `config/session-0.json`
+
+**Built:**
+- ObservationService with 3-tier observation system (auto/PP-filtered/investigation)
+- 7 event observation sets with all Session 0 observations from spec
+- Monster tells for Vladislav (8 tells) and Tomas (5 tells)
+- Passive perception calculation: 10 + skills.perception.modifier
+- Private message delivery via dm:private_message with 45s duration
+- DM earbud whisper for all tiers
+- REST API: /api/observations, /api/observations/fire, /api/observations/pp, /api/observations/tells
+
+**Test results:**
+- Server starts: 16 services, 6 event observations, 2 monster tell sets — PASS
+- GET /api/observations/pp returns Barry PP 13 — PASS
+- POST /api/observations/fire tier 2 DC12: Barry sees it (PP 13 >= 12) — PASS
+- POST /api/observations/fire tier 2 DC15: Barry doesn't see it (PP 13 < 15) — PASS
+- Monster tells loaded for hooded-stranger and tomas — PASS
 

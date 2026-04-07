@@ -15,6 +15,7 @@ const CampaignService = require('./services/campaign/campaign-service');
 const EquipmentService = require('./services/equipment/equipment-service');
 const StaminaService = require('./services/stamina/stamina-service');
 const LightingService = require('./services/lighting/lighting-service');
+const ObservationService = require('./services/observation/observation-service');
 const { loadConfig } = require('./utils/config-loader');
 
 // Auto-discover session config: CLI arg > config/session-0.json > defaults only
@@ -45,6 +46,7 @@ orchestrator.register(new CampaignService());
 orchestrator.register(new EquipmentService());
 orchestrator.register(new StaminaService());
 orchestrator.register(new LightingService());
+orchestrator.register(new ObservationService());
 
 orchestrator.startAll().catch(err => {
   console.error('Fatal startup error:', err);

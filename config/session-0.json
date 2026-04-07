@@ -675,7 +675,84 @@
         "state": "extinguished",
         "startTime": "1274-10-15T23:00:00"
       }
-    ]
+    ],
+
+    "observations": [
+      {
+        "eventId": "vladislav_watches",
+        "items": [
+          { "id": "obs-1730-vlad-food", "tier": 1, "text": "Vladislav has not touched his food or drink" },
+          { "id": "obs-1730-tomas-window", "tier": 2, "dc": 12, "text": "Tomas keeps glancing at the window, then quickly looking away.", "linkedSecret": "tomas_is_werewolf" },
+          { "id": "obs-1730-vlad-chair", "tier": 2, "dc": 14, "text": "Vladislav's chair faces the cellar door, not the room. He chose that position deliberately.", "linkedSecret": "both_want_cellar" }
+        ]
+      },
+      {
+        "eventId": "vladislav_watches",
+        "items": [
+          { "id": "obs-1900-vlad-tracks", "tier": 2, "dc": 15, "text": "His eyes track one of you specifically — not the room. He is watching someone.", "linkedSecret": "vladislav_is_vampire" },
+          { "id": "obs-1900-vlad-still", "tier": 2, "dc": 13, "text": "He has not shifted position in over an hour. Not even to adjust his cloak. Nobody sits that still." }
+        ]
+      },
+      {
+        "eventId": "katya_song_stops",
+        "items": [
+          { "id": "obs-1930-katya-stops", "tier": 1, "text": "Katya stops playing abruptly and stares at something behind the bar" },
+          { "id": "obs-1930-brass-plate", "tier": 2, "dc": 14, "text": "She is looking at the brass plate on the wall — the polished one that catches reflections.", "linkedSecret": "vladislav_is_vampire" },
+          { "id": "obs-1930-no-reflect", "tier": 3, "dc": 12, "text": "Examine the brass plate — something about the way Katya stopped troubles you", "suggest": "Something about the way Katya stopped troubles you. You follow her gaze to the polished brass on the wall..." }
+        ]
+      },
+      {
+        "eventId": "moonrise",
+        "items": [
+          { "id": "obs-1945-tomas-grips", "tier": 1, "text": "Tomas grips the edge of his table hard enough to turn his knuckles white" },
+          { "id": "obs-1945-tomas-shaking", "tier": 2, "dc": 12, "text": "His hands are shaking. He is gripping the table to hide it.", "linkedSecret": "tomas_is_werewolf" },
+          { "id": "obs-1945-tomas-sweat", "tier": 2, "dc": 14, "text": "Sweat beads on his forehead despite sitting away from the fire. His breath comes short and fast.", "linkedSecret": "tomas_is_werewolf" }
+        ]
+      },
+      {
+        "eventId": "gregor_collapse",
+        "items": [
+          { "id": "obs-2100-gregor-falls", "tier": 1, "text": "Old Gregor slides from his chair without a sound — he simply folds and drops" },
+          { "id": "obs-2100-gregor-wounds", "tier": 3, "dc": 12, "text": "Medicine check on Gregor — two puncture wounds on his neck", "suggest": "Something about the way he fell does not look right. Not like a faint. More like... emptied." }
+        ]
+      },
+      {
+        "eventId": "tomas_cellar_attempt",
+        "items": [
+          { "id": "obs-2130-vlad-fingers", "tier": 2, "dc": 15, "text": "Vladislav's fingers have been slowly curling and uncurling for several minutes. Like a predator flexing its claws.", "linkedSecret": "vladislav_is_vampire" },
+          { "id": "obs-2130-both-cellar", "tier": 2, "dc": 13, "text": "Both Vladislav and Tomas are watching the cellar door. Neither is aware the other is doing it.", "linkedSecret": "both_want_cellar" },
+          { "id": "obs-2130-tomas-stands", "tier": 1, "text": "Tomas stands abruptly, knocking his chair back. His eyes are wild." }
+        ]
+      },
+      {
+        "eventId": "aldric_prayer",
+        "items": [
+          { "id": "obs-2300-aldric-prays", "tier": 1, "text": "Brother Aldric begins praying loudly, his holy symbol glowing with faint light" },
+          { "id": "obs-2300-vlad-jaw", "tier": 2, "dc": 13, "text": "Vladislav's jaw tightens when the holy symbol catches the light. A muscle jumps in his cheek.", "linkedSecret": "vladislav_is_vampire" },
+          { "id": "obs-2300-vlad-marks", "tier": 2, "dc": 15, "text": "His hand grips the chair arm so hard it leaves marks in the wood. Finger-shaped grooves pressed into oak.", "linkedSecret": "vladislav_is_vampire" }
+        ]
+      }
+    ],
+
+    "monsterTells": {
+      "hooded-stranger": [
+        { "actionType": "feeding", "text": "His nostrils flare almost imperceptibly. He has been watching the target for three minutes without blinking." },
+        { "actionType": "feeding", "text": "Something shifts behind those eyes — hunger, ancient and patient, surfacing for just a moment." },
+        { "actionType": "moving", "text": "He unfolds from his chair with no sound — no creak, no scrape, no effort. Like shadow given form." },
+        { "actionType": "moving", "text": "He moves between the shadows as if the darkness parts for him. You almost lose track of where he is." },
+        { "actionType": "revealing", "text": "The candlelight catches his teeth for just a moment — too many, too sharp." },
+        { "actionType": "revealing", "text": "His hood shifts and the firelight finds his face. The skin is wrong — too smooth, too pale, like something carved from marble." },
+        { "actionType": "general", "text": "He tilts his head at an angle that is not quite human. Like a bird studying prey." },
+        { "actionType": "wound", "text": "The wound closes. Not heals — closes. Like it was never there. He does not even flinch." }
+      ],
+      "tomas": [
+        { "actionType": "transformation", "text": "His breath comes in short, sharp bursts. He is counting something under his breath — a prayer, or a countdown." },
+        { "actionType": "transformation", "text": "His eyes flash amber in the firelight. For just a moment, they are not human eyes." },
+        { "actionType": "moving", "text": "He stands before he means to. Catches himself. Sits back down. His leg bounces with desperate energy." },
+        { "actionType": "general", "text": "He scratches at his forearms unconsciously. The scratches are already there — deep, like claws." },
+        { "actionType": "wound", "text": "The wound knits shut faster than it should. The flesh around it ripples, like something beneath the skin is fighting to get out." }
+      ]
+    }
   },
 
   "backstories": {

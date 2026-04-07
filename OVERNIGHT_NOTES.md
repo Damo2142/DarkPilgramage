@@ -8,7 +8,7 @@
 - [x] SYSTEM A — Darkness and light
 - [x] SYSTEM B — Passive perception and monster tells
 - [x] SYSTEM C — Psychological horror and character arc tracks
-- [ ] SYSTEM D — Social combat and ambient NPC behavior
+- [x] SYSTEM D — Social combat and ambient NPC behavior
 - [ ] SYSTEM E — Environmental hazards, reputation, session continuity
 - [ ] SYSTEM F — NPC dialogue fix and stamina initialization
 - [ ] SYSTEM G — Dashboard visual redesign and player UI fixes
@@ -92,4 +92,25 @@
 - Threshold 20 triggered, private message dispatched — PASS
 - Arc profile generated via Gemini API — PASS
 - DM dashboard color shifts from green to yellow-green — PASS
+
+### SYSTEM D — Social Combat and Ambient NPC Behavior
+**Status: PASS**
+**Files created:** `services/social-combat/social-combat-service.js`
+**Files modified:** `server.js`
+
+**Built:**
+- SocialCombatService with momentum -10 to +10
+- 5 player actions (persuade/deceive/intimidate/insight/recall) vs AI NPC rolls
+- Vladislav-specific rules: advantage on rolls, minimum momentum -3
+- AI-generated NPC dialogue colored by momentum
+- Vladislav insight DC18 private observation trigger
+- Ambient NPC behavior: 8-12 minute random interval, AI-generated or fallback
+- REST API: /api/social-combat (GET/start/action/end/momentum/ambient-toggle)
+
+**Test results:**
+- Server starts: 18 services — PASS
+- POST /api/social-combat/start with Vladislav — PASS
+- Social combat action: Barry insight 18 vs Vladislav 20, shift -1 — PASS
+- AI dialogue generated for Vladislav response — PASS
+- Vladislav advantage and min momentum -3 rules active — PASS
 

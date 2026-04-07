@@ -449,7 +449,7 @@ Stay strictly within what ${npcName} knows. 1-3 sentences of dialogue typical.`;
 
     try {
       const response = await this.gemini.generate(this._halSystemPrompt, userPrompt, {
-        maxTokens: 150,
+        maxTokens: 500,
         temperature: 0.7
       });
 

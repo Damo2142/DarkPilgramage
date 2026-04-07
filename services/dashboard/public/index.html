@@ -1660,7 +1660,10 @@
         break;
       case 'ai:npc_dialogue':
         addNpcSuggestion(msg.data);
-        Earbud.onNpcSuggestion(msg.data);
+        break;
+      case 'npc:approved':
+        // NPC spoke to players — show in transcript so DM sees what was said
+        addTranscript({ speaker: msg.data.npc || 'NPC', text: msg.data.text });
         break;
       case 'ai:atmosphere':
         addTranscript({ speaker: 'system', text: `AI suggests: ${msg.data.profile} (${msg.data.reason}, confidence: ${msg.data.confidence})` });

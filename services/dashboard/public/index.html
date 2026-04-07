@@ -842,6 +842,7 @@
       <div id="session-save-info" style="font-size:9px;color:var(--text-dim);padding:2px 4px;"></div>
       <div class="session-bar">
         <button class="danger" onclick="if(confirm('PANIC — Kill all effects?')) send('panic')" style="flex:2">🚨 PANIC</button>
+        <button onclick="DmRecap.generate()" title="AI generates a recap of the last 10 minutes">Recap</button>
       </div>
       </div>
 
@@ -1076,6 +1077,13 @@
       <div class="panel-section" data-panel="wounds">
       <div class="section-header"><span class="drag-handle">⠿</span>Wounds</div>
       <div id="wounds-panel" style="padding:6px 8px;font-size:11px;"></div>
+      </div>
+
+      <div class="panel-section" data-panel="equipment">
+      <div class="section-header"><span class="drag-handle">⠿</span>Equipment</div>
+      <div id="equipment-panel" style="padding:6px 8px;font-size:11px;">
+        <div id="equip-dm-content" style="color:var(--text-dim);">No players loaded</div>
+      </div>
       </div>
 
       <div class="panel-section" data-panel="combat">
@@ -1617,11 +1625,13 @@
         updateAll();
         if (msg.services) renderServices(msg.services);
         if (state.map?.tokens) { VTT.tokens = state.map.tokens; VTT.render(); }
-        // Load initial wound state
+        // Load initial wound + stamina state
         for (const [pid, p] of Object.entries(state.players || {})) {
           if (p.wounds) DmWounds.onUpdate({ playerId: pid, wounds: p.wounds });
+          if (p.stamina) DmStamina.onUpdate({ playerId: pid, ...p.stamina });
         }
         DmWounds.render();
+        DmEquipment.refresh();
         break;
       case 'state:change':
         setNested(state, msg.data.path, msg.data.value);
@@ -1764,6 +1774,20 @@
         break;
       case 'wounds:updated':
         if (msg.data) DmWounds.onUpdate(msg.data);
+        break;
+      case 'stamina:updated':
+      case 'stamina:tier_change':
+        if (msg.data) DmStamina.onUpdate(msg.data);
+        break;
+      case 'equipment:updated':
+      case 'equipment:degraded':
+        DmEquipment.refresh();
+        break;
+      case 'combat:massive_damage':
+      case 'combat:hit_location':
+      case 'combat:bleeding_started':
+      case 'combat:bleeding_stopped':
+      case 'combat:shock_failed':
         break;
       case 'hal:thinking':
         HAL.setThinking(true);
@@ -2910,9 +2934,10 @@
             + 'style="display:inline-block;width:14px;height:14px;border-radius:50%;background:' + WOUND_COLORS[s] + ';border:1px solid #555;cursor:pointer;" '
             + 'onclick="DmWounds.edit(\'' + pid + '\',\'' + limb + '\',' + s + ',event)"></span>';
         }).join(' ');
+        const torch = DmStamina.renderTorch(pid);
         return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
           + '<span style="min-width:70px;color:#e8d0a0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(name) + '</span>'
-          + '<span style="display:flex;gap:4px;align-items:center;">' + dots + '</span>'
+          + '<span style="display:flex;gap:4px;align-items:center;">' + dots + torch + '</span>'
           + '</div>';
       }).join('');
     },
@@ -2961,6 +2986,91 @@
     s.textContent = '@keyframes wp-slow{0%,100%{opacity:1}50%{opacity:0.4}} @keyframes wp-fast{0%,100%{opacity:1}50%{opacity:0.2}} .wound-pulse-slow{animation:wp-slow 2s ease-in-out infinite} .wound-pulse-fast{animation:wp-fast 0.8s ease-in-out infinite}';
     document.head.appendChild(s);
   })();
+
+  // ── EQUIPMENT PANEL ──────────────────────────────────────────────
+  const DmEquipment = {
+    _cache: {},
+    refresh() {
+      const players = state?.players || {};
+      const ids = Object.keys(players).filter(id => players[id]?.character);
+      if (!ids.length) { const el = document.getElementById('equip-dm-content'); if (el) el.innerHTML = '<span style="color:var(--text-dim);">No players loaded</span>'; return; }
+      Promise.all(ids.map(id => fetch('/api/equipment/' + id).then(r => r.json()).then(d => ({ id, data: d })).catch(() => null)))
+        .then(results => { for (const r of results) { if (r) this._cache[r.id] = r.data; } this.render(); });
+    },
+    render() {
+      const el = document.getElementById('equip-dm-content');
+      if (!el) return;
+      const players = state?.players || {};
+      const ids = Object.keys(this._cache);
+      if (!ids.length) { el.innerHTML = '<span style="color:var(--text-dim);">No equipment tracked</span>'; return; }
+      const condColors = ['#4caf50','#8bc34a','#ffc107','#ff5722','#666'];
+      const condLabels = ['Pristine','Good','Worn','Damaged','Broken'];
+      let html = '';
+      for (const pid of ids) {
+        const eq = this._cache[pid];
+        const charName = players[pid]?.character?.name || pid;
+        html += '<div style="margin-bottom:8px;"><div style="font-family:Cinzel,serif;font-size:12px;color:var(--accent);margin-bottom:3px;">' + esc(charName) + '</div>';
+        for (const [name, cond] of Object.entries(eq.conditions || {})) {
+          const broken = cond === 4;
+          html += '<div style="display:flex;align-items:center;gap:4px;padding:1px 0;' + (broken ? 'text-decoration:line-through;color:#666;' : '') + '">';
+          html += '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:' + condColors[cond] + ';flex-shrink:0;"></span>';
+          html += '<span style="flex:1;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(name) + '</span>';
+          html += '<span style="font-size:9px;color:var(--text-dim);">' + condLabels[cond] + '</span></div>';
+        }
+        for (const [type, info] of Object.entries(eq.ammo || {})) {
+          html += '<div style="display:flex;align-items:center;gap:4px;padding:1px 0;"><span style="font-size:10px;font-weight:700;color:' + (info.count <= 3 ? '#ff5722' : 'var(--accent)') + ';min-width:18px;text-align:right;">' + info.count + '</span><span style="font-size:10px;">' + type + '</span></div>';
+        }
+        if (eq.healerKit) {
+          const pct = (eq.healerKit.charges / eq.healerKit.max) * 100;
+          html += '<div style="display:flex;align-items:center;gap:4px;padding:1px 0;"><span style="font-size:10px;">Kit:</span><div style="flex:1;height:4px;background:#222;border-radius:2px;overflow:hidden;"><div style="height:100%;width:' + pct + '%;background:' + (pct <= 20 ? '#ff5722' : '#4caf50') + ';border-radius:2px;"></div></div><span style="font-size:9px;color:var(--text-dim);">' + eq.healerKit.charges + '</span></div>';
+        }
+        html += '</div>';
+      }
+      el.innerHTML = html;
+    }
+  };
+
+  // ── RECAP ─────────────────────────────────────────────────────────
+  const DmRecap = {
+    generate() { fetch('/api/recap', { method: 'POST' }).then(r => r.json()).then(d => { if (d.recap) console.log('[Recap]', d.recap); }).catch(e => console.error('[Recap]', e)); }
+  };
+
+  // ── STAMINA TORCH ─────────────────────────────────────────────────
+  const DmStamina = {
+    _cache: {},
+    onUpdate(data) {
+      if (data.playerId) this._cache[data.playerId] = data;
+      DmWounds.render();
+    },
+    renderTorch(playerId) {
+      const stam = this._cache[playerId];
+      if (!stam) return '<span title="No stamina data" style="display:inline-block;width:24px;height:24px;text-align:center;line-height:24px;font-size:16px;opacity:0.3;">&#128367;</span>';
+      const icons = {
+        fresh:     { icon: '&#128293;', title: 'Fresh',     style: 'opacity:1;' },
+        winded:    { icon: '&#128293;', title: 'Winded',    style: 'opacity:0.7;' },
+        exhausted: { icon: '&#128293;', title: 'Exhausted', style: 'opacity:0.5;' },
+        spent:     { icon: '&#128293;', title: 'Spent',     style: 'opacity:0.3;' },
+        collapsed: { icon: '&#128367;', title: 'Collapsed', style: 'opacity:0.3;' }
+      };
+      const s = icons[stam.state] || icons.fresh;
+      return '<span title="' + s.title + ' (' + (stam.current||0) + '/' + (stam.max||0) + ')" style="display:inline-block;width:24px;height:24px;text-align:center;line-height:24px;font-size:16px;cursor:pointer;' + s.style + '" onclick="event.stopPropagation();DmStamina.adjust(\'' + playerId + '\',\'' + (stam.state||'fresh') + '\')">' + s.icon + '</span>';
+    },
+    adjust(playerId, currentState) {
+      const states = ['fresh','winded','exhausted','spent','collapsed'];
+      const idx = states.indexOf(currentState);
+      const options = states.map((s,i) => '<option value="' + s + '"' + (i===idx?' selected':'') + '>' + s + '</option>').join('');
+      const popup = document.createElement('div');
+      popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;z-index:10000;min-width:180px;';
+      popup.innerHTML = '<div style="font-size:11px;color:var(--accent);margin-bottom:6px;">Stamina Override</div><select id="stam-adj" style="width:100%;padding:4px;background:var(--surface3);border:1px solid var(--border);color:var(--text);border-radius:3px;font-size:11px;">' + options + '</select><div style="display:flex;gap:4px;margin-top:8px;"><button class="sm primary" onclick="DmStamina._apply(\'' + playerId + '\')">Set</button><button class="sm" onclick="this.closest(\'div[style]\').remove()">Cancel</button></div>';
+      document.body.appendChild(popup);
+    },
+    _apply(playerId) {
+      const sel = document.getElementById('stam-adj');
+      if (!sel) return;
+      fetch('/api/stamina/' + playerId, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetState: sel.value }) });
+      sel.closest('div[style]').remove();
+    }
+  };
 
   // ── HAL Co-DM Panel ────────────────────────────────────────────
   const HAL = {

@@ -74,25 +74,108 @@ class CombatService {
   // ── Core Combat Methods ────────────────────────────────────────────────
 
   /**
-   * Start combat with a list of combatant IDs (tokens on the map)
-   * body: { combatantIds: ['vladislav', 'player1', ...], manualInit: { vladislav: 15 } }
+   * Resolve a flexible identifier to a map token.
+   * Accepts: exact token ID, player ID, character name, NPC name, or actor slug.
+   * Returns { tokenId, token } or null.
+   */
+  _resolveToken(input) {
+    const tokens = this.state.get('map.tokens') || {};
+    const lower = (input || '').toLowerCase();
+
+    // 1. Exact token ID match
+    if (tokens[input]) return { tokenId: input, token: tokens[input] };
+
+    // 2. Search by actor slug, name, or partial match
+    for (const [tokenId, token] of Object.entries(tokens)) {
+      const slug = (token.actorSlug || '').toLowerCase();
+      const name = (token.name || '').toLowerCase();
+      if (slug === lower || name === lower || tokenId.toLowerCase().startsWith(lower)) {
+        return { tokenId, token };
+      }
+    }
+
+    // 3. Check player IDs — player may not have a token yet, create from character data
+    const players = this.state.get('players') || {};
+    if (players[lower] || players[input]) {
+      const playerId = players[lower] ? lower : input;
+      const player = players[playerId];
+      const charName = player?.character?.name || playerId;
+
+      // Try to find token by character name
+      for (const [tokenId, token] of Object.entries(tokens)) {
+        if ((token.name || '').toLowerCase() === charName.toLowerCase()) {
+          return { tokenId, token };
+        }
+      }
+
+      // No token found — build a virtual combatant from character data
+      if (player?.character) {
+        const char = player.character;
+        const virtualToken = {
+          name: char.name || playerId,
+          type: 'pc',
+          hp: char.hp || { current: 20, max: 20 },
+          ac: char.ac || 10,
+          actorSlug: playerId,
+          _virtual: true
+        };
+        return { tokenId: playerId, token: virtualToken };
+      }
+    }
+
+    // 4. Search NPC config from session data
+    const npcs = this.state.get('npcs') || {};
+    if (npcs[lower] || npcs[input]) {
+      const npcId = npcs[lower] ? lower : input;
+      const npc = npcs[npcId];
+      const npcName = (npc?.name || '').toLowerCase();
+      const npcTrueName = (npc?.trueIdentity || npc?.trueName || '').toLowerCase();
+      for (const [tokenId, token] of Object.entries(tokens)) {
+        const tName = (token.name || '').toLowerCase();
+        if (tName === npcName || tName === npcTrueName ||
+            tName.includes(npcName) || npcName.includes(tName) ||
+            npcTrueName.includes(tName) || tName.includes(npcTrueName.split(' (')[0])) {
+          return { tokenId, token };
+        }
+      }
+    }
+
+    // 5. Fuzzy partial match on token names
+    for (const [tokenId, token] of Object.entries(tokens)) {
+      const tName = (token.name || '').toLowerCase();
+      if (tName.includes(lower) || lower.includes(tName.split(' ')[0])) {
+        return { tokenId, token };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Start combat with a list of combatant identifiers.
+   * Accepts any mix of: token IDs, player IDs, character names, NPC names, actor slugs.
+   * body: { combatantIds: ['vladislav', 'jerome', 'Tomas Birkov', ...], manualInit: { vladislav: 15 } }
    */
   startCombat(combatantIds, manualInit = {}) {
     const tokens = this.state.get('map.tokens') || {};
     const combatants = [];
 
     for (const id of combatantIds) {
-      const token = tokens[id];
-      if (!token) continue;
+      const resolved = this._resolveToken(id);
+      if (!resolved) {
+        console.warn(`[CombatService] Could not resolve combatant: "${id}" — skipping`);
+        continue;
+      }
+      const { tokenId, token } = resolved;
 
-      const initMod = this._getInitMod({ ...token, id });
+      const initMod = this._getInitMod({ ...token, id: tokenId });
       const roll = this._rollD20();
-      const manualVal = manualInit[id];
+      const manualVal = manualInit[id] || manualInit[tokenId];
       const total = manualVal !== undefined ? manualVal : roll + initMod;
 
       combatants.push({
-        id,
-        name: token.name || id,
+        id: tokenId,
+        name: token.name || tokenId,
         type: token.type || 'npc',
         initiative: total,
         initRoll: roll,

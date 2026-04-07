@@ -240,6 +240,28 @@
 **Git Log:**
 See commit history for all systems in order.
 
+### COMBAT SERVICE FIX — Flexible Combatant Resolution
+**Status: PASS**
+**Files modified:** `services/combat/combat-service.js`
+
+**Problem:** `startCombat()` required exact map token IDs (e.g., `vladislav-mmmq6srl10`) which the DM would never know.
+
+**Fix:** Added `_resolveToken(input)` method that accepts any of:
+1. Exact token ID (e.g., `vladislav-mmmq6srl10`)
+2. Actor slug (e.g., `vladislav`, `marta`)
+3. Character/NPC name (e.g., `Vladislav Dragan`, `Tomas Birkov`)
+4. Player ID (e.g., `jerome`) — auto-creates virtual combatant from character data
+5. NPC config ID (e.g., `hooded-stranger`) — resolves via NPC trueIdentity to token
+6. Fuzzy partial name match as fallback
+
+**Test results:**
+- `"jerome"` → Barry Goodfellow Frascht (PC, from character data) ✓
+- `"vladislav"` → Vladislav Dragan (token via actor slug) ✓
+- `"marta"` → Marta Kowalski (token via actor slug) ✓
+- `"tomas"` → Tomas Birkov (token via actor slug) ✓
+- `"hooded-stranger"` → Vladislav Dragan (via NPC trueIdentity match) ✓
+- `"Vladislav Dragan"` → exact name match on token ✓
+
 **Push Status:**
 - Git push failed — permission denied (known issue, needs auth fix)
 - All commits are local on branch `main` (co-dm) and `feature/phase-r-complete` (parent)

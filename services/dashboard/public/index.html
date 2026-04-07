@@ -27,12 +27,6 @@
       --blue-dim: #2a5580;
       --purple: #7050a0;
       --orange: #e89040;
-      --blood: #aa2a1a;
-      --panel-header: #1e1a14;
-      --panel-body: #12100c;
-      --panel-header-text: #8a7a62;
-      --panel-border: #2a2218;
-      --border-strong: #4a3a28;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -188,26 +182,20 @@
 
     .section-header {
       padding: 10px 14px;
-      background: var(--panel-header, var(--surface));
-      border-bottom: 1px solid var(--border-light, #3a3028);
+      background: #1e1a14;
+      border-bottom: 1px solid #3a3028;
       font-size: 12px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: var(--panel-header-text, #8a7a62);
+      color: #8a7a62;
       display: flex;
       align-items: center;
       gap: 6px;
     }
 
-    /* Panel body styling */
-    .panel-section > *:not(.section-header) {
-      font-size: 13px;
-      color: var(--text, #c8b89a);
-    }
-
     /* Drag-to-reorder panels */
-    .panel-section { position: relative; border-radius: 8px; border: 1px solid var(--panel-border, #2a2218); margin-bottom: 8px; overflow: hidden; background: var(--panel-body, #12100c); }
+    .panel-section { position: relative; border-radius: 8px; border: 1px solid #2a2218; margin-bottom: 8px; overflow: hidden; background: #12100c; }
     .panel-section.dragging { opacity: 0.4; }
     .panel-section.drag-over { border-top: 2px solid var(--accent); }
     .drag-handle {
@@ -710,8 +698,8 @@
       <span><span class="dot green" id="earbud-indicator" title="Earbud TTS"></span>🎧</span>
       <span>Session: <strong id="sess-status">Idle</strong></span>
       <span id="session-timer">00:00:00</span>
-      <span id="pi-speaker-status" title="Room Speaker" style="cursor:pointer;position:relative;" onclick="PiSpeaker.togglePopover()"><span class="dot" id="pi-dot" style="background:#4a3a28;"></span><span style="font-size:11px;color:var(--text-dim);">Speaker</span></span>
-      <span id="weather-icon" title="Weather" style="font-size:16px;cursor:help;">☀</span>
+      <span id="pi-speaker-status" title="Room Speaker" style="cursor:pointer;position:relative;" onclick="togglePiPopover()"><span class="dot" id="pi-dot" style="background:#4a3a28;"></span><span style="font-size:11px;color:var(--text-dim);">Speaker</span></span>
+      <span id="weather-icon" title="Weather" style="font-size:16px;cursor:help;">&#10052;</span>
       <span id="game-time-display" style="font-family:monospace;color:var(--accent-dim);font-size:12px;">--:--</span>
       <button id="panel-menu-btn" onclick="PanelLayout.toggleMenu()" title="Show/hide panels">&#9776;</button>
     </div>
@@ -1177,10 +1165,10 @@
         <div class="atmo-btn" onclick="setAtmo('combat')" data-profile="combat"><span class="atmo-dot" style="background:#d04020"></span>Combat</div>
         <div class="atmo-btn" onclick="setAtmo('revelation')" data-profile="revelation"><span class="atmo-dot" style="background:#8080ff"></span>Reveal</div>
         <div class="atmo-btn" onclick="setAtmo('dawn')" data-profile="dawn"><span class="atmo-dot" style="background:#e0c060"></span>Dawn</div>
-      <div id="pi-speaker-vol" style="padding:6px 10px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+      </div>
+      <div style="padding:6px 10px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;">
         <span style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap;">Room Speaker</span>
-        <input type="range" id="pi-vol-slider" min="0" max="100" value="80" style="flex:1;accent-color:var(--accent);height:4px;" oninput="PiSpeaker.setVolume(this.value)">
-        <span id="pi-vol-label" style="font-size:11px;color:var(--text-dim);min-width:28px;text-align:right;">80</span>
+        <input type="range" min="0" max="100" value="80" style="flex:1;accent-color:var(--accent);height:4px;" oninput="fetch('/api/sound/pi/volume',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({volume:parseInt(this.value)})})">
       </div>
       </div>
 
@@ -1989,32 +1977,28 @@
     if (state.session?.elapsedMs) document.getElementById('session-timer').textContent = fmtTime(state.session.elapsedMs);
 
     // Weather icon and game time
-    const weatherData = state.lighting?.weather || state.world?.weather || {};
-    const weatherIcons = { clear:'☀', cloudy:'☁', rain:'🌧', storm:'⛈', blizzard:'❄', fog:'🌫', snow:'🌨' };
+    const weatherData = state.world?.weather || {};
+    const weatherIcons = { clear:'\u2600', cloudy:'\u2601', rain:'\uD83C\uDF27', storm:'\u26C8', blizzard:'\u2744', fog:'\uD83C\uDF2B', snow:'\uD83C\uDF28' };
     const wIcon = document.getElementById('weather-icon');
-    if (wIcon) {
-      wIcon.textContent = weatherIcons[weatherData.type] || '☀';
-      wIcon.title = weatherData.description || weatherData.type || 'Clear';
-    }
+    if (wIcon) { wIcon.textContent = weatherIcons[weatherData.type] || '\u2744'; wIcon.title = weatherData.description || weatherData.type || 'Weather'; }
     const gtDisplay = document.getElementById('game-time-display');
     if (gtDisplay && state.world?.gameTime) {
-      try {
-        const gt = new Date(state.world.gameTime);
-        gtDisplay.textContent = gt.getHours().toString().padStart(2,'0') + ':' + gt.getMinutes().toString().padStart(2,'0');
-      } catch(e) {}
+      try { const gt = new Date(state.world.gameTime); gtDisplay.textContent = gt.getHours().toString().padStart(2,'0') + ':' + gt.getMinutes().toString().padStart(2,'0'); } catch(e) {}
+    }
+
+    // Pi speaker status
+    const piDot = document.getElementById('pi-dot');
+    if (piDot && state.sound) {
+      piDot.style.background = state.sound.piConnected ? 'var(--green)' : '#4a3a28';
+      piDot.style.boxShadow = state.sound.piConnected ? '0 0 4px var(--green)' : 'none';
     }
 
     // Horror color on player rows
     const horrorState = state.horror || {};
     for (const [pid, hData] of Object.entries(horrorState)) {
-      const row = document.querySelector(`[data-player="${pid}"]`);
-      if (row && hData.color) {
-        row.style.borderLeft = `3px solid ${hData.color}`;
-      }
+      const rows = document.querySelectorAll(`[data-player="${pid}"]`);
+      rows.forEach(row => { if (hData.color) row.style.borderLeft = '3px solid ' + hData.color; });
     }
-
-    // Pi Speaker status
-    if (state.sound) PiSpeaker.update(state.sound);
 
     // Trust
     ['manual','assisted','autopilot'].forEach(l => {
@@ -3094,7 +3078,7 @@
 
     renderTorch(playerId) {
       const stam = this._cache[playerId];
-      if (!stam) return '<span title="No stamina data" style="display:inline-block;width:12px;text-align:center;font-size:10px;opacity:0.3;">🕯</span>';
+      if (!stam) return '<span title="No stamina data" style="display:inline-block;width:24px;height:24px;text-align:center;line-height:24px;font-size:16px;opacity:0.3;">🕯</span>';
 
       const icons = {
         fresh: { icon: '🔥', title: 'Fresh', style: 'opacity:1;filter:brightness(1.2);' },
@@ -3104,7 +3088,7 @@
         collapsed: { icon: '🕯', title: 'Collapsed', style: 'opacity:0.3;' }
       };
       const s = icons[stam.state] || icons.fresh;
-      return `<span title="${s.title}" style="display:inline-block;width:14px;text-align:center;font-size:11px;cursor:pointer;${s.style}" onclick="event.stopPropagation();DmStamina.adjust('${playerId}','${stam.state}')">${s.icon}</span>`;
+      return `<span title="${s.title}" style="display:inline-block;width:24px;height:24px;text-align:center;line-height:24px;font-size:16px;cursor:pointer;${s.style}" onclick="event.stopPropagation();DmStamina.adjust('${playerId}','${stam.state}')">${s.icon}</span>`;
     },
 
     adjust(playerId, currentState) {
@@ -3313,59 +3297,6 @@
 
   // Load HAL history on page load
   setTimeout(() => HAL.loadHistory(), 2000);
-
-  // ── Pi Speaker ──
-  const PiSpeaker = {
-    connected: false,
-    volume: 80,
-    _popoverOpen: false,
-
-    update(soundState) {
-      const connected = soundState?.piConnected || false;
-      const dot = document.getElementById('pi-dot');
-      if (dot) {
-        dot.style.background = connected ? 'var(--green, #4a8c4a)' : '#4a3a28';
-        dot.style.boxShadow = connected ? '0 0 4px var(--green, #4a8c4a)' : 'none';
-      }
-      this.connected = connected;
-      if (soundState?.piVolume != null) {
-        this.volume = soundState.piVolume;
-        const slider = document.getElementById('pi-vol-slider');
-        const label = document.getElementById('pi-vol-label');
-        if (slider) slider.value = this.volume;
-        if (label) label.textContent = this.volume;
-      }
-    },
-
-    async setVolume(val) {
-      this.volume = parseInt(val);
-      const label = document.getElementById('pi-vol-label');
-      if (label) label.textContent = this.volume;
-      try {
-        await fetch('/api/sound/pi/volume', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ volume: this.volume })
-        });
-      } catch (e) { /* silent */ }
-    },
-
-    togglePopover() {
-      let pop = document.getElementById('pi-popover');
-      if (pop) { pop.remove(); return; }
-      pop = document.createElement('div');
-      pop.id = 'pi-popover';
-      pop.style.cssText = 'position:absolute;top:36px;right:0;background:var(--surface,#1e1a14);border:1px solid var(--border,#2a2218);border-radius:6px;padding:10px;min-width:180px;z-index:900;box-shadow:0 4px 16px rgba(0,0,0,0.5);';
-      pop.innerHTML = '<div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">Room Speaker</div>'
-        + '<div style="display:flex;align-items:center;gap:6px;">'
-        + '<input type="range" min="0" max="100" value="' + this.volume + '" style="flex:1;accent-color:var(--accent);" oninput="PiSpeaker.setVolume(this.value);document.getElementById(\'pi-vol-slider\').value=this.value;">'
-        + '<span style="font-size:12px;color:var(--text);min-width:28px;">' + this.volume + '</span>'
-        + '</div>'
-        + '<div style="font-size:10px;color:' + (this.connected ? 'var(--green)' : 'var(--red)') + ';margin-top:6px;">' + (this.connected ? 'Connected' : 'Offline') + '</div>';
-      document.getElementById('pi-speaker-status').appendChild(pop);
-      setTimeout(() => { document.addEventListener('click', function rm(e) { if (!pop.contains(e.target) && e.target.id !== 'pi-speaker-status') { pop.remove(); document.removeEventListener('click', rm); } }); }, 10);
-    }
-  };
 
   const Earbud = {
     enabled: true,
@@ -6851,13 +6782,13 @@
     },
 
     popout(panelName) {
-      const panelTitle = document.querySelector(`[data-panel="${panelName}"] .section-header`)?.textContent?.replace('⠿','').replace('▼','').trim() || panelName;
-      const w = window.open(
-        `${location.pathname}?panel=${panelName}`,
+      // Use the dedicated panel-window.html route — lightweight, no map/dashboard bloat
+      const panelId = 'panel-' + panelName.replace(/^panel-/, '');
+      window.open(
+        `/panel/${panelId}`,
         `panel_${panelName}`,
-        'width=500,height=700,menubar=no,toolbar=no,location=no,status=no'
+        'width=500,height=700,menubar=no,toolbar=no,scrollbars=yes'
       );
-      if (w) w.document.title = `${panelTitle} — Co-DM`;
     },
 
     checkPopoutMode() {
@@ -7047,6 +6978,23 @@
   };
 
   document.addEventListener('DOMContentLoaded', () => PanelLayout.initDrag());
+
+  // Pi speaker popover
+  function togglePiPopover() {
+    let pop = document.getElementById('pi-popover');
+    if (pop) { pop.remove(); return; }
+    pop = document.createElement('div');
+    pop.id = 'pi-popover';
+    pop.style.cssText = 'position:absolute;top:36px;right:0;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px;min-width:180px;z-index:900;box-shadow:0 4px 16px rgba(0,0,0,0.5);';
+    const connected = state.sound?.piConnected;
+    pop.innerHTML = '<div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">Room Speaker</div>'
+      + '<div style="display:flex;align-items:center;gap:6px;">'
+      + '<input type="range" min="0" max="100" value="80" style="flex:1;accent-color:var(--accent);" oninput="fetch(\'/api/sound/pi/volume\',{method:\'POST\',headers:{\'Content-Type\':\'application/json\'},body:JSON.stringify({volume:parseInt(this.value)})})">'
+      + '</div>'
+      + '<div style="font-size:10px;color:' + (connected ? 'var(--green)' : 'var(--red)') + ';margin-top:6px;">' + (connected ? 'Connected' : 'Offline') + '</div>';
+    document.getElementById('pi-speaker-status').appendChild(pop);
+    setTimeout(() => { document.addEventListener('click', function rm(e) { if (!pop.contains(e.target) && !e.target.closest('#pi-speaker-status')) { pop.remove(); document.removeEventListener('click', rm); } }); }, 10);
+  }
 
   // ========================================================================
   // COMBAT TRACKER

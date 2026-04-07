@@ -6570,6 +6570,15 @@
       this.renderMenu();
     },
 
+    resetLayout() {
+      localStorage.removeItem(this.STORAGE_KEY);
+      this.getAllPanels().forEach(p => {
+        p.classList.remove('panel-hidden', 'panel-collapsed');
+      });
+      this.renderMenu();
+      document.getElementById('panel-menu').classList.remove('open');
+    },
+
     toggleMenu() {
       const menu = document.getElementById('panel-menu');
       menu.classList.toggle('open');
@@ -6581,6 +6590,7 @@
       const panels = this.getAllPanels();
       let html = '<div class="pm-title">Panel Visibility</div>';
       html += '<label style="padding:4px 12px;"><a href="#" onclick="PanelLayout.showAll();return false;" style="color:var(--accent);font-size:10px;text-decoration:none;">Show All</a></label>';
+      html += '<label style="padding:4px 12px;"><a href="#" onclick="PanelLayout.resetLayout();return false;" style="color:var(--orange);font-size:10px;text-decoration:none;">Reset Layout</a></label>';
       html += '<div class="pm-divider"></div>';
 
       panels.forEach(p => {

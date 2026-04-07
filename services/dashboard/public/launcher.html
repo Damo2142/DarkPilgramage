@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dark Pilgrimage — Co-DM</title>
+  <link rel="stylesheet" href="/panel-styles.css">
+  <style>
+    html, body { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+    .main-area {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Tile grid when in launcher mode */
+    .mode-launcher .tile-grid { display: grid; }
+    .mode-launcher .inline-stack { display: none; }
+
+    /* Inline stack when panels are expanded */
+    .mode-inline .tile-grid { display: none; }
+    .mode-inline .inline-stack { display: flex; }
+
+    /* Group headers in tile grid */
+    .group-header {
+      grid-column: 1 / -1;
+      font-family: 'Cinzel', serif;
+      font-size: 12px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      padding: 8px 4px 4px;
+      border-bottom: 1px solid var(--border);
+      margin-top: 8px;
+    }
+    .group-header:first-child { margin-top: 0; }
+
+    .tile-badge {
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: var(--accent-dim);
+      color: #fff;
+    }
+
+    /* Popped panel tile appearance */
+    .panel-tile.popped {
+      border-color: var(--accent-dim);
+      opacity: 0.5;
+    }
+    .panel-tile.popped .tile-name::after {
+      content: ' (popped out)';
+      font-size: 10px;
+      color: var(--accent-dim);
+      font-family: 'Source Sans 3', sans-serif;
+      font-weight: 400;
+    }
+
+    /* Connection overlay */
+    .connect-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 12px;
+      font-family: 'Cinzel', serif;
+      font-size: 16px;
+      color: var(--text-dim);
+      transition: opacity 0.4s;
+    }
+    .connect-overlay.connected { opacity: 0; pointer-events: none; }
+
+    /* Back to tiles button when inline */
+    .back-btn {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      z-index: 100;
+      padding: 10px 18px;
+      font-size: 13px;
+      background: var(--surface2);
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--text);
+      display: none;
+    }
+    .mode-inline .back-btn { display: block; }
+  </style>
+</head>
+<body>
+  <div class="connect-overlay" id="overlay">Connecting to Co-DM...</div>
+
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <span class="brand">Dark Pilgrimage — Co-DM</span>
+    <span class="spacer"></span>
+    <div class="status-group">
+      <span id="session-status" style="font-size:11px;">Session: idle</span>
+      <span id="session-timer" style="font-family:monospace;">00:00:00</span>
+      <span id="ws-dot" class="dot red"></span>
+      <span id="ws-label" style="font-size:11px;">Connecting</span>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button class="sm" onclick="Layout.save()" title="Save current layout">Save Layout</button>
+      <button class="sm" onclick="Popout.restoreAll()" title="Restore last session's window layout">Restore Layout</button>
+      <a href="/classic" style="font-size:10px;color:var(--text-dim);text-decoration:none;padding:6px 8px;">Classic</a>
+    </div>
+  </div>
+
+  <!-- Main Content Area -->
+  <div class="main-area mode-launcher" id="main-area">
+
+    <!-- Tile Grid (launcher mode) -->
+    <div class="tile-grid" id="tile-grid"></div>
+
+    <!-- Inline Panel Stack (expanded mode) -->
+    <div class="inline-stack" id="inline-stack"></div>
+  </div>
+
+  <button class="back-btn" onclick="switchToLauncher()">Back to Panels</button>
+
+<script src="/panel-framework.js"></script>
+<script>
+  // ═══════════════════════════════════════════════════════════════
+  // LAUNCHER STATE
+  // ═══════════════════════════════════════════════════════════════
+  let _inlinePanel = null; // which panel is expanded inline, or null for launcher view
+  let _timerInterval = null;
+
+  // ═══════════════════════════════════════════════════════════════
+  // TILE RENDERING
+  // ═══════════════════════════════════════════════════════════════
+  function renderTiles() {
+    const grid = $('tile-grid');
+    const groups = {
+      main: 'Main',
+      monitor1: 'Monitor 1 — Combat & AI',
+      monitor2: 'Monitor 2 — Players',
+      monitor3: 'Monitor 3 — Campaign & Tools'
+    };
+
+    let html = '';
+    for (const [groupKey, groupLabel] of Object.entries(groups)) {
+      const panels = PanelRegistry.byGroup(groupKey);
+      if (!panels.length) continue;
+
+      html += `<div class="group-header">${groupLabel}</div>`;
+      for (const [id, info] of panels) {
+        const popped = Popout.isPopped(id);
+        html += `<div class="panel-tile${popped ? ' popped' : ''}" id="tile-${id}" onclick="expandInline('${id}')">
+          <span class="tile-icon">${info.icon}</span>
+          <div class="tile-info">
+            <div class="tile-name">${info.title}</div>
+          </div>
+          <button class="tile-popout" onclick="event.stopPropagation();Popout.open('${id}')" title="Pop out to separate window">⧉</button>
+        </div>`;
+      }
+    }
+    grid.innerHTML = html;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // INLINE EXPAND
+  // ═══════════════════════════════════════════════════════════════
+  function expandInline(panelId) {
+    if (Popout.isPopped(panelId)) {
+      // Already popped — focus that window
+      Popout.open(panelId);
+      return;
+    }
+
+    _inlinePanel = panelId;
+    const area = $('main-area');
+    area.classList.remove('mode-launcher');
+    area.classList.add('mode-inline');
+
+    const stack = $('inline-stack');
+    const info = PanelRegistry.get(panelId);
+
+    stack.innerHTML = `<div class="panel-frame" style="flex:1;min-height:0;">
+      <div class="panel-header">
+        <span class="panel-icon">${info.icon}</span>
+        <span class="panel-title">${info.title}</span>
+        <div class="panel-actions">
+          <button class="panel-btn" onclick="Popout.open('${panelId}')" title="Pop out">⧉</button>
+          <button class="panel-btn" onclick="switchToLauncher()" title="Back to tiles">✕</button>
+        </div>
+      </div>
+      <div class="panel-body" id="inline-panel-body">
+        <iframe src="/panel/${panelId}" style="width:100%;height:100%;border:none;background:var(--bg);"></iframe>
+      </div>
+    </div>`;
+  }
+
+  function switchToLauncher() {
+    _inlinePanel = null;
+    const area = $('main-area');
+    area.classList.remove('mode-inline');
+    area.classList.add('mode-launcher');
+    $('inline-stack').innerHTML = '';
+    renderTiles();
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // SESSION STATUS
+  // ═══════════════════════════════════════════════════════════════
+  function updateSessionStatus() {
+    const status = DashWS.state?.session?.status || 'idle';
+    const el = $('session-status');
+    if (el) {
+      const colors = { active: 'var(--green)', paused: 'var(--orange)', ended: 'var(--red)', idle: 'var(--text-dim)' };
+      el.textContent = 'Session: ' + status;
+      el.style.color = colors[status] || 'var(--text-dim)';
+    }
+  }
+
+  function startSessionTimer() {
+    if (_timerInterval) clearInterval(_timerInterval);
+    _timerInterval = setInterval(() => {
+      const elapsed = DashWS.state?.session?.elapsedMs || 0;
+      const status = DashWS.state?.session?.status;
+      if (status !== 'active') return;
+      const now = Date.now();
+      const startedAt = DashWS.state?.session?._startedAt || now;
+      const total = elapsed + (now - startedAt);
+      const h = Math.floor(total / 3600000);
+      const m = Math.floor((total % 3600000) / 60000);
+      const s = Math.floor((total % 60000) / 1000);
+      const el = $('session-timer');
+      if (el) el.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }, 1000);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // EVENT HANDLERS
+  // ═══════════════════════════════════════════════════════════════
+  DashWS.on('init', () => {
+    $('overlay').classList.add('connected');
+    $('ws-dot').className = 'dot green';
+    $('ws-label').textContent = 'Connected';
+    updateSessionStatus();
+    startSessionTimer();
+    renderTiles();
+  });
+
+  DashWS.on('_ws:disconnected', () => {
+    $('ws-dot').className = 'dot red';
+    $('ws-label').textContent = 'Disconnected';
+  });
+
+  DashWS.on('session:started', updateSessionStatus);
+  DashWS.on('session:paused', updateSessionStatus);
+  DashWS.on('session:ended', updateSessionStatus);
+
+  DashWS.on('_panel:popped', () => renderTiles());
+  DashWS.on('_panel:docked', () => renderTiles());
+
+  // ═══════════════════════════════════════════════════════════════
+  // BOOT
+  // ═══════════════════════════════════════════════════════════════
+  (async function boot() {
+    await Layout.load();
+    DashWS.connect();
+    renderTiles();
+    // Auto-restore popped panels after a short delay
+    setTimeout(() => Popout.restoreAll(), 500);
+  })();
+</script>
+</body>
+</html>

@@ -62,6 +62,12 @@ class StaminaService {
     this._setupRoutes();
     this._initAllPlayers();
     console.log('[Stamina] Ready');
+
+    // Delayed re-init: other services may not have loaded character data yet
+    setTimeout(() => {
+      console.log('[PLAYERS]', JSON.stringify(Object.keys(this.state.get('players') || {})));
+      this._initAllPlayers();
+    }, 2000);
   }
 
   async stop() {}
@@ -97,7 +103,7 @@ class StaminaService {
         this.bus.dispatch('stamina:updated', {
           playerId, current: stam.current, max: stam.max, state: stam.state, reason: 'init'
         });
-        console.log(`[Stamina]   ${playerId}: ${stam.current}/${stam.max} (${stam.state})`);
+        console.log('[STAMINA-INIT]', playerId, stam);
       } else {
         console.warn(`[Stamina]   ${playerId}: character found but stamina init failed`);
       }
@@ -336,6 +342,25 @@ class StaminaService {
   // HELPERS
   // ═══════════════════════════════════════════════════════════════
 
+  /**
+   * Resolve a playerId — accepts exact key, or case-insensitive name match
+   */
+  _resolvePlayerId(input) {
+    const players = this.state.get('players') || {};
+    // Exact match first
+    if (players[input]) return input;
+    // Case-insensitive name search
+    const lower = input.toLowerCase();
+    for (const [id, p] of Object.entries(players)) {
+      const charName = (p.character?.name || '').toLowerCase();
+      const playerName = (p.name || '').toLowerCase();
+      if (charName.includes(lower) || playerName.includes(lower) || id.toLowerCase() === lower) {
+        return id;
+      }
+    }
+    return input; // fallback to original
+  }
+
   _calcState(current, max) {
     if (current <= 0) return STAMINA_STATES.COLLAPSED;
     const pct = current / max;
@@ -437,43 +462,48 @@ class StaminaService {
     console.log('[Stamina] Registering API routes on dashboard app');
 
     app.get('/api/stamina/:playerId', (req, res) => {
-      const stam = this.getStamina(req.params.playerId);
-      if (!stam) return res.status(404).json({ error: 'No stamina data' });
+      const id = this._resolvePlayerId(req.params.playerId);
+      const stam = this.getStamina(id);
+      if (!stam) return res.status(404).json({ error: 'No stamina data', resolvedId: id });
       res.json(stam);
     });
 
     app.put('/api/stamina/:playerId', (req, res) => {
+      const id = this._resolvePlayerId(req.params.playerId);
       const { delta, action, spellLevel, targetState } = req.body;
       if (targetState) {
-        const result = this.setStaminaState(req.params.playerId, targetState);
+        const result = this.setStaminaState(id, targetState);
         return res.json({ ok: !!result, stamina: result });
       }
       if (action) {
-        const result = this.applyCombatDrain(req.params.playerId, action, spellLevel || 0);
+        const result = this.applyCombatDrain(id, action, spellLevel || 0);
         return res.json({ ok: !!result, stamina: result });
       }
       if (typeof delta === 'number') {
         const result = delta < 0
-          ? this.drain(req.params.playerId, Math.abs(delta), 'manual')
-          : this.recover(req.params.playerId, delta, 'manual');
+          ? this.drain(id, Math.abs(delta), 'manual')
+          : this.recover(id, delta, 'manual');
         return res.json({ ok: !!result, stamina: result });
       }
       res.status(400).json({ error: 'delta, action, or targetState required' });
     });
 
     app.post('/api/stamina/:playerId/catch-breath', (req, res) => {
-      const result = this.catchBreath(req.params.playerId);
+      const id = this._resolvePlayerId(req.params.playerId);
+      const result = this.catchBreath(id);
       res.json({ ok: !!result, stamina: result });
     });
 
     app.post('/api/stamina/:playerId/short-rest', (req, res) => {
+      const id = this._resolvePlayerId(req.params.playerId);
       const hours = req.body.hours || 1;
-      const result = this.shortRest(req.params.playerId, hours);
+      const result = this.shortRest(id, hours);
       res.json({ ok: !!result, stamina: result });
     });
 
     app.post('/api/stamina/:playerId/long-rest', (req, res) => {
-      const result = this.longRest(req.params.playerId);
+      const id = this._resolvePlayerId(req.params.playerId);
+      const result = this.longRest(id);
       res.json({ ok: !!result, stamina: result });
     });
   }

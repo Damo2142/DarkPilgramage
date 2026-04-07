@@ -163,18 +163,7 @@
       "ritual": false,
       "concentration": true,
       "prepared": false,
-      "description": "You place a curse on a creature that you can see within range. Until the spell ends, you deal an extra 1d6 Necrotic damage to the target whenever you hit it with an attack roll. Also, choose one abili",
-      "damage": "1d6",
-      "damageType": "necrotic",
-      "castingTime": "1 bonus action",
-      "range": "90 feet",
-      "components": "V, S, M (the petrified eye of a newt)",
-      "duration": "Concentration, up to 1 hour",
-      "classes": [
-        "Warlock"
-      ],
-      "higherLevel": "Duration increases with higher slots: 8 hours at 3rd, 24 hours at 5th.",
-      "_enriched": true
+      "description": "You place a curse on a creature that you can see within range. Until the spell ends, you deal an extra 1d6 Necrotic damage to the target whenever you hit it with an attack roll. Also, choose one abili"
     },
     {
       "name": "Eldritch Blast",
@@ -183,18 +172,7 @@
       "ritual": false,
       "concentration": false,
       "prepared": true,
-      "description": "You hurl a beam of crackling energy. Make a ranged spell attack against one creature or object in range. On a hit, the target takes 1d10 Force damage.\r\nCantrip Upgrade. The spell creates two beams at ",
-      "damage": "1d10",
-      "damageType": "force",
-      "castingTime": "1 action",
-      "range": "120 feet",
-      "components": "V, S",
-      "duration": "Instantaneous",
-      "classes": [
-        "Warlock"
-      ],
-      "higherLevel": "Additional beams at 5th (2), 11th (3), and 17th (4) level.",
-      "_enriched": true
+      "description": "You hurl a beam of crackling energy. Make a ranged spell attack against one creature or object in range. On a hit, the target takes 1d10 Force damage.\r\nCantrip Upgrade. The spell creates two beams at "
     },
     {
       "name": "Prestidigitation",
@@ -203,18 +181,7 @@
       "ritual": false,
       "concentration": false,
       "prepared": true,
-      "description": "You create a magical effect within range. Choose the effect from the options below. If you cast this spell multiple times, you can have up to three of its non-instantaneous effects active at a time.\r\n",
-      "castingTime": "1 action",
-      "range": "10 feet",
-      "components": "V, S",
-      "duration": "Up to 1 hour",
-      "classes": [
-        "Bard",
-        "Sorcerer",
-        "Warlock",
-        "Wizard"
-      ],
-      "_enriched": true
+      "description": "You create a magical effect within range. Choose the effect from the options below. If you cast this spell multiple times, you can have up to three of its non-instantaneous effects active at a time.\r\n"
     },
     {
       "name": "Hellish Rebuke",
@@ -232,17 +199,7 @@
       "ritual": false,
       "concentration": false,
       "prepared": false,
-      "description": "Briefly surrounded by silvery mist, you teleport up to 30 feet to an unoccupied space that you can see.",
-      "castingTime": "1 bonus action",
-      "range": "Self",
-      "components": "V",
-      "duration": "Instantaneous",
-      "classes": [
-        "Sorcerer",
-        "Warlock",
-        "Wizard"
-      ],
-      "_enriched": true
+      "description": "Briefly surrounded by silvery mist, you teleport up to 30 feet to an unoccupied space you can see."
     },
     {
       "name": "Mirror Image",
@@ -251,17 +208,7 @@
       "ritual": false,
       "concentration": false,
       "prepared": false,
-      "description": "Three illusory duplicates of yourself appear in your space. Until the spell ends, the duplicates move with you and mimic your actions, shifting position so it’s impossible to track which image is real",
-      "castingTime": "1 action",
-      "range": "Self",
-      "components": "V, S",
-      "duration": "1 minute",
-      "classes": [
-        "Sorcerer",
-        "Warlock",
-        "Wizard"
-      ],
-      "_enriched": true
+      "description": "Three illusory duplicates of yourself appear in your space. Until the spell ends, the duplicates move with you and mimic your actions, shifting position so it’s impossible to track which image is real"
     }
   ],
   "attacks": [],
@@ -615,7 +562,7 @@
     "description": null
   },
   "patron": "Fiend Patron",
-  "_syncedAt": "2026-04-06T20:09:13.743Z",
+  "_syncedAt": "2026-04-07T01:42:05.441Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/162702065"
 }

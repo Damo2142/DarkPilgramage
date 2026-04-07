@@ -56,7 +56,7 @@ class AudioService {
 
   async _startWhisper() {
     const workerPath = path.join(__dirname, 'whisper-worker.py');
-    const whisperModel = this.config.audio?.whisperModel || 'base.en';
+    const whisperModel = process.env.WHISPER_MODEL || this.config.audio?.whisperModel || 'base.en';
     const vadThreshold = this.config.audio?.vadThreshold || 0.5;
 
     console.log(`[Audio] Starting Whisper worker (model: ${whisperModel})...`);

@@ -43,7 +43,12 @@ class GeminiClient {
       generationConfig: {
         maxOutputTokens: options.maxTokens || this.maxTokens,
         temperature: options.temperature ?? this.temperature,
-        topP: 0.95
+        topP: 0.95,
+        // Gemini 2.5 Flash uses thinking tokens from the output budget.
+        // Set a thinking budget to prevent it from consuming all output tokens.
+        thinkingConfig: {
+          thinkingBudget: 0
+        }
       },
       safetySettings: [
         { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
@@ -117,7 +122,10 @@ class GeminiClient {
       generationConfig: {
         maxOutputTokens: options.maxTokens || this.maxTokens,
         temperature: options.temperature ?? this.temperature,
-        topP: 0.95
+        topP: 0.95,
+        thinkingConfig: {
+          thinkingBudget: 0
+        }
       },
       safetySettings: [
         { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },

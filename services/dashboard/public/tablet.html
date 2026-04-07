@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+  <title>Dark Pilgrimage — Table Map</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Source+Sans+3:wght@300;400;600&display=swap');
+    :root {
+      --bg: #07070a; --surface: #0f0f14; --surface2: #16161d; --border: #252530;
+      --text: #f0ece6; --text-dim: #b0a99f; --accent: #c9a54e;
+      --red: #d04040; --green: #30a050; --blue: #4080c0;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; background: var(--bg); touch-action: none; }
+    canvas { display: block; width: 100%; height: 100%; }
+
+    /* Top strip — initiative + info */
+    #strip {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(10,10,18,0.92); border-bottom: 1px solid var(--border);
+      max-height: 0; overflow: hidden; transition: max-height 0.3s ease;
+    }
+    #strip.open { max-height: 80px; }
+    #strip-toggle {
+      position: fixed; top: 0; left: 50%; transform: translateX(-50%); z-index: 101;
+      width: 60px; height: 18px; background: rgba(10,10,18,0.85); border: 1px solid var(--border);
+      border-top: none; border-radius: 0 0 6px 6px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; color: var(--text-dim);
+    }
+    #strip.open ~ #strip-toggle { top: auto; }
+    #strip-content {
+      display: flex; align-items: center; gap: 10px; padding: 6px 12px;
+      font-family: 'Source Sans 3', sans-serif; font-size: 12px; color: var(--text);
+      overflow-x: auto; white-space: nowrap;
+    }
+    .init-entry { padding: 4px 8px; border-radius: 4px; font-size: 11px; }
+    .init-entry.current { background: var(--accent); color: #000; font-weight: 700; border-radius: 4px; }
+    .init-entry.pc { color: var(--blue); }
+    .init-entry.npc { color: var(--text-dim); }
+
+    /* Token name label */
+    #token-label {
+      position: fixed; z-index: 50;
+      background: rgba(10,10,18,0.9); border: 1px solid var(--accent);
+      border-radius: 4px; padding: 4px 10px;
+      font-family: 'Cinzel', serif; font-size: 12px; color: var(--accent);
+      pointer-events: none; display: none;
+    }
+
+    /* Action menu */
+    #action-menu {
+      position: fixed; z-index: 60;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 6px; display: none;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    }
+    #action-menu button {
+      display: block; width: 100%; padding: 10px 20px; margin-bottom: 4px;
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 4px;
+      color: var(--text); font-family: inherit; font-size: 13px; cursor: pointer;
+      min-height: 40px;
+    }
+    #action-menu button:last-child { margin-bottom: 0; }
+    #action-menu button:active { background: var(--accent-dim); }
+
+    /* Torch toggle */
+    #torch-btn {
+      position: fixed; bottom: 16px; right: 16px; z-index: 50;
+      width: 48px; height: 48px; border-radius: 50%;
+      background: rgba(30,30,40,0.85); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; cursor: pointer; color: var(--text-dim);
+    }
+    #torch-btn.active { border-color: var(--accent); color: var(--accent); }
+  </style>
+</head>
+<body>
+  <canvas id="map"></canvas>
+
+  <div id="strip">
+    <div id="strip-content"></div>
+  </div>
+  <div id="strip-toggle" onclick="toggleStrip()">&#9660;</div>
+
+  <div id="token-label"></div>
+  <div id="action-menu">
+    <button onclick="actionMove()">Move</button>
+    <button onclick="actionInfo()">Info</button>
+    <button onclick="closeMenu()">Cancel</button>
+  </div>
+  <div id="torch-btn" onclick="toggleLights()">&#128294;</div>
+
+<script>
+  // ═══════════════════════════════════════════════════════════════
+  // STATE
+  // ═══════════════════════════════════════════════════════════════
+  let ws = null;
+  let mapData = null;
+  let mapImage = null;
+  let tokens = {};
+  let walls = [];
+  let fogRevealed = [];
+  let combat = { active: false, turnOrder: [], currentTurn: null, round: 0 };
+  let gameTime = '';
+  let showLights = false;
+
+  const cam = { x: 0, y: 0, zoom: 1 };
+  const canvas = document.getElementById('map');
+  const ctx = canvas.getContext('2d');
+
+  // Touch state
+  let _touches = {};
+  let _pinchDist = 0;
+  let _panStart = null;
+  let _selectedToken = null;
+  let _longPressTimer = null;
+  let _draggingToken = null;
+  let _dragOffset = { x: 0, y: 0 };
+
+  // ═══════════════════════════════════════════════════════════════
+  // RESIZE
+  // ═══════════════════════════════════════════════════════════════
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    render();
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ═══════════════════════════════════════════════════════════════
+  // WEBSOCKET
+  // ═══════════════════════════════════════════════════════════════
+  function connect() {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${proto}//${location.host}`);
+    ws.onopen = () => { console.log('[Tablet] Connected'); };
+    ws.onmessage = (e) => {
+      try { handleMsg(JSON.parse(e.data)); } catch(err) { console.error('[Tablet] Bad msg:', err); }
+    };
+    ws.onclose = () => { setTimeout(connect, 5000); };
+  }
+
+  function wsSend(type, data = {}) {
+    if (ws?.readyState === 1) ws.send(JSON.stringify({ type, ...data }));
+  }
+
+  function handleMsg(msg) {
+    const t = msg.type || msg.event;
+    switch (t) {
+      case 'init': {
+        const s = msg.state || {};
+        if (s.map) {
+          mapData = s.map;
+          tokens = s.map.tokens || {};
+          walls = s.map.walls || [];
+          fogRevealed = s.map.fogRevealed || [];
+          loadMapImage();
+        }
+        if (s.combat) combat = s.combat;
+        if (s.world?.gameTime) gameTime = s.world.gameTime;
+        renderStrip();
+        render();
+        break;
+      }
+      case 'state:change': {
+        const p = msg.data?.path;
+        const v = msg.data?.value;
+        if (p === 'map.tokens') { tokens = v || {}; render(); }
+        if (p?.startsWith('map.tokens.')) {
+          const parts = p.split('.');
+          if (parts.length === 3) tokens[parts[2]] = v;
+          else if (parts.length > 3) {
+            if (!tokens[parts[2]]) tokens[parts[2]] = {};
+            tokens[parts[2]][parts[3]] = v;
+          }
+          render();
+        }
+        if (p === 'map.fogRevealed') { fogRevealed = v || []; render(); }
+        if (p === 'map.walls') { walls = v || []; render(); }
+        if (p?.startsWith('world.gameTime')) { gameTime = v; renderStrip(); }
+        break;
+      }
+      case 'map:activated':
+      case 'map:full_update': {
+        if (msg.data?.map) {
+          mapData = msg.data.map;
+          tokens = msg.data.tokens || msg.data.map.tokens || {};
+          walls = msg.data.map.walls || [];
+          fogRevealed = msg.data.map.fogRevealed || [];
+          loadMapImage();
+        }
+        render();
+        break;
+      }
+      case 'map:token_moved':
+      case 'map:token_facing': {
+        const { tokenId, x, y, facing } = msg.data || {};
+        if (tokenId && tokens[tokenId]) {
+          if (x !== undefined) tokens[tokenId].x = x;
+          if (y !== undefined) tokens[tokenId].y = y;
+          if (facing !== undefined) tokens[tokenId].facing = facing;
+          render();
+        }
+        break;
+      }
+      case 'map:token_added': {
+        if (msg.data?.tokenId && msg.data?.token) {
+          tokens[msg.data.tokenId] = msg.data.token;
+          render();
+        }
+        break;
+      }
+      case 'map:token_removed': {
+        if (msg.data?.tokenId) { delete tokens[msg.data.tokenId]; render(); }
+        break;
+      }
+      case 'combat:started':
+      case 'combat:ended':
+      case 'combat:next_turn':
+      case 'combat:prev_turn':
+      case 'combat:hp_changed':
+      case 'combat:combatant_added':
+      case 'combat:combatant_removed': {
+        combat = msg.data?.combat || combat;
+        renderStrip();
+        break;
+      }
+    }
+  }
+
+  function loadMapImage() {
+    if (!mapData?.image) return;
+    const img = new Image();
+    img.onload = () => { mapImage = img; centerCamera(); render(); };
+    img.onerror = () => { mapImage = null; render(); };
+    img.src = '/assets/maps/' + mapData.image;
+  }
+
+  function centerCamera() {
+    if (!mapData) return;
+    cam.x = 0; cam.y = 0;
+    cam.zoom = Math.min(canvas.width / mapData.width, canvas.height / mapData.height) * 0.95;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════════
+  function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#07070a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (!mapData) return;
+
+    ctx.save();
+    ctx.translate(canvas.width / 2 + cam.x * cam.zoom, canvas.height / 2 + cam.y * cam.zoom);
+    ctx.scale(cam.zoom, cam.zoom);
+
+    const mw = mapData.width;
+    const mh = mapData.height;
+
+    // Map image
+    if (mapImage) {
+      ctx.drawImage(mapImage, -mw / 2, -mh / 2, mw, mh);
+    }
+
+    // Grid
+    const gs = mapData.gridSize || 64;
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 0.5;
+    for (let x = 0; x <= mw; x += gs) {
+      ctx.beginPath(); ctx.moveTo(x - mw/2, -mh/2); ctx.lineTo(x - mw/2, mh/2); ctx.stroke();
+    }
+    for (let y = 0; y <= mh; y += gs) {
+      ctx.beginPath(); ctx.moveTo(-mw/2, y - mh/2); ctx.lineTo(mw/2, y - mh/2); ctx.stroke();
+    }
+
+    // Fog of war
+    if (fogRevealed.length > 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fillRect(-mw/2, -mh/2, mw, mh);
+      ctx.globalCompositeOperation = 'destination-out';
+      for (const rect of fogRevealed) {
+        ctx.fillRect(rect.x - mw/2, rect.y - mh/2, rect.w, rect.h);
+      }
+      ctx.restore();
+    }
+
+    // Tokens
+    for (const [id, tok] of Object.entries(tokens)) {
+      if (tok.hidden) continue;
+      const tx = tok.x - mw / 2;
+      const ty = tok.y - mh / 2;
+      const r = (tok.size || gs) / 2 * 0.85;
+
+      // Token circle
+      ctx.beginPath();
+      ctx.arc(tx, ty, r, 0, Math.PI * 2);
+      const color = tok.type === 'pc' ? '#4080c0' : '#c9a54e';
+      ctx.fillStyle = color + '40';
+      ctx.fill();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Token name
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${Math.max(10, gs * 0.18)}px Source Sans 3, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(tok.name || id, tx, ty + r + 3);
+
+      // HP bar (if in combat)
+      if (tok.hp && tok.hp.max > 0) {
+        const hpPct = tok.hp.current / tok.hp.max;
+        const barW = r * 1.6;
+        const barH = 3;
+        const barX = tx - barW / 2;
+        const barY = ty - r - 6;
+        ctx.fillStyle = '#222';
+        ctx.fillRect(barX, barY, barW, barH);
+        ctx.fillStyle = hpPct > 0.5 ? '#30a050' : hpPct > 0.25 ? '#c07030' : '#d04040';
+        ctx.fillRect(barX, barY, barW * hpPct, barH);
+      }
+
+      // Light radius
+      if (showLights && tok.light) {
+        if (tok.light.bright) {
+          ctx.beginPath();
+          ctx.arc(tx, ty, tok.light.bright, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255,200,80,0.06)';
+          ctx.fill();
+        }
+        if (tok.light.dim) {
+          ctx.beginPath();
+          ctx.arc(tx, ty, tok.light.dim, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255,200,80,0.03)';
+          ctx.fill();
+        }
+      }
+
+      // Selection highlight
+      if (_selectedToken === id) {
+        ctx.beginPath();
+        ctx.arc(tx, ty, r + 4, 0, Math.PI * 2);
+        ctx.strokeStyle = '#c9a54e';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    // Movement range overlay during drag
+    if (_draggingToken && tokens[_draggingToken]) {
+      const tok = tokens[_draggingToken];
+      const speed = tok._speed || 30;
+      const speedPx = (speed / 5) * gs;
+      const startX = tok._dragStartX || tok.x;
+      const startY = tok._dragStartY || tok.y;
+      ctx.beginPath();
+      ctx.arc(startX - mw/2, startY - mh/2, speedPx, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(201,165,78,0.3)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // Dash range
+      ctx.beginPath();
+      ctx.arc(startX - mw/2, startY - mh/2, speedPx * 2, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(201,165,78,0.15)';
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // TOUCH CONTROLS
+  // ═══════════════════════════════════════════════════════════════
+  function screenToWorld(sx, sy) {
+    return {
+      x: (sx - canvas.width / 2) / cam.zoom - cam.x + (mapData?.width || 0) / 2,
+      y: (sy - canvas.height / 2) / cam.zoom - cam.y + (mapData?.height || 0) / 2
+    };
+  }
+
+  function hitTestToken(wx, wy) {
+    const gs = mapData?.gridSize || 64;
+    for (const [id, tok] of Object.entries(tokens)) {
+      if (tok.hidden) continue;
+      const dx = wx - tok.x;
+      const dy = wy - tok.y;
+      const r = (tok.size || gs) / 2;
+      if (dx * dx + dy * dy <= r * r) return id;
+    }
+    return null;
+  }
+
+  canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const touches = e.touches;
+
+    if (touches.length === 2) {
+      // Pinch start
+      _pinchDist = Math.hypot(touches[1].clientX - touches[0].clientX, touches[1].clientY - touches[0].clientY);
+      _panStart = null;
+      clearLongPress();
+      return;
+    }
+
+    if (touches.length === 1) {
+      const t = touches[0];
+      const world = screenToWorld(t.clientX, t.clientY);
+      const hit = hitTestToken(world.x, world.y);
+
+      // Start long press timer
+      _longPressTimer = setTimeout(() => {
+        if (hit) {
+          _selectedToken = hit;
+          showActionMenu(t.clientX, t.clientY);
+        }
+      }, 500);
+
+      if (_draggingToken) {
+        // Already dragging — continue
+        _dragOffset = { x: world.x - tokens[_draggingToken].x, y: world.y - tokens[_draggingToken].y };
+      } else {
+        // Pan start
+        _panStart = { sx: t.clientX, sy: t.clientY, cx: cam.x, cy: cam.y, hit, world };
+      }
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const touches = e.touches;
+
+    clearLongPress();
+
+    if (touches.length === 2) {
+      // Pinch zoom
+      const dist = Math.hypot(touches[1].clientX - touches[0].clientX, touches[1].clientY - touches[0].clientY);
+      if (_pinchDist > 0) {
+        const scale = dist / _pinchDist;
+        cam.zoom = Math.max(0.5, Math.min(3, cam.zoom * scale));
+      }
+      _pinchDist = dist;
+      render();
+      return;
+    }
+
+    if (touches.length === 1 && _draggingToken && tokens[_draggingToken]) {
+      // Token drag
+      const world = screenToWorld(touches[0].clientX, touches[0].clientY);
+      tokens[_draggingToken].x = world.x - _dragOffset.x;
+      tokens[_draggingToken].y = world.y - _dragOffset.y;
+      render();
+      return;
+    }
+
+    if (touches.length === 1 && _panStart) {
+      // Pan
+      const dx = (touches[0].clientX - _panStart.sx) / cam.zoom;
+      const dy = (touches[0].clientY - _panStart.sy) / cam.zoom;
+      cam.x = _panStart.cx + dx;
+      cam.y = _panStart.cy + dy;
+      render();
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    clearLongPress();
+
+    if (_draggingToken && tokens[_draggingToken]) {
+      // Snap to grid
+      const gs = mapData?.gridSize || 64;
+      const tok = tokens[_draggingToken];
+      tok.x = Math.round(tok.x / gs) * gs + gs / 2;
+      tok.y = Math.round(tok.y / gs) * gs + gs / 2;
+
+      // Send move to server
+      wsSend('map:move_token', { tokenId: _draggingToken, x: tok.x, y: tok.y });
+      _draggingToken = null;
+      render();
+      return;
+    }
+
+    // Single tap detection (short touch, no significant movement)
+    if (_panStart && e.changedTouches.length === 1) {
+      const t = e.changedTouches[0];
+      const dx = Math.abs(t.clientX - _panStart.sx);
+      const dy = Math.abs(t.clientY - _panStart.sy);
+      if (dx < 10 && dy < 10) {
+        // Tap
+        if (_panStart.hit) {
+          _selectedToken = _panStart.hit;
+          showTokenLabel(_panStart.hit, t.clientX, t.clientY);
+          render();
+        } else {
+          _selectedToken = null;
+          hideTokenLabel();
+          closeMenu();
+          render();
+        }
+      }
+    }
+    _panStart = null;
+    _pinchDist = 0;
+  });
+
+  // Double tap to center
+  let _lastTap = 0;
+  canvas.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - _lastTap < 300 && e.changedTouches.length === 1) {
+      const t = e.changedTouches[0];
+      const world = screenToWorld(t.clientX, t.clientY);
+      cam.x = -(world.x - (mapData?.width || 0) / 2);
+      cam.y = -(world.y - (mapData?.height || 0) / 2);
+      render();
+    }
+    _lastTap = now;
+  });
+
+  function clearLongPress() {
+    if (_longPressTimer) { clearTimeout(_longPressTimer); _longPressTimer = null; }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // UI
+  // ═══════════════════════════════════════════════════════════════
+  function showTokenLabel(tokenId, sx, sy) {
+    const tok = tokens[tokenId];
+    if (!tok) return;
+    const el = document.getElementById('token-label');
+    el.textContent = tok.name || tokenId;
+    el.style.left = (sx - 40) + 'px';
+    el.style.top = (sy - 40) + 'px';
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 2000);
+  }
+
+  function hideTokenLabel() {
+    document.getElementById('token-label').style.display = 'none';
+  }
+
+  function showActionMenu(sx, sy) {
+    const menu = document.getElementById('action-menu');
+    menu.style.left = Math.min(sx, window.innerWidth - 160) + 'px';
+    menu.style.top = Math.min(sy, window.innerHeight - 150) + 'px';
+    menu.style.display = 'block';
+  }
+
+  function closeMenu() {
+    document.getElementById('action-menu').style.display = 'none';
+  }
+
+  function actionMove() {
+    closeMenu();
+    if (!_selectedToken || !tokens[_selectedToken]) return;
+    _draggingToken = _selectedToken;
+    const tok = tokens[_draggingToken];
+    tok._dragStartX = tok.x;
+    tok._dragStartY = tok.y;
+    // Get speed from character data or default
+    tok._speed = 30;
+    render();
+  }
+
+  function actionInfo() {
+    closeMenu();
+    if (!_selectedToken || !tokens[_selectedToken]) return;
+    const tok = tokens[_selectedToken];
+    showTokenLabel(_selectedToken, window.innerWidth / 2, window.innerHeight / 2);
+  }
+
+  function toggleStrip() {
+    document.getElementById('strip').classList.toggle('open');
+  }
+
+  function toggleLights() {
+    showLights = !showLights;
+    document.getElementById('torch-btn').classList.toggle('active', showLights);
+    render();
+  }
+
+  function renderStrip() {
+    const el = document.getElementById('strip-content');
+    let html = '';
+    if (combat.active && combat.turnOrder?.length) {
+      html += `<span style="color:var(--accent);font-weight:700;margin-right:6px;">R${combat.round}</span>`;
+      html += combat.turnOrder.map((c, i) => {
+        const cur = i === combat.currentTurn;
+        return `<span class="init-entry${cur ? ' current' : ''} ${c.type}">${c.name}</span>`;
+      }).join('');
+    }
+    if (gameTime) {
+      html += `<span style="margin-left:auto;color:var(--text-dim);">${gameTime}</span>`;
+    }
+    el.innerHTML = html || '<span style="color:var(--text-dim);">No active combat</span>';
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // BOOT
+  // ═══════════════════════════════════════════════════════════════
+  connect();
+</script>
+</body>
+</html>

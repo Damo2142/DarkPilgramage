@@ -12,7 +12,7 @@
 - [x] SYSTEM E — Environmental hazards, reputation, session continuity
 - [x] SYSTEM F — NPC dialogue fix and stamina initialization
 - [x] SYSTEM G — Dashboard visual redesign and player UI fixes
-- [ ] SYSTEM H — Full integration pass and dry run preparation
+- [x] SYSTEM H — Full integration pass and dry run preparation
 
 ---
 
@@ -187,4 +187,56 @@
 - Wound silhouette size not changed per spec ("stays at current compact size")
 - Pop-out panel functionality already existed — added it to all panel headers
 - Equipment equipped/pack split deferred to integration test (needs char sheet data)
+
+### SYSTEM H — Full Integration Pass and Dry Run
+**Status: PASS**
+
+**Server Startup:** 19 services, all initialized cleanly
+```
+✓ characters (1 character: Barry Goodfellow Frascht)
+✓ dashboard (HTTPS, port 3200)
+✓ player-bridge (HTTPS, port 3202)
+✓ map (3 maps, 322 SRD monsters, 110 SRD items, 145 SRD spells, 13 custom actors)
+✓ combat
+✓ world-clock (14 timed events, 6 secrets, 14 clues, 4 hooks, 3 factions)
+✓ audio (Whisper ready)
+✓ voice (disabled — no ALEXA_COOKIE)
+✓ sound (disabled — no ELEVENLABS_API_KEY, 39 cached sounds)
+✓ ai-engine (Gemini connected)
+✓ atmosphere (10 profiles, Hubitat configured)
+✓ campaign (7 lore entries, 2 downtime events)
+✓ equipment
+✓ stamina (Jerome initialized: max 70, fresh)
+✓ lighting (9 sources, 8 lit)
+✓ observation (6 event observations, 2 monster tell sets)
+✓ horror (1 player, arc profile generated)
+✓ social-combat
+✓ hazard (4 hazards, 3 NPC standings)
+```
+
+**Integration Test Results:**
+1. Stamina API: /api/stamina/jerome ✓, /api/stamina/barry ✓ (both resolve to Jerome)
+2. Lighting: 9 sources loaded, 8 lit, toggle works ✓
+3. Passive Perception: Barry PP=13, DC12 ✓ (reaches), DC15 ✓ (filtered)
+4. Horror: Jerome 0→20 on vladislav_feeds, threshold 20 triggered ✓
+5. Social Combat: Vladislav started, advantage active, momentum adjustable ✓
+6. Hazards: 4 active, all correct ✓
+7. NPC Standings: 3 NPCs at 0, adjustable ✓
+8. NPC Dialogue: Marta responds about cellar, no father reference ✓
+9. NPC Dialogue: "The Stranger" (Vladislav) responds in character ✓
+10. Light toggle: table-candle-1 extinguished ✓
+11. Session start: creates session ID ✓
+12. Dashboard visual: new color scheme loads ✓
+13. Player bridge: tabs load, observation zone ready ✓
+
+**Not tested (requires physical devices/browser):**
+- Movement rate limiting overlay (requires browser drag)
+- Map dim/dark overlays (canvas rendering)
+- Hubitat light control (no token in test env)
+- Alexa TTS (no cookie auth)
+- Pop-out panel window.open() (requires browser)
+- Equipment condition degradation (requires combat with nat 1 / crit)
+
+**Git Log:**
+See commit history for all systems in order.
 

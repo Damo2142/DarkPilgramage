@@ -11,7 +11,7 @@
 - [x] SYSTEM D — Social combat and ambient NPC behavior
 - [x] SYSTEM E — Environmental hazards, reputation, session continuity
 - [x] SYSTEM F — NPC dialogue fix and stamina initialization
-- [ ] SYSTEM G — Dashboard visual redesign and player UI fixes
+- [x] SYSTEM G — Dashboard visual redesign and player UI fixes
 - [ ] SYSTEM H — Full integration pass and dry run preparation
 
 ---
@@ -157,4 +157,34 @@
 - The NPC dialogue "truncation" issue from the spec appears to have been already resolved
 - The "father" references were already prohibited in npc-base.md and hal-codm.md prompts
 - No further changes needed to stamina — _resolvePlayerId already handles name fallback
+
+### SYSTEM G — Dashboard Visual Redesign and Player UI
+**Status: PASS**
+**Files modified:** `services/dashboard/public/index.html`, `services/player-bridge/public/index.html`
+
+**Dashboard changes:**
+- Updated CSS variables: bg=#141210, surface=#1e1a14, panel-body=#12100c, text=#c8b89a, accent=#e8c060
+- Panel headers: #1e1a14 bg, #3a3028 border, 12px uppercase 0.08em letter-spacing, #8a7a62 text
+- Panels: 8px border-radius, #2a2218 border, 8px gap between
+- Wound dots: 14px diameter (was 10px), 4px gap (was 3px)
+- Player name: 14px #e8d0a0 (was 10px)
+- Weather icon + game time display added to header bar
+- Horror color indicator on player rows (green→amber→red border-left)
+
+**Player bridge changes:**
+- Added 5-tab navigation: CONDITION / ARMS & ARMOR / GIFTS & MAGIC / SOUL / NUMBERS
+- Tab bar: #2a2420 bg, inactive #6a5a48, active #e8c060 with 2px underline
+- Sections wrapped in tab divs, switchTab() JS function
+- Observation zone: fixed overlay at top, italic fade-in, auto-fade after 45s
+- dm:private_message with style='observation' routes to observation zone instead of toast
+
+**Test results:**
+- Server starts: all services OK — PASS
+- Dashboard page loads with new colors — PASS
+- Player page loads with tab structure — PASS
+
+**Decisions:**
+- Wound silhouette size not changed per spec ("stays at current compact size")
+- Pop-out panel functionality already existed — added it to all panel headers
+- Equipment equipped/pack split deferred to integration test (needs char sheet data)
 

@@ -3,574 +3,801 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Dark Pilgrimage — Character Sheet</title>
+  <title>Dark Pilgrimage</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Source+Sans+3:wght@300;400;600&display=swap');
     :root {
-      --bg:#f4ebd0;--surface:#e8d5a3;--surface2:#dcc698;--surface3:#d0b880;
-      --border:#b8975a;--text:#1a1008;--text-dim:#5a4a30;
-      --accent:#58180d;--accent-dim:#8b4513;
-      --red:#8b0000;--green:#1a5a30;--purple:#4a1a6a;--blue:#1a3a5a;
+      /* Legacy vars for existing JS inline styles */
+      --bg:#1e1a14; --surface:#2a2420; --surface2:#2a2420; --surface3:#352e26;
+      --border:#4a3a28; --text:#e8d0a0; --text-dim:#6a5a48;
+      --accent:#e8c060; --accent-dim:#8a6a20;
+      --red:#aa2a1a; --green:#3a8a3a; --purple:#6a3a8a; --blue:#3a6a8a;
     }
     *{box-sizing:border-box;margin:0;padding:0;}
-    body{background:var(--bg);color:var(--text);font-family:'Source Sans 3',sans-serif;font-size:14px;overflow-x:hidden;}
-    input,textarea,select{font-family:inherit;background:var(--surface3);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:5px 8px;font-size:13px;}
+    body{
+      background:#1e1a14;color:#e8d0a0;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+      font-size:14px;overflow:hidden;height:100vh;width:100vw;
+    }
+    input,textarea,select{
+      font-family:inherit;background:#161210;border:1px solid #4a3a28;
+      color:#e8d0a0;border-radius:6px;padding:5px 8px;font-size:14px;
+    }
     button{font-family:inherit;cursor:pointer;}
 
-    #overlay{position:fixed;inset:0;background:#1a1008;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity .5s;}
+    /* ── Overlays ── */
+    #overlay{position:fixed;inset:0;background:#1e1a14;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity .5s;}
     #overlay.hidden{opacity:0;pointer-events:none;}
-    #overlay h1{font-family:Cinzel,serif;color:#c9a54e;font-size:1.5rem;margin-bottom:10px;}
-    #overlay p{color:#8a7a5a;}
+    #overlay h1{font-family:Georgia,serif;color:#e8c060;font-size:1.5rem;margin-bottom:10px;}
+    #overlay p{color:#8a7a62;}
     #horror-layer{position:fixed;inset:0;pointer-events:none;z-index:100;transition:background .4s;}
     #dread-vignette{position:fixed;inset:0;pointer-events:none;z-index:99;transition:all 2s;}
+    #death-vignette{position:fixed;inset:0;pointer-events:none;z-index:98;transition:all 0.8s ease;}
     @keyframes terror-glitch{0%{clip-path:inset(0 0 90% 0);transform:translate(-2px,0);}10%{clip-path:inset(80% 0 0 0);transform:translate(3px,1px);}20%{clip-path:inset(40% 0 40% 0);transform:translate(-1px,-2px);}30%{clip-path:inset(0);transform:none;}100%{clip-path:inset(0);transform:none;}}
-    @keyframes revelation-glow{0%{box-shadow:inset 0 0 60px rgba(201,165,78,0);background:rgba(201,165,78,0);}30%{box-shadow:inset 0 0 100px rgba(201,165,78,.25);background:rgba(201,165,78,.08);}100%{box-shadow:inset 0 0 0 rgba(201,165,78,0);background:rgba(201,165,78,0);}}
+    @keyframes revelation-glow{0%{box-shadow:inset 0 0 60px rgba(232,192,96,0);background:rgba(232,192,96,0);}30%{box-shadow:inset 0 0 100px rgba(232,192,96,.25);background:rgba(232,192,96,.08);}100%{box-shadow:inset 0 0 0 rgba(232,192,96,0);background:rgba(232,192,96,0);}}
+
+    /* ── Toast Layer ── */
     #toast-layer{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:150;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:6px;max-width:90vw;}
-    .toast{background:rgba(15,15,20,0.92);border:1px solid #c9a54e;border-radius:6px;padding:8px 14px;color:#ddd9cf;font-size:13px;max-width:80vw;animation:toast-in .4s ease-out;pointer-events:auto;box-shadow:0 4px 20px rgba(0,0,0,0.6);}
-    .toast .toast-who{color:#c9a54e;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}
+    .toast{background:rgba(30,26,20,0.95);border:1px solid #e8c060;border-radius:6px;padding:8px 14px;color:#e8d0a0;font-size:14px;max-width:80vw;animation:toast-in .4s ease-out;pointer-events:auto;box-shadow:0 4px 20px rgba(0,0,0,0.6);}
+    .toast .toast-who{color:#e8c060;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}
     .toast.fading{opacity:0;transition:opacity .5s;}
     @keyframes toast-in{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:translateY(0);}}
-    #app{display:none;flex-direction:column;min-height:100vh;}
+
+    /* ── App Container ── */
+    #app{display:none;flex-direction:column;height:100vh;overflow:hidden;}
     #app.visible{display:flex;}
 
-    /* Top bar */
-    #topbar{background:#58180d;border-bottom:2px solid #3a0a05;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
-    .char-title{font-family:Cinzel,serif;color:#f4ebd0;font-size:1rem;font-weight:700;}
-    .char-sub{font-size:10px;color:rgba(244,235,208,0.7);}
-    #conn-dot{width:8px;height:8px;border-radius:50%;background:#444;}
-    #conn-dot.on{background:var(--green);}
+    /* ══════════════════════════════════════════
+       TOP BAR — fixed 48px
+       ══════════════════════════════════════════ */
+    #topbar{
+      height:48px;min-height:48px;max-height:48px;flex-shrink:0;
+      background:#2a2420;border-bottom:1px solid #4a3a28;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:0 20px;position:relative;z-index:50;
+    }
+    .char-title{font-family:Georgia,serif;color:#e8d0a0;font-size:18px;font-weight:400;}
+    .char-sub{font-size:12px;color:#8a7a62;text-transform:uppercase;letter-spacing:0.1em;}
+    #conn-dot{width:8px;height:8px;border-radius:50%;background:#4a3a28;flex-shrink:0;}
+    #conn-dot.on{background:#3a8a3a;}
 
-    /* Vitals */
-    #vitals{background:var(--surface2);border-bottom:1px solid var(--border);padding:8px 10px;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;}
-    .vbox{text-align:center;background:var(--surface3);border-radius:4px;padding:5px 2px;cursor:pointer;}
-    .vbox:active{opacity:.7;}
-    .vl{font-size:8px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;}
-    .vv{font-size:17px;font-weight:700;color:#58180d;line-height:1.2;}
+    /* ══════════════════════════════════════════
+       OBSERVATION ZONE — 40px
+       ══════════════════════════════════════════ */
+    #zone-observation{
+      height:40px;min-height:40px;max-height:40px;flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;padding:0 20px;
+    }
+    #observation-text{
+      font-style:italic;color:#e8c060;font-size:14px;text-align:center;
+      opacity:0;transition:opacity 1s ease;font-family:Georgia,serif;max-width:80%;
+    }
+    #observation-text.visible{opacity:1;}
 
-    /* HP */
-    #hp-block{background:var(--surface2);border-bottom:1px solid var(--border);padding:8px 12px;}
-    .hpr{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
-    .hpl{font-size:9px;color:var(--text-dim);text-transform:uppercase;width:32px;}
-    .hpw{flex:1;background:rgba(0,0,0,0.15);border-radius:3px;height:12px;overflow:hidden;}
-    .hpb{height:100%;border-radius:3px;transition:width .3s;}
-    #hpfill{background:linear-gradient(90deg,#cc0000,#8b0000);}
-    #tmpfill{background:linear-gradient(90deg,#2980b9,#1a3a5a);}
-    .hpt{font-size:11px;font-weight:700;min-width:52px;text-align:right;}
-    .hp-ctrl{display:grid;grid-template-columns:1fr 55px 1fr 55px 1fr;gap:5px;align-items:center;}
-    .hbtn{padding:7px 2px;border:1px solid var(--border);background:var(--surface3);color:var(--text);border-radius:4px;font-size:12px;font-weight:600;text-align:center;}
-    .hbtn.dmg{border-color:#5a1010;color:var(--red);}
-    .hbtn.heal{border-color:#1a4a1a;color:var(--green);}
-    .hbtn.tmp{border-color:#1a3a5a;color:var(--blue);}
-    .ni{padding:6px 4px;text-align:center;width:100%;}
+    /* ══════════════════════════════════════════
+       BODY ZONE — 220px
+       ══════════════════════════════════════════ */
+    #zone-body{
+      height:220px;min-height:220px;max-height:220px;flex-shrink:0;
+      background:#161210;border-bottom:1px solid #3a3028;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      position:relative;
+    }
+    #wound-overlay{cursor:pointer;transition:opacity 0.2s;}
+    #body-narrative{
+      font-style:italic;color:#b09878;font-size:13px;text-align:center;
+      margin-top:4px;min-height:18px;max-width:500px;padding:0 20px;
+      font-family:Georgia,serif;
+    }
+    /* Wound overlay detail popup — repositioned for new layout */
+    #wound-overlay-detail{
+      position:fixed;bottom:auto;top:280px;left:50%;transform:translateX(-50%);
+      z-index:91;background:rgba(30,26,20,0.97);border:1px solid #4a3a28;
+      border-radius:8px;padding:12px 16px;max-width:320px;width:90%;
+      font-size:13px;color:#e8d0a0;
+    }
 
-    /* Dread */
-    #dread-strip{background:var(--surface2);border-bottom:1px solid var(--border);padding:5px 12px;}
-    .dr{display:flex;align-items:center;gap:6px;}
-    .dw{flex:1;background:rgba(0,0,0,0.15);border-radius:3px;height:8px;overflow:hidden;}
-    .df{height:100%;background:linear-gradient(90deg,#6a1a8a,#4a1a6a);border-radius:3px;transition:width .6s;}
-    .dl{font-size:9px;text-transform:uppercase;color:var(--text-dim);width:38px;}
-    .dv{font-size:10px;color:var(--purple);min-width:52px;text-align:right;}
+    /* Wound silhouette colors */
+    @keyframes wound-pulse-broken{0%,100%{opacity:1}50%{opacity:0.6}}
+    @keyframes wound-pulse-crippled{0%,100%{opacity:1}50%{opacity:0.6}}
+    .wound-3{animation:wound-pulse-broken 1.5s ease-in-out infinite;}
+    .wound-4{animation:wound-pulse-crippled 0.8s ease-in-out infinite;}
 
-    /* Tabs */
-    #tabs{display:flex;background:#58180d;border-bottom:1px solid #3a0a05;overflow-x:auto;}
-    #tabs::-webkit-scrollbar{display:none;}
-    .tab{flex:0 0 auto;padding:9px 11px;font-size:10px;color:rgba(244,235,208,0.6);cursor:pointer;border-bottom:2px solid transparent;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;}
-    .tab.active{color:#f4ebd0;border-bottom-color:#f4ebd0;}
+    /* Stamina ring animations */
+    @keyframes stam-pulse-slow{0%,100%{opacity:1}50%{opacity:0.6}}
+    @keyframes stam-pulse-fast{0%,100%{opacity:1}50%{opacity:0.3}}
+    @keyframes stam-pulse-rapid{0%,100%{opacity:1}50%{opacity:0.15}}
+    .stam-winded #stamina-ring{stroke:#e89040;animation:stam-pulse-slow 2s ease-in-out infinite;}
+    .stam-exhausted #stamina-ring{stroke:#c85020;animation:stam-pulse-fast 1.2s ease-in-out infinite;}
+    .stam-spent #stamina-ring{stroke:#aa2a1a;animation:stam-pulse-rapid 0.6s ease-in-out infinite;}
+    .stam-collapsed #stamina-ring{stroke:#4a2018;stroke-dasharray:8 8;animation:none;opacity:0.5;}
 
-    /* Panels */
-    .panel{display:none;padding:10px 12px;overflow-y:auto;}
-    .panel.active{display:block;}
-    .st{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);border-bottom:1px solid var(--border);padding-bottom:3px;margin:12px 0 6px;}
+    /* Condition visual effects on silhouette */
+    @keyframes cond-flicker{0%,90%,100%{opacity:1}92%{opacity:0.2}95%{opacity:0.8}97%{opacity:0.3}}
+    .cond-stunned{animation:cond-flicker 0.8s ease-in-out infinite;}
+    .cond-poisoned{filter:hue-rotate(80deg) saturate(1.5);}
+    .cond-prone{transform:rotate(90deg);}
+    .cond-unconscious{opacity:0.15 !important;filter:brightness(0.2);}
+
+    /* ══════════════════════════════════════════
+       GRIMOIRE CONTENT — scrollable, fills remaining
+       ══════════════════════════════════════════ */
+    #grimoire-content{
+      flex:1;overflow-y:auto;background:#1e1a14;padding:20px;
+    }
+    #grimoire-content::-webkit-scrollbar{width:4px;}
+    #grimoire-content::-webkit-scrollbar-track{background:#1e1a14;}
+    #grimoire-content::-webkit-scrollbar-thumb{background:#4a3a28;border-radius:2px;}
+
+    /* Section separator */
+    .gsection-label{
+      font-size:11px;text-transform:uppercase;color:#6a5a48;letter-spacing:0.1em;
+      border-bottom:1px solid #3a3028;padding-bottom:6px;margin:24px 0 12px 0;
+    }
+    .gsection-label:first-child{margin-top:0;}
+
+    /* Tab bar */
+    #tab-bar{
+      display:flex;background:#2a2420;border-bottom:1px solid #3a3028;
+      flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    }
+    .tab-btn{
+      padding:10px 16px;font-size:12px;text-transform:uppercase;letter-spacing:0.08em;
+      color:#6a5a48;background:none;border:none;border-bottom:2px solid transparent;
+      cursor:pointer;white-space:nowrap;transition:color 0.15s;flex-shrink:0;
+    }
+    .tab-btn:hover{color:#b09878;}
+    .tab-btn.active{color:#e8c060;border-bottom-color:#e8c060;}
+    .gtab{display:none;}
+    .gtab.active{display:block;}
+
+    /* Limb rows */
+    .limb-row{
+      height:44px;background:#2a2420;border-radius:6px;margin-bottom:8px;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:0 14px;cursor:pointer;transition:background 0.15s;
+    }
+    .limb-row:hover{background:#322c24;}
+    .limb-row:active{background:#3a3228;}
+    .limb-name{font-size:14px;color:#e8d0a0;}
+    .limb-state-0{color:#3a8a3a;}
+    .limb-state-1{color:#7a8a20;}
+    .limb-state-2{color:#c87828;}
+    .limb-state-3{color:#aa2a1a;}
+    .limb-state-4{color:#6a3020;}
+    .limb-desc{
+      font-style:italic;font-size:13px;color:#b09878;padding:4px 14px 12px;
+      line-height:1.5;display:none;
+    }
+    .limb-desc.visible{display:block;}
+
+    /* Equipment rows */
+    .equip-row{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:8px 0;border-bottom:1px solid #2a2218;font-size:14px;
+    }
+    .equip-row:last-child{border-bottom:none;}
+    .equip-name{color:#e8d0a0;}
+    .equip-name.broken{color:#6a3020;text-decoration:line-through;}
+    .equip-note{font-size:13px;color:#b09878;}
+
+    /* Spell slot flames */
+    .flame-row{display:flex;gap:4px;align-items:center;margin:4px 0;}
+    .flame{width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;}
+    .flame.lit{color:#e8c060;text-shadow:0 0 6px rgba(232,192,96,0.5);}
+    .flame.unlit{color:#3a3028;}
+    .spell-level-hdr{font-size:11px;text-transform:uppercase;color:#6a5a48;margin-top:12px;margin-bottom:4px;}
+    .spell-name{font-size:14px;color:#e8d0a0;padding:6px 0;cursor:pointer;border-bottom:1px solid #2a2218;}
+    .spell-name:hover{color:#e8c060;}
+    .spell-desc-inline{font-size:13px;color:#b09878;padding:4px 0 8px;line-height:1.5;display:none;}
+    .spell-desc-inline.visible{display:block;}
+
+    /* Soul section */
+    .soul-prose{font-size:14px;color:#b09878;line-height:1.7;margin-bottom:16px;}
+    .soul-label{font-size:13px;text-transform:uppercase;color:#6a5a48;margin-bottom:4px;}
+
+    /* Numbers section */
+    .ability-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+    .ability-cell{
+      background:#2a2420;border-radius:6px;padding:10px 4px;text-align:center;
+      cursor:pointer;transition:background 0.15s;
+    }
+    .ability-cell:hover{background:#322c24;}
+    .ability-label{font-size:11px;color:#6a5a48;text-transform:uppercase;letter-spacing:0.05em;}
+    .ability-mod{font-size:24px;color:#e8d0a0;font-weight:700;line-height:1.2;}
+    .ability-score{font-size:12px;color:#8a7a62;margin-top:2px;}
+    .stat-row{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:6px 0;border-bottom:1px solid #2a2218;font-size:13px;
+    }
+    .stat-row:last-child{border-bottom:none;}
+    .stat-label{color:#b09878;}
+    .stat-val{color:#e8d0a0;font-weight:600;}
+    .stat-val.prof{color:#e8c060;}
+    .big-stats{display:flex;gap:16px;justify-content:center;margin-bottom:16px;}
+    .big-stat{text-align:center;min-width:80px;}
+    .big-stat-val{font-size:28px;font-weight:700;color:#e8d0a0;font-family:Georgia,serif;}
+    .big-stat-label{font-size:11px;color:#6a5a48;text-transform:uppercase;letter-spacing:0.05em;}
+
+    /* ══════════════════════════════════════════
+       INPUT BAR — fixed 56px at bottom
+       ══════════════════════════════════════════ */
+    #input-bar{
+      height:56px;min-height:56px;max-height:56px;flex-shrink:0;
+      background:#2a2420;border-top:1px solid #3a3028;
+      display:flex;align-items:center;gap:8px;padding:0 8px;
+    }
+    #speak-input{
+      flex:1;height:36px;background:#161210;border:1px solid #4a3a28;
+      border-radius:6px;color:#e8d0a0;font-size:14px;font-style:italic;
+      padding:0 12px;caret-color:#e8c060;
+    }
+    #speak-input::placeholder{color:#6a5a48;font-style:italic;}
+    .journal-btn{
+      width:44px;height:44px;background:#2a2420;border:1px solid #3a3028;
+      border-radius:6px;color:#8a7a62;font-size:20px;display:flex;
+      align-items:center;justify-content:center;transition:color 0.2s;flex-shrink:0;
+    }
+    .journal-btn:hover{color:#e8c060;}
+
+    /* ══════════════════════════════════════════
+       NPC DIALOGUE CARD — fixed above input bar
+       ══════════════════════════════════════════ */
+    #npc-dialogue-card{
+      position:fixed;bottom:56px;left:0;right:0;z-index:80;
+      background:#2a2420;border:1px solid #4a3a28;border-radius:8px 8px 0 0;
+      padding:16px 20px;max-height:200px;overflow-y:auto;
+      transform:translateY(100%);transition:transform 0.3s ease;
+      cursor:pointer;
+    }
+    #npc-dialogue-card.visible{transform:translateY(0);}
+    #npc-dialogue-card .npc-name{
+      font-size:12px;text-transform:uppercase;color:#e8c060;
+      letter-spacing:0.1em;margin-bottom:8px;
+    }
+    #npc-dialogue-card .npc-response{
+      font-style:italic;font-size:15px;color:#e8d0a0;line-height:1.6;
+    }
+
+    /* ══════════════════════════════════════════
+       JOURNAL PANEL — slides from right
+       ══════════════════════════════════════════ */
+    #journal-panel{
+      position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.5);
+      opacity:0;pointer-events:none;transition:opacity 0.3s;
+    }
+    #journal-panel.open{opacity:1;pointer-events:auto;}
+    #journal-inner{
+      position:absolute;top:0;right:0;bottom:0;width:380px;max-width:90vw;
+      background:#1c1810;transform:translateX(100%);transition:transform 0.35s ease;
+      display:flex;flex-direction:column;overflow:hidden;
+    }
+    #journal-panel.open #journal-inner{transform:translateX(0);}
+    #journal-header{
+      font-family:Georgia,serif;color:#e8c060;font-size:18px;padding:20px;
+      border-bottom:1px solid #3a3028;flex-shrink:0;
+    }
+    #journal-body{flex:1;overflow-y:auto;padding:16px 20px;}
+    #journal-body::-webkit-scrollbar{width:4px;}
+    #journal-body::-webkit-scrollbar-track{background:#1c1810;}
+    #journal-body::-webkit-scrollbar-thumb{background:#4a3a28;border-radius:2px;}
+    .journal-empty{color:#6a5a48;font-style:italic;font-size:14px;text-align:center;padding:40px 0;}
+
+    /* ══════════════════════════════════════════
+       HIDDEN PANELS — exist for JS, never visible
+       ══════════════════════════════════════════ */
+    #hidden-panels{position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;}
+    /* Old .panel / .tab classes — prevent any visibility */
+    .panel{display:block;visibility:visible;}
+    .tab{display:inline-block;}
+
+    /* Legacy CSS classes referenced by JS */
+    .st{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6a5a48;border-bottom:1px solid #3a3028;padding-bottom:3px;margin:12px 0 6px;}
     .st:first-child{margin-top:0;}
-
-    /* Abilities */
     .abg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:4px;}
-    .abbox{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 4px;text-align:center;}
-    .abn{font-size:8px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;}
-    .abm{font-size:26px;font-weight:700;color:#58180d;line-height:1;}
-    .abs{font-size:11px;color:var(--text-dim);border:1px solid var(--border);border-radius:10px;padding:1px 6px;margin-top:2px;display:inline-block;cursor:pointer;}
-    .abs:hover{border-color:var(--accent);}
-
-    /* Skills/saves */
-    .skr{display:flex;align-items:center;gap:6px;padding:3px 2px;border-bottom:1px solid rgba(88,24,13,0.1);font-size:12px;}
+    .abbox{background:#2a2420;border:1px solid #4a3a28;border-radius:6px;padding:8px 4px;text-align:center;}
+    .abn{font-size:8px;color:#6a5a48;text-transform:uppercase;letter-spacing:.5px;}
+    .abm{font-size:24px;font-weight:700;color:#e8d0a0;line-height:1;cursor:pointer;}
+    .abs{font-size:11px;color:#8a7a62;border:1px solid #4a3a28;border-radius:10px;padding:1px 6px;margin-top:2px;display:inline-block;cursor:pointer;}
+    .abs:hover{border-color:#e8c060;}
+    .skr{display:flex;align-items:center;gap:6px;padding:4px 2px;border-bottom:1px solid #2a2218;font-size:13px;}
     .skr:last-child{border:none;}
-    .pdot{width:10px;height:10px;border-radius:50%;border:1px solid var(--text-dim);flex-shrink:0;cursor:pointer;}
-    .pdot.full{background:#58180d;border-color:#58180d;}
-    .pdot.exp{background:#58180d;border-color:#58180d;border-radius:2px;}
-    .skn{flex:1;}
-    .skmod{font-weight:700;min-width:28px;text-align:right;}
-
-    /* Attacks */
-    .atk-card{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:6px;}
+    .pdot{width:10px;height:10px;border-radius:50%;border:1px solid #6a5a48;flex-shrink:0;cursor:pointer;}
+    .pdot.full{background:#e8c060;border-color:#e8c060;}
+    .pdot.exp{background:#e8c060;border-color:#e8c060;border-radius:2px;}
+    .skn{flex:1;color:#b09878;}
+    .skmod{font-weight:700;min-width:28px;text-align:right;color:#e8d0a0;}
+    .atk-card{background:#2a2420;border:1px solid #4a3a28;border-radius:6px;padding:8px 10px;margin-bottom:6px;}
     .atk-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
-    .atk-name{font-weight:700;font-size:13px;}
+    .atk-name{font-weight:700;font-size:14px;color:#e8d0a0;}
     .atk-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;}
-    .atk-stat{text-align:center;background:var(--surface3);border-radius:3px;padding:4px 2px;}
-    .asl{font-size:9px;color:var(--text-dim);text-transform:uppercase;}
-    .asv{font-weight:700;color:var(--accent);}
-    .roll-btn{margin-top:6px;width:100%;padding:7px;background:#58180d;border:none;color:#f4ebd0;border-radius:4px;font-weight:700;font-size:12px;}
-    .add-btn{width:100%;padding:8px;background:var(--surface2);border:1px dashed var(--border);color:var(--text-dim);border-radius:4px;font-size:12px;margin-top:4px;}
-    .add-btn:hover{border-color:var(--accent);color:var(--accent);}
-
-    /* Spells */
+    .atk-stat{text-align:center;background:#352e26;border-radius:3px;padding:4px 2px;}
+    .asl{font-size:9px;color:#6a5a48;text-transform:uppercase;}
+    .asv{font-weight:700;color:#e8c060;}
+    .roll-btn{margin-top:6px;width:100%;padding:7px;background:#8a6a20;border:none;color:#e8d0a0;border-radius:4px;font-weight:700;font-size:13px;}
+    .roll-btn:active{opacity:0.7;}
+    .add-btn{width:100%;padding:8px;background:#2a2420;border:1px dashed #4a3a28;color:#6a5a48;border-radius:4px;font-size:13px;margin-top:4px;}
+    .add-btn:hover{border-color:#e8c060;color:#e8c060;}
     .slotg{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:6px;}
-    .slotbox{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:6px 4px;text-align:center;}
-    .sll{font-size:8px;color:var(--text-dim);text-transform:uppercase;}
-    .slv{font-size:14px;font-weight:700;color:#58180d;}
+    .slotbox{background:#2a2420;border:1px solid #4a3a28;border-radius:4px;padding:6px 4px;text-align:center;}
+    .sll{font-size:8px;color:#6a5a48;text-transform:uppercase;}
+    .slv{font-size:14px;font-weight:700;color:#e8d0a0;}
     .pips{display:flex;gap:3px;justify-content:center;margin-top:2px;flex-wrap:wrap;}
-    .pip{width:12px;height:12px;border-radius:50%;border:1px solid var(--accent-dim);cursor:pointer;}
-    .pip.used{background:var(--surface3);border-color:var(--border);}
-    .pip.avail{background:#58180d;}
-    .sp-item{display:flex;align-items:center;gap:6px;padding:4px 4px;border-bottom:1px solid var(--border);font-size:12px;}
-
-    /* Inventory */
-    .inv-item{display:flex;align-items:center;gap:6px;padding:5px 6px;background:var(--surface2);border-radius:4px;margin-bottom:3px;font-size:12px;}
-    .eqdot{width:8px;height:8px;border-radius:50%;border:1px solid var(--border);cursor:pointer;flex-shrink:0;}
-    .eqdot.eq{background:var(--green);border-color:var(--green);}
-    .attdot{font-size:8px;color:var(--border);cursor:pointer;flex-shrink:0;line-height:1;}
-    .attdot.att{color:var(--accent);text-shadow:0 0 4px var(--accent);}
-    .iname{flex:1;}
-    .iqty{color:var(--text-dim);font-size:11px;}
-    .currow{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:6px;}
-    .coinbox{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:6px 4px;text-align:center;}
-    .coinl{font-size:8px;color:var(--text-dim);text-transform:uppercase;}
+    .pip{width:14px;height:14px;border-radius:50%;border:2px solid #6a5a48;cursor:pointer;transition:all .15s;}
+    .pip:hover{transform:scale(1.15);}
+    .pip.avail{background:#e8c060;border-color:#e8c060;box-shadow:0 0 4px rgba(232,192,96,0.4);}
+    .pip.used{background:#2a2420;border-color:#4a3a28;box-shadow:none;}
+    .sp-item{display:flex;align-items:center;gap:6px;padding:4px 4px;border-bottom:1px solid #2a2218;font-size:13px;}
+    .sp-desc{font-size:12px;color:#b09878;padding:2px 8px 6px;line-height:1.4;}
+    .inv-item{display:flex;align-items:center;gap:6px;padding:5px 6px;background:#2a2420;border-radius:4px;margin-bottom:3px;font-size:13px;}
+    .eqdot{width:8px;height:8px;border-radius:50%;border:1px solid #4a3a28;cursor:pointer;flex-shrink:0;}
+    .eqdot.eq{background:#3a8a3a;border-color:#3a8a3a;}
+    .attdot{font-size:8px;color:#4a3a28;cursor:pointer;flex-shrink:0;line-height:1;}
+    .attdot.att{color:#e8c060;text-shadow:0 0 4px #e8c060;}
+    .iname{flex:1;color:#e8d0a0;}
+    .iqty{color:#6a5a48;font-size:11px;}
+    .coinbox{background:#2a2420;border:1px solid #4a3a28;border-radius:4px;padding:6px 4px;text-align:center;}
+    .coinl{font-size:8px;color:#6a5a48;text-transform:uppercase;}
     .coinv{font-size:15px;font-weight:700;}
-
-    /* Features */
-    .feat{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:8px;margin-bottom:6px;}
-    .feat-name{font-weight:700;font-size:12px;color:#58180d;margin-bottom:2px;}
-    .feat-src{font-size:9px;color:var(--text-dim);margin-bottom:4px;}
-    .feat-desc{font-size:11px;color:var(--text-dim);line-height:1.4;}
-
-    /* Conditions */
+    .feat{background:#2a2420;border:1px solid #4a3a28;border-radius:4px;padding:8px;margin-bottom:6px;}
+    .feat-name{font-weight:700;font-size:13px;color:#e8c060;margin-bottom:2px;}
+    .feat-src{font-size:9px;color:#6a5a48;margin-bottom:4px;}
+    .feat-desc{font-size:12px;color:#b09878;line-height:1.4;}
     .condg{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;}
-    .cond{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:6px;text-align:center;font-size:11px;cursor:pointer;}
-    .cond.on{background:rgba(192,57,43,.2);border-color:var(--red);color:var(--red);}
-
-    /* Death saves */
+    .cond{background:#2a2420;border:1px solid #4a3a28;border-radius:4px;padding:6px;text-align:center;font-size:11px;cursor:pointer;color:#b09878;}
+    .cond.on{background:rgba(170,42,26,.2);border-color:#aa2a1a;color:#aa2a1a;}
     .dsrow{display:flex;gap:16px;align-items:center;padding:6px 0;}
     .dsgrp{display:flex;flex-direction:column;gap:4px;}
-    .dsl{font-size:9px;color:var(--text-dim);text-transform:uppercase;}
+    .dsl{font-size:9px;color:#6a5a48;text-transform:uppercase;}
     .dspips{display:flex;gap:4px;}
-    .dsp{width:14px;height:14px;border-radius:50%;border:1px solid var(--border);cursor:pointer;}
-    .dsp.s{background:var(--green);border-color:var(--green);}
-    .dsp.f{background:var(--red);border-color:var(--red);}
-
-    /* Dice */
+    .dsp{width:14px;height:14px;border-radius:50%;border:1px solid #4a3a28;cursor:pointer;}
+    .dsp.s{background:#3a8a3a;border-color:#3a8a3a;}
+    .dsp.f{background:#aa2a1a;border-color:#aa2a1a;}
     .diceg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px;}
-    .diebtn{padding:12px 4px;background:var(--surface2);border:1px solid var(--border);color:#58180d;border-radius:4px;font-family:Cinzel,serif;font-size:12px;text-align:center;}
-    .diebtn:active{background:var(--surface3);}
-    #rollres{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px;text-align:center;margin-top:4px;}
-    #rollnum{font-size:3rem;font-weight:700;color:#58180d;font-family:Cinzel,serif;line-height:1;}
-    #rolldtl{font-size:11px;color:var(--text-dim);margin-top:4px;}
+    .diebtn{padding:12px 4px;background:#2a2420;border:1px solid #4a3a28;color:#e8d0a0;border-radius:4px;font-family:Georgia,serif;font-size:13px;text-align:center;}
+    .diebtn:active{background:#352e26;}
+    #rollres{background:#2a2420;border:1px solid #4a3a28;border-radius:6px;padding:14px;text-align:center;margin-top:4px;}
+    #rollnum{font-size:3rem;font-weight:700;color:#e8c060;font-family:Georgia,serif;line-height:1;}
+    #rolldtl{font-size:11px;color:#6a5a48;margin-top:4px;}
     #rollhist{margin-top:8px;max-height:80px;overflow-y:auto;}
-    .rhi{font-size:10px;color:var(--text-dim);padding:1px 0;border-bottom:1px solid var(--border);}
-
-    /* Notes + Chat */
-    #notes-area{width:100%;min-height:180px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:8px;font-size:13px;line-height:1.5;resize:vertical;}
-    #chatlog{background:var(--surface2);border:1px solid var(--border);border-radius:4px;height:140px;overflow-y:auto;padding:8px;margin-bottom:8px;}
-    .chentry{margin-bottom:4px;font-size:12px;}
+    .rhi{font-size:10px;color:#6a5a48;padding:1px 0;border-bottom:1px solid #2a2218;}
+    #notes-area{width:100%;min-height:180px;background:#2a2420;border:1px solid #4a3a28;border-radius:4px;color:#e8d0a0;padding:8px;font-size:14px;line-height:1.5;resize:vertical;}
+    #chatlog{background:#2a2420;border:1px solid #4a3a28;border-radius:4px;height:140px;overflow-y:auto;padding:8px;margin-bottom:8px;}
+    .chentry{margin-bottom:4px;font-size:13px;}
     .chwho{font-weight:700;}
     #chatr{display:flex;gap:6px;}
     #chatin{flex:1;padding:7px 8px;}
-    .sendbtn{padding:7px 12px;background:#58180d;border:none;color:#f4ebd0;border-radius:4px;font-weight:700;}
-
-    /* Quest Journal */
-    .quest-item{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:6px;}
+    .sendbtn{padding:7px 12px;background:#8a6a20;border:none;color:#e8d0a0;border-radius:4px;font-weight:700;}
+    .quest-item{background:#2a2420;border:1px solid #4a3a28;border-radius:6px;padding:10px;margin-bottom:6px;}
     .quest-item.completed{opacity:0.5;}
-    .quest-title{font-family:Cinzel,serif;font-weight:700;font-size:13px;color:#58180d;display:flex;align-items:center;gap:6px;}
-    .quest-title .qi{font-size:14px;}
-    .quest-desc{font-size:12px;color:var(--text-dim);margin-top:4px;line-height:1.4;}
-    .quest-obj{font-size:11px;padding:3px 0 3px 16px;border-bottom:1px solid rgba(88,24,13,0.1);}
+    .quest-title{font-family:Georgia,serif;font-weight:700;font-size:14px;color:#e8c060;display:flex;align-items:center;gap:6px;}
+    .quest-desc{font-size:13px;color:#b09878;margin-top:4px;line-height:1.4;}
+    .quest-obj{font-size:12px;padding:3px 0 3px 16px;border-bottom:1px solid #2a2218;}
     .quest-obj:last-child{border:none;}
     .quest-obj.done{text-decoration:line-through;opacity:0.5;}
-    .quest-obj::before{content:'○ ';color:var(--accent-dim);}
-    .quest-obj.done::before{content:'● ';color:var(--green);}
+    .quest-obj::before{content:'- ';color:#6a5a48;}
+    .quest-obj.done::before{content:'* ';color:#3a8a3a;}
     .quest-badge{font-size:9px;padding:1px 5px;border-radius:8px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
-    .quest-badge.main{background:rgba(88,24,13,0.2);color:var(--accent);}
-    .quest-badge.side{background:rgba(26,58,90,0.2);color:var(--blue);}
+    .quest-badge.main{background:rgba(232,192,96,0.15);color:#e8c060;}
+    .quest-badge.side{background:rgba(58,106,138,0.2);color:#3a6a8a;}
+    @keyframes quest-glow{0%{box-shadow:0 0 12px rgba(232,192,96,0.4);}100%{box-shadow:none;}}
     .quest-new{animation:quest-glow 2s ease-out;}
-    @keyframes quest-glow{0%{box-shadow:0 0 12px rgba(201,165,78,0.4);}100%{box-shadow:none;}}
-
-    /* NPC Chat */
     .npc-chat-select{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;margin-bottom:8px;}
-    .npc-chat-btn{padding:8px 6px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;font-size:11px;text-align:center;cursor:pointer;}
-    .npc-chat-btn.active{background:rgba(88,24,13,0.15);border-color:var(--accent);color:var(--accent);font-weight:700;}
-    .npc-chat-btn .npc-disp{font-size:8px;color:var(--text-dim);margin-top:2px;}
-    #npc-chatlog{background:var(--surface2);border:1px solid var(--border);border-radius:4px;height:200px;overflow-y:auto;padding:8px;margin-bottom:8px;}
-    .npc-msg{margin-bottom:6px;font-size:12px;line-height:1.4;}
+    .npc-chat-btn{padding:8px 6px;background:#2a2420;border:1px solid #4a3a28;border-radius:4px;font-size:11px;text-align:center;cursor:pointer;color:#b09878;}
+    .npc-chat-btn.active{background:rgba(232,192,96,0.1);border-color:#e8c060;color:#e8c060;font-weight:700;}
+    .npc-chat-btn .npc-disp{font-size:8px;color:#6a5a48;margin-top:2px;}
+    #npc-chatlog{background:#2a2420;border:1px solid #4a3a28;border-radius:4px;height:200px;overflow-y:auto;padding:8px;margin-bottom:8px;}
+    .npc-msg{margin-bottom:6px;font-size:13px;line-height:1.4;}
     .npc-msg .nm-who{font-weight:700;font-size:11px;}
-    .npc-msg.from-npc .nm-who{color:var(--accent);}
-    .npc-msg.from-player .nm-who{color:var(--blue);}
+    .npc-msg.from-npc .nm-who{color:#e8c060;}
+    .npc-msg.from-player .nm-who{color:#3a6a8a;}
     .npc-msg .nm-text{margin-top:2px;}
-    .npc-thinking{color:var(--text-dim);font-style:italic;font-size:11px;padding:4px 0;}
-
-    /* Handouts */
-    .handout-item{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:6px;cursor:pointer;}
+    .npc-thinking{color:#6a5a48;font-style:italic;font-size:11px;padding:4px 0;}
+    .handout-item{background:#2a2420;border:1px solid #4a3a28;border-radius:6px;padding:10px;margin-bottom:6px;cursor:pointer;}
     .handout-item:active{opacity:0.7;}
-    .handout-item.unread{border-color:var(--accent);box-shadow:0 0 6px rgba(201,165,78,0.3);}
-    .handout-title{font-family:Cinzel,serif;font-weight:700;font-size:13px;color:#58180d;display:flex;align-items:center;gap:6px;}
-    .handout-preview{font-size:11px;color:var(--text-dim);margin-top:4px;max-height:40px;overflow:hidden;}
+    .handout-item.unread{border-color:#e8c060;box-shadow:0 0 6px rgba(232,192,96,0.3);}
+    .handout-title{font-family:Georgia,serif;font-weight:700;font-size:14px;color:#e8c060;}
+    .handout-preview{font-size:12px;color:#6a5a48;margin-top:4px;max-height:40px;overflow:hidden;}
     .handout-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;padding:16px;}
     .handout-modal.open{display:flex;}
-    .handout-content{background:var(--bg);border:2px solid #58180d;border-radius:6px;padding:16px;width:95%;max-width:400px;max-height:80vh;overflow-y:auto;}
-    .handout-content h3{font-family:Cinzel,serif;color:#58180d;margin-bottom:8px;}
+    .handout-content{background:#1e1a14;border:2px solid #4a3a28;border-radius:6px;padding:16px;width:95%;max-width:400px;max-height:80vh;overflow-y:auto;}
+    .handout-content h3{font-family:Georgia,serif;color:#e8c060;margin-bottom:8px;}
     .handout-content img{max-width:100%;border-radius:4px;margin:8px 0;}
-    .handout-content .hc-text{font-size:13px;line-height:1.5;}
-    .handout-close{position:absolute;top:8px;right:12px;background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;}
-
-    /* Inspiration popup */
-    #inspiration-popup{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:180;background:linear-gradient(135deg,#1a1008,#2a1a08);border:2px solid #c9a54e;border-radius:10px;padding:20px;text-align:center;box-shadow:0 0 40px rgba(201,165,78,0.4);animation:insp-appear 0.5s ease-out;}
+    .handout-content .hc-text{font-size:14px;line-height:1.5;}
+    .handout-close{position:absolute;top:8px;right:12px;background:none;border:none;color:#6a5a48;font-size:20px;cursor:pointer;}
+    #inspiration-popup{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:180;background:linear-gradient(135deg,#1e1a14,#2a2218);border:2px solid #e8c060;border-radius:10px;padding:20px;text-align:center;box-shadow:0 0 40px rgba(232,192,96,0.4);animation:insp-appear 0.5s ease-out;}
     @keyframes insp-appear{from{opacity:0;transform:translate(-50%,-50%) scale(0.8);}to{opacity:1;transform:translate(-50%,-50%) scale(1);}}
     #inspiration-popup .insp-star{font-size:48px;line-height:1;}
-    #inspiration-popup .insp-title{font-family:Cinzel,serif;color:#c9a54e;font-size:18px;font-weight:700;margin:8px 0 4px;}
-    #inspiration-popup .insp-reason{color:#b0a080;font-size:12px;max-width:250px;margin:0 auto;}
-    #inspiration-popup .insp-dismiss{margin-top:12px;padding:8px 20px;background:#58180d;border:none;color:#f4ebd0;border-radius:4px;font-weight:700;}
-
-    /* Edit modal */
+    #inspiration-popup .insp-title{font-family:Georgia,serif;color:#e8c060;font-size:18px;font-weight:700;margin:8px 0 4px;}
+    #inspiration-popup .insp-reason{color:#b09878;font-size:13px;max-width:250px;margin:0 auto;}
+    #inspiration-popup .insp-dismiss{margin-top:12px;padding:8px 20px;background:#8a6a20;border:none;color:#e8d0a0;border-radius:4px;font-weight:700;}
     #emodal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;}
     #emodal.open{display:flex;}
-    #einner{background:var(--bg);border:2px solid #58180d;border-radius:6px;padding:16px;width:92%;max-width:320px;}
-    #einner h3{font-family:Cinzel,serif;color:#58180d;margin-bottom:10px;font-size:14px;}
+    #einner{background:#1e1a14;border:2px solid #4a3a28;border-radius:6px;padding:16px;width:92%;max-width:320px;}
+    #einner h3{font-family:Georgia,serif;color:#e8c060;margin-bottom:10px;font-size:14px;}
     .ef{margin-bottom:8px;}
-    .ef label{display:block;font-size:10px;color:var(--text-dim);text-transform:uppercase;margin-bottom:3px;}
+    .ef label{display:block;font-size:10px;color:#6a5a48;text-transform:uppercase;margin-bottom:3px;}
     .ef input,.ef select,.ef textarea{width:100%;}
     .ebtns{display:flex;gap:6px;margin-top:10px;}
-    .ebtns button{flex:1;padding:8px;border-radius:4px;font-size:13px;font-weight:600;}
-    .bsave{background:#58180d;border:none;color:#f4ebd0;}
-    .bcancel{background:var(--surface3);border:1px solid var(--border);color:var(--text);}
-
-    /* Combat result */
-    #combatres{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;text-align:center;min-height:52px;}
-    /* YOUR TURN banner */
-    @keyframes your-turn-pulse { 0%,100%{box-shadow:0 0 8px rgba(88,24,13,0.3);} 50%{box-shadow:0 0 20px rgba(88,24,13,0.6);} }
-    #your-turn-banner{display:none;background:linear-gradient(135deg,#58180d,#8b4513);color:#f4ebd0;padding:14px 16px;border-radius:8px;margin-bottom:10px;text-align:center;animation:your-turn-pulse 2s infinite;}
-    #your-turn-banner .ytb-label{font-family:Cinzel,serif;font-size:20px;font-weight:700;letter-spacing:2px;text-transform:uppercase;}
+    .ebtns button{flex:1;padding:8px;border-radius:4px;font-size:14px;font-weight:600;}
+    .bsave{background:#8a6a20;border:none;color:#e8d0a0;}
+    .bcancel{background:#2a2420;border:1px solid #4a3a28;color:#b09878;}
+    #combatres{background:#2a2420;border:1px solid #4a3a28;border-radius:6px;padding:12px;text-align:center;min-height:52px;}
+    @keyframes your-turn-pulse{0%,100%{box-shadow:0 0 8px rgba(232,192,96,0.3);}50%{box-shadow:0 0 20px rgba(232,192,96,0.6);}}
+    #your-turn-banner{display:none;background:linear-gradient(135deg,#8a6a20,#6a4a10);color:#e8d0a0;padding:14px 16px;border-radius:8px;margin-bottom:10px;text-align:center;animation:your-turn-pulse 2s infinite;}
+    #your-turn-banner .ytb-label{font-family:Georgia,serif;font-size:20px;font-weight:700;letter-spacing:2px;text-transform:uppercase;}
     #your-turn-banner .ytb-sub{font-size:11px;opacity:0.8;margin-top:2px;}
-    /* Attack target selector */
-    #attack-target-section{display:none;margin-top:8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;}
-    #attack-target-section .ats-label{font-size:10px;color:var(--text-dim);text-transform:uppercase;font-weight:600;letter-spacing:0.5px;margin-bottom:4px;}
-    #attack-target-select{width:100%;padding:8px;font-size:13px;border-radius:4px;margin-bottom:6px;}
-    #apply-damage-btn{display:none;width:100%;padding:10px;background:#8b0000;border:none;color:#f4ebd0;border-radius:4px;font-weight:700;font-size:14px;min-height:44px;}
-    #apply-damage-btn:active{background:#6b0000;}
+    #attack-target-section{display:none;margin-top:8px;background:#2a2420;border:1px solid #4a3a28;border-radius:6px;padding:10px;}
+    #attack-target-section .ats-label{font-size:10px;color:#6a5a48;text-transform:uppercase;font-weight:600;letter-spacing:0.5px;margin-bottom:4px;}
+    #attack-target-select{width:100%;padding:8px;font-size:14px;border-radius:4px;margin-bottom:6px;}
+    #apply-damage-btn{display:none;width:100%;padding:10px;background:#aa2a1a;border:none;color:#e8d0a0;border-radius:4px;font-weight:700;font-size:14px;min-height:44px;}
+    #apply-damage-btn:active{background:#8a1a0a;}
     #attack-result-area{text-align:center;padding:8px;min-height:40px;}
-    /* Attack notification */
-    #attack-notification{display:none;background:rgba(139,0,0,0.15);border:1px solid var(--red);border-radius:6px;padding:10px;margin-bottom:8px;text-align:center;font-size:12px;}
-    /* Combat tracker (player) */
-    .ctp-row{display:flex;align-items:center;gap:6px;padding:7px 8px;border-bottom:1px solid var(--surface2);font-size:13px;}
-    .ctp-row.active-turn{background:rgba(88,24,13,0.15);border-left:4px solid var(--accent);font-weight:600;}
-    .ctp-row.is-me{font-weight:700;background:rgba(26,58,90,0.08);}
-    .ctp-row.is-me.active-turn{background:rgba(88,24,13,0.2);}
+    #attack-notification{display:none;background:rgba(170,42,26,0.15);border:1px solid #aa2a1a;border-radius:6px;padding:10px;margin-bottom:8px;text-align:center;font-size:13px;}
+    .ctp-row{display:flex;align-items:center;gap:6px;padding:7px 8px;border-bottom:1px solid #2a2420;font-size:14px;color:#b09878;}
+    .ctp-row.active-turn{background:rgba(232,192,96,0.1);border-left:4px solid #e8c060;font-weight:600;}
+    .ctp-row.is-me{font-weight:700;background:rgba(58,106,138,0.08);}
+    .ctp-row.is-me.active-turn{background:rgba(232,192,96,0.15);}
     .ctp-row.dead{opacity:0.3;text-decoration:line-through;}
-    .ctp-row .ctp-init{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent);font-family:monospace;font-size:13px;flex-shrink:0;background:var(--surface);border-radius:4px;}
+    .ctp-row .ctp-init{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#e8c060;font-family:monospace;font-size:14px;flex-shrink:0;background:#2a2420;border-radius:4px;}
     .ctp-row .ctp-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .ctp-row .ctp-name.pc{color:var(--blue);}
-    .ctp-row .ctp-name.npc{color:var(--accent-dim);}
+    .ctp-row .ctp-name.pc{color:#3a6a8a;}
+    .ctp-row .ctp-name.npc{color:#8a6a20;}
     .ctp-row .ctp-hp{font-family:monospace;font-size:11px;flex-shrink:0;}
-    .ctp-cond{font-size:9px;padding:2px 4px;border-radius:3px;background:var(--accent-dim);color:#fff;margin-left:2px;font-weight:600;}
-
-    /* Spell info bar */
-    .spellbar{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:7px 10px;font-size:11px;margin-bottom:6px;display:flex;gap:16px;}
-    .spellbar span{color:var(--text-dim);}
-    .spellbar strong{color:var(--text);}
-
-    /* ── DDB-inspired style enhancements ── */
-
-    /* Ability score boxes — shield/hex style */
-    .abbox{background:linear-gradient(135deg,var(--surface2),var(--surface));border:2px solid var(--border);border-radius:8px;padding:10px 4px;text-align:center;box-shadow:inset 0 1px 3px rgba(255,255,255,0.15),0 2px 6px rgba(0,0,0,0.15);position:relative;}
-    .abbox::before{content:'';position:absolute;inset:2px;border-radius:6px;border:1px solid rgba(88,24,13,0.12);pointer-events:none;}
-    .abm{font-size:28px;font-weight:700;color:#58180d;line-height:1;text-shadow:0 1px 2px rgba(0,0,0,0.1);}
-    .abs{font-size:11px;color:var(--text-dim);border:1.5px solid var(--border);border-radius:12px;padding:2px 8px;margin-top:4px;display:inline-block;cursor:pointer;background:var(--surface3);transition:border-color .2s;}
-    .abs:hover{border-color:var(--accent);background:rgba(88,24,13,0.08);}
-
-    /* HP bar — dramatic gradient */
-    #hpfill{background:linear-gradient(90deg,#e53935,#b71c1c,#880e0e);box-shadow:0 0 6px rgba(229,57,53,0.4);}
-    #tmpfill{background:linear-gradient(90deg,#42a5f5,#1565c0);box-shadow:0 0 6px rgba(66,165,245,0.3);}
-    .hpw{flex:1;background:rgba(0,0,0,0.2);border-radius:4px;height:14px;overflow:hidden;border:1px solid rgba(0,0,0,0.1);}
-
-    /* Section headers — serif with subtle underline */
-    .st{font-family:Cinzel,serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);border-bottom:2px solid var(--border);padding-bottom:4px;margin:14px 0 8px;background:linear-gradient(90deg,rgba(88,24,13,0.06),transparent);padding-left:6px;}
-    .st:first-child{margin-top:0;}
-
-    /* Skill list — alternating rows */
-    .skr{display:flex;align-items:center;gap:6px;padding:4px 6px;border-bottom:1px solid rgba(88,24,13,0.06);font-size:12px;border-radius:2px;transition:background .15s;}
-    .skr:nth-child(odd){background:rgba(88,24,13,0.03);}
-    .skr:hover{background:rgba(88,24,13,0.08);}
-    .skr:last-child{border:none;}
-
-    /* Attack cards — refined */
-    .atk-card{background:linear-gradient(135deg,var(--surface2),var(--surface));border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,0.08);}
-    .roll-btn{margin-top:8px;width:100%;padding:8px;background:linear-gradient(135deg,#58180d,#7a2010);border:none;color:#f4ebd0;border-radius:6px;font-weight:700;font-size:12px;box-shadow:0 2px 4px rgba(88,24,13,0.3);transition:box-shadow .2s;}
-    .roll-btn:active{box-shadow:inset 0 2px 4px rgba(0,0,0,0.3);}
-
-    /* Feature cards — refined */
-    .feat{background:linear-gradient(135deg,var(--surface2),var(--surface));border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
-    .feat-name{font-family:Cinzel,serif;font-weight:700;font-size:13px;color:#58180d;margin-bottom:3px;}
-
-    /* Spell slot pips — improved */
-    .pip{width:14px;height:14px;border-radius:50%;border:2px solid var(--accent-dim);cursor:pointer;transition:all .15s;}
-    .pip.avail{background:linear-gradient(135deg,#58180d,#7a2010);border-color:#58180d;box-shadow:0 0 4px rgba(88,24,13,0.4);}
-    .pip.used{background:var(--surface3);border-color:var(--border);box-shadow:none;}
-    .pip:hover{transform:scale(1.15);}
-
-    /* Vitals boxes — refined */
-    .vbox{text-align:center;background:linear-gradient(135deg,var(--surface3),var(--surface2));border-radius:6px;padding:6px 2px;cursor:pointer;border:1px solid rgba(0,0,0,0.08);transition:border-color .2s;}
-    .vbox:active{opacity:.7;border-color:var(--accent);}
-    .vv{font-size:18px;font-weight:700;color:#58180d;line-height:1.2;font-family:Cinzel,serif;}
-
-    /* Inventory items — refined */
-    .inv-item{display:flex;align-items:center;gap:6px;padding:6px 8px;background:linear-gradient(135deg,var(--surface2),var(--surface));border-radius:5px;margin-bottom:4px;font-size:12px;border:1px solid rgba(0,0,0,0.04);}
-
-    /* Dice buttons — refined */
-    .diebtn{padding:14px 4px;background:linear-gradient(135deg,var(--surface2),var(--surface));border:2px solid var(--border);color:#58180d;border-radius:8px;font-family:Cinzel,serif;font-size:13px;text-align:center;box-shadow:0 2px 4px rgba(0,0,0,0.08);transition:all .15s;}
-    .diebtn:active{background:var(--accent);color:#f4ebd0;border-color:var(--accent);box-shadow:inset 0 2px 4px rgba(0,0,0,0.2);}
-
-    /* Dread bar — enhanced */
-    .df{height:100%;background:linear-gradient(90deg,#9c27b0,#6a1a8a,#4a1a6a);border-radius:3px;transition:width .6s;box-shadow:0 0 6px rgba(106,26,138,0.4);}
-
-    /* ── Background tab styles ── */
-    .bg-identity{background:linear-gradient(135deg,var(--surface2),var(--surface));border:2px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.1);}
-    .bg-identity .bg-charname{font-family:Cinzel,serif;font-size:1.3rem;font-weight:700;color:#58180d;line-height:1.2;}
-    .bg-identity .bg-subtitle{font-size:12px;color:var(--text-dim);margin-top:2px;}
-    .bg-identity .bg-patron{font-size:11px;color:var(--accent-dim);margin-top:4px;font-style:italic;}
-    .bg-identity .bg-faith{font-size:10px;color:var(--text-dim);margin-top:2px;}
-
+    .ctp-cond{font-size:9px;padding:2px 4px;border-radius:3px;background:#8a6a20;color:#e8d0a0;margin-left:2px;font-weight:600;}
+    .spellbar{background:#2a2420;border:1px solid #4a3a28;border-radius:4px;padding:7px 10px;font-size:12px;margin-bottom:6px;display:flex;gap:16px;}
+    .spellbar span{color:#6a5a48;}
+    .spellbar strong{color:#e8d0a0;}
+    .hpr{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+    .hpl{font-size:9px;color:#6a5a48;text-transform:uppercase;width:32px;}
+    .hpw{flex:1;background:rgba(0,0,0,0.3);border-radius:3px;height:12px;overflow:hidden;}
+    .hpb{height:100%;border-radius:3px;transition:width .3s;}
+    #hpfill{background:linear-gradient(90deg,#aa2a1a,#8a1a0a);}
+    #tmpfill{background:linear-gradient(90deg,#3a6a8a,#2a4a6a);}
+    .hpt{font-size:11px;font-weight:700;min-width:52px;text-align:right;color:#e8d0a0;}
+    .hp-ctrl{display:grid;grid-template-columns:1fr 55px 1fr 55px 1fr;gap:5px;align-items:center;}
+    .hbtn{padding:7px 2px;border:1px solid #4a3a28;background:#2a2420;color:#b09878;border-radius:4px;font-size:13px;font-weight:600;text-align:center;}
+    .hbtn.dmg{border-color:#6a2a1a;color:#aa2a1a;}
+    .hbtn.heal{border-color:#2a4a2a;color:#3a8a3a;}
+    .hbtn.tmp{border-color:#2a4a6a;color:#3a6a8a;}
+    .ni{padding:6px 4px;text-align:center;width:100%;}
+    .vbox{text-align:center;background:#2a2420;border-radius:4px;padding:5px 2px;cursor:pointer;}
+    .vbox:active{opacity:.7;}
+    .vl{font-size:8px;color:#6a5a48;text-transform:uppercase;letter-spacing:.5px;}
+    .vv{font-size:17px;font-weight:700;color:#e8c060;line-height:1.2;}
+    .currow{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:6px;}
+    .bg-identity{background:#2a2420;border:1px solid #4a3a28;border-radius:8px;padding:14px;margin-bottom:10px;text-align:center;}
+    .bg-identity .bg-charname{font-family:Georgia,serif;font-size:1.3rem;font-weight:700;color:#e8c060;line-height:1.2;}
+    .bg-identity .bg-subtitle{font-size:13px;color:#6a5a48;margin-top:2px;}
+    .bg-identity .bg-patron{font-size:12px;color:#8a6a20;margin-top:4px;font-style:italic;}
+    .bg-identity .bg-faith{font-size:10px;color:#6a5a48;margin-top:2px;}
     .bg-section{margin-bottom:10px;}
-    .bg-section-hdr{font-family:Cinzel,serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);border-bottom:2px solid var(--border);padding-bottom:4px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(90deg,rgba(88,24,13,0.06),transparent);padding:4px 6px;border-radius:2px 2px 0 0;user-select:none;}
-    .bg-section-hdr .bg-toggle{font-size:12px;color:var(--text-dim);transition:transform .2s;}
+    .bg-section-hdr{font-family:Georgia,serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#e8c060;border-bottom:1px solid #3a3028;padding-bottom:4px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:4px 6px;user-select:none;}
+    .bg-section-hdr .bg-toggle{font-size:12px;color:#6a5a48;transition:transform .2s;}
     .bg-section-hdr.collapsed .bg-toggle{transform:rotate(-90deg);}
     .bg-section-body{overflow:hidden;transition:max-height .3s ease;}
     .bg-section-body.collapsed{max-height:0!important;overflow:hidden;}
-
     .bg-appear-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:6px;}
-    .bg-appear-item{background:var(--surface3);border:1px solid var(--border);border-radius:4px;padding:6px;text-align:center;}
-    .bg-appear-item .bg-al{font-size:8px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;}
-    .bg-appear-item .bg-av{font-size:12px;font-weight:600;color:var(--text);}
-    .bg-appear-desc{margin-top:8px;font-size:12px;color:var(--text-dim);line-height:1.5;font-style:italic;padding:8px;background:rgba(88,24,13,0.04);border-radius:4px;border-left:3px solid var(--border);}
-
+    .bg-appear-item{background:#2a2420;border:1px solid #4a3a28;border-radius:4px;padding:6px;text-align:center;}
+    .bg-appear-item .bg-al{font-size:8px;color:#6a5a48;text-transform:uppercase;letter-spacing:.5px;}
+    .bg-appear-item .bg-av{font-size:13px;font-weight:600;color:#e8d0a0;}
+    .bg-appear-desc{margin-top:8px;font-size:13px;color:#b09878;line-height:1.5;font-style:italic;padding:8px;background:#2a2218;border-radius:4px;border-left:3px solid #4a3a28;}
     .bg-personality-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
     @media(max-width:400px){.bg-personality-grid{grid-template-columns:1fr;}}
-    .bg-trait-card{background:linear-gradient(135deg,var(--surface),var(--bg));border:1px solid var(--border);border-radius:6px;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,0.06);position:relative;}
-    .bg-trait-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:6px 6px 0 0;background:var(--accent);opacity:0.4;}
-    .bg-trait-label{font-family:Cinzel,serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:4px;}
-    .bg-trait-text{font-size:12px;color:var(--text);line-height:1.5;}
-
-    .bg-backstory{background:linear-gradient(135deg,var(--surface),#f0e4c0);border:1px solid var(--border);border-radius:6px;padding:14px 16px;font-size:12px;line-height:1.7;color:var(--text);box-shadow:inset 0 0 20px rgba(184,151,90,0.15);position:relative;}
-    .bg-backstory::before{content:'';position:absolute;inset:3px;border:1px solid rgba(184,151,90,0.2);border-radius:4px;pointer-events:none;}
-
+    .bg-trait-card{background:#2a2420;border:1px solid #4a3a28;border-radius:6px;padding:10px;}
+    .bg-trait-label{font-family:Georgia,serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#e8c060;margin-bottom:4px;}
+    .bg-trait-text{font-size:13px;color:#e8d0a0;line-height:1.5;}
+    .bg-backstory{background:#2a2218;border:1px solid #4a3a28;border-radius:6px;padding:14px 16px;font-size:13px;line-height:1.7;color:#b09878;}
     .bg-allies-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
     @media(max-width:400px){.bg-allies-grid{grid-template-columns:1fr;}}
-    .bg-ally-card{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;}
-    .bg-ally-card.enemies{border-color:rgba(139,0,0,0.3);background:rgba(139,0,0,0.04);}
-    .bg-ally-label{font-family:Cinzel,serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent-dim);margin-bottom:4px;}
-    .bg-ally-card.enemies .bg-ally-label{color:var(--red);}
-    .bg-ally-text{font-size:12px;color:var(--text);line-height:1.4;}
-
-    /* Kiosk mode — hides browser chrome indicators, fullscreen feel */
+    .bg-ally-card{background:#2a2420;border:1px solid #4a3a28;border-radius:6px;padding:10px;}
+    .bg-ally-card.enemies{border-color:rgba(170,42,26,0.3);background:rgba(170,42,26,0.04);}
+    .bg-ally-label{font-family:Georgia,serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#8a6a20;margin-bottom:4px;}
+    .bg-ally-card.enemies .bg-ally-label{color:#aa2a1a;}
+    .bg-ally-text{font-size:13px;color:#e8d0a0;line-height:1.4;}
+    .eq-item{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid #2a2218;}
+    .eq-item.broken{opacity:0.5;text-decoration:line-through;color:#6a3020;}
+    .eq-pip{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+    .eq-pip-0{background:#3a8a3a;}.eq-pip-1{background:#7a8a20;}.eq-pip-2{background:#c87828;}.eq-pip-3{background:#aa2a1a;}.eq-pip-4{background:#4a3a28;}
+    .eq-name{flex:1;font-size:12px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#e8d0a0;}
+    .eq-cond{font-size:9px;color:#6a5a48;flex-shrink:0;}
+    .eq-ammo-row{display:flex;align-items:center;gap:6px;padding:3px 0;}
+    .eq-ammo-count{font-family:monospace;font-size:14px;color:#e8c060;font-weight:700;min-width:24px;text-align:right;}
+    .eq-ammo-label{font-size:12px;color:#b09878;}
+    .eq-comp-item{display:flex;align-items:center;gap:6px;padding:2px 0;font-size:12px;color:#b09878;}
+    .eq-comp-item.depleted{text-decoration:line-through;color:#4a3a28;}
+    .eq-healer-bar{height:6px;background:#161210;border-radius:3px;overflow:hidden;margin:4px 0;}
+    .eq-healer-fill{height:100%;background:#3a8a3a;border-radius:3px;transition:width 0.3s;}
+    #cast-result{display:none;background:#2a2420;border:1px solid #e8c060;border-radius:6px;padding:10px;margin-bottom:8px;}
     body.kiosk #topbar{display:none;}
     body.kiosk{padding-top:0;}
     body.kiosk #app{padding-top:env(safe-area-inset-top);}
-    body.kiosk .tab-bar{position:fixed;bottom:0;left:0;right:0;z-index:100;}
-    body.kiosk #toast-layer{bottom:50px;}
   </style>
 </head>
 <body>
-<div id="overlay"><h1>⛧ Dark Pilgrimage</h1><p id="ovmsg">Connecting to Co-DM...</p></div>
+<!-- Fixed overlays -->
+<div id="death-vignette"></div>
+<div id="overlay"><h1>Dark Pilgrimage</h1><p id="ovmsg">Connecting to Co-DM...</p></div>
 <div id="horror-layer"></div>
 <div id="dread-vignette"></div>
 <div id="toast-layer"></div>
-<!-- Persistent wound body overlay — always visible, lower right -->
-<div id="wound-overlay" onclick="WoundPanel.toggleOverlay()" style="position:fixed;bottom:12px;right:12px;z-index:90;cursor:pointer;opacity:0.7;transition:opacity 0.2s;">
-  <svg viewBox="-10 -10 140 280" width="56" height="112" style="filter:drop-shadow(0 0 4px rgba(0,0,0,0.8));">
-    <!-- Stamina ring arc around the body -->
-    <circle id="stamina-ring-bg" cx="60" cy="130" r="68" fill="none" stroke="#222" stroke-width="3" stroke-dasharray="427" stroke-dashoffset="0" opacity="0.3"/>
-    <circle id="stamina-ring" cx="60" cy="130" r="68" fill="none" stroke="#c9a54e" stroke-width="3" stroke-dasharray="427" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 60 130)"/>
-    <!-- Body silhouette -->
-    <ellipse id="wo-head" cx="60" cy="28" rx="18" ry="22" fill="#1a3a1a" stroke="#222" stroke-width="1.5"/>
-    <path id="wo-torso" d="M38,52 L82,52 L86,140 L34,140 Z" fill="#1a3a1a" stroke="#222" stroke-width="1.5"/>
-    <path id="wo-rightArm" d="M34,56 L22,56 L10,110 L14,112 L24,70 L34,80 Z" fill="#1a3a1a" stroke="#222" stroke-width="1.5"/>
-    <path id="wo-leftArm" d="M86,56 L98,56 L110,110 L106,112 L96,70 L86,80 Z" fill="#1a3a1a" stroke="#222" stroke-width="1.5"/>
-    <path id="wo-rightLeg" d="M38,140 L54,140 L52,210 L56,250 L44,250 L46,210 L34,170 Z" fill="#1a3a1a" stroke="#222" stroke-width="1.5"/>
-    <path id="wo-leftLeg" d="M66,140 L82,140 L86,170 L74,210 L76,250 L64,250 L68,210 Z" fill="#1a3a1a" stroke="#222" stroke-width="1.5"/>
-  </svg>
-  <style>
-    @keyframes stam-pulse-slow { 0%,100%{opacity:1} 50%{opacity:0.6} }
-    @keyframes stam-pulse-fast { 0%,100%{opacity:1} 50%{opacity:0.3} }
-    @keyframes stam-pulse-rapid { 0%,100%{opacity:1} 50%{opacity:0.15} }
-    .stam-winded #stamina-ring { stroke:#e0a020; animation: stam-pulse-slow 3s ease-in-out infinite; }
-    .stam-exhausted #stamina-ring { stroke:#e06020; animation: stam-pulse-fast 1.5s ease-in-out infinite; }
-    .stam-spent #stamina-ring { stroke:#c02020; animation: stam-pulse-rapid 0.8s ease-in-out infinite; }
-    .stam-collapsed #stamina-ring { stroke:#401010; stroke-dasharray:15 25; animation: none; opacity:0.5; }
-  </style>
-</div>
-<!-- Speak input at bottom -->
-<div id="speak-bar" style="position:fixed;bottom:0;left:0;right:0;z-index:80;background:rgba(10,10,18,0.95);border-top:1px solid #333;padding:6px 8px;display:flex;gap:6px;">
-  <input type="text" id="speak-input" placeholder="Speak..." style="flex:1;padding:6px 10px;background:#1e1e28;border:1px solid #333;border-radius:4px;color:#f0ece6;font-size:12px;font-family:inherit;" onkeydown="if(event.key==='Enter')playerSpeak()">
-  <button onclick="playerSpeak()" style="padding:6px 14px;background:#8a7030;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer;">Send</button>
-</div>
-<div id="wound-overlay-detail" style="display:none;position:fixed;bottom:12px;right:68px;z-index:91;background:rgba(10,10,18,0.95);border:1px solid #333;border-radius:8px;padding:10px 12px;max-width:200px;font-size:11px;color:#e8e0d0;">
-  <div id="wo-detail-text" style="font-style:italic;line-height:1.5;"></div>
-</div>
+
+<!-- ═══ MAIN APP ═══ -->
 <div id="app">
+
+  <!-- OBSERVATION ZONE — italic fade-in messages, auto-remove after 45s -->
+  <div id="observation-zone" style="position:fixed;top:0;left:0;right:0;z-index:200;pointer-events:none;padding:12px 20px;display:flex;flex-direction:column;gap:6px;"></div>
+
+  <!-- TOP BAR — 48px -->
   <div id="topbar">
-    <div><div class="char-title" id="cname">—</div><div class="char-sub" id="csub">—</div></div>
+    <div>
+      <div class="char-title" id="cname">&#x2014;</div>
+      <div class="char-sub" id="csub">&#x2014;</div>
+    </div>
     <div id="conn-dot"></div>
   </div>
-  <div id="vitals">
-    <div class="vbox" onclick="editVital('ac')"><div class="vl">AC</div><div class="vv" id="vac">—</div></div>
-    <div class="vbox" onclick="editVital('initiative')"><div class="vl">Init</div><div class="vv" id="vinit">—</div></div>
-    <div class="vbox" onclick="editVital('speed')"><div class="vl">Speed</div><div class="vv" id="vspd">—</div><div style="font-size:8px;color:var(--text-dim);">ft</div></div>
-    <div class="vbox"><div class="vl">Prof</div><div class="vv" id="vprof">—</div></div>
-    <div class="vbox" onclick="editVital('inspiration')"><div class="vl">Inspire</div><div class="vv" id="vinsp">☆</div></div>
+
+  <!-- OBSERVATION ZONE — 40px -->
+  <div id="zone-observation">
+    <div id="observation-text"></div>
   </div>
-  <div id="hp-block" style="display:none;">
-    <div class="hpr"><span class="hpl">HP</span><div class="hpw"><div class="hpb" id="hpfill" style="width:100%"></div></div><span class="hpt" id="hptxt">—/—</span></div>
+
+  <!-- BODY ZONE — 220px -->
+  <div id="zone-body">
+    <div id="wound-overlay" onclick="WoundPanel.toggleOverlay()">
+      <svg viewBox="-10 -10 140 280" width="120" height="200" style="filter:drop-shadow(0 0 6px rgba(0,0,0,0.8));">
+        <circle id="stamina-ring-bg" cx="60" cy="130" r="68" fill="none" stroke="#3a3028" stroke-width="4" stroke-dasharray="427" stroke-dashoffset="0" opacity="0.4"/>
+        <circle id="stamina-ring" cx="60" cy="130" r="68" fill="none" stroke="#e8c060" stroke-width="4" stroke-dasharray="427" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 60 130)"/>
+        <ellipse id="wo-head" cx="60" cy="28" rx="18" ry="22" fill="#3a8a3a" stroke="#4a4030" stroke-width="1"/>
+        <path id="wo-torso" d="M38,52 L82,52 L86,140 L34,140 Z" fill="#3a8a3a" stroke="#4a4030" stroke-width="1"/>
+        <path id="wo-rightArm" d="M34,56 L22,56 L10,110 L14,112 L24,70 L34,80 Z" fill="#3a8a3a" stroke="#4a4030" stroke-width="1"/>
+        <path id="wo-leftArm" d="M86,56 L98,56 L110,110 L106,112 L96,70 L86,80 Z" fill="#3a8a3a" stroke="#4a4030" stroke-width="1"/>
+        <path id="wo-rightLeg" d="M38,140 L54,140 L52,210 L56,250 L44,250 L46,210 L34,170 Z" fill="#3a8a3a" stroke="#4a4030" stroke-width="1"/>
+        <path id="wo-leftLeg" d="M66,140 L82,140 L86,170 L74,210 L76,250 L64,250 L68,210 Z" fill="#3a8a3a" stroke="#4a4030" stroke-width="1"/>
+      </svg>
+    </div>
+    <div id="body-narrative"></div>
+  </div>
+  <!-- Wound overlay detail popup -->
+  <div id="wound-overlay-detail" style="display:none;">
+    <div id="wo-detail-text" style="font-style:italic;line-height:1.5;"></div>
+  </div>
+
+  <!-- TAB BAR -->
+  <div id="tab-bar">
+    <button class="tab-btn active" data-tab="condition" onclick="switchTab('condition')">Condition</button>
+    <button class="tab-btn" data-tab="arms" onclick="switchTab('arms')">Arms &amp; Armor</button>
+    <button class="tab-btn" data-tab="magic" onclick="switchTab('magic')">Gifts &amp; Magic</button>
+    <button class="tab-btn" data-tab="soul" onclick="switchTab('soul')">Soul</button>
+    <button class="tab-btn" data-tab="numbers" onclick="switchTab('numbers')">Numbers</button>
+  </div>
+
+  <!-- GRIMOIRE CONTENT — scrollable, fills remaining -->
+  <div id="grimoire-content">
+    <!-- TAB: CONDITION -->
+    <div class="gtab active" id="gtab-condition">
+    <div class="gsection-label" style="display:none;">Condition</div>
+    <div id="grimoire-condition"></div>
+
+    </div><!-- end gtab-condition -->
+
+    <!-- TAB: ARMS & ARMOR -->
+    <div class="gtab" id="gtab-arms">
+    <div class="gsection-label" style="display:none;">Arms &amp; Armor</div>
+    <div id="grimoire-arms">
+      <div class="panel" id="panel-inventory">
+        <div id="inv-attune" style="font-size:10px;color:#6a5a48;margin-bottom:4px;"></div>
+        <div id="inv-weight" style="font-size:10px;color:#6a5a48;margin-bottom:6px;"></div>
+        <div id="invlist"></div>
+        <div class="st">Currency</div><div class="currow" id="currow"></div>
+        <div style="display:flex;gap:4px;margin-top:8px;">
+          <button class="add-btn" style="flex:1;" onclick="openAddItem()">+ Manual</button>
+          <button class="add-btn" style="flex:1;" onclick="openSrdItemSearch()">+ SRD Item</button>
+        </div>
+        <div id="srd-item-search" style="display:none;margin-top:6px;">
+          <input id="srd-item-q" type="text" placeholder="Search SRD items..." style="width:100%;padding:4px 8px;font-size:12px;" oninput="searchSrdItems()">
+          <div id="srd-item-results" style="max-height:200px;overflow-y:auto;font-size:12px;margin-top:4px;"></div>
+        </div>
+      </div>
+      <div class="panel" id="panel-equip">
+        <div class="st">Equipment Condition</div>
+        <div id="equip-items" style="margin-bottom:8px;"></div>
+        <div id="equip-ammo-section" style="display:none;"><div class="st">Ammunition</div><div id="equip-ammo"></div></div>
+        <div id="equip-components-section" style="display:none;"><div class="st">Spell Components</div><div id="equip-components"></div></div>
+        <div id="equip-healer-section" style="display:none;"><div class="st">Healer's Kit</div><div id="equip-healer"></div></div>
+      </div>
+    </div>
+
+    </div><!-- end gtab-arms -->
+
+    <!-- TAB: GIFTS & MAGIC -->
+    <div class="gtab" id="gtab-magic">
+    <div class="gsection-label" style="display:none;">Gifts &amp; Magic</div>
+    <div id="grimoire-magic">
+      <div class="panel" id="panel-spells">
+        <div id="cast-result" style="display:none;background:#2a2420;border:1px solid #e8c060;border-radius:6px;padding:10px;margin-bottom:8px;">
+          <div id="cast-result-name" style="font-family:Georgia,serif;color:#e8c060;font-size:14px;margin-bottom:4px;"></div>
+          <div id="cast-result-details" style="font-size:13px;line-height:1.6;"></div>
+          <div id="cast-result-total" style="font-size:28px;font-weight:700;color:#e8c060;text-align:center;margin:6px 0;"></div>
+          <div id="cast-result-breakdown" style="font-size:12px;color:#6a5a48;text-align:center;"></div>
+          <button style="width:100%;margin-top:8px;padding:6px;background:#2a2420;border:1px solid #4a3a28;border-radius:3px;color:#6a5a48;font-size:12px;cursor:pointer;" onclick="$('cast-result').style.display='none'">Dismiss</button>
+        </div>
+        <div class="spellbar" id="spellbar"></div>
+        <div class="st">Spell Slots</div><div id="slotarea"></div>
+        <div class="st">Cantrips</div><div id="cantrips"></div>
+        <div class="st">Spells</div><div id="spelllist"></div>
+        <div style="display:flex;gap:4px;">
+          <button class="add-btn" style="flex:1;" onclick="openAddSpell()">+ Manual</button>
+          <button class="add-btn" style="flex:1;" onclick="openSrdSpellSearch()">+ SRD Spell</button>
+        </div>
+        <div id="srd-spell-search" style="display:none;margin-top:6px;">
+          <input id="srd-spell-q" type="text" placeholder="Search SRD spells..." style="width:100%;padding:4px 8px;font-size:12px;" oninput="searchSrdSpells()">
+          <div id="srd-spell-results" style="max-height:200px;overflow-y:auto;font-size:12px;margin-top:4px;"></div>
+        </div>
+      </div>
+    </div>
+
+    </div><!-- end gtab-magic -->
+
+    <!-- TAB: SOUL -->
+    <div class="gtab" id="gtab-soul">
+    <div class="gsection-label" style="display:none;">Soul</div>
+    <div id="grimoire-soul">
+      <div class="panel" id="panel-background">
+        <div class="bg-identity" id="bg-identity"></div>
+        <div class="bg-section"><div class="bg-section-hdr" onclick="toggleBgSection('bg-appear')">Appearance <span class="bg-toggle">&#9660;</span></div><div class="bg-section-body" id="bg-appear"></div></div>
+        <div class="bg-section"><div class="bg-section-hdr" onclick="toggleBgSection('bg-personality')">Personality <span class="bg-toggle">&#9660;</span></div><div class="bg-section-body" id="bg-personality"></div></div>
+        <div class="bg-section"><div class="bg-section-hdr" onclick="toggleBgSection('bg-backstory')">Backstory <span class="bg-toggle">&#9660;</span></div><div class="bg-section-body" id="bg-backstory"></div></div>
+        <div class="bg-section"><div class="bg-section-hdr" onclick="toggleBgSection('bg-allies')">Allies, Organizations &amp; Enemies <span class="bg-toggle">&#9660;</span></div><div class="bg-section-body" id="bg-allies"></div></div>
+      </div>
+    </div>
+
+    </div><!-- end gtab-soul -->
+
+    <!-- TAB: NUMBERS -->
+    <div class="gtab" id="gtab-numbers">
+    <div class="gsection-label" style="display:none;">Numbers</div>
+    <div id="grimoire-numbers">
+      <div class="panel" id="panel-stats">
+        <div class="big-stats">
+          <div class="big-stat"><div class="big-stat-val" id="vac">&#x2014;</div><div class="big-stat-label">AC</div></div>
+          <div class="big-stat"><div class="big-stat-val" id="vinit">&#x2014;</div><div class="big-stat-label">Initiative</div></div>
+          <div class="big-stat"><div class="big-stat-val" id="vspd">&#x2014;</div><div class="big-stat-label">Speed</div></div>
+          <div class="big-stat"><div class="big-stat-val" id="vprof">&#x2014;</div><div class="big-stat-label">Proficiency</div></div>
+          <div class="big-stat"><div class="big-stat-val" id="vinsp">&#x2606;</div><div class="big-stat-label">Inspiration</div></div>
+        </div>
+        <div class="st">Abilities</div>
+        <div class="abg" id="abgrid"></div>
+        <div class="st">Saving Throws</div><div id="savelist"></div>
+        <div class="st">Death Saves</div>
+        <div class="dsrow">
+          <div class="dsgrp"><div class="dsl">Successes</div><div class="dspips"><div class="dsp" id="dss0" onclick="tds('s',0)"></div><div class="dsp" id="dss1" onclick="tds('s',1)"></div><div class="dsp" id="dss2" onclick="tds('s',2)"></div></div></div>
+          <div class="dsgrp"><div class="dsl">Failures</div><div class="dspips"><div class="dsp" id="dsf0" onclick="tds('f',0)"></div><div class="dsp" id="dsf1" onclick="tds('f',1)"></div><div class="dsp" id="dsf2" onclick="tds('f',2)"></div></div></div>
+          <button class="hbtn" style="padding:4px 10px;font-size:11px;" onclick="rds()">Reset</button>
+        </div>
+        <div class="st">Conditions</div><div class="condg" id="condg"></div>
+      </div>
+      <div class="panel" id="panel-skills"><div id="sklist"></div></div>
+      <div class="panel" id="panel-combat">
+        <div id="your-turn-banner"><div class="ytb-label">Your Turn!</div><div class="ytb-sub">Choose an action below</div></div>
+        <div id="attack-notification"></div>
+        <div id="combat-tracker-player" style="display:none;margin-bottom:12px;">
+          <div class="st" style="display:flex;justify-content:space-between;align-items:center;"><span>Initiative Order</span><span id="ctp-round" style="font-size:10px;color:#e8c060;font-family:Georgia,serif;">Round 1</span></div>
+          <div id="ctp-order" style="max-height:220px;overflow-y:auto;"></div>
+        </div>
+        <div class="st">Attacks &amp; Actions</div><div id="atklist"></div>
+        <button class="add-btn" onclick="openAddAtk()">+ Add Attack</button>
+        <div id="attack-target-section">
+          <div class="ats-label">Target</div>
+          <select id="attack-target-select"><option value="">Select target...</option></select>
+          <div id="attack-result-area"><span style="color:#6a5a48;font-size:13px;">Roll an attack above</span></div>
+          <button id="apply-damage-btn" onclick="applyPendingDamage()">Apply Damage</button>
+        </div>
+        <div class="st">Last Roll</div>
+        <div id="combatres"><span style="color:#6a5a48;font-size:13px;">No roll yet</span></div>
+      </div>
+    </div>
+
+    <!-- Wounds panel (for healing buttons, references) -->
+    <div class="panel" id="panel-wounds" style="display:none;">
+      <svg id="wound-body" viewBox="0 0 120 260" width="1" height="1" style="position:absolute;opacity:0;">
+        <ellipse id="wb-head" cx="60" cy="28" rx="18" ry="22" fill="#3a8a3a" stroke="#4a4030" stroke-width="1" onclick="WoundPanel.select('head')" style="cursor:pointer;"/>
+        <path id="wb-torso" d="M38,52 L82,52 L86,140 L34,140 Z" fill="#3a8a3a" stroke="#4a4030" stroke-width="1" onclick="WoundPanel.select('torso')" style="cursor:pointer;"/>
+        <path id="wb-rightArm" d="M34,56 L22,56 L10,110 L14,112 L24,70 L34,80 Z" fill="#3a8a3a" stroke="#4a4030" stroke-width="1" onclick="WoundPanel.select('rightArm')" style="cursor:pointer;"/>
+        <path id="wb-leftArm" d="M86,56 L98,56 L110,110 L106,112 L96,70 L86,80 Z" fill="#3a8a3a" stroke="#4a4030" stroke-width="1" onclick="WoundPanel.select('leftArm')" style="cursor:pointer;"/>
+        <path id="wb-rightLeg" d="M38,140 L54,140 L52,210 L56,250 L44,250 L46,210 L34,170 Z" fill="#3a8a3a" stroke="#4a4030" stroke-width="1" onclick="WoundPanel.select('rightLeg')" style="cursor:pointer;"/>
+        <path id="wb-leftLeg" d="M66,140 L82,140 L86,170 L74,210 L76,250 L64,250 L68,210 Z" fill="#3a8a3a" stroke="#4a4030" stroke-width="1" onclick="WoundPanel.select('leftLeg')" style="cursor:pointer;"/>
+      </svg>
+      <div id="wound-limb-name" style="display:none;">Select a region</div>
+      <div id="wound-desc" style="display:none;">Tap any part of the body to see your condition.</div>
+      <div id="wound-summary" style="display:none;"></div>
+    </div>
+
+    </div><!-- end gtab-numbers -->
+
+    <!-- HEALING — always visible at bottom of grimoire -->
+    <div class="gsection-label">Tend Your Wounds</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button onclick="useHealing('potion',7)" style="flex:1;min-width:80px;padding:8px;font-size:13px;background:#2a2420;border:1px solid #3a3028;color:#3a8a3a;border-radius:6px;cursor:pointer;">Potion</button>
+      <button onclick="useHealing('greater',14)" style="flex:1;min-width:80px;padding:8px;font-size:13px;background:#2a2420;border:1px solid #3a3028;color:#3a8a3a;border-radius:6px;cursor:pointer;">Greater Potion</button>
+      <button onclick="useHealing('superior',28)" style="flex:1;min-width:80px;padding:8px;font-size:13px;background:#2a2420;border:1px solid #3a3028;color:#3a8a3a;border-radius:6px;cursor:pointer;">Superior Potion</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:6px;align-items:center;">
+      <button onclick="useHealingCustom()" style="flex:1;padding:8px;font-size:13px;background:#2a2420;border:1px solid #3a3028;color:#3a8a3a;border-radius:6px;cursor:pointer;">Heal</button>
+      <input type="number" id="heal-amt" min="1" max="999" value="1" style="width:60px;padding:6px;text-align:center;">
+      <span style="font-size:12px;color:#6a5a48;">HP</span>
+    </div>
+    <div id="heal-feedback" style="font-size:13px;color:#3a8a3a;font-style:italic;margin-top:6px;min-height:18px;"></div>
+
+    <!-- Extra spacing at bottom -->
+    <div style="height:40px;"></div>
+  </div>
+
+  <!-- INPUT BAR — 56px -->
+  <div id="input-bar">
+    <input type="text" id="speak-input" placeholder="Speak..." onkeydown="if(event.key==='Enter')playerSpeak()">
+    <button class="journal-btn" id="journal-open" title="Journal">&#x2767;</button>
+  </div>
+</div>
+
+<!-- NPC DIALOGUE CARD — above input bar -->
+<div id="npc-dialogue-card" onclick="this.classList.remove('visible')">
+  <div class="npc-name" id="npc-dialogue-name"></div>
+  <div class="npc-response" id="npc-dialogue-text"></div>
+</div>
+
+<!-- JOURNAL PANEL -->
+<div id="journal-panel" onclick="if(event.target===this)this.classList.remove('open')">
+  <div id="journal-inner">
+    <div id="journal-header">Your Account</div>
+    <div id="journal-body">
+      <div class="panel" id="panel-journal">
+        <div id="journal-list"><div class="journal-empty">Your story begins.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HIDDEN PANELS (exist for JS references, never visible) -->
+<div id="hidden-panels">
+  <!-- HP block -->
+  <div id="hp-block">
+    <div class="hpr"><span class="hpl">HP</span><div class="hpw"><div class="hpb" id="hpfill" style="width:100%"></div></div><span class="hpt" id="hptxt">-/-</span></div>
     <div class="hpr"><span class="hpl">Temp</span><div class="hpw"><div class="hpb" id="tmpfill" style="width:0%"></div></div><span class="hpt" id="tmptxt">0</span></div>
     <div class="hp-ctrl">
-      <button class="hbtn dmg" onclick="adjHp(-1)">— Damage</button>
+      <button class="hbtn dmg" onclick="adjHp(-1)">- Damage</button>
       <input class="ni" id="hpamt" type="number" min="1" max="999" value="1">
       <button class="hbtn heal" onclick="adjHp(1)">+ Heal</button>
       <input class="ni" id="tmpamt" type="number" min="1" max="999" value="1">
       <button class="hbtn tmp" onclick="addTmp()">+ Temp</button>
     </div>
   </div>
-  <div id="dread-strip">
-    <div class="dr"><span class="dl">Dread</span><div class="dw"><div class="df" id="dfill" style="width:0%"></div></div><span class="dv" id="dval">0/100</span></div>
-  </div>
+  <!-- Dread -->
+  <div id="dread-strip"><div class="dr"><span class="dl">Dread</span><div class="dw"><div class="df" id="dfill" style="width:0%"></div></div><span class="dv" id="dval">0/100</span></div></div>
+  <!-- Tabs -->
   <div id="tabs">
-    <div class="tab active" onclick="showTab('stats')">Stats</div>
-    <div class="tab" onclick="showTab('map')">Map</div>
-    <div class="tab" onclick="showTab('combat')">Combat</div>
-    <div class="tab" onclick="showTab('spells')">Spells</div>
-    <div class="tab" onclick="showTab('skills')">Skills</div>
-    <div class="tab" onclick="showTab('inventory')">Items</div>
-    <div class="tab" onclick="showTab('features')">Features</div>
-    <div class="tab" onclick="showTab('background')">Background</div>
-    <div class="tab" onclick="showTab('dice')">Dice</div>
-    <div class="tab" onclick="showTab('chat')">Chat</div>
-    <div class="tab" onclick="showTab('journal')">Journal</div>
-    <div class="tab" onclick="showTab('wounds')">Body</div>
-    <div class="tab" onclick="showTab('equip')">Equip</div>
-    <div class="tab" onclick="showTab('npcchat')">NPC</div>
-    <div class="tab" onclick="showTab('handouts')">Docs</div>
-    <div class="tab" onclick="showTab('notes')">Notes</div>
+    <div class="tab active">Stats</div><div class="tab">Map</div><div class="tab">Combat</div><div class="tab">Spells</div><div class="tab">Skills</div><div class="tab">Items</div><div class="tab">Features</div><div class="tab">Background</div><div class="tab">Dice</div><div class="tab">Chat</div><div class="tab">Journal</div><div class="tab">Body</div><div class="tab">Equip</div><div class="tab">NPC</div><div class="tab">Docs</div><div class="tab">Notes</div>
   </div>
-  <!-- MAP -->
+  <!-- Vitals -->
+  <div id="vitals">
+    <div class="vbox" onclick="editVital('ac')"><div class="vl">AC</div><div class="vv">-</div></div>
+    <div class="vbox" onclick="editVital('initiative')"><div class="vl">Init</div><div class="vv">-</div></div>
+    <div class="vbox" onclick="editVital('speed')"><div class="vl">Speed</div><div class="vv">-</div></div>
+    <div class="vbox"><div class="vl">Prof</div><div class="vv">-</div></div>
+    <div class="vbox" onclick="editVital('inspiration')"><div class="vl">Inspire</div><div class="vv">-</div></div>
+  </div>
+  <!-- Map -->
   <div class="panel" id="panel-map" style="padding:0;position:relative;overflow:hidden;">
     <canvas id="player-map-canvas" style="display:block;width:100%;touch-action:none;"></canvas>
-    <div id="zone-banner" style="display:none;position:absolute;top:0;left:0;right:0;background:rgba(15,15,20,0.9);border-bottom:2px solid var(--accent-dim);padding:10px 14px;text-align:center;z-index:10;">
-      <div style="font-family:Cinzel,serif;color:var(--accent);font-size:13px;" id="zone-banner-text"></div>
+    <div id="zone-banner" style="display:none;position:absolute;top:0;left:0;right:0;background:rgba(15,15,20,0.9);border-bottom:2px solid #8a6a20;padding:10px 14px;text-align:center;z-index:10;">
+      <div style="font-family:Georgia,serif;color:#e8c060;font-size:14px;" id="zone-banner-text"></div>
     </div>
     <button id="rotate-btn" onclick="PlayerMap._toggleRotateMode()" style="position:absolute;bottom:8px;right:8px;z-index:10;background:rgba(30,30,40,0.85);color:#aaa;border:1px solid #555;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;">Rotate</button>
   </div>
-  <!-- STATS -->
-  <div class="panel active" id="panel-stats">
-    <div class="abg" id="abgrid"></div>
-    <div class="st">Saving Throws</div><div id="savelist"></div>
-    <div class="st">Death Saves</div>
-    <div class="dsrow">
-      <div class="dsgrp"><div class="dsl">Successes</div><div class="dspips"><div class="dsp" id="dss0" onclick="tds('s',0)"></div><div class="dsp" id="dss1" onclick="tds('s',1)"></div><div class="dsp" id="dss2" onclick="tds('s',2)"></div></div></div>
-      <div class="dsgrp"><div class="dsl">Failures</div><div class="dspips"><div class="dsp" id="dsf0" onclick="tds('f',0)"></div><div class="dsp" id="dsf1" onclick="tds('f',1)"></div><div class="dsp" id="dsf2" onclick="tds('f',2)"></div></div></div>
-      <button class="hbtn" style="padding:4px 10px;font-size:11px;" onclick="rds()">Reset</button>
-    </div>
-    <div class="st">Conditions</div><div class="condg" id="condg"></div>
-  </div>
-  <!-- COMBAT -->
-  <div class="panel" id="panel-combat">
-    <div id="your-turn-banner">
-      <div class="ytb-label">Your Turn!</div>
-      <div class="ytb-sub">Choose an action below</div>
-    </div>
-    <div id="attack-notification"></div>
-    <div id="combat-tracker-player" style="display:none;margin-bottom:12px;">
-      <div class="st" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>Initiative Order</span>
-        <span id="ctp-round" style="font-size:10px;color:var(--accent);font-family:Cinzel,serif;">Round 1</span>
-      </div>
-      <div id="ctp-order" style="max-height:220px;overflow-y:auto;"></div>
-    </div>
-    <div class="st">Attacks & Actions</div><div id="atklist"></div>
-    <button class="add-btn" onclick="openAddAtk()">+ Add Attack</button>
-    <div id="attack-target-section">
-      <div class="ats-label">Target</div>
-      <select id="attack-target-select"><option value="">Select target...</option></select>
-      <div id="attack-result-area"><span style="color:var(--text-dim);font-size:12px;">Roll an attack above</span></div>
-      <button id="apply-damage-btn" onclick="applyPendingDamage()">Apply Damage</button>
-    </div>
-    <div class="st">Last Roll</div>
-    <div id="combatres"><span style="color:var(--text-dim);font-size:12px;">No roll yet</span></div>
-  </div>
-  <!-- SPELLS -->
-  <div class="panel" id="panel-spells">
-    <div id="cast-result" style="display:none;background:var(--surface3);border:1px solid var(--accent-dim);border-radius:6px;padding:10px;margin-bottom:8px;">
-      <div id="cast-result-name" style="font-family:Cinzel,serif;color:var(--accent);font-size:14px;margin-bottom:4px;"></div>
-      <div id="cast-result-details" style="font-size:12px;line-height:1.6;"></div>
-      <div id="cast-result-total" style="font-size:28px;font-weight:700;color:var(--accent);text-align:center;margin:6px 0;"></div>
-      <div id="cast-result-breakdown" style="font-size:11px;color:var(--text-dim);text-align:center;"></div>
-      <button style="width:100%;margin-top:8px;padding:6px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text-dim);font-size:11px;cursor:pointer;" onclick="$('cast-result').style.display='none'">Dismiss</button>
-    </div>
-    <div class="spellbar" id="spellbar"></div>
-    <div class="st">Spell Slots</div><div id="slotarea"></div>
-    <div class="st">Cantrips</div><div id="cantrips"></div>
-    <div class="st">Spells</div><div id="spelllist"></div>
-    <div style="display:flex;gap:4px;">
-      <button class="add-btn" style="flex:1;" onclick="openAddSpell()">+ Manual</button>
-      <button class="add-btn" style="flex:1;" onclick="openSrdSpellSearch()">+ SRD Spell</button>
-    </div>
-    <div id="srd-spell-search" style="display:none;margin-top:6px;">
-      <input id="srd-spell-q" type="text" placeholder="Search SRD spells..." style="width:100%;padding:4px 8px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px;" oninput="searchSrdSpells()">
-      <div id="srd-spell-results" style="max-height:200px;overflow-y:auto;font-size:11px;margin-top:4px;"></div>
-    </div>
-  </div>
-  <!-- SKILLS -->
-  <div class="panel" id="panel-skills"><div id="sklist"></div></div>
-  <!-- INVENTORY -->
-  <div class="panel" id="panel-inventory">
-    <div id="inv-attune" style="font-size:10px;color:var(--text-dim);margin-bottom:4px;"></div>
-    <div id="inv-weight" style="font-size:10px;color:var(--text-dim);margin-bottom:6px;"></div>
-    <div id="invlist"></div>
-    <div class="st">Currency</div><div class="currow" id="currow"></div>
-    <div style="display:flex;gap:4px;margin-top:8px;">
-      <button class="add-btn" style="flex:1;" onclick="openAddItem()">+ Manual</button>
-      <button class="add-btn" style="flex:1;" onclick="openSrdItemSearch()">+ SRD Item</button>
-    </div>
-    <div id="srd-item-search" style="display:none;margin-top:6px;">
-      <input id="srd-item-q" type="text" placeholder="Search SRD items..." style="width:100%;padding:4px 8px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px;" oninput="searchSrdItems()">
-      <div id="srd-item-results" style="max-height:200px;overflow-y:auto;font-size:11px;margin-top:4px;"></div>
-    </div>
-  </div>
-  <!-- FEATURES -->
-  <div class="panel" id="panel-features"><div id="featlist"></div><button class="add-btn" onclick="openAddFeat()">+ Add Feature / Trait</button></div>
-  <!-- BACKGROUND -->
-  <div class="panel" id="panel-background">
-    <div class="bg-identity" id="bg-identity"></div>
-    <div class="bg-section" id="bg-appear-section">
-      <div class="bg-section-hdr" onclick="toggleBgSection('bg-appear')">Appearance <span class="bg-toggle">&#9660;</span></div>
-      <div class="bg-section-body" id="bg-appear"></div>
-    </div>
-    <div class="bg-section" id="bg-personality-section">
-      <div class="bg-section-hdr" onclick="toggleBgSection('bg-personality')">Personality <span class="bg-toggle">&#9660;</span></div>
-      <div class="bg-section-body" id="bg-personality"></div>
-    </div>
-    <div class="bg-section" id="bg-backstory-section">
-      <div class="bg-section-hdr" onclick="toggleBgSection('bg-backstory')">Backstory <span class="bg-toggle">&#9660;</span></div>
-      <div class="bg-section-body" id="bg-backstory"></div>
-    </div>
-    <div class="bg-section" id="bg-allies-section">
-      <div class="bg-section-hdr" onclick="toggleBgSection('bg-allies')">Allies, Organizations &amp; Enemies <span class="bg-toggle">&#9660;</span></div>
-      <div class="bg-section-body" id="bg-allies"></div>
-    </div>
-  </div>
-  <!-- DICE -->
+  <!-- Dice -->
   <div class="panel" id="panel-dice">
-    <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:4px 0 6px;border-bottom:1px solid var(--border);margin-bottom:6px;">
-      <span style="font-size:11px;color:var(--text-dim);">Digital</span>
-      <label style="position:relative;display:inline-block;width:40px;height:22px;cursor:pointer;">
-        <input type="checkbox" id="physdice-toggle" onchange="togglePhysicalDice(this.checked)" style="opacity:0;width:0;height:0;">
-        <span style="position:absolute;inset:0;background:var(--surface3);border-radius:11px;border:1px solid var(--border);transition:.3s;"></span>
-        <span id="physdice-knob" style="position:absolute;top:2px;left:2px;width:16px;height:16px;background:var(--accent);border-radius:50%;transition:.3s;"></span>
-      </label>
-      <span style="font-size:11px;color:var(--text-dim);">Physical Dice</span>
+    <div style="display:none;">
+      <input type="checkbox" id="physdice-toggle" onchange="togglePhysicalDice(this.checked)">
+      <span id="physdice-knob"></span>
     </div>
     <div class="diceg">
       <button class="diebtn" onclick="roll(4)">d4</button><button class="diebtn" onclick="roll(6)">d6</button>
@@ -578,146 +805,63 @@
       <button class="diebtn" onclick="roll(12)">d12</button><button class="diebtn" onclick="roll(20)">d20</button>
       <button class="diebtn" onclick="roll(100)">d%</button><button class="diebtn" onclick="rollX()">?d?</button>
     </div>
-    <div id="rollres"><div id="rollnum">—</div><div id="rolldtl">Roll a die</div></div>
+    <div id="rollres"><div id="rollnum">-</div><div id="rolldtl">Roll a die</div></div>
     <div id="rollhist"></div>
   </div>
-  <!-- CHAT -->
+  <!-- Chat -->
   <div class="panel" id="panel-chat">
     <div style="display:flex;gap:4px;padding:4px 0;">
-      <button class="hbtn" id="chat-ch-party" onclick="setChatChannel('party')" style="flex:1;padding:6px;font-size:11px;background:var(--accent-dim);color:#fff;">Party</button>
+      <button class="hbtn" id="chat-ch-party" onclick="setChatChannel('party')" style="flex:1;padding:6px;font-size:11px;">Party</button>
       <button class="hbtn" id="chat-ch-dm" onclick="setChatChannel('dm')" style="flex:1;padding:6px;font-size:11px;">DM</button>
-      <select id="chat-ch-player" onchange="setChatChannel(this.value)" style="flex:1;padding:6px;font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);">
-        <option value="">Whisper to...</option>
-      </select>
+      <select id="chat-ch-player" onchange="setChatChannel(this.value)" style="flex:1;padding:6px;font-size:11px;"><option value="">Whisper to...</option></select>
     </div>
-    <div id="chatlog" style="height:calc(100% - 80px);"></div>
-    <div id="chatr"><input id="chatin" type="text" placeholder="Say something..." onkeydown="if(event.key==='Enter')sndChat()"><button class="sendbtn" onclick="sndChat()">→</button></div>
+    <div id="chatlog"></div>
+    <div id="chatr"><input id="chatin" type="text" placeholder="Say something..." onkeydown="if(event.key==='Enter')sndChat()"><button class="sendbtn" onclick="sndChat()">Send</button></div>
   </div>
-  <!-- JOURNAL -->
-  <div class="panel" id="panel-journal">
-    <div class="st">Quest Journal</div>
-    <div id="journal-list" style="min-height:60px;"><div style="color:var(--text-dim);font-size:12px;text-align:center;padding:20px;">No quests yet. Your journey awaits.</div></div>
-  </div>
-  <!-- WOUNDS / BODY -->
-  <div class="panel" id="panel-wounds">
-    <div class="st">Condition</div>
-    <div style="display:flex;gap:12px;align-items:flex-start;justify-content:center;padding:8px 0;">
-      <svg id="wound-body" viewBox="0 0 120 260" width="120" height="260" style="flex-shrink:0;">
-        <!-- Head -->
-        <ellipse id="wb-head" cx="60" cy="28" rx="18" ry="22" fill="#1a3a1a" stroke="#333" stroke-width="1" onclick="WoundPanel.select('head')" style="cursor:pointer;"/>
-        <!-- Torso -->
-        <path id="wb-torso" d="M38,52 L82,52 L86,140 L34,140 Z" fill="#1a3a1a" stroke="#333" stroke-width="1" onclick="WoundPanel.select('torso')" style="cursor:pointer;"/>
-        <!-- Left Arm (viewer's left = character's right arm) -->
-        <path id="wb-rightArm" d="M34,56 L22,56 L10,110 L14,112 L24,70 L34,80 Z" fill="#1a3a1a" stroke="#333" stroke-width="1" onclick="WoundPanel.select('rightArm')" style="cursor:pointer;"/>
-        <!-- Right Arm (viewer's right = character's left arm) -->
-        <path id="wb-leftArm" d="M86,56 L98,56 L110,110 L106,112 L96,70 L86,80 Z" fill="#1a3a1a" stroke="#333" stroke-width="1" onclick="WoundPanel.select('leftArm')" style="cursor:pointer;"/>
-        <!-- Left Leg (viewer's left = character's right leg) -->
-        <path id="wb-rightLeg" d="M38,140 L54,140 L52,210 L56,250 L44,250 L46,210 L34,170 Z" fill="#1a3a1a" stroke="#333" stroke-width="1" onclick="WoundPanel.select('rightLeg')" style="cursor:pointer;"/>
-        <!-- Right Leg (viewer's right = character's left leg) -->
-        <path id="wb-leftLeg" d="M66,140 L82,140 L86,170 L74,210 L76,250 L64,250 L68,210 Z" fill="#1a3a1a" stroke="#333" stroke-width="1" onclick="WoundPanel.select('leftLeg')" style="cursor:pointer;"/>
-      </svg>
-      <div style="flex:1;min-width:0;">
-        <div id="wound-limb-name" style="font-family:Cinzel,serif;font-size:14px;color:var(--accent);margin-bottom:6px;">Select a region</div>
-        <div id="wound-desc" style="font-size:12px;color:var(--text-dim);line-height:1.5;font-style:italic;min-height:40px;">Tap any part of the body to see your condition.</div>
-        <div id="wound-summary" style="margin-top:12px;font-size:11px;"></div>
-      </div>
-    </div>
-    <div style="border-top:1px solid #333;margin-top:8px;padding-top:8px;">
-      <div style="font-family:Cinzel,serif;font-size:11px;color:var(--text-dim);margin-bottom:6px;">Tend Your Wounds</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        <button onclick="useHealing('potion',7)" style="flex:1;min-width:80px;padding:6px 8px;font-size:10px;background:#1a2a1a;border:1px solid #2a4a2a;color:#6b8b6b;border-radius:4px;cursor:pointer;font-family:inherit;">Potion</button>
-        <button onclick="useHealing('greater',14)" style="flex:1;min-width:80px;padding:6px 8px;font-size:10px;background:#1a2a1a;border:1px solid #2a4a2a;color:#6b8b6b;border-radius:4px;cursor:pointer;font-family:inherit;">Greater Potion</button>
-        <button onclick="useHealing('superior',28)" style="flex:1;min-width:80px;padding:6px 8px;font-size:10px;background:#1a2a1a;border:1px solid #2a4a2a;color:#6b8b6b;border-radius:4px;cursor:pointer;font-family:inherit;">Superior Potion</button>
-      </div>
-      <div style="display:flex;gap:6px;margin-top:6px;align-items:center;">
-        <button onclick="useHealingCustom()" style="flex:1;padding:6px 8px;font-size:10px;background:#1a2a1a;border:1px solid #2a4a2a;color:#6b8b6b;border-radius:4px;cursor:pointer;font-family:inherit;">Heal</button>
-        <input type="number" id="heal-amt" min="1" max="999" value="1" style="width:50px;padding:4px;background:var(--surface3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:11px;text-align:center;">
-        <span style="font-size:9px;color:var(--text-dim);">HP</span>
-      </div>
-      <div id="heal-feedback" style="font-size:10px;color:#6b8b6b;font-style:italic;margin-top:6px;min-height:14px;"></div>
-    </div>
-    <style>
-      @keyframes wound-pulse-slow { 0%,100%{opacity:1} 50%{opacity:0.5} }
-      @keyframes wound-pulse-fast { 0%,100%{opacity:1} 50%{opacity:0.3} }
-      .wound-3 { animation: wound-pulse-slow 2s ease-in-out infinite; }
-      .wound-4 { animation: wound-pulse-fast 0.8s ease-in-out infinite; }
-    </style>
-  </div>
-  <!-- EQUIPMENT CONDITION -->
-  <div class="panel" id="panel-equip">
-    <div class="st">Equipment Condition</div>
-    <div id="equip-items" style="margin-bottom:8px;"></div>
-    <div id="equip-ammo-section" style="display:none;">
-      <div class="st">Ammunition</div>
-      <div id="equip-ammo"></div>
-    </div>
-    <div id="equip-components-section" style="display:none;">
-      <div class="st">Spell Components</div>
-      <div id="equip-components"></div>
-    </div>
-    <div id="equip-healer-section" style="display:none;">
-      <div class="st">Healer's Kit</div>
-      <div id="equip-healer"></div>
-    </div>
-    <style>
-      .eq-item{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
-      .eq-item.broken{opacity:0.5;text-decoration:line-through;color:#666;}
-      .eq-pip{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-      .eq-pip-0{background:#4caf50;} .eq-pip-1{background:#8bc34a;} .eq-pip-2{background:#ffc107;} .eq-pip-3{background:#ff5722;} .eq-pip-4{background:#666;}
-      .eq-name{flex:1;font-size:11px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-      .eq-cond{font-size:9px;color:var(--text-dim);flex-shrink:0;}
-      .eq-ammo-row{display:flex;align-items:center;gap:6px;padding:3px 0;}
-      .eq-ammo-count{font-family:monospace;font-size:13px;color:var(--accent);font-weight:700;min-width:24px;text-align:right;}
-      .eq-ammo-label{font-size:11px;}
-      .eq-comp-item{display:flex;align-items:center;gap:6px;padding:2px 0;font-size:11px;}
-      .eq-comp-item.depleted{text-decoration:line-through;color:#666;}
-      .eq-healer-bar{height:6px;background:#222;border-radius:3px;overflow:hidden;margin:4px 0;}
-      .eq-healer-fill{height:100%;background:#4caf50;border-radius:3px;transition:width 0.3s;}
-    </style>
-  </div>
-  <!-- NPC CHAT -->
+  <!-- NPC Chat -->
   <div class="panel" id="panel-npcchat">
-    <div class="st">Speak with NPC</div>
     <div id="npc-chat-npcs" class="npc-chat-select"></div>
     <div id="npc-chatlog"></div>
     <div style="display:flex;gap:6px;">
       <input id="npc-chat-input" type="text" placeholder="Say something to the NPC..." style="flex:1;padding:7px 8px;" onkeydown="if(event.key==='Enter')sendNpcChat()">
-      <button class="sendbtn" onclick="sendNpcChat()">&#8594;</button>
+      <button class="sendbtn" onclick="sendNpcChat()">Send</button>
     </div>
   </div>
-  <!-- HANDOUTS -->
+  <!-- Handouts -->
   <div class="panel" id="panel-handouts">
-    <div class="st">Documents & Handouts</div>
-    <div id="handouts-list" style="min-height:60px;"><div style="color:var(--text-dim);font-size:12px;text-align:center;padding:20px;">No documents received yet.</div></div>
+    <div id="handouts-list"><div style="color:#6a5a48;font-size:13px;text-align:center;padding:20px;">No documents received yet.</div></div>
   </div>
-  <div class="handout-modal" id="handout-modal" onclick="if(event.target===this)closeHandout()">
-    <div class="handout-content" id="handout-content"></div>
-  </div>
-  <!-- INSPIRATION POPUP -->
-  <div id="inspiration-popup">
-    <div class="insp-star">&#9733;</div>
-    <div class="insp-title">Inspiration!</div>
-    <div class="insp-reason" id="insp-reason"></div>
-    <button class="insp-dismiss" onclick="dismissInspiration()">Accept</button>
-  </div>
-  <!-- NOTES -->
+  <!-- Features -->
+  <div class="panel" id="panel-features"><div id="featlist"></div><button class="add-btn" onclick="openAddFeat()">+ Add Feature / Trait</button></div>
+  <!-- Notes -->
   <div class="panel" id="panel-notes">
-    <div class="st">Notes</div>
-    <textarea id="notes-area" placeholder="Session notes, reminders, lore..."></textarea>
+    <textarea id="notes-area" placeholder="Session notes..."></textarea>
     <button class="hbtn" style="width:100%;padding:8px;margin-top:6px;" onclick="saveNotes()">Save Notes</button>
   </div>
 </div>
+
+<!-- Handout modal -->
+<div class="handout-modal" id="handout-modal" onclick="if(event.target===this)closeHandout()">
+  <div class="handout-content" id="handout-content"></div>
+</div>
+<!-- Inspiration popup -->
+<div id="inspiration-popup">
+  <div class="insp-star">&#9733;</div>
+  <div class="insp-title">Inspiration!</div>
+  <div class="insp-reason" id="insp-reason"></div>
+  <button class="insp-dismiss" onclick="dismissInspiration()">Accept</button>
+</div>
 <!-- Edit modal -->
 <div id="emodal"><div id="einner"><h3 id="etitle">Edit</h3><div id="efields"></div><div class="ebtns"><button class="bsave" onclick="saveEdit()">Save</button><button class="bcancel" onclick="closeEdit()">Cancel</button></div></div></div>
-
-<div id="dicemodal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:center;justify-content:center;">
-  <div style="background:var(--surface);border:2px solid var(--border);border-radius:8px;padding:20px;min-width:260px;max-width:90vw;text-align:center;">
-    <h3 id="dm-label" style="font-family:Cinzel,serif;color:var(--accent);margin-bottom:12px;">Enter Roll</h3>
-    <div id="dm-info" style="font-size:12px;color:var(--text-dim);margin-bottom:10px;"></div>
+<!-- Dice modal -->
+<div id="dicemodal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;">
+  <div style="background:#1e1a14;border:2px solid #4a3a28;border-radius:8px;padding:20px;min-width:260px;max-width:90vw;text-align:center;">
+    <h3 id="dm-label" style="font-family:Georgia,serif;color:#e8c060;margin-bottom:12px;">Enter Roll</h3>
+    <div id="dm-info" style="font-size:13px;color:#6a5a48;margin-bottom:10px;"></div>
     <input id="dm-val" type="number" min="1" max="100" style="font-size:24px;width:80px;text-align:center;padding:8px;" autofocus>
     <div style="margin-top:14px;display:flex;gap:8px;justify-content:center;">
-      <button onclick="submitDiceModal()" style="padding:8px 20px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:600;">Submit</button>
-      <button onclick="cancelDiceModal()" style="padding:8px 16px;background:var(--surface3);border:1px solid var(--border);border-radius:4px;font-size:13px;">Cancel</button>
+      <button onclick="submitDiceModal()" style="padding:8px 20px;background:#8a6a20;color:#e8d0a0;border:none;border-radius:4px;font-size:14px;font-weight:600;">Submit</button>
+      <button onclick="cancelDiceModal()" style="padding:8px 16px;background:#2a2420;border:1px solid #4a3a28;border-radius:4px;font-size:14px;color:#b09878;">Cancel</button>
     </div>
   </div>
 </div>
@@ -777,6 +921,31 @@ const CONDS=['Blinded','Charmed','Deafened','Frightened','Grappled','Incapacitat
 const SKILL_AB={acrobatics:'dex','animal-handling':'wis',arcana:'int',athletics:'str',deception:'cha',history:'int',insight:'wis',intimidation:'cha',investigation:'int',medicine:'wis',nature:'int',perception:'wis',performance:'cha',persuasion:'cha',religion:'int','sleight-of-hand':'dex',stealth:'dex',survival:'wis'};
 
 function $(id){return document.getElementById(id);}
+
+// Observation zone — italic fade-in, auto-remove after duration
+function showObservation(text, durationMs) {
+  const zone = document.getElementById('observation-zone');
+  if (!zone) return;
+  const el = document.createElement('div');
+  el.style.cssText = 'font-style:italic;color:#c8b89a;font-size:15px;line-height:1.6;opacity:0;transition:opacity 1.5s;background:rgba(30,26,20,0.85);padding:10px 16px;border-radius:6px;border-left:2px solid #e8c060;';
+  el.textContent = text;
+  zone.appendChild(el);
+  requestAnimationFrame(() => { el.style.opacity = '1'; });
+  setTimeout(() => {
+    el.style.opacity = '0';
+    setTimeout(() => { el.remove(); }, 1500);
+  }, durationMs - 1500);
+}
+
+// Tab switching
+function switchTab(tabName) {
+  document.querySelectorAll('.gtab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const tab = document.getElementById('gtab-' + tabName);
+  if (tab) tab.classList.add('active');
+  const btn = document.querySelector('.tab-btn[data-tab="' + tabName + '"]');
+  if (btn) btn.classList.add('active');
+}
 function fmt(n){return n>=0?'+'+n:''+n;}
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
@@ -835,7 +1004,10 @@ function handle(m){
     case 'horror:effect': applyHorror(m.effect,m.payload,m.durationMs); break;
     case 'horror:clear': clearHorror(); break;
     case 'npc:dialogue': showToast(m.npc||'NPC',m.text,8000); break;
-    case 'dm:private_message': showToast('DM',m.text,m.durationMs||8000); break;
+    case 'dm:private_message':
+      if (m.style === 'observation') { showObservation(m.text, m.durationMs || 45000); }
+      else { showToast('DM', m.text, m.durationMs || 8000); }
+      break;
     case 'chat:party': addChat(m.fromName||m.from,'[Party] '+m.text,'var(--accent)'); if(m.from!==PID) showToast(m.fromName||m.from,m.text,4000); break;
     case 'chat:whisper': addChat(m.fromName||m.from,'[Whisper] '+m.text,'#c9a54e'); showToast(m.fromName||m.from,'(whisper) '+m.text,5000); break;
     case 'chat:dm_reply': addChat('DM',m.text,'#c9a54e'); showToast('DM',m.text,5000); break;
@@ -4278,5 +4450,225 @@ if (navigator.permissions) {
   }).catch(function(){});
 }
 </script>
+</script>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// NEW UI LAYER — observation, NPC dialogue, conditions,
+// body narrative, death vignette, journal panel, grimoire condition rows
+// ═══════════════════════════════════════════════════════
+(function() {
+
+  // ── Wound color map (explicit colors from spec) ──
+  var WOUND_FILL = ['#3a8a3a', '#7a8a20', '#c87828', '#aa2a1a', '#3a2018'];
+
+  // Override WoundPanel update to also set explicit fill colors on wo-* elements
+  var _origWPUpdate = WoundPanel.update.bind(WoundPanel);
+  WoundPanel.update = function(wounds) {
+    _origWPUpdate(wounds);
+    // Set fills with spec colors
+    for (var limb in wounds) {
+      var state = wounds[limb];
+      var el = document.getElementById('wo-' + limb);
+      if (el) el.setAttribute('fill', WOUND_FILL[state]);
+      var wb = document.getElementById('wb-' + limb);
+      if (wb) wb.setAttribute('fill', WOUND_FILL[state]);
+    }
+    renderGrimoireCondition();
+    updateBodyNarrative();
+    updateConditionVisuals();
+  };
+
+  // ── Grimoire Condition Section ──
+  var LIMB_ORDER = ['head','torso','leftArm','rightArm','leftLeg','rightLeg'];
+  var LIMB_NAMES = {head:'Head',torso:'Torso',leftArm:'Left Arm',rightArm:'Right Arm',leftLeg:'Left Leg',rightLeg:'Right Leg'};
+  var STATE_NAMES = ['Unharmed','Scratched','Wounded','Broken','Crippled'];
+  var STATE_CSS = ['limb-state-0','limb-state-1','limb-state-2','limb-state-3','limb-state-4'];
+
+  function renderGrimoireCondition() {
+    var el = document.getElementById('grimoire-condition');
+    if (!el) return;
+    var wounds = WoundPanel.wounds;
+    var html = '';
+    for (var i = 0; i < LIMB_ORDER.length; i++) {
+      var limb = LIMB_ORDER[i];
+      var state = wounds[limb] || 0;
+      html += '<div class="limb-row" data-limb="' + limb + '">';
+      html += '<span class="limb-name">' + LIMB_NAMES[limb] + '</span>';
+      html += '<span class="' + STATE_CSS[state] + '" style="font-size:13px;">' + STATE_NAMES[state] + '</span>';
+      html += '</div>';
+      html += '<div class="limb-desc" id="limb-desc-' + limb + '">' + (WOUND_DESC[limb] ? WOUND_DESC[limb][state] : '') + '</div>';
+    }
+    el.innerHTML = html;
+    // Bind tap-to-expand
+    el.querySelectorAll('.limb-row').forEach(function(row) {
+      row.addEventListener('click', function() {
+        var limb = row.getAttribute('data-limb');
+        var desc = document.getElementById('limb-desc-' + limb);
+        if (desc) desc.classList.toggle('visible');
+      });
+    });
+  }
+
+  // ── Body Narrative ──
+  function updateBodyNarrative() {
+    var el = document.getElementById('body-narrative');
+    if (!el) return;
+    var wounds = WoundPanel.wounds;
+    var worstWound = 0;
+    for (var limb in wounds) {
+      if (wounds[limb] > worstWound) worstWound = wounds[limb];
+    }
+    var stamEl = document.getElementById('wound-overlay');
+    var stamLevel = 0;
+    if (stamEl) {
+      if (stamEl.classList.contains('stam-collapsed')) stamLevel = 4;
+      else if (stamEl.classList.contains('stam-spent')) stamLevel = 3;
+      else if (stamEl.classList.contains('stam-exhausted')) stamLevel = 2;
+      else if (stamEl.classList.contains('stam-winded')) stamLevel = 1;
+    }
+    var severity = Math.max(worstWound, stamLevel);
+    if (severity === 0) el.textContent = '';
+    else if (severity <= 1) el.textContent = 'Your breath comes a little harder than it should.';
+    else if (severity <= 2) el.textContent = 'Every movement costs you. Something is wrong inside.';
+    else if (severity <= 3) el.textContent = 'You are running on will alone. Your body has nearly nothing left.';
+    else el.textContent = 'The darkness is close. You can feel it waiting.';
+  }
+
+  // ── StaminaRing wrapper ──
+  var _origSRUpdate = StaminaRing.update.bind(StaminaRing);
+  StaminaRing.update = function(data) {
+    _origSRUpdate(data);
+    updateBodyNarrative();
+  };
+
+  // ── Observation Zone ──
+  var obsText = document.getElementById('observation-text');
+  var obsTimer = null;
+  function showObservation(text) {
+    if (!obsText) return;
+    obsText.textContent = text;
+    obsText.classList.add('visible');
+    clearTimeout(obsTimer);
+    obsTimer = setTimeout(function() {
+      obsText.classList.remove('visible');
+    }, 45000);
+  }
+
+  // ── NPC Dialogue Card ──
+  var npcCard = document.getElementById('npc-dialogue-card');
+  var npcNameEl = document.getElementById('npc-dialogue-name');
+  var npcTextEl = document.getElementById('npc-dialogue-text');
+  var npcTimer = null;
+  function showNpcDialogue(name, text) {
+    if (!npcCard) return;
+    npcNameEl.textContent = name;
+    npcTextEl.textContent = text;
+    npcCard.classList.add('visible');
+    clearTimeout(npcTimer);
+    npcTimer = setTimeout(function() {
+      npcCard.classList.remove('visible');
+    }, 60000);
+  }
+
+  // ── MutationObserver on toast-layer ──
+  var toastLayer = document.getElementById('toast-layer');
+  if (toastLayer) {
+    new MutationObserver(function(mutations) {
+      mutations.forEach(function(m) {
+        m.addedNodes.forEach(function(node) {
+          if (node.nodeType !== 1 || !node.classList.contains('toast')) return;
+          var whoEl = node.querySelector('.toast-who');
+          if (!whoEl) return;
+          var who = whoEl.textContent.trim();
+          var text = node.textContent.replace(who, '').trim();
+          if (who === 'DM' || who === 'DM Whisper' || who === 'Vision' || who === 'Revelation') {
+            showObservation(text);
+          } else if (who !== 'System' && who !== 'Quest' && who !== 'Document' && who !== 'Combat' && who !== 'Inspiration') {
+            showNpcDialogue(who, text);
+          }
+        });
+      });
+    }).observe(toastLayer, { childList: true });
+  }
+
+  // ── Death Save Vignette ──
+  var deathVig = document.getElementById('death-vignette');
+  var _origRenderDs = renderDs;
+  renderDs = function() {
+    _origRenderDs();
+    if (!deathVig) return;
+    var failures = ds.f.filter(Boolean).length;
+    if (failures === 0) {
+      deathVig.style.boxShadow = 'none';
+      deathVig.style.background = 'transparent';
+    } else if (failures === 1) {
+      deathVig.style.boxShadow = 'inset 0 0 100px rgba(0,0,0,0.3)';
+      deathVig.style.background = 'transparent';
+    } else if (failures === 2) {
+      deathVig.style.boxShadow = 'inset 0 0 200px rgba(0,0,0,0.5)';
+      deathVig.style.background = 'rgba(0,0,0,0.2)';
+    } else {
+      deathVig.style.boxShadow = 'inset 0 0 400px rgba(0,0,0,1)';
+      deathVig.style.background = 'rgba(0,0,0,0.95)';
+    }
+  };
+
+  // ── Condition Visual Effects ──
+  function updateConditionVisuals() {
+    var silhouette = document.getElementById('wound-overlay');
+    if (!silhouette) return;
+    var condClasses = ['cond-stunned','cond-frightened','cond-poisoned','cond-prone','cond-unconscious'];
+    condClasses.forEach(function(c) { silhouette.classList.remove(c); });
+    if (typeof activeConds !== 'undefined') {
+      if (activeConds.has('Stunned')) {
+        silhouette.classList.add('cond-stunned');
+        showObservation('The world goes sideways for a moment.');
+      }
+      if (activeConds.has('Frightened')) {
+        showObservation('Something cold has hold of your chest.');
+      }
+      if (activeConds.has('Poisoned')) silhouette.classList.add('cond-poisoned');
+      if (activeConds.has('Prone')) silhouette.classList.add('cond-prone');
+      if (activeConds.has('Unconscious')) silhouette.classList.add('cond-unconscious');
+    }
+  }
+  var _origTogCond = togCond;
+  togCond = function(c) { _origTogCond(c); updateConditionVisuals(); };
+
+  // ── Journal Panel ──
+  document.getElementById('journal-open').addEventListener('click', function() {
+    document.getElementById('journal-panel').classList.add('open');
+  });
+
+  // ── Override showTab to be a no-op for visibility (all content is on one page) ──
+  // Keep original for JS that calls it, but don't toggle panel visibility
+  showTab = function(n) {
+    // Only resize map if explicitly asked
+    if (n === 'map' && typeof PlayerMap !== 'undefined') PlayerMap.resize();
+    // Scroll to the relevant section in grimoire content
+    var sectionMap = {
+      'stats': 'grimoire-numbers', 'skills': 'grimoire-numbers',
+      'combat': 'grimoire-numbers', 'spells': 'grimoire-magic',
+      'inventory': 'grimoire-arms', 'wounds': 'grimoire-condition',
+      'equip': 'grimoire-arms', 'background': 'grimoire-soul',
+      'features': 'grimoire-soul'
+    };
+    var targetId = sectionMap[n];
+    if (targetId) {
+      var target = document.getElementById(targetId);
+      var container = document.getElementById('grimoire-content');
+      if (target && container) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  };
+
+  // Initial render of condition section
+  renderGrimoireCondition();
+
+})();
+</script>
+
 </body>
 </html>

@@ -8,25 +8,31 @@
     @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Source+Sans+3:wght@300;400;600&display=swap');
 
     :root {
-      --bg: #07070a;
-      --surface: #0f0f14;
-      --surface2: #16161d;
-      --surface3: #1e1e28;
-      --border: #252530;
-      --border-light: #333340;
-      --text: #f0ece6;
-      --text-dim: #b0a99f;
-      --accent: #c9a54e;
-      --accent-dim: #8a7030;
-      --accent-glow: rgba(201,165,78,0.15);
-      --red: #a03030;
+      --bg: #141210;
+      --surface: #1e1a14;
+      --surface2: #12100c;
+      --surface3: #2a2420;
+      --border: #2a2218;
+      --border-light: #3a3028;
+      --text: #c8b89a;
+      --text-dim: #8a7a62;
+      --accent: #e8c060;
+      --accent-dim: #b09878;
+      --accent-glow: rgba(232,192,96,0.15);
+      --red: #aa2a1a;
       --red-bright: #d04040;
-      --green: #30a050;
+      --green: #4a8c4a;
       --green-dim: #1a5a30;
       --blue: #4080c0;
       --blue-dim: #2a5580;
       --purple: #7050a0;
-      --orange: #c07030;
+      --orange: #e89040;
+      --blood: #aa2a1a;
+      --panel-header: #1e1a14;
+      --panel-body: #12100c;
+      --panel-header-text: #8a7a62;
+      --panel-border: #2a2218;
+      --border-strong: #4a3a28;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -181,21 +187,27 @@
     }
 
     .section-header {
-      padding: 5px 10px;
-      background: var(--surface2);
-      border-bottom: 1px solid var(--border);
-      font-size: 10px;
+      padding: 10px 14px;
+      background: var(--panel-header, var(--surface));
+      border-bottom: 1px solid var(--border-light, #3a3028);
+      font-size: 12px;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      color: var(--panel-header-text, #8a7a62);
       display: flex;
       align-items: center;
       gap: 6px;
     }
 
+    /* Panel body styling */
+    .panel-section > *:not(.section-header) {
+      font-size: 13px;
+      color: var(--text, #c8b89a);
+    }
+
     /* Drag-to-reorder panels */
-    .panel-section { position: relative; }
+    .panel-section { position: relative; border-radius: 8px; border: 1px solid var(--panel-border, #2a2218); margin-bottom: 8px; overflow: hidden; background: var(--panel-body, #12100c); }
     .panel-section.dragging { opacity: 0.4; }
     .panel-section.drag-over { border-top: 2px solid var(--accent); }
     .drag-handle {
@@ -698,6 +710,8 @@
       <span><span class="dot green" id="earbud-indicator" title="Earbud TTS"></span>🎧</span>
       <span>Session: <strong id="sess-status">Idle</strong></span>
       <span id="session-timer">00:00:00</span>
+      <span id="weather-icon" title="Weather" style="font-size:16px;cursor:help;">☀</span>
+      <span id="game-time-display" style="font-family:monospace;color:var(--accent-dim);font-size:12px;">--:--</span>
       <button id="panel-menu-btn" onclick="PanelLayout.toggleMenu()" title="Show/hide panels">&#9776;</button>
     </div>
   </header>
@@ -1969,6 +1983,31 @@
     document.getElementById('sess-status').textContent = s.charAt(0).toUpperCase() + s.slice(1);
     if (state.session?.elapsedMs) document.getElementById('session-timer').textContent = fmtTime(state.session.elapsedMs);
 
+    // Weather icon and game time
+    const weatherData = state.lighting?.weather || state.world?.weather || {};
+    const weatherIcons = { clear:'☀', cloudy:'☁', rain:'🌧', storm:'⛈', blizzard:'❄', fog:'🌫', snow:'🌨' };
+    const wIcon = document.getElementById('weather-icon');
+    if (wIcon) {
+      wIcon.textContent = weatherIcons[weatherData.type] || '☀';
+      wIcon.title = weatherData.description || weatherData.type || 'Clear';
+    }
+    const gtDisplay = document.getElementById('game-time-display');
+    if (gtDisplay && state.world?.gameTime) {
+      try {
+        const gt = new Date(state.world.gameTime);
+        gtDisplay.textContent = gt.getHours().toString().padStart(2,'0') + ':' + gt.getMinutes().toString().padStart(2,'0');
+      } catch(e) {}
+    }
+
+    // Horror color on player rows
+    const horrorState = state.horror || {};
+    for (const [pid, hData] of Object.entries(horrorState)) {
+      const row = document.querySelector(`[data-player="${pid}"]`);
+      if (row && hData.color) {
+        row.style.borderLeft = `3px solid ${hData.color}`;
+      }
+    }
+
     // Trust
     ['manual','assisted','autopilot'].forEach(l => {
       document.getElementById(`t-${l}`).classList.toggle('active', state.session?.aiTrustLevel === l);
@@ -3130,7 +3169,7 @@
           const s = w[limb] || 0;
           const pulseCls = s === 3 ? 'wound-pulse-slow' : s === 4 ? 'wound-pulse-fast' : '';
           return '<span class="wound-dot ' + pulseCls + '" title="' + WOUND_LIMB_SHORT[limb] + ': ' + WOUND_NAMES[s] + '" '
-            + 'style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + WOUND_COLORS[s] + ';border:1px solid #555;cursor:pointer;" '
+            + 'style="display:inline-block;width:14px;height:14px;border-radius:50%;background:' + WOUND_COLORS[s] + ';border:1px solid #555;cursor:pointer;" '
             + 'onclick="DmWounds.edit(\'' + pid + '\',\'' + limb + '\',' + s + ',event)"></span>';
         }).join(' ');
         const torch = DmStamina.renderTorch(pid);
@@ -3140,9 +3179,9 @@
           + '<div style="flex:1;min-width:0;">'
           + '<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;">'
           + torch
-          + '<span style="color:var(--text);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(name) + '</span>'
+          + '<span style="color:#e8d0a0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(name) + '</span>'
           + '</div>'
-          + '<span style="display:flex;gap:3px;">' + dots + '</span>'
+          + '<span style="display:flex;gap:4px;align-items:center;">' + dots + '</span>'
           + '</div></div>';
       }).join('');
     },

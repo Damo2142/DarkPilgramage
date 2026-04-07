@@ -734,6 +734,97 @@
       }
     ],
 
+    "hazards": [
+      {
+        "id": "fireplace",
+        "type": "fire",
+        "name": "Common Room Fireplace",
+        "position": { "x": 12, "y": 8 },
+        "radius": 1,
+        "active": true,
+        "damage": "1d6",
+        "damageType": "fire",
+        "saveType": "DEX",
+        "saveDC": 12,
+        "description": "The stone hearth radiates dangerous heat",
+        "deactivateEvent": "fire_dies_completely"
+      },
+      {
+        "id": "storm-outside",
+        "type": "cold",
+        "name": "Blizzard (Outdoors)",
+        "position": { "x": -5, "y": 8 },
+        "radius": 100,
+        "active": true,
+        "damage": "1d6",
+        "damageType": "cold",
+        "saveType": "CON",
+        "saveDC": 10,
+        "description": "CON DC10 or exhaustion per minute outdoors during blizzard"
+      },
+      {
+        "id": "cellar-stairs",
+        "type": "fall",
+        "name": "Cellar Stairs",
+        "position": { "x": 6, "y": 12 },
+        "radius": 1,
+        "active": true,
+        "damage": "1d6",
+        "damageType": "bludgeoning",
+        "saveType": "DEX",
+        "saveDC": 10,
+        "description": "Steep, narrow cellar stairs — difficult terrain"
+      },
+      {
+        "id": "balcony-edge",
+        "type": "fall",
+        "name": "Second Floor Balcony",
+        "position": { "x": 12, "y": 2 },
+        "radius": 1,
+        "active": true,
+        "damage": "2d6",
+        "damageType": "bludgeoning",
+        "saveType": "DEX",
+        "saveDC": 12,
+        "description": "2d6 fall damage if pushed over the balcony edge"
+      }
+    ],
+
+    "reputationTriggers": [
+      {
+        "id": "help-tomas-chain",
+        "eventId": "tomas_chained",
+        "reason": "Helped Tomas chain himself before transformation",
+        "factionReputation": { "local-villagers": 3 },
+        "npcStanding": { "tomas": 2 }
+      },
+      {
+        "id": "vladislav-escapes",
+        "eventId": "vladislav_escape",
+        "reason": "Vladislav escaped the inn",
+        "factionReputation": { "church-of-light": -5 }
+      },
+      {
+        "id": "save-marta",
+        "eventId": "marta_saved",
+        "reason": "Saved Marta from danger",
+        "factionReputation": { "local-villagers": 2 },
+        "npcStanding": { "marta": 5 }
+      },
+      {
+        "id": "attack-tomas-early",
+        "eventId": "tomas_attacked",
+        "reason": "Attacked Tomas before transformation",
+        "npcStanding": { "tomas": -3 }
+      },
+      {
+        "id": "holy-items-effective",
+        "eventId": "holy_items_used",
+        "reason": "Used holy items effectively against undead",
+        "factionReputation": { "church-of-light": 2 }
+      }
+    ],
+
     "monsterTells": {
       "hooded-stranger": [
         { "actionType": "feeding", "text": "His nostrils flare almost imperceptibly. He has been watching the target for three minutes without blinking." },

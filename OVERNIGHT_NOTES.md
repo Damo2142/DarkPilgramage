@@ -9,7 +9,7 @@
 - [x] SYSTEM B — Passive perception and monster tells
 - [x] SYSTEM C — Psychological horror and character arc tracks
 - [x] SYSTEM D — Social combat and ambient NPC behavior
-- [ ] SYSTEM E — Environmental hazards, reputation, session continuity
+- [x] SYSTEM E — Environmental hazards, reputation, session continuity
 - [ ] SYSTEM F — NPC dialogue fix and stamina initialization
 - [ ] SYSTEM G — Dashboard visual redesign and player UI fixes
 - [ ] SYSTEM H — Full integration pass and dry run preparation
@@ -113,4 +113,25 @@
 - Social combat action: Barry insight 18 vs Vladislav 20, shift -1 — PASS
 - AI dialogue generated for Vladislav response — PASS
 - Vladislav advantage and min momentum -3 rules active — PASS
+
+### SYSTEM E — Environmental Hazards, Reputation, Session Continuity
+**Status: PASS**
+**Files created:** `services/hazard/hazard-service.js`
+**Files modified:** `server.js`, `config/session-0.json`
+
+**Built:**
+- HazardService with 4 hazard zones (fireplace fire, outdoor blizzard, cellar stairs, balcony)
+- Hazard proximity warning and auto-damage on token entry
+- Per-NPC standing -10 to +10 trust system (3 NPCs: marta, tomas, hooded-stranger)
+- 5 reputation triggers for Session 0 events
+- Session end: save all state (wounds, horror, equipment, standings, hazards)
+- Long rest recovery: horror -10, wounds downgrade, equipment repair
+- AI session summary generation on session end
+- REST API: /api/hazards, /api/npc-standings, /api/session/long-rest
+
+**Test results:**
+- Server starts: 19 services, 4 hazards, 3 NPC standings — PASS
+- GET /api/hazards returns all 4 hazard zones — PASS
+- GET /api/npc-standings returns marta/tomas/hooded-stranger at 0 — PASS
+- POST /api/npc-standings Marta +5: standing changes to 5 — PASS
 

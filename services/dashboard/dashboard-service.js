@@ -34,6 +34,28 @@ class DashboardService {
     this.app.get('/player/:playerId', (req, res) => {
       res.sendFile(path.join(__dirname, '..', 'player-bridge', 'public', 'index.html'));
     });
+
+    // Panel pop-out routes — serve individual panel pages
+    this.app.get('/panel/:panelId', (req, res) => {
+      // All panels use the same wrapper — panelId is read client-side from URL
+      res.sendFile(path.join(__dirname, 'public', 'panel-window.html'));
+    });
+
+    // Tablet map route — touch-optimized full-screen map
+    this.app.get('/tablet', (req, res) => {
+      res.sendFile(path.join(__dirname, 'public', 'tablet.html'));
+    });
+
+    // Dashboard launcher (new main page)
+    this.app.get('/launcher', (req, res) => {
+      res.sendFile(path.join(__dirname, 'public', 'launcher.html'));
+    });
+
+    // Legacy dashboard preserved at /classic
+    this.app.get('/classic', (req, res) => {
+      res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    });
+
     this.app.use('/assets', express.static(path.join(__dirname, '..', '..', 'assets')));
     this.app.use('/sounds', express.static(path.join(__dirname, '..', '..', 'assets', 'sounds')));
 
@@ -87,6 +109,19 @@ class DashboardService {
   }
 
   _setupRoutes() {
+    // Layout persistence API
+    this.app.get('/api/layout', (req, res) => {
+      const layout = this.state.get('dashboard.layout') || { panels: {} };
+      res.json(layout);
+    });
+
+    this.app.post('/api/layout/save', (req, res) => {
+      const layout = req.body;
+      if (!layout || typeof layout !== 'object') return res.status(400).json({ error: 'layout object required' });
+      this.state.set('dashboard.layout', layout);
+      res.json({ ok: true });
+    });
+
     this.app.get('/api/health', (req, res) => {
       res.json({
         status: 'ok',
@@ -685,6 +720,12 @@ Answer concisely (2-4 sentences). If it's a rules question, give the D&D 5e rule
         break;
       case 'audio:sfx':
         this.bus.dispatch('audio:sfx', { effect: msg.effect, device: msg.device, surround: msg.surround });
+        break;
+      case 'audio:dm_chunk':
+        this.bus.dispatch('audio:dm_chunk', msg.data || msg);
+        break;
+      case 'audio:dm_flush':
+        this.bus.dispatch('audio:dm_chunk', { cmd: 'flush', playerId: 'dm' });
         break;
       case 'voice:list_devices':
         this.bus.dispatch('voice:list_devices', {});

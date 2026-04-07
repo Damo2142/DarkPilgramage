@@ -176,6 +176,11 @@ class AudioService {
       audioB64 = audio.toString('base64');
     } else if (audio instanceof ArrayBuffer) {
       audioB64 = Buffer.from(audio).toString('base64');
+    } else if (Array.isArray(audio)) {
+      // Int16 array from browser WebSocket — convert to Buffer
+      const buf = Buffer.alloc(audio.length * 2);
+      for (let i = 0; i < audio.length; i++) { buf.writeInt16LE(audio[i], i * 2); }
+      audioB64 = buf.toString('base64');
     } else {
       return; // Unknown format
     }

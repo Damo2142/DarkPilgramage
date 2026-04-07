@@ -195,7 +195,7 @@
     }
 
     /* Drag-to-reorder panels */
-    .panel-section { position: relative; border-radius: 8px; border: 1px solid #2a2218; margin-bottom: 8px; overflow: hidden; background: #12100c; }
+    .panel-section { position: relative; border-radius: 8px; border: 1px solid #2a2218; margin-bottom: 8px; background: #12100c; }
     .panel-section.dragging { opacity: 0.4; }
     .panel-section.drag-over { border-top: 2px solid var(--accent); }
     .drag-handle {
@@ -6355,7 +6355,7 @@
 
   /* === PANEL LAYOUT MANAGER — drag, hide, collapse, cross-column === */
   const PanelLayout = {
-    STORAGE_KEY: 'dp_panel_layout',
+    STORAGE_KEY: 'dp_panel_layout_v2',
     draggedPanel: null,
     clone: null,
     touchOffsetY: 0,

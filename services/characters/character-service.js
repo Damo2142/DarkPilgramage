@@ -134,6 +134,31 @@ class CharacterService {
         const r = this.state.get('players.' + req.params.playerId + '.resources') || {};
         res.json(r);
       });
+
+      // ── Language validation ──
+      app.get('/api/languages/validation', (req, res) => {
+        const players = this.state.get('players') || {};
+        const result = {};
+        for (const [pid, p] of Object.entries(players)) {
+          const lang = p.character?.languages || [];
+          const valid = p.character?.languageValidation || {};
+          result[pid] = { name: p.character?.name || pid, languages: lang, validation: valid };
+        }
+        res.json(result);
+      });
+
+      app.post('/api/languages/:playerId/:lang', (req, res) => {
+        const { playerId, lang } = req.params;
+        const { status, backstory } = req.body || {};
+        const valid = ['approved', 'unavailable', 'pending'];
+        if (!valid.includes(status)) return res.status(400).json({ error: 'status must be approved/unavailable/pending' });
+        const path = 'players.' + playerId + '.character.languageValidation.' + lang;
+        this.state.set(path, status);
+        if (backstory) {
+          this.state.set('players.' + playerId + '.character.languageBackstory.' + lang, backstory);
+        }
+        res.json({ ok: true });
+      });
     }
   }
 
@@ -240,6 +265,15 @@ class CharacterService {
       console.warn('[Characters] Origins overlay parse failed: ' + err.message);
     }
 
+    // Load language validation rules
+    let langRules = null;
+    try {
+      const langPath = path.join(__dirname, '..', '..', 'config', 'language-validation.json');
+      if (fs.existsSync(langPath)) {
+        langRules = JSON.parse(fs.readFileSync(langPath, 'utf8'));
+      }
+    } catch (err) {}
+
     for (const file of fs.readdirSync(this.charactersDir)) {
       if (!file.endsWith('.json')) continue;
       try {
@@ -259,6 +293,24 @@ class CharacterService {
             pp: ddbCurrency.pp || 0,
             transactions: []
           };
+        }
+        // Validate languages — flag for DM review
+        if (langRules && Array.isArray(data.languages)) {
+          const race = (data.race || '').replace(/^.*\s/, ''); // last word
+          const raceAuto = langRules.raceAutoApprove?.[race] || [];
+          const validation = {};
+          for (const lang of data.languages) {
+            if (lang === 'Common' || lang === 'Latin' || langRules.autoApprove?.humanHistorical?.includes(lang)) {
+              validation[lang] = 'approved';
+            } else if (raceAuto.includes(lang)) {
+              validation[lang] = 'approved';
+            } else if (langRules.requireBackstory?.[lang]) {
+              validation[lang] = 'pending';
+            } else {
+              validation[lang] = 'pending';
+            }
+          }
+          data.languageValidation = validation;
         }
         chars[String(id)] = data;
       } catch (err) {

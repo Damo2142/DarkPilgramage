@@ -1,0 +1,47 @@
+{
+  "_note": "Language backstory validation rules — applied during DDB sync. See setting-authenticity.json for the underlying setting rules.",
+  "autoApprove": {
+    "Common": "Maps to Latin — auto-approved for all characters",
+    "Latin": "Same as Common",
+    "humanHistorical": [
+      "French", "English", "German", "Czech", "Slovak", "Polish", "Hungarian",
+      "Italian", "Spanish", "Catalan", "Greek", "Old Church Slavonic",
+      "Arabic", "Persian", "Hebrew", "Aramaic"
+    ]
+  },
+  "requireBackstory": {
+    "Elvish": "Requires specific connection to elven community",
+    "Draconic": "Requires explicit dragon connection or Kobold race or Americas heritage",
+    "Infernal": "Requires specific patron or infernal heritage",
+    "Sylvan": "Requires specific fey connection",
+    "Deep Speech": "Requires specific underdark connection",
+    "Abyssal": "Requires specific demonic patron or extraplanar contact",
+    "Celestial": "Requires angelic patron or sacred order initiation",
+    "Primordial": "Requires elemental contact",
+    "Giant": "Requires northern frontier or giant communities exposure",
+    "Goblin": "Requires direct contact with goblinoid communities",
+    "Orc": "Requires direct contact with orcish communities",
+    "Halfling": "Requires direct contact with halfling communities",
+    "Dwarvish": "Requires direct contact with dwarven communities",
+    "Gnomish": "Requires direct contact with gnomish communities"
+  },
+  "raceAutoApprove": {
+    "Kobold": ["Draconic"],
+    "Elf": ["Elvish"],
+    "Half-Elf": ["Elvish"],
+    "Dwarf": ["Dwarvish"],
+    "Gnome": ["Gnomish"],
+    "Halfling": ["Halfling"],
+    "Tiefling": ["Infernal"]
+  },
+  "americasLanguagesForbiddenForHumans": {
+    "rule": "Human characters cannot speak Americas languages under any circumstances without explicit DM override",
+    "rationale": "No European human in 1274 has had contact with the Americas. This is an absolute rule in the AI context.",
+    "knownAmericasLanguages": ["Old Tongue", "Western Speech", "Stone-Speech"]
+  },
+  "validationStatuses": {
+    "approved": "Language is active in the world for this character",
+    "unavailable": "Language exists mechanically but not active in the world",
+    "pending": "Backstory required — language inactive until resolved"
+  }
+}

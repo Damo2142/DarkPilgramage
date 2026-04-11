@@ -101,6 +101,12 @@ class AIEngine {
         }
       }
 
+      // Mirror reflection mechanic — keyword detection in player and DM speech
+      if (segment.text && this._detectMirrorAction(segment.text)) {
+        this._handleMirrorAction(segment);
+        // Don't return — allow normal NPC/story pipeline to also process the line
+      }
+
       // Player speech is in-character by default unless prefixed with "out of character" or "OOC"
       if (segment.speaker !== 'dm' && segment.speaker !== 'system') {
         const text = (segment.text || '').trim();
@@ -170,6 +176,10 @@ class AIEngine {
         text: env.data.text,
         timestamp: Date.now()
       });
+      // Mirror reflection mechanic — also fires from player chat input
+      if (env.data?.text && this._detectMirrorAction(env.data.text)) {
+        this._handleMirrorAction({ speaker: env.data.playerId, text: env.data.text });
+      }
     }, 'ai-engine');
 
     // Player dice rolls add context and trigger roll interpretation
@@ -549,6 +559,153 @@ Stay strictly within what ${npcName} knows. 1-3 sentences of dialogue typical.`;
       }
     }
     return nearby;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════
+  // MIRROR REFLECTION MECHANIC
+  // Detects when a player or DM uses a mirror, fires Max whisper based
+  // on which NPCs are present in the active scene and their reflection
+  // type. DM-only — no player-facing event.
+  // ═══════════════════════════════════════════════════════════════
+
+  _detectMirrorAction(text) {
+    if (!text) return false;
+    const t = text.toLowerCase();
+    // Keyword phrases to trigger
+    const triggers = [
+      /\bmirror\b/,
+      /\breflection\b/,
+      /\breflect\b/,
+      /\bhold up\b/,
+      /\bangle the\b/,
+      /\blook in the mirror\b/
+    ];
+    return triggers.some(re => re.test(t));
+  }
+
+  _handleMirrorAction(segment) {
+    // Identify NPCs present in the active scene
+    const npcs = this._getNpcsInActiveScene();
+    if (!npcs.length) {
+      this.bus.dispatch('dm:whisper', {
+        text: 'Mirror used. No NPCs in scene to reflect.',
+        priority: 3, category: 'mirror', source: 'max', dmOnly: true
+      });
+      return;
+    }
+
+    let hasNone = null;
+    let hasDistorted = null;
+    const allNormal = [];
+    for (const n of npcs) {
+      const r = n.mirrorReflection || 'normal';
+      if (r === 'none') hasNone = n;
+      else if (r === 'distorted') hasDistorted = n;
+      else allNormal.push(n);
+    }
+
+    // Vladislav (none) takes priority — most dramatic
+    if (hasNone) {
+      this.bus.dispatch('dm:whisper', {
+        text: 'The mirror shows the room. Everyone in it. The corner where he sits is empty glass.',
+        priority: 1, category: 'mirror', source: 'max', dmOnly: true,
+        useElevenLabs: true
+      });
+      this.bus.dispatch('voice:speak', {
+        text: 'The mirror shows the room. Everyone in it. The corner where he sits is empty glass.',
+        profile: 'max', device: 'earbud', useElevenLabs: true
+      });
+
+      // Vladislav awareness check — was the player subtle?
+      const speakerId = segment.speaker;
+      const player = this.state.get('players.' + speakerId);
+      if (player && speakerId !== 'dm') {
+        const dexMod = player.character?.abilities?.dex
+          ? Math.floor((player.character.abilities.dex - 10) / 2)
+          : 0;
+        const passive = 10 + dexMod;
+        // DC 14 stealth — passive check
+        const subtle = passive >= 14;
+        if (!subtle) {
+          // He noticed — fire follow-up Max whisper
+          setTimeout(() => {
+            this.bus.dispatch('dm:whisper', {
+              text: 'He saw. He knows you know.',
+              priority: 1, category: 'mirror', source: 'max', dmOnly: true,
+              useElevenLabs: true
+            });
+            this.bus.dispatch('voice:speak', {
+              text: 'He saw. He knows you know.',
+              profile: 'max', device: 'earbud', useElevenLabs: true
+            });
+          }, 1500);
+        } else {
+          // Ask DM if it was subtle (they may have rolled stealth)
+          this.bus.dispatch('dm:whisper', {
+            text: 'Subtle? Passive Dex ' + passive + ' vs DC 14. If they actively rolled stealth, override.',
+            priority: 2, category: 'mirror', source: 'max', dmOnly: true
+          });
+        }
+      } else {
+        // DM-driven — ask
+        this.bus.dispatch('dm:whisper', {
+          text: 'Subtle attempt? If yes Vladislav misses it. If no he saw — say so.',
+          priority: 2, category: 'mirror', source: 'max', dmOnly: true
+        });
+      }
+      return;
+    }
+
+    if (hasDistorted) {
+      this.bus.dispatch('dm:whisper', {
+        text: 'Something is there. Wrong proportions. The face keeps sliding.',
+        priority: 2, category: 'mirror', source: 'max', dmOnly: true,
+        useElevenLabs: true
+      });
+      this.bus.dispatch('voice:speak', {
+        text: 'Something is there. Wrong proportions. The face keeps sliding.',
+        profile: 'max', device: 'earbud', useElevenLabs: true
+      });
+      return;
+    }
+
+    // Everyone normal
+    this.bus.dispatch('dm:whisper', {
+      text: 'Everyone reflects normally.',
+      priority: 3, category: 'mirror', source: 'max', dmOnly: true,
+      useElevenLabs: true
+    });
+    this.bus.dispatch('voice:speak', {
+      text: 'Everyone reflects normally.',
+      profile: 'max', device: 'earbud', useElevenLabs: true
+    });
+  }
+
+  _getNpcsInActiveScene() {
+    // Pull NPCs from state that are alive and have a location
+    const npcs = this.state.get('npcs') || {};
+    const result = [];
+    for (const [id, n] of Object.entries(npcs)) {
+      if (!n) continue;
+      // Skip dead/removed NPCs but include undead like Piotr
+      if (n.status === 'removed' || n.status === 'gone') continue;
+      // Skip cellar-only NPCs unless cellar has been discovered
+      if (n.location && /cellar/i.test(n.location)) {
+        const cellarKnown = this.state.get('world.secrets.cellar_contents.revealed')
+          || this.state.get('world.secrets.piotr_in_cellar.revealed')
+          || this.state.get('story.cluesDiscovered')?.some?.(c => /cellar/i.test(c));
+        if (!cellarKnown) continue;
+      }
+      result.push({ id, ...n });
+    }
+    // Also pull top-level patron NPCs (they're at config root, not under npcs)
+    const config = this.config || {};
+    for (const key of ['patron-farmer', 'patron-merchant', 'patron-pilgrim', 'patron-minstrel']) {
+      const p = config[key];
+      if (p) result.push({ id: key, ...p });
+    }
+    return result;
   }
 
   // ═══════════════════════════════════════════════════════════════

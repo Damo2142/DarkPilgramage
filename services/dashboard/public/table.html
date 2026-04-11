@@ -6,19 +6,8 @@
   <title>Dark Pilgrimage — Table</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body {
-      height: 100%;
-      width: 100%;
-      overflow: hidden;
-      background: #000;
-      cursor: none;
-    }
-    canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
-    /* Disconnected state — pulsing red border, no error text visible */
+    html, body { height: 100%; width: 100%; overflow: hidden; background: #000; cursor: none; }
+    canvas { display: block; width: 100%; height: 100%; }
     body.disconnected::before {
       content: '';
       position: fixed;
@@ -36,321 +25,313 @@
   </style>
 </head>
 <body>
-  <canvas id="map"></canvas>
+<canvas id="map"></canvas>
 
 <script>
-  // ═══════════════════════════════════════════════════════════════
-  // /TABLE — PROJECTION DISPLAY
-  // No UI chrome. No interaction. Display only.
-  // Strict fog of war enforcement. Hidden tokens never rendered.
-  // ═══════════════════════════════════════════════════════════════
-  let ws = null;
-  let mapData = null;
-  let mapImage = null;
-  let tokens = {};
-  let walls = [];
-  let fogRevealed = [];
-  let revealedHidden = new Set(); // hidden tokens DM has explicitly revealed
-  let animations = []; // active token movement animations
+// ═══════════════════════════════════════════════════════════════
+// /table — PLAYER-FACING PROJECTION DISPLAY
+// Strict rules:
+//   1. Unrevealed fog = SOLID BLACK (zero visibility)
+//   2. Player tokens (type:pc) always visible — unless absent/notYetArrived
+//   3. NPC tokens visible ONLY if revealedToPlayers === true
+//   4. Hidden tokens invisible regardless
+//   5. Tokens fade in/out over 600ms when revealedToPlayers toggles
+// ═══════════════════════════════════════════════════════════════
 
-  const cam = { x: 0, y: 0, zoom: 1 };
-  const canvas = document.getElementById('map');
-  const ctx = canvas.getContext('2d');
+var ws = null;
+var mapData = null;
+var mapImage = null;
+var tokens = {};
+var fogRevealed = [];
+var players = {};
+// Per-token visibility transition: id -> { from, to, startTime, duration }
+var visibilityTransitions = {};
+// Per-token current opacity (0..1)
+var tokenOpacity = {};
 
-  function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    centerCamera();
-    render();
-  }
-  window.addEventListener('resize', resize);
-  resize();
+var cam = { x: 0, y: 0, zoom: 1 };
+var canvas = document.getElementById('map');
+var ctx = canvas.getContext('2d');
 
-  function connect() {
-    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    ws = new WebSocket(`${proto}//${location.host}`);
-    ws.onopen = () => {
-      console.log('[Table] Connected');
-      document.body.classList.remove('disconnected');
-    };
-    ws.onmessage = (e) => {
-      try { handleMsg(JSON.parse(e.data)); } catch (err) { console.error('[Table]', err); }
-    };
-    ws.onclose = () => {
-      console.log('[Table] Disconnected — reconnecting...');
-      document.body.classList.add('disconnected');
-      setTimeout(connect, 3000);
-    };
-    ws.onerror = () => {
-      document.body.classList.add('disconnected');
-    };
-  }
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  centerCamera();
+  render();
+}
+window.addEventListener('resize', resize);
 
-  function handleMsg(msg) {
-    const t = msg.type || msg.event;
-    switch (t) {
-      case 'init': {
-        const s = msg.state || {};
-        if (s.map) {
-          mapData = s.map;
-          tokens = s.map.tokens || {};
-          walls = s.map.walls || [];
-          fogRevealed = s.map.fogRevealed || [];
-          loadMapImage();
+function connect() {
+  var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(proto + '//' + location.host);
+  ws.onopen = function() { document.body.classList.remove('disconnected'); };
+  ws.onmessage = function(e) {
+    try { handleMsg(JSON.parse(e.data)); } catch (err) { console.error('[Table]', err); }
+  };
+  ws.onclose = function() { document.body.classList.add('disconnected'); setTimeout(connect, 3000); };
+  ws.onerror = function() { document.body.classList.add('disconnected'); };
+}
+
+function handleMsg(msg) {
+  var t = msg.type || msg.event;
+  switch (t) {
+    case 'init': {
+      var s = msg.state || {};
+      if (s.map) {
+        mapData = s.map;
+        tokens = s.map.tokens || {};
+        fogRevealed = s.map.fogRevealed || [];
+        loadMapImage();
+      }
+      if (s.players) players = s.players;
+      // Initialize opacities for currently-visible tokens
+      for (var id in tokens) initTokenOpacity(id, tokens[id]);
+      render();
+      break;
+    }
+    case 'state:change': {
+      var p = msg.data && msg.data.path;
+      var v = msg.data && msg.data.value;
+      if (p === 'map.tokens') { tokens = v || {}; for (var id in tokens) initTokenOpacity(id, tokens[id]); render(); }
+      if (p && p.indexOf('map.tokens.') === 0) {
+        var parts = p.split('.');
+        var tid = parts[2];
+        if (parts.length === 3) {
+          // Whole token replaced
+          var prevVisible = isVisible(tid, tokens[tid]);
+          tokens[tid] = v;
+          var nowVisible = isVisible(tid, v);
+          if (prevVisible !== nowVisible) startTransition(tid, prevVisible ? 1 : 0, nowVisible ? 1 : 0);
+        } else if (parts.length > 3) {
+          if (!tokens[tid]) tokens[tid] = {};
+          var prevVisible2 = isVisible(tid, tokens[tid]);
+          tokens[tid][parts[3]] = v;
+          var nowVisible2 = isVisible(tid, tokens[tid]);
+          if (prevVisible2 !== nowVisible2) startTransition(tid, prevVisible2 ? 1 : 0, nowVisible2 ? 1 : 0);
         }
         render();
-        break;
       }
-      case 'state:change': {
-        const p = msg.data?.path;
-        const v = msg.data?.value;
-        if (p === 'map.tokens') { tokens = v || {}; render(); }
-        if (p?.startsWith('map.tokens.')) {
-          const parts = p.split('.');
-          if (parts.length === 3) tokens[parts[2]] = v;
-          else if (parts.length > 3) {
-            if (!tokens[parts[2]]) tokens[parts[2]] = {};
-            tokens[parts[2]][parts[3]] = v;
-          }
-          render();
-        }
-        if (p === 'map.fogRevealed') { fogRevealed = v || []; render(); }
-        if (p === 'map.walls') { walls = v || []; render(); }
-        break;
-      }
-      case 'map:activated':
-      case 'map:full_update': {
-        if (msg.data?.map) {
-          mapData = msg.data.map;
-          tokens = msg.data.tokens || msg.data.map.tokens || {};
-          walls = msg.data.map.walls || [];
-          fogRevealed = msg.data.map.fogRevealed || [];
-          loadMapImage();
-        }
+      if (p === 'map.fogRevealed') { fogRevealed = v || []; render(); }
+      if (p && p.indexOf('players.') === 0) {
+        var pidParts = p.split('.');
+        var pid = pidParts[1];
+        if (!players[pid]) players[pid] = {};
+        if (pidParts.length === 2) players[pid] = v;
+        else if (pidParts.length === 3) players[pid][pidParts[2]] = v;
         render();
-        break;
       }
-      case 'map:token_moved': {
-        const { tokenId, x, y, duration } = msg.data || {};
-        if (tokenId && tokens[tokenId]) {
-          if (duration && duration > 0) {
-            startAnimation(tokenId, x, y, duration);
-          } else {
-            tokens[tokenId].x = x;
-            tokens[tokenId].y = y;
+      break;
+    }
+    case 'map:activated':
+    case 'map:full_update': {
+      if (msg.data && msg.data.map) {
+        mapData = msg.data.map;
+        tokens = msg.data.tokens || msg.data.map.tokens || {};
+        fogRevealed = msg.data.map.fogRevealed || [];
+        loadMapImage();
+      }
+      for (var id3 in tokens) initTokenOpacity(id3, tokens[id3]);
+      render();
+      break;
+    }
+    case 'map:token_moved': {
+      var d = msg.data || {};
+      if (d.tokenId && tokens[d.tokenId]) {
+        tokens[d.tokenId].x = d.x;
+        tokens[d.tokenId].y = d.y;
+        render();
+      }
+      break;
+    }
+    case 'map:token_added': {
+      if (msg.data && msg.data.tokenId && msg.data.token) {
+        tokens[msg.data.tokenId] = msg.data.token;
+        var nowVis = isVisible(msg.data.tokenId, msg.data.token);
+        startTransition(msg.data.tokenId, 0, nowVis ? 1 : 0);
+        render();
+      }
+      break;
+    }
+    case 'map:token_removed': {
+      if (msg.data && msg.data.tokenId) {
+        // Fade out before delete
+        startTransition(msg.data.tokenId, tokenOpacity[msg.data.tokenId] || 0, 0);
+        setTimeout(function() {
+          if (msg.data && msg.data.tokenId) {
+            delete tokens[msg.data.tokenId];
+            delete tokenOpacity[msg.data.tokenId];
             render();
           }
-        }
-        break;
+        }, 700);
       }
-      case 'token:move': {
-        const { entityId, to, duration, hidden } = msg.data || {};
-        if (entityId && tokens[entityId]) {
-          if (hidden === false) revealedHidden.add(entityId);
-          startAnimation(entityId, to.x, to.y, duration || 600);
-        }
-        break;
-      }
-      case 'token:reveal': {
-        const id = msg.data?.tokenId || msg.data?.entityId;
-        if (id) { revealedHidden.add(id); render(); }
-        break;
-      }
-      case 'token:hide': {
-        const id = msg.data?.tokenId || msg.data?.entityId;
-        if (id) { revealedHidden.delete(id); render(); }
-        break;
-      }
-      case 'map:token_added': {
-        if (msg.data?.tokenId && msg.data?.token) {
-          tokens[msg.data.tokenId] = msg.data.token;
-          render();
-        }
-        break;
-      }
-      case 'map:token_removed': {
-        if (msg.data?.tokenId) { delete tokens[msg.data.tokenId]; render(); }
+      break;
+    }
+  }
+}
+
+function loadMapImage() {
+  if (!mapData || !mapData.image) return;
+  var img = new Image();
+  img.onload = function() { mapImage = img; centerCamera(); render(); };
+  img.onerror = function() { mapImage = null; render(); };
+  img.src = '/assets/maps/' + mapData.image;
+}
+
+function centerCamera() {
+  if (!mapData) return;
+  cam.x = 0; cam.y = 0;
+  cam.zoom = Math.min(canvas.width / mapData.width, canvas.height / mapData.height) * 0.95;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VISIBILITY RULES
+// ═══════════════════════════════════════════════════════════════
+function isVisible(id, tok) {
+  if (!tok) return false;
+  // Hidden tokens never visible
+  if (tok.hidden) return false;
+  // Player tokens always visible — unless absent or not yet arrived
+  if (tok.type === 'pc' || tok.isPC) {
+    var p = players[id];
+    if (p && (p.absent || p.notYetArrived)) return false;
+    return true;
+  }
+  // NPCs only visible if explicitly revealedToPlayers
+  return !!tok.revealedToPlayers;
+}
+
+function initTokenOpacity(id, tok) {
+  tokenOpacity[id] = isVisible(id, tok) ? 1 : 0;
+}
+
+function startTransition(id, from, to) {
+  if (from === to) return;
+  visibilityTransitions[id] = {
+    from: from,
+    to: to,
+    startTime: performance.now(),
+    duration: 600
+  };
+  requestAnimationFrame(animLoop);
+}
+
+function animLoop(now) {
+  var anyActive = false;
+  for (var id in visibilityTransitions) {
+    var tr = visibilityTransitions[id];
+    var t = Math.min(1, (now - tr.startTime) / tr.duration);
+    var eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+    tokenOpacity[id] = tr.from + (tr.to - tr.from) * eased;
+    if (t >= 1) {
+      tokenOpacity[id] = tr.to;
+      delete visibilityTransitions[id];
+    } else {
+      anyActive = true;
+    }
+  }
+  render();
+  if (anyActive) requestAnimationFrame(animLoop);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════════
+function render() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  if (!mapData) return;
+
+  ctx.save();
+  ctx.translate(canvas.width / 2 + cam.x * cam.zoom, canvas.height / 2 + cam.y * cam.zoom);
+  ctx.scale(cam.zoom, cam.zoom);
+
+  var mw = mapData.width;
+  var mh = mapData.height;
+
+  // ── Strict black fog ──
+  // Default: entire map blacked out. Only DM-revealed zones show the image.
+  if (fogRevealed.length === 0) {
+    // No reveal data — entire map is hidden. Players see solid black.
+    ctx.restore();
+    return;
+  }
+
+  // Clip to revealed regions, then draw map image inside the clip
+  ctx.save();
+  ctx.beginPath();
+  for (var fi = 0; fi < fogRevealed.length; fi++) {
+    var rect = fogRevealed[fi];
+    ctx.rect(rect.x - mw/2, rect.y - mh/2, rect.w, rect.h);
+  }
+  ctx.clip();
+
+  if (mapImage) {
+    ctx.drawImage(mapImage, -mw / 2, -mh / 2, mw, mh);
+  }
+  ctx.restore();
+
+  // Tokens — strict visibility
+  for (var id in tokens) {
+    var tok = tokens[id];
+    var op = tokenOpacity[id];
+    if (op === undefined) {
+      tokenOpacity[id] = isVisible(id, tok) ? 1 : 0;
+      op = tokenOpacity[id];
+    }
+    if (op <= 0.001) continue;
+
+    // Token must also be inside a revealed area to render
+    var inRevealed = false;
+    for (var ri = 0; ri < fogRevealed.length; ri++) {
+      var rr = fogRevealed[ri];
+      if (tok.x >= rr.x && tok.x <= rr.x + rr.w && tok.y >= rr.y && tok.y <= rr.y + rr.h) {
+        inRevealed = true;
         break;
       }
     }
-  }
+    if (!inRevealed) continue;
 
-  function loadMapImage() {
-    if (!mapData?.image) return;
-    const img = new Image();
-    img.onload = () => { mapImage = img; centerCamera(); render(); };
-    img.onerror = () => { mapImage = null; render(); };
-    img.src = '/assets/maps/' + mapData.image;
-  }
-
-  function centerCamera() {
-    if (!mapData) return;
-    cam.x = 0; cam.y = 0;
-    cam.zoom = Math.min(canvas.width / mapData.width, canvas.height / mapData.height) * 0.95;
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // ANIMATION
-  // ═══════════════════════════════════════════════════════════════
-  function startAnimation(tokenId, toX, toY, duration) {
-    const tok = tokens[tokenId];
-    if (!tok) return;
-    // Calculate distance — segment if too long
-    const fromX = tok.x;
-    const fromY = tok.y;
-    const dist = Math.hypot(toX - fromX, toY - fromY);
-    const gs = mapData?.gridSize || 70;
-    const moveActionPx = 6 * gs; // 6 squares = ~30ft
-    const segments = Math.max(1, Math.ceil(dist / moveActionPx));
-    let segIdx = 0;
-
-    const runSegment = () => {
-      if (segIdx >= segments) return;
-      const segFromX = fromX + ((toX - fromX) * segIdx / segments);
-      const segFromY = fromY + ((toY - fromY) * segIdx / segments);
-      const segToX = fromX + ((toX - fromX) * (segIdx + 1) / segments);
-      const segToY = fromY + ((toY - fromY) * (segIdx + 1) / segments);
-      const segDuration = duration / segments;
-
-      // Remove any existing animation for this token
-      animations = animations.filter(a => a.tokenId !== tokenId);
-      animations.push({
-        tokenId,
-        fromX: segFromX, fromY: segFromY,
-        toX: segToX, toY: segToY,
-        startTime: performance.now(),
-        duration: segDuration,
-        onComplete: () => {
-          tokens[tokenId].x = segToX;
-          tokens[tokenId].y = segToY;
-          segIdx++;
-          if (segIdx < segments) {
-            setTimeout(runSegment, 200); // 200ms pause between segments
-          }
-        }
-      });
-      requestAnimationFrame(animLoop);
-    };
-    runSegment();
-  }
-
-  function easeInOut(t) {
-    return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-  }
-
-  function animLoop(now) {
-    if (!animations.length) { render(); return; }
-    let stillAnimating = false;
-    for (const a of animations) {
-      const elapsed = now - a.startTime;
-      const t = Math.min(1, elapsed / a.duration);
-      if (t >= 1) {
-        if (a.onComplete && !a._completed) { a.onComplete(); a._completed = true; }
-      } else {
-        stillAnimating = true;
-      }
-    }
-    animations = animations.filter(a => !a._completed);
-    render();
-    if (stillAnimating || animations.length) requestAnimationFrame(animLoop);
-  }
-
-  function getTokenRenderPos(id, tok) {
-    const anim = animations.find(a => a.tokenId === id);
-    if (anim) {
-      const elapsed = performance.now() - anim.startTime;
-      const t = Math.min(1, elapsed / anim.duration);
-      const eased = easeInOut(t);
-      return {
-        x: anim.fromX + (anim.toX - anim.fromX) * eased,
-        y: anim.fromY + (anim.toY - anim.fromY) * eased
-      };
-    }
-    return { x: tok.x, y: tok.y };
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // RENDER
-  // ═══════════════════════════════════════════════════════════════
-  function render() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    if (!mapData) return;
+    var tx = tok.x - mw / 2;
+    var ty = tok.y - mh / 2;
+    var gs = mapData.gridSize || 64;
+    var r = (gs * 0.4) * 1.4; // 40% larger than dashboard
 
     ctx.save();
-    ctx.translate(canvas.width / 2 + cam.x * cam.zoom, canvas.height / 2 + cam.y * cam.zoom);
-    ctx.scale(cam.zoom, cam.zoom);
+    ctx.globalAlpha = op;
 
-    const mw = mapData.width;
-    const mh = mapData.height;
+    var isPlayer = tok.type === 'pc' || tok.isPC;
+    ctx.fillStyle = tok.color || (isPlayer ? '#5a9ad9' : '#a44');
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(tx, ty, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
 
-    // Map image
-    if (mapImage) {
-      ctx.drawImage(mapImage, -mw / 2, -mh / 2, mw, mh);
-    }
-
-    // Strict fog of war
-    if (fogRevealed.length > 0) {
-      ctx.save();
-      ctx.fillStyle = '#000';
-      ctx.fillRect(-mw/2, -mh/2, mw, mh);
-      ctx.globalCompositeOperation = 'destination-out';
-      for (const rect of fogRevealed) {
-        ctx.fillRect(rect.x - mw/2, rect.y - mh/2, rect.w, rect.h);
-      }
-      ctx.restore();
+    // Label — character name (player) or public name only (NPC)
+    var label;
+    if (isPlayer) {
+      label = (tok.name || id).toUpperCase();
     } else {
-      // No fog data = entire map blacked out (most secure default)
-      ctx.fillStyle = 'rgba(0,0,0,0.7)';
-      ctx.fillRect(-mw/2, -mh/2, mw, mh);
+      // NPCs: use public-facing name only, never trueIdentity
+      label = (tok.publicName || tok.name || id).toUpperCase();
     }
-
-    const gs = mapData.gridSize || 64;
-
-    // Tokens — players always visible, NPCs/creatures only if revealed
-    for (const [id, tok] of Object.entries(tokens)) {
-      // Hidden tokens: only render if explicitly revealed by DM
-      if (tok.hidden && !revealedHidden.has(id)) continue;
-
-      // Check if token is in a revealed fog area (or no fog)
-      const pos = getTokenRenderPos(id, tok);
-      const inRevealed = fogRevealed.length === 0 || fogRevealed.some(r =>
-        pos.x >= r.x && pos.x <= r.x + r.w &&
-        pos.y >= r.y && pos.y <= r.y + r.h
-      );
-      // Players always visible. NPCs only if in revealed area or explicitly revealed.
-      const isPlayer = tok.type === 'pc' || tok.isPC;
-      if (!isPlayer && !inRevealed && !revealedHidden.has(id)) continue;
-
-      const tx = pos.x - mw / 2;
-      const ty = pos.y - mh / 2;
-      // 40% larger than dashboard map
-      const r = ((tok.size || gs) / 2) * 0.85 * 1.4;
-
-      // Token circle
-      ctx.fillStyle = tok.color || (isPlayer ? '#5a9ad9' : '#a44');
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(tx, ty, r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      // Character name label below token
-      const name = tok.name || tok.label || id;
-      ctx.font = 'bold 14px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#000';
-      ctx.fillText(name.toUpperCase(), tx + 1, ty + r + 19);
-      ctx.fillStyle = '#e8d0a0';
-      ctx.fillText(name.toUpperCase(), tx, ty + r + 18);
-    }
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#000';
+    ctx.fillText(label, tx + 1, ty + r + 19);
+    ctx.fillStyle = '#e8d0a0';
+    ctx.fillText(label, tx, ty + r + 18);
 
     ctx.restore();
   }
 
-  connect();
+  ctx.restore();
+}
+
+connect();
+resize();
 </script>
 </body>
 </html>

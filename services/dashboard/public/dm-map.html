@@ -891,16 +891,35 @@ var DmMap = (function() {
     if (!el) return;
     if (!npcsList.length) { el.innerHTML = '<div style="font-size:9px;color:#666;padding:4px 0;">No NPCs loaded</div>'; return; }
     el.innerHTML = npcsList.map(function(n) {
-      var onMap = !!tokens[n.id];
+      var tok = tokens[n.id];
+      var onMap = !!tok;
+      var revealedToPlayers = !!(tok && tok.revealedToPlayers);
       var posIndicator = onMap ? '●' : '○';
       var posColor = onMap ? '#7fb069' : '#666';
+      var revealColor = revealedToPlayers ? '#7fb069' : '#666';
+      var revealLabel = revealedToPlayers ? '👁 P' : '✕ P';
       return '<div class="npc-row">' +
         '<span style="color:' + posColor + ';">' + posIndicator + '</span>' +
         '<span class="name">' + esc(n.name) + '</span>' +
         '<button onclick="DmMap.startPlace(\'' + n.id + '\')">' + (onMap ? 'Move' : 'Place') + '</button>' +
-        '<button onclick="DmMap.toggleNpcVisibility(\'' + n.id + '\')">' + (n.hidden || (tokens[n.id] && tokens[n.id].hidden) ? 'Show' : 'Hide') + '</button>' +
+        '<button onclick="DmMap.toggleNpcVisibility(\'' + n.id + '\')">' + (n.hidden || (tok && tok.hidden) ? 'Show' : 'Hide') + '</button>' +
+        '<button onclick="DmMap.toggleRevealToPlayers(\'' + n.id + '\')" style="color:' + revealColor + ';" title="Reveal to players on /table">' + revealLabel + '</button>' +
         '</div>';
     }).join('');
+  }
+
+  function toggleRevealToPlayers(npcId) {
+    var tok = tokens[npcId];
+    if (!tok) return;
+    var newRevealed = !tok.revealedToPlayers;
+    fetch('/api/map/token/reveal-to-players', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tokenId: npcId, revealed: newRevealed })
+    }).catch(function(){});
+    tok.revealedToPlayers = newRevealed;
+    setTimeout(loadNpcsList, 200);
+    render();
   }
 
   function startPlace(npcId) {
@@ -977,6 +996,7 @@ var DmMap = (function() {
     updateDisplay: updateDisplay,
     startPlace: startPlace,
     toggleNpcVisibility: toggleNpcVisibility,
+    toggleRevealToPlayers: toggleRevealToPlayers,
     init: function() {
       window.addEventListener('resize', resize);
       resize();

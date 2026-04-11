@@ -218,8 +218,19 @@ class VoiceService {
     }, 'voice-service');
 
     this.bus.subscribe('voice:speak', (env) => {
-      const { text, profile, device } = env.data;
-      this.speak(text, profile || 'narrator', device);
+      const { text, profile, device, useElevenLabs } = env.data;
+      // Section 8 — Max voice via ElevenLabs
+      if (profile === 'max' || useElevenLabs) {
+        this._speakMaxElevenLabs(text, device || 'earbud');
+      } else {
+        this.speak(text, profile || 'narrator', device);
+      }
+    }, 'voice-service');
+
+    // Section 6 — voice/audio enable/disable from session mode transitions
+    this.bus.subscribe('voice:enable', (env) => {
+      this._enabled = !!env.data?.enabled;
+      if (!this._enabled) this._speechQueue = [];
     }, 'voice-service');
 
     this.bus.subscribe('voice:list_devices', () => {
@@ -367,6 +378,73 @@ class VoiceService {
       if (d.name.toLowerCase().includes(lower) || key.includes(lower)) return d;
     }
     return ECHO_DEVICES[this.primaryDevice];
+  }
+
+  // Section 8 — Max voice via ElevenLabs (streamed to earbud channel)
+  // Falls back to Echo TTS if ElevenLabs unavailable, MAX_VOICE_ID empty, or call fails.
+  async _speakMaxElevenLabs(text, deviceName) {
+    if (!text) return;
+    const t0 = Date.now();
+    const apiKey = process.env.ELEVENLABS_API_KEY;
+    const voiceId = process.env.MAX_VOICE_ID;
+
+    // Decision: skip ElevenLabs immediately if missing key or voice ID — no failed-call delay
+    if (!apiKey || !voiceId) {
+      console.log('[VoiceService] Max: ElevenLabs unavailable, falling back to Echo TTS');
+      this.speak(text, 'narrator', deviceName || 'earbud');
+      return;
+    }
+
+    try {
+      const fetchFn = global.fetch || require('node-fetch');
+      const resp = await fetchFn(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'audio/mpeg',
+          'Content-Type': 'application/json',
+          'xi-api-key': apiKey
+        },
+        body: JSON.stringify({
+          text,
+          model_id: 'eleven_turbo_v2_5',
+          voice_settings: { stability: 0.75, similarity_boost: 0.80, style: 0.20 }
+        })
+      });
+
+      if (!resp.ok) {
+        console.warn(`[VoiceService] Max ElevenLabs failed (${resp.status}), falling back to Echo TTS`);
+        this.speak(text, 'narrator', deviceName || 'earbud');
+        return;
+      }
+
+      const buf = await resp.arrayBuffer();
+      const fs = require('fs');
+      const path = require('path');
+      const cacheDir = path.join(__dirname, '..', '..', 'assets', 'sounds', 'max');
+      try { fs.mkdirSync(cacheDir, { recursive: true }); } catch (e) {}
+      const filename = `max-${Date.now()}.mp3`;
+      const filepath = path.join(cacheDir, filename);
+      fs.writeFileSync(filepath, Buffer.from(buf));
+
+      const latency = Date.now() - t0;
+      console.log(`[VoiceService] Max ElevenLabs success (${latency}ms): ${text.slice(0, 60)}`);
+
+      // Dispatch sound:play event so dashboard browser plays it through earbud channel
+      this.bus.dispatch('sound:play', {
+        url: `/assets/sounds/max/${filename}`,
+        device: 'earbud',
+        priority: 'high',
+        source: 'max'
+      });
+
+      // Latency log for FINAL_BUILD_NOTES
+      this.bus.dispatch('max:latency', { latencyMs: latency, text: text.slice(0, 60) });
+
+      // If latency exceeded 4s also fall back to Echo for next response (handled in halQuery)
+    } catch (err) {
+      console.error('[VoiceService] Max ElevenLabs error:', err.message);
+      this.speak(text, 'narrator', deviceName || 'earbud');
+    }
   }
 
   async speak(text, profileName, deviceName) {

@@ -70,11 +70,11 @@ class AIEngine {
     this.spurt = new SpurtAgent(this.gemini, this.context, this.bus, this.state, this.config);
     this.pacing = new PacingMonitor(this.gemini, this.context, this.bus, this.state, this.config);
 
-    // Load HAL system prompt
+    // Load Max system prompt (formerly HAL — file kept as hal-codm.md for compat)
     try {
       this._halSystemPrompt = fs.readFileSync(path.join(__dirname, '../../prompts/hal-codm.md'), 'utf-8');
     } catch (e) {
-      this._halSystemPrompt = 'You are HAL, the Co-DM assistant. Answer concisely in under 60 words.';
+      this._halSystemPrompt = 'You are Max, the Co-DM session assistant. Calm, British, under 60 words.';
       console.warn('[AIEngine] Could not load hal-codm.md prompt, using fallback');
     }
 
@@ -86,14 +86,17 @@ class AIEngine {
     this.bus.subscribe('transcript:segment', async (env) => {
       const segment = env.data;
 
-      // HAL voice trigger — DM says "HAL ..." at the start of a phrase
+      // Max voice trigger — DM says "Max ..." at the start of a phrase
+      // Section 8 — wake word changed from HAL to Max
+      // False positive guard: "Max" must be first word AND followed by 3+ words OR a pause
       if (segment.speaker === 'dm' && segment.text) {
-        const halMatch = segment.text.match(/^hal[\s,.:]+(.+)/i);
-        if (halMatch) {
-          const halQuery = halMatch[1].trim();
-          if (halQuery.length > 0) {
-            this.halQuery(halQuery, 'voice');
-            return; // Don't feed HAL queries into the normal NPC/story pipeline
+        const maxMatch = segment.text.match(/^(?:max|hal)[\s,.:?]+(.+)/i);
+        if (maxMatch) {
+          const maxQuery = maxMatch[1].trim();
+          const wordCount = maxQuery.split(/\s+/).length;
+          if (wordCount >= 3 || segment.pauseAfterWakeWord) {
+            this.halQuery(maxQuery, 'voice');
+            return; // Don't feed Max queries into the normal NPC/story pipeline
           }
         }
       }
@@ -553,34 +556,53 @@ Stay strictly within what ${npcName} knows. 1-3 sentences of dialogue typical.`;
   // ═══════════════════════════════════════════════════════════════
 
   async halQuery(query, source = 'typed') {
-    if (!this.gemini?.available) {
-      const fallback = { query, response: 'Gemini unavailable — HAL offline.', timestamp: Date.now(), source };
+    const t0 = Date.now();
+    if (!this.gemini?.available || this._apiHealth?.status === 'OFFLINE') {
+      const scene = this.state.get('scene') || {};
+      const fallback = {
+        query,
+        response: `AI offline. Use reference page. Current scene: ${scene.name || 'unknown'}.`,
+        timestamp: Date.now(),
+        source,
+        offline: true,
+        latencyMs: Date.now() - t0
+      };
       this._halHistory.push(fallback);
       this.bus.dispatch('hal:response', fallback);
+      this.bus.dispatch('max:response', fallback);
       return fallback;
     }
 
     // Signal dashboard that a response is incoming
     this.bus.dispatch('hal:thinking', { query, source });
+    this.bus.dispatch('max:thinking', { query, source });
 
     // Build full game context
     const gameContext = this.context.buildNpcContext('dm') || {};
     const contextStr = this.context.toPromptString(gameContext);
 
-    // Include recent HAL conversation for continuity
-    const recentHal = this._halHistory.slice(-4).map(h =>
-      `DM asked: "${h.query}"\nHAL answered: "${h.response}"`
+    // Section 8 — inject CURRENT_TIME and CURRENT_SCENE into Max system prompt
+    const gameTime = this.state.get('world.gameTime') || '17:30';
+    const scene = this.state.get('scene') || {};
+    const sceneDesc = `${scene.name || 'unknown'} — ${(scene.description || '').slice(0, 200)}`;
+    const systemPrompt = this._halSystemPrompt
+      .replace('[CURRENT_TIME]', gameTime)
+      .replace('[CURRENT_SCENE]', sceneDesc);
+
+    // Include recent Max conversation for continuity
+    const recentMax = this._halHistory.slice(-4).map(h =>
+      `DM asked: "${h.query}"\nMax answered: "${h.response}"`
     ).join('\n\n');
 
     const userPrompt = [
       '## Current Game State',
       contextStr,
-      recentHal ? `\n## Recent HAL Exchanges\n${recentHal}` : '',
+      recentMax ? `\n## Recent Max Exchanges\n${recentMax}` : '',
       `\n## DM Query\n${query}`
     ].join('\n');
 
     try {
-      const response = await this.gemini.generate(this._halSystemPrompt, userPrompt, {
+      const response = await this.gemini.generate(systemPrompt, userPrompt, {
         maxTokens: 500,
         temperature: 0.7
       });
@@ -589,36 +611,49 @@ Stay strictly within what ${npcName} knows. 1-3 sentences of dialogue typical.`;
         query,
         response: response || 'No response generated.',
         timestamp: Date.now(),
-        source
+        source,
+        latencyMs: Date.now() - t0
       };
 
       this._halHistory.push(entry);
       if (this._halHistory.length > 20) this._halHistory.shift();
 
-      // Whisper to DM earbud
+      // Whisper to DM earbud — tagged max so voice service can route to ElevenLabs
       this.bus.dispatch('dm:whisper', {
-        text: `HAL: ${entry.response}`,
+        text: entry.response,
         priority: 2,
-        category: 'hal'
+        category: 'max',
+        source: 'max',
+        useElevenLabs: true
       });
 
-      // Send to dashboard HAL panel
+      // Voice synthesis — fire to voice service for ElevenLabs Max voice
+      this.bus.dispatch('voice:speak', {
+        text: entry.response,
+        profile: 'max',
+        device: 'earbud',
+        useElevenLabs: true
+      });
+
+      // Send to dashboard panels (both HAL legacy and Max alias)
       this.bus.dispatch('hal:response', entry);
+      this.bus.dispatch('max:response', entry);
 
       // Log to session
       this.bus.dispatch('session:log', {
-        source: 'hal_query',
+        source: 'max_query',
         query,
         response: entry.response,
         aiSource: source
       });
 
-      console.log(`[HAL] "${query}" → "${entry.response}"`);
+      console.log(`[Max] "${query}" → "${entry.response}" (${entry.latencyMs}ms)`);
       return entry;
     } catch (err) {
-      console.error('[HAL] Query error:', err.message);
-      const errorEntry = { query, response: `Error: ${err.message}`, timestamp: Date.now(), source };
+      console.error('[Max] Query error:', err.message);
+      const errorEntry = { query, response: `Error: ${err.message}`, timestamp: Date.now(), source, latencyMs: Date.now() - t0 };
       this.bus.dispatch('hal:response', errorEntry);
+      this.bus.dispatch('max:response', errorEntry);
       return errorEntry;
     }
   }

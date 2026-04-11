@@ -46,6 +46,175 @@ class WorldClockService {
     this.futureHooks = new Map();    // id -> { id, description, plantedAt, plantedInBeat, payoffCondition, payoffBeat, session, status, notes }
     this.reputation = new Map();     // factionId -> { id, name, score, history[], description }
     this.backstories = new Map();    // playerId -> { hooks[], themes[], connections[], integrated[] }
+
+    // Journey System (between settlements)
+    this.journey = {
+      active: false,
+      origin: null,
+      destination: null,
+      daysTraveled: 0,
+      daysRemaining: 0,
+      currentTerrain: 'mountain-road',
+      currentWeather: 'clear',
+      exhaustionLevels: {},
+      campChoice: null,
+      complications: []
+    };
+
+    // Journey configuration tables
+    this.journeyConfig = {
+      navigationDC: {
+        'good-road': 8,
+        'mountain-road': 12,
+        'mountain-path': 12,
+        'deep-forest': 15,
+        'high-pass': 16
+      },
+      blizzardDCBonus: 4,
+      milesPerDay: {
+        'good-road': 24,
+        'mountain-road': 14,
+        'mountain-path': 14,
+        'deep-forest': 10,
+        'high-pass': 8
+      },
+      staminaDrain: {
+        'no-armor': 5,
+        'light': 10,
+        'medium': 18,
+        'heavy': 28
+      },
+      camp: {
+        church: {
+          safety: 'high', consecrated: true, restQuality: 'full',
+          threats_blocked: ['letavec', 'strigoi', 'vrykolakas', 'aufhocker', 'nachtmahr']
+        },
+        inn: {
+          safety: 'medium', restQuality: 'full',
+          threats_blocked: ['letavec', 'wild-hunt'],
+          threats_possible: ['nachtmahr', 'moroaica', 'doppelganger']
+        },
+        cave: {
+          safety: 'medium', restQuality: 'full',
+          threats_blocked: ['wild-hunt', 'letavec-partial'],
+          threats_possible: ['aufhocker', 'hound-of-tindalos', 'nocni-letavec']
+        },
+        'open-camp': {
+          safety: 'low', restQuality: 'full-if-undisturbed',
+          threats_blocked: [],
+          threats_possible: ['letavec', 'nachtmahr', 'aufhocker', 'wild-hunt', 'strigoi', 'neck-nearby']
+        },
+        monastery: {
+          safety: 'medium-high', consecrated: true, restQuality: 'full',
+          threats_blocked: ['letavec', 'strigoi', 'vrykolakas', 'wild-hunt'],
+          threats_possible: ['hound-of-tindalos', 'nachtmahr']
+        }
+      }
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // JOURNEY SYSTEM
+  // ═══════════════════════════════════════════════════════════════
+
+  getJourneyState() {
+    return { ...this.journey, config: this.journeyConfig };
+  }
+
+  startJourney(origin, destination, terrain) {
+    this.journey = {
+      active: true,
+      origin,
+      destination,
+      daysTraveled: 0,
+      daysRemaining: 1,
+      currentTerrain: terrain || 'mountain-road',
+      currentWeather: this.weather.current?.type || 'clear',
+      exhaustionLevels: {},
+      campChoice: null,
+      complications: []
+    };
+    this.state.set('journey', this.journey);
+    this.bus.dispatch('journey:started', { ...this.journey });
+    return this.journey;
+  }
+
+  advanceJourney(phase, opts = {}) {
+    if (!this.journey.active) return { error: 'No active journey' };
+    const result = { phase, journey: this.journey };
+
+    switch (phase) {
+      case 'morning': {
+        // Navigation check phase
+        const dc = (this.journeyConfig.navigationDC[this.journey.currentTerrain] || 12)
+          + (this.journey.currentWeather === 'blizzard' ? this.journeyConfig.blizzardDCBonus : 0);
+        result.navigationDC = dc;
+        result.terrain = this.journey.currentTerrain;
+        if (opts.navCheck != null) {
+          const success = opts.navCheck >= dc;
+          const failBy = dc - opts.navCheck;
+          if (!success && failBy >= 5) {
+            this.journey.daysRemaining += 1;
+            result.outcome = 'wrong-turn';
+            result.note = 'Wrong turn — add one day, navigator gains 1 Exhaustion';
+          } else if (!success) {
+            result.outcome = 'half-progress';
+            result.note = 'Half progress for the day';
+          } else {
+            result.outcome = 'success';
+          }
+        }
+        this.bus.dispatch('journey:morning', result);
+        break;
+      }
+      case 'afternoon': {
+        result.note = 'Foraging and condition check phase';
+        this.bus.dispatch('journey:afternoon', result);
+        break;
+      }
+      case 'evening': {
+        result.prompt = 'Choose camp: church | inn | cave | open-camp | monastery';
+        if (opts.campChoice) {
+          this.setCampChoice(opts.campChoice);
+          result.camp = this.journeyConfig.camp[opts.campChoice];
+        }
+        this.bus.dispatch('journey:evening', result);
+        break;
+      }
+      case 'night': {
+        result.note = 'Night encounter check — weighted by active threats and camp choice';
+        this.bus.dispatch('journey:night', result);
+        break;
+      }
+      case 'arrived': {
+        this.journey.active = false;
+        result.note = `Arrived at ${this.journey.destination}`;
+        this.bus.dispatch('journey:arrived', { ...this.journey });
+        break;
+      }
+    }
+
+    this.state.set('journey', this.journey);
+    return result;
+  }
+
+  setCampChoice(choice) {
+    this.journey.campChoice = choice;
+    this.state.set('journey', this.journey);
+    return this.journey;
+  }
+
+  addJourneyComplication(description) {
+    this.journey.complications.push({ description, at: new Date().toISOString() });
+    this.state.set('journey', this.journey);
+  }
+
+  endJourney() {
+    const final = { ...this.journey };
+    this.journey.active = false;
+    this.state.set('journey', this.journey);
+    this.bus.dispatch('journey:arrived', final);
+    return final;
   }
 
   async init(orchestrator) {
@@ -1587,6 +1756,55 @@ class WorldClockService {
       const bs = this.markBackstoryIntegrated(req.params.playerId, hookId, beatId);
       if (!bs) return res.status(404).json({ error: 'player backstory not found' });
       res.json({ ok: true });
+    });
+
+    // ── Journey System ──
+
+    // GET /api/world/journey — current journey state
+    app.get('/api/world/journey', (req, res) => {
+      res.json(this.getJourneyState());
+    });
+
+    // POST /api/world/journey/start — begin a journey
+    app.post('/api/world/journey/start', (req, res) => {
+      const { origin, destination, terrain } = req.body;
+      if (!origin || !destination) return res.status(400).json({ error: 'origin and destination required' });
+      const j = this.startJourney(origin, destination, terrain);
+      res.json({ ok: true, journey: j });
+    });
+
+    // POST /api/world/journey/advance — advance journey by one phase
+    app.post('/api/world/journey/advance', (req, res) => {
+      const { phase, navCheck, campChoice } = req.body;
+      const result = this.advanceJourney(phase, { navCheck, campChoice });
+      res.json({ ok: true, result });
+    });
+
+    // POST /api/world/journey/camp — set camp choice for the night
+    app.post('/api/world/journey/camp', (req, res) => {
+      const { choice } = req.body;
+      const result = this.setCampChoice(choice);
+      res.json({ ok: true, journey: result });
+    });
+
+    // POST /api/world/journey/complication — log a complication
+    app.post('/api/world/journey/complication', (req, res) => {
+      const { description } = req.body;
+      this.addJourneyComplication(description);
+      res.json({ ok: true });
+    });
+
+    // POST /api/world/journey/encounter — manually trigger an encounter
+    app.post('/api/world/journey/encounter', (req, res) => {
+      const { creatureId, description } = req.body;
+      this.bus.dispatch('journey:encounter', { creatureId, description, journey: this.getJourneyState() });
+      res.json({ ok: true });
+    });
+
+    // POST /api/world/journey/end — end the journey (arrived)
+    app.post('/api/world/journey/end', (req, res) => {
+      const j = this.endJourney();
+      res.json({ ok: true, journey: j });
     });
 
     // POST /api/world/add-timed-event — add a timed event mid-session

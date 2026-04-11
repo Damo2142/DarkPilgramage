@@ -1,0 +1,220 @@
+{
+  "id": "nocni-letavec",
+  "name": "Noční Letavec",
+  "commonName": "The Night Flier",
+  "type": "monstrosity",
+  "size": "large",
+  "alignment": "unaligned",
+  "cr": 9,
+  "xp": 5000,
+  "ac": 16,
+  "acSource": "natural armor",
+  "hp": 180,
+  "hpDice": "24d10 + 48",
+  "speed": "40ft walk, 60ft fly",
+  "stats": {
+    "str": 24,
+    "dex": 18,
+    "con": 20,
+    "int": 14,
+    "wis": 16,
+    "cha": 10
+  },
+  "savingThrows": {
+    "str": 11,
+    "con": 9,
+    "wis": 7
+  },
+  "skills": {
+    "perception": 11,
+    "stealth": 8,
+    "survival": 7
+  },
+  "damageImmunities": ["poison", "psychic"],
+  "damageResistances": ["bludgeoning", "piercing", "slashing from nonmagical weapons"],
+  "conditionImmunities": ["charmed", "exhaustion", "frightened", "paralyzed", "poisoned"],
+  "senses": {
+    "darkvision": 120,
+    "blindsight": 60,
+    "passivePerception": 21
+  },
+  "languages": "All languages — speaks rarely and only to chosen targets, always in their native tongue with no accent",
+  "traits": [
+    {
+      "name": "Regeneration",
+      "description": "The Letavec regains 15 HP at the start of each of its turns unless it took fire or radiant damage since its last turn. If reduced to 0 HP it drops unconscious but does not die — it regenerates to 1 HP after 1 minute and resumes its hunt. It can only be permanently killed by destroying its dormant basin."
+    },
+    {
+      "name": "Legendary Resistance",
+      "uses": 3,
+      "description": "If the Letavec fails a saving throw it can choose to succeed instead."
+    },
+    {
+      "name": "Chosen Scent",
+      "description": "The Letavec identifies specific individuals it has chosen to harvest. It can smell a chosen target from up to 5 miles. Within 1 mile it knows their exact direction. Within 300 feet it knows their exact position regardless of walls, darkness, or concealment. It cannot be deceived about a chosen target's location by mundane means."
+    },
+    {
+      "name": "Patient Hunter",
+      "description": "The Letavec will not enter consecrated ground. Not because it cannot — because it does not need to. It circles and waits. Chosen targets must leave eventually. When not actively hunting it perches in darkness within sensing range and observes."
+    },
+    {
+      "name": "Targeted Restraint",
+      "description": "Against chosen targets the Letavec fights to incapacitate not kill — it wants specific parts intact. It will reduce a chosen target to 0 HP rather than kill them outright. Against non-chosen targets it has no such restraint."
+    },
+    {
+      "name": "Dormant Cycle",
+      "description": "The Letavec is active for 13 nights every 13 years. During dormancy it submerges in a stone basin in its underground den in the Roman-era survey tunnels of the Orava mountains. While dormant it is effectively dead. Destroying the basin permanently ends its cycle — the creature dissolves. Without the basin it cannot return from 0 HP."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The Letavec makes three attacks — two Talon attacks and one Wing Buffet."
+    },
+    {
+      "name": "Talons",
+      "type": "melee",
+      "attackBonus": 11,
+      "reach": "10ft",
+      "damage": "2d8 + 7",
+      "damageType": "piercing",
+      "additionalEffect": "Target is Grappled on hit. Escape DC 17. While grappled target is Restrained."
+    },
+    {
+      "name": "Wing Buffet",
+      "type": "melee",
+      "attackBonus": 11,
+      "reach": "10ft",
+      "damage": "2d6 + 7",
+      "damageType": "bludgeoning",
+      "additionalEffect": "Target pushed 10 feet and knocked Prone."
+    },
+    {
+      "name": "Harvest",
+      "recharge": "5-6",
+      "description": "One grappled chosen target must make a DC 17 Constitution saving throw. On a failed save the Letavec extracts something from them — see Harvest Table per character. On a success the target takes 4d10 necrotic damage but retains what was taken. Non-chosen targets are immune to this action."
+    },
+    {
+      "name": "Speak",
+      "description": "The Letavec addresses one chosen target it can see in that target's native language. It explains what it wants with complete sincerity and no malice. This is not a game mechanic — it is a roleplay moment. The DM delivers the Letavec's words. See Speech Templates."
+    }
+  ],
+  "legendaryActions": {
+    "cost": 3,
+    "options": [
+      {
+        "name": "Sense",
+        "cost": 1,
+        "description": "The Letavec knows the exact position of all chosen targets within 300 feet until the start of its next turn."
+      },
+      {
+        "name": "Wing Beat",
+        "cost": 1,
+        "description": "The Letavec flies up to half its speed without provoking opportunity attacks."
+      },
+      {
+        "name": "Snatch",
+        "cost": 2,
+        "description": "The Letavec makes one Talon attack. On a hit the target is carried up to 30 feet vertically."
+      },
+      {
+        "name": "Retreat",
+        "cost": 3,
+        "description": "The Letavec disengages and flies up to its full speed. It does not return until the following night."
+      }
+    ]
+  },
+  "harvestTable": {
+    "barry-frascht": [
+      {
+        "harvest": 1,
+        "effect": "Disadvantage on all Perception checks involving sight. His hunter's vision is partially consumed.",
+        "narrative": "Something leaves your eye that you cannot name. Colors seem slightly wrong. Distances are harder to judge."
+      },
+      {
+        "harvest": 2,
+        "effect": "Loses ability to instinctively sense undead — the bloodline sense that made his hand reach for stakes before his mind understood why.",
+        "narrative": "The instinct is gone. You reach for a stake and realize you are reaching out of habit not knowing."
+      },
+      {
+        "harvest": 3,
+        "effect": "Permanently blinded in one eye. The Letavec has what it came for and will not target Barry again.",
+        "narrative": "It takes the eye. Not painfully. Almost gently. It has what it came for."
+      }
+    ],
+    "zarina-firethorn": [
+      {
+        "harvest": 1,
+        "effect": "Disadvantage on all Insight checks. Her pattern recognition is disrupted.",
+        "narrative": "Faces look the same to you for a moment. You cannot read what is behind them. It passes — mostly."
+      },
+      {
+        "harvest": 2,
+        "effect": "Cannot benefit from Deductive Intuition — the Mark of Detection dims.",
+        "narrative": "The extra sense your bloodline gave you is quiet. Not gone. Just unreachable."
+      },
+      {
+        "harvest": 3,
+        "effect": "The Letavec has what it came for and will not target Zarina again.",
+        "narrative": "Something analytical and irreplaceable leaves with it. You will never quite think the same way again."
+      }
+    ],
+    "spurt": [
+      {
+        "harvest": 1,
+        "effect": "Wild Magic surge table shifts — all results are one step more catastrophic.",
+        "narrative": "Spurt feels something leave. His magic feels looser. More dangerous. He is not sure this is bad."
+      },
+      {
+        "harvest": 2,
+        "effect": "Sorcery points cannot be recovered on short rest — only long rest.",
+        "narrative": "The well is slower to refill. Something that was quick and easy is now an effort."
+      },
+      {
+        "harvest": 3,
+        "effect": "The Letavec has what it came for and will not target Spurt again.",
+        "narrative": "Whatever made his magic wild and unpredictable is gone. His spells still work. They are just less interesting now."
+      }
+    ]
+  },
+  "speechTemplates": {
+    "barry": "Your family has produced this quality for eleven generations. I have tasted it twice before — your grandfather's grandfather, and the one before him. You will not miss what I take. You have more than enough of it. I have been patient.",
+    "zarina": "I have collected soldiers for three hundred years. What you do is different. I want to understand what you do. I will not take much.",
+    "spurt": "The small chaotic ones are rare. I have not had one in a very long time. I will be gentle.",
+    "general": "I only want what you have. You will not need it.",
+    "dmNote": "The Letavec speaks rarely and only when alone with a target. Never in combat. Always calm. Always sincere. It genuinely does not understand why its targets object. Deliver its words quietly and without theatrical menace — the absence of malice is the horror."
+  },
+  "den": {
+    "location": "Roman-era survey tunnels in the Orava mountains between Orava and Houska",
+    "description": "A worked stone doorway half-collapsed into a hillside. Roman construction. A single chamber inside containing a stone basin filled with dark liquid. The Letavec submerges in the basin during dormancy.",
+    "findingTheDen": [
+      "Information from Vladislav — he watched it once in 1251 and knows the approximate location. Requires social combat to extract.",
+      "Roman-era library documents at Houska Castle referencing mountain survey tunnels.",
+      "Aldous Kern's voice from inside the False Hydra — he traveled these roads and saw the entrance without knowing what it was.",
+      "Tracking the Letavec on foot after it lands — it walks the last miles leaving ground tracks. DC 18 Survival to follow without losing the trail."
+    ],
+    "destroyingTheBasin": "The basin is AC 17, HP 50, immune to poison and psychic. Destroyed by fire, radiant, or force damage. When destroyed the Letavec dissolves permanently if currently at 0 HP or will dissolve the next time it reaches 0 HP."
+  },
+  "lore": "The Noční Letavec has been in these mountains since before the castles. The castles were built partly to give travelers somewhere defensible to shelter during its active cycles. Local people do not speak its full name. They say Letavec and make a specific gesture and change the subject. It has been doing this for longer than anyone can trace. It will be doing this long after everyone who encountered it is gone.",
+  "vladislavKnowledge": {
+    "encountered": 1251,
+    "knows": [
+      "What it is and what it wants from each party member",
+      "Approximate den location",
+      "That destroying the basin is the only permanent solution",
+      "Which party members it has selected"
+    ],
+    "willNotVolunteer": true,
+    "leverage": "This information is valuable. He will trade pieces of it for something he wants from the party.",
+    "directQuestion": "There are older things than me in these mountains. That should concern you considerably.",
+    "socialCombatRequired": true,
+    "socialCombatNote": "Each piece of information requires positive momentum in a social combat encounter. He releases information one piece at a time — never everything at once."
+  },
+  "campaignNotes": {
+    "session0": "Tracks around the inn. Observation only. Aldous Kern was moving fast when he arrived — he was on the road after dark.",
+    "session0to1": "Follows the party. Chosen targets feel watched. DC 13 Perception at night to hear wings.",
+    "session1to2": "First direct encounter at camp. Driven off after damage. Returns next night for 13 nights total.",
+    "session2": "Followed party to Houska. Vladislav aware of it — considers it a nuisance and useful deterrent. Will not help party against it.",
+    "session3": "Party finds den location. First opportunity to permanently end the cycle."
+  }
+}

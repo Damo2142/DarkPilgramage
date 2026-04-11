@@ -1,0 +1,38 @@
+{
+  "id": "corpse-candle",
+  "name": "Corpse Candle",
+  "alternateNames": ["Pwyll", "Will-o-the-Death"],
+  "type": "undead",
+  "size": "tiny",
+  "cr": 0,
+  "xp": 0,
+  "description": "A floating pale light that drifts toward places where someone will soon die or has recently died. It follows death. It does not cause it.",
+  "stats": { "str": 1, "dex": 20, "con": 10, "int": 6, "wis": 10, "cha": 6 },
+  "damageImmunities": ["all"],
+  "conditionImmunities": ["all"],
+  "traits": [
+    {
+      "name": "Deathsense",
+      "description": "The Corpse Candle knows when a creature within 1 mile will die within 24 hours. It drifts toward that creature and hovers near them. It does not know the cause. It just knows the timing."
+    },
+    {
+      "name": "Untouchable",
+      "description": "The Corpse Candle cannot be harmed, moved, or interacted with physically. Attacks pass through it. It cannot be dispelled."
+    },
+    {
+      "name": "Cultural Terror",
+      "description": "Any NPC who sees the Corpse Candle near a specific person reacts with immediate terror and avoidance of that person. They will not speak to the marked person, do business with them, or allow them into their home."
+    },
+    {
+      "name": "Prediction Not Curse",
+      "description": "The Corpse Candle predicts death — it does not cause it. The marked creature can survive if the cause of death is identified and prevented. The Candle fades when the predicted death no longer will occur."
+    }
+  ],
+  "actions": [],
+  "lore": "It knows. That is all it does. It knows and it follows the knowing. It has no malice. It has no mercy. It is simply accurate.",
+  "campaignUse": {
+    "session0": "Appears at midnight drifting through a window to hover near one party member. The room goes silent. Even Vladislav watches it. The DM knows whose death it predicts. The party does not.",
+    "session14": "Appears again outside Čachtice. Same light. Same silence. The party now knows what it means. The question is the same as before — whose death and can it be prevented.",
+    "mechanicalNote": "Pure atmosphere and story tool. No stats needed in practice. DM decides what death it is predicting and whether the party can prevent it."
+  }
+}

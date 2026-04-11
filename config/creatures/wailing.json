@@ -1,0 +1,50 @@
+{
+  "id": "wailing",
+  "name": "The Wailing",
+  "type": "undead",
+  "size": "medium",
+  "cr": 4,
+  "xp": 1100,
+  "ac": 12,
+  "hp": 58,
+  "hpDice": "9d8 + 18",
+  "speed": "0ft (cannot move from death location), 40ft fly",
+  "stats": { "str": 6, "dex": 14, "con": 14, "int": 12, "wis": 12, "cha": 18 },
+  "damageImmunities": ["cold", "necrotic", "poison", "bludgeoning piercing slashing from nonmagical weapons"],
+  "conditionImmunities": ["charmed", "exhaustion", "frightened", "grappled", "paralyzed", "petrified", "poisoned", "prone", "restrained"],
+  "senses": { "darkvision": 60, "passivePerception": 11 },
+  "traits": [
+    {
+      "name": "Silent Scream",
+      "description": "The Wailing's scream produces no sound that can be heard — but it can be felt. Creatures within 30ft who can see it make DC 14 WIS save or be Frightened for 1 minute."
+    },
+    {
+      "name": "Bound",
+      "description": "The Wailing cannot move more than 100 feet from the location of its death. It does not want to attack the party. It wants to be heard."
+    },
+    {
+      "name": "Seeking Justice",
+      "description": "If a creature speaks the name of the Wailing's killer aloud in the location of its death, the Wailing is immediately released and passes on. It does not attack that creature — it looks at them with something like gratitude."
+    },
+    {
+      "name": "Incorporeal Movement",
+      "description": "Can move through objects and creatures. Takes 1d10 force damage if it ends turn inside an object."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Corrupting Touch",
+      "attackBonus": 4,
+      "damage": "3d6",
+      "damageType": "necrotic",
+      "description": "The Wailing only attacks if a creature tries to leave before it has communicated what it needs."
+    },
+    {
+      "name": "Horrifying Visage",
+      "description": "Creatures within 60ft who can see it make DC 14 WIS save or age 1d4 × 10 years. On successful save immune for 24 hours. Aging reversed by Greater Restoration."
+    }
+  ],
+  "resolution": "Investigation to discover killer's name. Killer is ancestor of one party member — determine which based on family backstory. Speaking the name aloud at the location releases the Wailing permanently.",
+  "lore": "A woman murdered. Killer never named. She cannot rest until someone says it. She has been screaming into silence for decades. She does not want to hurt anyone. She wants justice. The distinction matters.",
+  "campaignPlacement": "Krvavý Kříž crossroads, Session 12. CR 4 against level 11 party — not a combat challenge. A puzzle and a story moment."
+}

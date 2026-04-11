@@ -62,6 +62,40 @@ const WILD_MAGIC_TABLE = [
   { range: [99, 100], effect: 'You regain all expended sorcery points.', category: 'buff' }
 ];
 
+// ════════════════════════════════════════════════════════════════════
+// FUTURE HOOK AWARENESS FLAGS
+// ════════════════════════════════════════════════════════════════════
+//
+// Bagman: at Dread 41+ if party inventory contains item with bagman:true flag
+// Spurt refuses to approach it and cannot explain why. He watches it.
+// spurt.bagmanAwareness = true at Dread 41+
+//
+// False Hydra: Spurt's Draconic speech at high Dread is partially immune to the song.
+// His attempts to warn the party are dismissed while song is active.
+// When song broken party realizes Spurt was trying to tell them the whole time.
+// spurt.hydraImmunity = true
+//
+// Leucrotta: if Leucrotta uses a voice Spurt has heard, Spurt reacts differently.
+// At Dread 61+ he addresses the voice directly in Draconic rather than following it.
+// spurt.leucrottaAwareness = true at Dread 61+
+//
+// Noční Letavec awareness — Spurt can hear the Letavec at greater range than humans
+// At Dread 41+: Spurt becomes agitated near the inn perimeter at night.
+//   He won't go near windows or doors after dark during the active cycle.
+//   He cannot explain why — just "no. no outside. no."
+// At Dread 61+: If the Letavec speaks to a chosen target and Spurt is present
+//   He addresses it directly in Draconic: "We know what you are. We know where you sleep."
+//   This is a bluff. He does not know where it sleeps. But the Letavec pauses.
+//   It has not been spoken to in Draconic before. It is briefly uncertain.
+// At Dread 81+: Spurt has decided the Letavec is the most interesting thing
+//   he has ever encountered. He starts leaving it small offerings near the tree line.
+//   Bones, shiny objects, a cantrip flame. He thinks they are negotiating.
+//   They are not negotiating. But the Letavec is confused by this behavior
+//   and has not harvested Spurt yet partly out of something resembling curiosity.
+// spurt.letavecAwareness = true
+// spurt.letavecNegotiating = false  // becomes true at Dread 81+
+// ════════════════════════════════════════════════════════════════════
+
 class SpurtAgent {
   constructor(gemini, contextBuilder, bus, state, config) {
     this.gemini = gemini;
@@ -78,6 +112,13 @@ class SpurtAgent {
     this._dialogueCooldownMs = 15000; // min 15s between unprompted dialogue
     this._surgeCount = 0;
     this._activeEffects = []; // from wild magic surges
+
+    // Future hook awareness flags
+    this.hydraImmunity = true;          // Draconic partially immune to False Hydra song
+    this.bagmanAwareness = false;       // becomes true at Dread 41+ near bagman item
+    this.leucrottaAwareness = false;    // becomes true at Dread 61+
+    this.letavecAwareness = true;       // always aware (Kobold hearing)
+    this.letavecNegotiating = false;    // becomes true at Dread 81+
 
     // Load prompt
     try {

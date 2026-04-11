@@ -1,0 +1,59 @@
+{
+  "id": "gas-spore",
+  "name": "Gas Spore",
+  "displayName": "Something in the dark",
+  "trueIdentity": "Gas Spore — Beholder Mimic (CR 1/2)",
+  "type": "plant",
+  "size": "medium",
+  "cr": 0.5,
+  "xp": 100,
+  "ac": 5,
+  "hp": 1,
+  "speed": "10ft float",
+  "stats": {
+    "str": 5,
+    "dex": 1,
+    "con": 10,
+    "int": 1,
+    "wis": 1,
+    "cha": 1
+  },
+  "passivePerception": 6,
+  "conditionImmunities": ["prone", "grappled", "restrained"],
+  "description": "A large round shape floating in the darkness of the cellar. From a distance it is unmistakably the silhouette of a Beholder — the central eye, the eyestalks, the floating mass. Up close the details are wrong. The stalks hang limp. The surface is mottled and soft. The central eye is milky and fixed. It smells of damp earth and old mushrooms.",
+  "secret": "This is a Gas Spore — a fungal creature that mimics the silhouette of a Beholder. It has been floating in the cellar for three weeks feeding on organic matter. It is not intelligent. It does not hunt. When it dies or takes significant damage it detonates in a 20-foot radius explosion of necrotic energy and infectious spores.",
+  "traits": [
+    {
+      "name": "Death Burst",
+      "description": "When the gas spore drops to 0 hit points or takes 10 or more damage from a single hit, it explodes. Each creature within 20 feet must make a DC 15 Constitution saving throw taking 10d10 necrotic damage on a failed save or half on success. On a failed save the creature is also infected with spores — see Spore Infection."
+    },
+    {
+      "name": "Spore Infection",
+      "description": "An infected creature must succeed on a DC 15 Constitution saving throw after 24 hours or die. If it dies its body becomes a Gas Spore after another 24 hours. Remove infection with Lesser Restoration or similar magic.",
+      "systemFlag": "sporeInfection",
+      "duration": "24h-game-time",
+      "saveInterval": "24h-game-time",
+      "saveDC": 15
+    },
+    {
+      "name": "False Appearance",
+      "description": "While motionless the Gas Spore is indistinguishable from a Beholder to any creature that has not succeeded on a DC 15 Nature check or moved within 30 feet and actively examined it.",
+      "systemFlag": "beholderMimic"
+    }
+  ],
+  "piotrRelationship": "Piotr has been chained near it for three weeks. He calls it 'the eye.' He believes Vladislav sent it to watch him. He is terrified of it detonating and will warn players away from it without explaining why. He presses himself against the wall when players approach it.",
+  "sporeInfectionNarratives": {
+    "12h": "You feel pressure behind your eyes. A strange lightness in your chest. You tell yourself it is nothing.",
+    "20h": "The pressure has become something else. When you breathe too deeply something shifts inside you. You do not tell the others.",
+    "24h": "Something blooms inside you all at once. There is no pain exactly — just a terrible fullness and then nothing."
+  },
+  "tokenDisplay": {
+    "icon": "beholder",
+    "playerLabel": "Something in the dark",
+    "dmLabel": "Gas Spore (Beholder Mimic)",
+    "appearance": "beholder-silhouette",
+    "initialOnInitiative": false,
+    "combatTriggerRange": 5
+  },
+  "campaignPlacement": "Pallid Hart cellar, Session 0. Players will likely mistake it for a Beholder until they get close enough to identify it. Teaches players what a Gas Spore is — payoff later at the Houska pit."
+}

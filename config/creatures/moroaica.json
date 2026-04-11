@@ -1,0 +1,48 @@
+{
+  "id": "moroaica",
+  "name": "Moroaică",
+  "type": "undead",
+  "size": "medium",
+  "cr": 5,
+  "xp": 1800,
+  "ac": 13,
+  "hp": 78,
+  "hpDice": "12d8 + 24",
+  "speed": "30ft",
+  "stats": { "str": 12, "dex": 16, "con": 14, "int": 14, "wis": 14, "cha": 18 },
+  "damageResistances": ["necrotic"],
+  "damageImmunities": ["poison"],
+  "conditionImmunities": ["poisoned", "exhaustion"],
+  "traits": [
+    {
+      "name": "Life Siphon",
+      "description": "Any creature who sleeps within 60ft of the Moroaică without magical protection loses 1d4+1 years of life force. They appear older by that many years the next morning. This is not Exhaustion — it is actual aging. Reversed by Greater Restoration.",
+      "systemFlag": "moroaicaAging"
+    },
+    {
+      "name": "Perfect Disguise",
+      "description": "The Moroaică appears as a normal old woman. She is warm, helpful, and grateful. DC 20 Insight to suspect she is not what she appears without magical assistance or Zarina's professional observation."
+    },
+    {
+      "name": "Ageless",
+      "description": "The Moroaică herself ages in reverse while feeding — she appears younger each day she siphons life. Zarina notices this before anyone else: 'She looked sixty when she arrived. She looks fifty-five today. You did not misremember.'"
+    }
+  ],
+  "actions": [
+    {
+      "name": "Life Drain",
+      "attackBonus": 6,
+      "damage": "3d8 + 4",
+      "damageType": "necrotic",
+      "description": "Target's max HP reduced by damage dealt until long rest."
+    },
+    {
+      "name": "Soothing Presence",
+      "description": "One creature within 30ft makes DC 14 WIS save or feels no urgency about the Moroaică for 24 hours — they find reasons to delay confronting her."
+    }
+  ],
+  "detection": "Zarina's Detect Poison and Disease with DC 14 Medicine: 'This woman is not aging forward. Something in her biology is running in reverse.' Passive Insight DC 20 after 3 days to notice she looks younger.",
+  "destruction": "Staking with hawthorn through the heart. Decapitation. Burial at crossroads with mouth filled with garlic. Same requirements as Strigoi — she is a similar category of undead.",
+  "lore": "She has been doing this for two hundred years. She moves into a village as a widow. She mends and tells stories. She is genuinely pleasant company. She has no malice toward the people she is slowly killing. She needs what they have and they have so much of it and she has so little.",
+  "campaignPlacement": "Třebíč village, Session 10-11. CR 5 against level 10-11 party. Not a combat challenge — an investigation and moral problem. She has done nothing overtly threatening. She is a guest. Accusing her requires evidence."
+}

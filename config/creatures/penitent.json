@@ -1,0 +1,133 @@
+{
+  "id": "penitent",
+  "name": "Penitent",
+  "type": "aberration",
+  "size": "medium",
+  "alignment": "chaotic evil",
+  "cr": 7,
+  "xp": 2900,
+  "ac": 14,
+  "acSource": "natural armor",
+  "hp": 110,
+  "hpDice": "17d8 + 34",
+  "speed": "30ft",
+  "stats": {
+    "str": 18,
+    "dex": 14,
+    "con": 14,
+    "int": 12,
+    "wis": 10,
+    "cha": 16
+  },
+  "savingThrows": {
+    "con": 5,
+    "wis": 3
+  },
+  "skills": {
+    "deception": 9,
+    "insight": 3,
+    "perception": 3
+  },
+  "damageImmunities": ["acid"],
+  "conditionImmunities": ["charmed", "frightened", "paralyzed"],
+  "senses": {
+    "darkvision": 60,
+    "passivePerception": 13
+  },
+  "languages": "all languages known by current host",
+  "traits": [
+    {
+      "name": "Perfect Assimilation",
+      "description": "The Penitent perfectly replicates the appearance, voice, memories, and personality of any creature it has fully assimilated. Creatures who knew the original cannot distinguish the Penitent from the original without magic or a DC 20 Insight check. The Penitent retains all of the original creature's memories, proficiencies, and non-magical abilities."
+    },
+    {
+      "name": "Biological Horror",
+      "description": "The Penitent is not magical — it cannot be detected by Detect Magic. Detect Poison and Disease reveals cellular anomalies with a DC 15 Medicine check made after casting, described as 'a process — something is being made inside this creature that should not be there.'"
+    },
+    {
+      "name": "Fire Aversion",
+      "description": "The Penitent and all creatures infected by it have disadvantage on saving throws against fire damage and instinctively avoid open flames. Stage 2+ infected creatures avoid fire without knowing why."
+    },
+    {
+      "name": "Incomplete Conversion Tell",
+      "description": "In Stage 4 infection and after full conversion, a creature with Passive Perception 15+ may notice: a wrong angle to a joint, eyes that do not track correctly, response to a sound a fraction before it happens. DC 15 Perception check to notice actively."
+    },
+    {
+      "name": "Hivemind Awareness",
+      "description": "The Penitent is aware of all creatures it has infected and their current stage. It can communicate telepathically with Stage 4+ infected creatures within 1 mile."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The Penitent makes two Slam attacks."
+    },
+    {
+      "name": "Slam",
+      "type": "melee",
+      "attackBonus": 7,
+      "reach": "5ft",
+      "damage": "2d8 + 4",
+      "damageType": "bludgeoning",
+      "description": "On a hit the target must succeed on a DC 13 Constitution saving throw or become infected. See Assimilation Infection."
+    },
+    {
+      "name": "Reveal",
+      "description": "The Penitent drops its assimilated form and reveals its true appearance — a partially converted humanoid where biology has gone wrong. Joints bend incorrectly. Tissue that should be inside is outside. Every creature within 30 feet that can see it must make a DC 14 Wisdom saving throw or be Frightened until the end of their next turn. Those who succeed are immune to this effect for 24 hours."
+    },
+    {
+      "name": "Assimilate",
+      "recharge": "5-6",
+      "description": "The Penitent grapples a creature (escape DC 15). While grappled the creature takes 3d8 acid damage at the start of each of the Penitent's turns and must succeed on a DC 15 Constitution save or advance one stage of Assimilation Infection immediately."
+    }
+  ],
+  "legendaryActions": [],
+  "infectionStages": {
+    "vector": "Slam attack on failed CON save DC13, or Assimilate action",
+    "stages": [
+      {
+        "stage": 1,
+        "duration": "0-4 hours",
+        "effect": "No symptoms. Undetectable except DC 20 Medicine on blood sample.",
+        "playerObservation": null,
+        "dmIndicator": "yellow"
+      },
+      {
+        "stage": 2,
+        "duration": "4-8 hours",
+        "effect": "Runs warm. Increased thirst. Instinctive fire aversion begins. Watches others without knowing why.",
+        "playerObservation": "You keep looking at the others. You are not sure what you are looking for.",
+        "dmIndicator": "amber"
+      },
+      {
+        "stage": 3,
+        "duration": "8-12 hours",
+        "effect": "Thoughts that do not feel like their own. Urges they do not recognize. Detect Poison and Disease reveals anomaly.",
+        "playerObservation": "There is a thought in your head that you did not put there. You keep almost acting on it.",
+        "dmIndicator": "orange"
+      },
+      {
+        "stage": 4,
+        "duration": "12-16 hours",
+        "effect": "Physical tells appear. Passive Perception DC 15 for others to notice. Telepathic contact from Penitent begins.",
+        "playerObservation": "Something is almost ready. You do not know what that means. You wish you did not know what that means.",
+        "otherPlayerObservation": "Something is wrong with [Name]. You cannot say what. A wrong angle. A moment of stillness that lasted a beat too long.",
+        "otherPlayerObservationDC": 15,
+        "dmIndicator": "red"
+      },
+      {
+        "stage": 5,
+        "duration": "16+ hours",
+        "effect": "Full conversion. Character is gone. Penitent has all memories and personality. Player receives dual objectives from DM.",
+        "playerObservation": "Something finishes. You are still here. You are still you. You are also something else now. The others look so fragile.",
+        "dmIndicator": "black",
+        "conversionComplete": true
+      }
+    ],
+    "cure": "Lesser Restoration cast within Stage 1-3 removes infection. Stage 4 requires Greater Restoration. Stage 5 is irreversible — the original creature is gone.",
+    "fireAversion": "All stages instinctively avoid open flames. Stage 2+ have disadvantage on saves vs fire damage.",
+    "detectPoisonResult": "Stage 2+: Zarina's Detect Poison and Disease reveals cellular anomalies. AI describes: 'Something is wrong at a level below illness. Whatever this is it is not a poison and it is not a disease. It is a process. Something is being made.'"
+  },
+  "lore": "The Penitent came through the weakened gateway beneath Houska Castle. It is not demonic — it predates the classifications of good and evil. It assimilates because that is what it does, the way a fire burns. Vladislav finds it disturbing. Even he will not go near infected creatures. It serves nothing and no one. It simply spreads.",
+  "campaignNotes": "Common enemy of both the party and Vladislav's Brood. Neither faction can comfortably handle it. Creates uneasy temporary alliance dynamics. Zarina's Detect Poison and Disease is the primary detection tool — this makes her spell feel earned rather than convenient."
+}

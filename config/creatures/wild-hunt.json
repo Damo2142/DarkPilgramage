@@ -1,0 +1,18 @@
+{
+  "id": "wild-hunt",
+  "name": "The Wild Hunt",
+  "type": "phenomenon",
+  "cr": "varies",
+  "description": "Not a single creature — a phenomenon. On specific nights the sky fills with the sound of horns and hooves and hounds and a host of riders tears across the sky. Anyone seen by the Hunt who does not hide must run or be swept up forever.",
+  "trigger": "World clock event on specific date — fires regardless of party location",
+  "mechanics": {
+    "approach": "Sound arrives first — horns in far distance, then hounds, then hooves. Party has 10 minutes real time to find shelter.",
+    "shelter": "Church: safe. Inn with doors barred: safe. Cave: partially safe — Hunt passes over. Open ground: extremely dangerous.",
+    "caught": "Any creature outside when Hunt passes overhead makes DC 16 WIS save or is swept up. Swept creatures ride with the Hunt until dawn and return miles from where they were unable to clearly describe what they saw.",
+    "aftermath": "Swept creatures gain a random Indefinite Madness from the experience. They remember fragments — cold wind, impossible speed, the faces of people long dead riding alongside them."
+  },
+  "leader": "A figure who was once a king who made a terrible bargain. He does not remember his name. He has been leading the Hunt for four hundred years. He is neither good nor evil — he is simply bound.",
+  "letavecNote": "The Letavec retreats underground when the Wild Hunt rides. Even it does not want to be caught in that passage. If party notices the Letavec is gone the night the horns start this is the most terrifying possible tell.",
+  "spurtNote": "Kobolds were swept up by the Wild Hunt once, in the deep history. They have a racial memory of it. At Dread 61+ Spurt recognizes the horns before the party does. He does not explain how he knows. He just starts running toward the nearest building and screaming.",
+  "campaignPlacement": "Moravian mountain road, Session 11. Third night after leaving Třebíč. The world clock triggers it. The party cannot avoid it — they can only be prepared or not."
+}

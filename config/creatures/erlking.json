@@ -1,0 +1,58 @@
+{
+  "id": "erlking",
+  "name": "The Erlking",
+  "type": "fey",
+  "size": "medium",
+  "cr": 8,
+  "xp": 3900,
+  "ac": 17,
+  "hp": 136,
+  "hpDice": "16d8 + 64",
+  "speed": "40ft",
+  "stats": { "str": 16, "dex": 20, "con": 18, "int": 16, "wis": 14, "cha": 22 },
+  "damageImmunities": ["poison"],
+  "conditionImmunities": ["charmed", "exhaustion", "frightened", "poisoned"],
+  "senses": { "truesight": 60, "passivePerception": 16 },
+  "traits": [
+    {
+      "name": "Harvest of Joy",
+      "description": "The Erlking does not fight in the traditional sense. It takes. When it successfully grapples a creature it begins the Harvest — each round the grappled creature makes DC 16 CHA save or lose one Joy Point. See Joy Drain."
+    },
+    {
+      "name": "Joy Drain",
+      "description": "Joy Points represent a character's capacity for wonder, humor, hope, and delight. Maximum 5. Characters at 0 Joy can function perfectly but will never laugh again, never be moved by beauty, never feel hope. They are not sad. They are simply flat. Restored only by a Wish spell or the Erlking's bargain."
+    },
+    {
+      "name": "Cannot Be Followed",
+      "description": "The Erlking cannot be tracked through its forest by conventional means. Survival checks to track it automatically fail. It can only be found by following its intermediaries or by bargaining with it directly."
+    },
+    {
+      "name": "Child Intermediaries",
+      "description": "The Erlking sends child-shaped figures to invite travelers deeper into its forest. The children look slightly wrong — proportions not quite right, movement not quite natural. DC 14 Perception to notice. The children do not speak. They only beckon."
+    },
+    {
+      "name": "Innate Spellcasting",
+      "description": "CHA-based DC 18. At will: Charm Person, Detect Thoughts. 3/day: Confusion, Fear. 1/day: Feeblemind."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "Two Longsword attacks."
+    },
+    {
+      "name": "Longsword",
+      "attackBonus": 9,
+      "damage": "1d8 + 5",
+      "damageType": "slashing plus 2d6 psychic"
+    },
+    {
+      "name": "The Taking",
+      "description": "One grappled creature makes DC 16 CHA save or loses 1 Joy Point. No save against this on a critical hit — 2 Joy Points lost."
+    }
+  ],
+  "bargain": "The Erlking operates by exchange. It will return what it has taken for something of equivalent value — something the bargainer genuinely treasures. It never cheats on bargains. It never volunteers what it will accept. The party must figure out what it wants.",
+  "spurtInteraction": "The Erlking encounters Spurt and attempts the Harvest. Spurt's Joy is expressed entirely through arson suggestions and talking to his magic. The Erlking is briefly confused — it has never tried to take joy from something that experiences joy this way. It pauses. It looks at Spurt with something resembling professional interest. It does not harvest him. Not because it cannot. Because it wants to understand him first.",
+  "lore": "The Erlking is not evil in any meaningful sense. It collects. It has been collecting since before the forest had a name. Joy is simply what it takes from adult humans. From children it takes something else — something the forest needs. It would explain if asked. Nobody asks.",
+  "campaignPlacement": "Křivoklátský Les forest, Session 6. CR 8 against level 6-7 party. Do not run this as a combat. Run it as an encounter the party probably cannot win directly and has to navigate around or bargain through."
+}

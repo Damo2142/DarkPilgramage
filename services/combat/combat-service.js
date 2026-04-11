@@ -301,6 +301,14 @@ class CombatService {
     const oldHp = c.hp.current;
     c.hp.current = Math.max(0, Math.min(c.hp.max, c.hp.current + delta));
 
+    // ── Gas Spore Death Burst ──
+    // If a Gas Spore takes 10+ damage in one hit OR drops to 0, fire Death Burst
+    const damage = delta < 0 ? -delta : 0;
+    const isGasSpore = (c.id === 'gas-spore' || c.creatureId === 'gas-spore' || (c.name || '').toLowerCase().includes('gas spore'));
+    if (isGasSpore && damage > 0 && (damage >= 10 || c.hp.current === 0)) {
+      this._triggerGasSporeDeathBurst(combatantId, c);
+    }
+
     // Mark as dead/unconscious at 0 HP
     if (c.hp.current === 0 && oldHp > 0) {
       if (c.type === 'pc') {
@@ -339,6 +347,67 @@ class CombatService {
     });
 
     return c;
+  }
+
+  /**
+   * Gas Spore Death Burst — 20ft radius necrotic explosion + spore infection
+   */
+  _triggerGasSporeDeathBurst(sporeId, sporeCombatant) {
+    const sporeToken = this.state.get(`map.tokens.${sporeId}`);
+    if (!sporeToken) {
+      // Fire AOE without position
+      this.bus.dispatch('combat:aoe', { source: sporeId, radius: 20, damage: '10d10', damageType: 'necrotic', saveType: 'CON', saveDC: 15 });
+      this.bus.dispatch('dm:whisper', {
+        text: 'Gas Spore Death Burst — 10d10 necrotic in 20ft, DC15 CON save, failed save = spore infection',
+        priority: 1, category: 'combat'
+      });
+      return;
+    }
+
+    const map = this.state.get('map') || {};
+    const tokens = map.tokens || {};
+    const gs = map.gridSize || 70;
+    const radiusPx = 20 * (gs / 5); // 20ft in pixels assuming 5ft per square
+    const targets = [];
+    for (const [tid, tok] of Object.entries(tokens)) {
+      if (tid === sporeId) continue;
+      const dx = (tok.x || 0) - (sporeToken.x || 0);
+      const dy = (tok.y || 0) - (sporeToken.y || 0);
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist <= radiusPx) targets.push({ id: tid, name: tok.name || tid, dist });
+    }
+
+    // Fire AOE event for visualization
+    this.bus.dispatch('combat:aoe', {
+      source: sporeId,
+      origin: { x: sporeToken.x, y: sporeToken.y },
+      radius: 20,
+      damage: '10d10',
+      damageType: 'necrotic',
+      saveType: 'CON',
+      saveDC: 15,
+      targets: targets.map(t => t.id)
+    });
+
+    // For each target, mark spore infection eligibility
+    for (const t of targets) {
+      this.state.set(`players.${t.id}.sporeInfection`, {
+        eligibleSinceGameTime: this.state.get('world.gameTime') || new Date().toISOString(),
+        saveDC: 15,
+        narrativeStage: 0
+      });
+    }
+
+    this.bus.dispatch('dm:whisper', {
+      text: `Gas Spore Death Burst — ${targets.length} targets in blast (${targets.map(t => t.name).join(', ')}) — CON save DC15 — failure = 10d10 necrotic AND spore infection`,
+      priority: 1, category: 'combat'
+    });
+
+    // AI gothic description for HAL panel
+    this.bus.dispatch('hal:event', {
+      type: 'death-burst',
+      description: 'The thing in the dark bursts. Not into pieces. Into a cloud of dust and spore that fills the air with a sweet rotten smell. The walls weep with necrotic mist. Whatever it touches is no longer entirely yours.'
+    });
   }
 
   /**

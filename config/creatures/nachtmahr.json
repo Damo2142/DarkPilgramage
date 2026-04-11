@@ -1,0 +1,50 @@
+{
+  "id": "nachtmahr",
+  "name": "Nachtmahr",
+  "alternateNames": ["Night Mare", "Mare"],
+  "type": "fiend",
+  "size": "tiny",
+  "cr": 2,
+  "xp": 450,
+  "ac": 13,
+  "hp": 28,
+  "hpDice": "8d4 + 8",
+  "speed": "0ft visible, 40ft invisible",
+  "stats": { "str": 6, "dex": 16, "con": 12, "int": 10, "wis": 12, "cha": 14 },
+  "damageImmunities": ["poison"],
+  "conditionImmunities": ["poisoned", "prone"],
+  "senses": { "darkvision": 120, "passivePerception": 11 },
+  "traits": [
+    {
+      "name": "Invisible",
+      "description": "The Nachtmahr is permanently invisible. It cannot be seen by any means short of True Seeing or See Invisibility. It leaves no tracks. The only evidence of its presence is its victims' exhaustion and the faint smell of something animal near their bedrolls."
+    },
+    {
+      "name": "Rest Disruption",
+      "description": "Any creature the Nachtmahr feeds on during a rest does not benefit from that rest. No HP recovery, no spell slot recovery, no Exhaustion level reduction. The creature wakes feeling as tired as when they went to sleep.",
+      "systemFlag": "nachtmahrFed"
+    },
+    {
+      "name": "Dream Infection",
+      "description": "A creature fed on three nights consecutively must make DC 13 WIS save or develop a specific nightmare that recurs every rest — always featuring the same dark pressing weight. After five consecutive nights: cannot distinguish sleeping from waking. After seven: cannot wake up."
+    },
+    {
+      "name": "Anchor Dependent",
+      "description": "The Nachtmahr is attracted to and anchored by specific objects — items from burial sites, objects that witnessed death, items with strong emotional resonance. If the anchor object is removed from its territory and destroyed the Nachtmahr must follow it or lose its anchor. A Nachtmahr without an anchor flees."
+    },
+    {
+      "name": "Kobold Sleep Immunity",
+      "description": "Kobolds sleep in short cycles too lightly for the Nachtmahr to feed properly. Spurt is the only party member getting proper rest. He notices the others look terrible and cannot understand why he feels fine."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Nightmare Feed",
+      "description": "One sleeping creature within 5ft. Target makes DC 13 WIS save or rest is disrupted and creature loses 1d4 max HP until long rest."
+    }
+  ],
+  "detection": "Impossible by sight. Smell — DC 15 Perception to detect faint animal smell near bedrolls in morning. See Invisibility reveals it. The anchor object can be found by investigation — DC 14 Investigation across the settlement.",
+  "removal": "Find and destroy the anchor object. The Nachtmahr follows the anchor if it is moved — luring it out of a settlement by carrying the anchor away and destroying it at distance is the cleanest solution.",
+  "lore": "A dark pressing weight on the chest. Paralysis. Terror. The sense of something present that cannot be moved. It feeds on sleeping victims the way a leech feeds — mindlessly, drawn by warmth and the smell of dreaming. It does not hate its victims. It is simply hungry.",
+  "campaignPlacement": "Dolná Súča town, Session 3. Also usable at any location the party sleeps for multiple nights. The anchor in Session 3 is carved bone in Canon Vojtěch's library. CR 2 against level 4-5 party — unkillable by combat alone since it cannot be seen. Requires investigation and removal of anchor."
+}

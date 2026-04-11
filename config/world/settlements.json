@@ -1,0 +1,284 @@
+{
+  "settlements": [
+    {
+      "id": "palid-hart-crossroads",
+      "name": "The Pallid Hart Crossroads",
+      "type": "waypoint",
+      "region": "orava-mountains",
+      "population": 0,
+      "description": "A crossroads inn on the mountain road above Orava. No permanent population beyond the innkeeper and her husband. A stopping point for travelers who miscalculate the mountain road.",
+      "keyNPCs": ["marta-kowalski", "piotr-kowalski"],
+      "currentThreat": "vladislav-dragan, tomas-birkov, gas-spore",
+      "reputation": {},
+      "services": ["lodging", "food", "stabling"],
+      "distanceToNext": {
+        "rakova": "3 hours on foot in snow",
+        "orava-castle": "6 hours"
+      },
+      "sessionContent": "session-0"
+    },
+    {
+      "id": "rakova",
+      "name": "Raková",
+      "type": "village",
+      "region": "orava-mountains",
+      "population": 340,
+      "description": "A logging village in the mountain foothills. Sturdy people, practical faith, deep suspicion of outsiders that has not helped them with the current problem. The church has not been opened in two weeks because the priest is afraid of what came to confession.",
+      "keyNPCs": [
+        {
+          "id": "father-benedikt",
+          "name": "Father Benedikt",
+          "role": "Village priest — knows what the Strigoi is but cannot bring himself to say it",
+          "secret": "He let the dead son into the church for confession three weeks ago because he could not refuse a penitent. He heard the confession. He knows the son is wrong. He has not told anyone."
+        },
+        {
+          "id": "widow-agnes",
+          "name": "Widow Agnes",
+          "role": "The dead son's mother — the one who let him in",
+          "secret": "She knows her son is not her son anymore. She lets him in every night because she cannot bear to lose him twice."
+        },
+        {
+          "id": "jan-the-miller",
+          "name": "Jan the Miller",
+          "role": "Village leader, pragmatist",
+          "secret": "He knows something is wrong but will not act without proof because accusing a dead man's mother of sheltering a monster will destroy the village even if he is right."
+        }
+      ],
+      "currentThreat": "strigoi",
+      "threatDetails": "Dead son Marek returned two weeks ago. Widow Agnes let him in. Three families have died since. Two more are sick.",
+      "reputation": {},
+      "services": ["lodging-limited", "food", "smithy", "church"],
+      "distanceToNext": {
+        "palid-hart": "3 hours",
+        "dolna-suca": "2 days"
+      },
+      "sessionContent": "session-1",
+      "ifPartyLeavesThreatUnsolved": "Strigoi moves to next household. By Session 3 twelve more dead. Village on the verge of collapse. Word has spread to Dolná Súča — travelers warned away from Raková."
+    },
+    {
+      "id": "shepherds-valley",
+      "name": "Pastierska Dolina",
+      "type": "wilderness",
+      "region": "orava-mountains",
+      "population": 0,
+      "description": "A high mountain valley used for summer grazing. Empty in October except for one occupied shepherd's hut that should not be occupied.",
+      "keyNPCs": [
+        {
+          "id": "eliska-the-defector",
+          "name": "Eliska",
+          "role": "Hiding in the shepherd's hut — defector from Vladislav's network",
+          "secret": "She was a courier between Vladislav's agents at Orava and Houska. She saw what is in the Houska pit and fled. She has information about Houska's layout, the gathering, and the False Hydra — though she does not know the Hydra's name, only that the village nearby is wrong.",
+          "coversMirrors": true,
+          "sleepsWithKnife": true
+        }
+      ],
+      "currentThreat": "aufhocker",
+      "threatDetails": "Hunts lone travelers through the valley. Has been here for thirty years. Locals know not to travel alone through it.",
+      "reputation": {},
+      "services": [],
+      "sessionContent": "session-2"
+    },
+    {
+      "id": "dolna-suca",
+      "name": "Dolná Súča",
+      "type": "town",
+      "region": "orava-mountains",
+      "population": 2100,
+      "description": "The largest settlement between Orava and the Bohemian border. A market town with a mill, a tanner, three inns, and a church that has been holding extra masses for three weeks because the population is exhausted and frightened and needs somewhere to go.",
+      "keyNPCs": [
+        {
+          "id": "canon-vojtěch",
+          "name": "Canon Vojtěch",
+          "role": "Senior churchman — intelligent, practical, has been trying to solve the exhaustion problem through prayer and is starting to suspect prayer is not the solution",
+          "secret": "He found a book in the church library describing the Nachtmahr. He has not told anyone because the solution the book describes requires desecrating a grave and he cannot authorize that."
+        },
+        {
+          "id": "trader-oswald",
+          "name": "Oswald the Trader",
+          "role": "Antique dealer in the market — friendly, talkative, has the bag of holding",
+          "secret": "He bought it from a confused pilgrim who couldn't remember why he had it. The pilgrim's name was Kern. Oswald thought nothing of it."
+        },
+        {
+          "id": "apprentice-tomáš",
+          "name": "Tomáš",
+          "role": "Miller's apprentice — lost two fingers falling asleep at the grindstone",
+          "secret": "He has been seeing something in his room at night. A dark pressing weight. He thinks he is going mad."
+        }
+      ],
+      "currentThreat": "nachtmahr",
+      "threatDetails": "Three weeks of disrupted sleep across the entire town. The Nachtmahr was attracted by something — a piece of carved bone in Canon Vojtěch's library that was brought back from a burial site by a well-meaning parishioner. The bone is the anchor.",
+      "reputation": {},
+      "services": ["lodging", "food", "smithy", "church", "market", "stabling", "healer"],
+      "distanceToNext": {
+        "rakova": "2 days",
+        "high-pass": "1 day"
+      },
+      "sessionContent": "session-3",
+      "nachtmahrAnchor": "Carved bone from pre-Christian burial site in Canon Vojtěch's library — remove it from the building and burn it to break the Nachtmahr's hold",
+      "ifPartyLeavesThreatUnsolved": "Town continues deteriorating. On return journey Tomáš is dead. Canon Vojtěch has made his decision about the grave and is facing excommunication proceedings."
+    },
+    {
+      "id": "high-pass",
+      "name": "Vlčí Průsmyk — Wolf's Pass",
+      "type": "wilderness",
+      "region": "orava-mountains",
+      "population": 0,
+      "description": "The high mountain pass connecting Orava region to Bohemia. Dangerous in summer, brutal in October. The river crossing at the midpoint is where the Neck sings. The pass earned its name from what people heard in the dark, not from wolves.",
+      "keyNPCs": [],
+      "currentThreat": "neck, nocni-letavec",
+      "threatDetails": "The Neck is at the river crossing — active after dark. The Letavec makes its first direct appearance on the second night of the pass.",
+      "reputation": {},
+      "services": [],
+      "sessionContent": "session-4",
+      "letavecFirstContact": "Night 2 of the pass. It lands on a rock 50 feet away. It looks at the chosen targets for a long moment. It does not attack. It flies away. This is not a fight. This is an introduction."
+    },
+    {
+      "id": "pernsjtejn",
+      "name": "Pernštejn",
+      "type": "village",
+      "region": "bohemia",
+      "population": 35,
+      "description": "Should have 180 people. Has 35. Nobody finds this alarming. The inn has 14 tables. One family eats at one of them. The innkeeper refers to the busy season without irony.",
+      "keyNPCs": [
+        {
+          "id": "innkeeper-radka",
+          "name": "Radka",
+          "role": "Innkeeper — warm, helpful, cannot tell you where the other villagers went because she does not know they are gone",
+          "secret": "Her husband was taken four months ago. She sometimes sets two places at dinner. She cannot say why."
+        }
+      ],
+      "currentThreat": "false-hydra",
+      "threatDetails": "False Hydra beneath Houska has been feeding on the village for months. Exposure begins accumulating the moment the party arrives.",
+      "reputation": {},
+      "services": ["lodging", "food"],
+      "distanceToNext": {
+        "houska-castle": "3 hours"
+      },
+      "sessionContent": "session-5",
+      "falseHydraExposureRate": "20 per night sleeping here unprotected"
+    },
+    {
+      "id": "krivoklatsky-les",
+      "name": "Křivoklátský Les",
+      "type": "wilderness",
+      "region": "bohemia",
+      "population": 0,
+      "description": "The great forest between Pernštejn and Houska. Beautiful in a way that feels wrong. Too quiet. Too still. Animals watch instead of fleeing. The Erlking's territory.",
+      "keyNPCs": [],
+      "currentThreat": "erlking",
+      "threatDetails": "The Erlking sends child-shaped intermediaries to invite travelers deeper into the forest. Joy is what it takes. The forest is where it takes it.",
+      "reputation": {},
+      "services": [],
+      "sessionContent": "session-6"
+    },
+    {
+      "id": "houska-castle",
+      "name": "Houska Castle",
+      "type": "castle",
+      "region": "bohemia",
+      "population": 40,
+      "description": "Built over a pit said to be a gateway to Hell. The stonework is older than it should be. The lower levels are older still. The vampire network has been gathering here for six months. The False Hydra is below. The Oblex is in the upper levels. The Doppelganger has replaced the Church investigator. The Penitent is emerging from the pit.",
+      "sessionContent": "session-7-through-10"
+    },
+    {
+      "id": "road-village-moroaica",
+      "name": "Třebíč",
+      "type": "village",
+      "region": "moravia",
+      "population": 280,
+      "description": "A quiet farming village on the Moravian road. An old widow named Bozena moved in three weeks ago seeking shelter after her home burned. The villagers have been kind to her. She mends and tells stories. The village is aging.",
+      "keyNPCs": [
+        {
+          "id": "bozena",
+          "name": "Bozena",
+          "role": "The Moroaică — appears as a gentle old widow",
+          "secret": "She is not old. She is not gentle. She is not a widow. She has been doing this for two hundred years."
+        },
+        {
+          "id": "headman-prokop",
+          "name": "Prokop",
+          "role": "Village headman — notices something is wrong but cannot name it",
+          "secret": "He looks fifteen years older than he did three weeks ago. He does not know this."
+        }
+      ],
+      "currentThreat": "moroaica",
+      "sessionContent": "session-10-11",
+      "delayMechanic": "Horses need rest, road washes out, supply issue — party must stay minimum 3 days"
+    },
+    {
+      "id": "wild-hunt-road",
+      "name": "Moravian Mountain Road",
+      "type": "wilderness",
+      "region": "moravia",
+      "population": 0,
+      "description": "Open mountain road. No shelter within two hours. The horns start far away.",
+      "currentThreat": "wild-hunt",
+      "sessionContent": "session-11",
+      "huntNight": "Third night after leaving Třebíč — the world clock triggers this on a specific date regardless of party location"
+    },
+    {
+      "id": "crossroads-wailing",
+      "name": "Krvavý Kříž — Bloody Crossroads",
+      "type": "waypoint",
+      "region": "moravia",
+      "population": 0,
+      "description": "A crossroads between two towns. Locals go miles out of their way to avoid it. Every night at the same hour something screams here. No sound comes out. The road is perfectly maintained because nobody will stop to let it fall into disrepair.",
+      "currentThreat": "wailing",
+      "sessionContent": "session-12"
+    },
+    {
+      "id": "mountain-monastery",
+      "name": "Klášter Sv. Prokopa — Monastery of Saint Prokop",
+      "type": "monastery",
+      "region": "moravia",
+      "population": 22,
+      "description": "A Benedictine monastery built into a mountain cliff. Hospitable, learned, currently terrified. Something has been killing monks — one every few nights. Always in their cell. Never any sign of entry or exit.",
+      "keyNPCs": [
+        {
+          "id": "abbot-ratibor",
+          "name": "Abbot Ratibor",
+          "role": "Senior monk — brilliant, elderly, has been cataloguing the deaths trying to find a pattern",
+          "secret": "He found the pattern three days ago. The deaths follow the corners of the building. He does not know what this means."
+        },
+        {
+          "id": "brother-methodius",
+          "name": "Brother Methodius",
+          "role": "Young monk — the one who brought back the artifact from a burial site",
+          "secret": "He found a carved piece of bone at an old burial site and thought it was interesting. He did not tell anyone. He does not connect it to the deaths."
+        }
+      ],
+      "currentThreat": "hound-of-tindalos",
+      "threatDetails": "The artifact in Brother Methodius's cell is the anchor. The wine cellar has no sharp corners — it was carved from a natural cave. Safe zone.",
+      "sessionContent": "session-13",
+      "letavecDenNearby": "The Roman survey tunnel entrance is one day's walk from the monastery. Abbot Ratibor has old documents referencing it."
+    },
+    {
+      "id": "village-near-cachtice",
+      "name": "Čachtická Dolina",
+      "type": "village",
+      "region": "western-hungary",
+      "population": 190,
+      "description": "The village directly below Čachtice Castle. Has a complicated relationship with the castle above it — employed by it, frightened of it, dependent on it. The Vrykolakas arrived here two weeks ago.",
+      "currentThreat": "vrykolakas",
+      "sessionContent": "session-14"
+    },
+    {
+      "id": "cachtice-castle",
+      "name": "Čachtice Castle",
+      "type": "castle",
+      "region": "western-hungary",
+      "population": 60,
+      "description": "Lady Bathory's domain. Beautiful and wrong. The treasury has three chests. The Mimic has been in one of them for years. The Wailing is in the east tower where something happened that nobody will speak of.",
+      "sessionContent": "session-15-through-18"
+    },
+    {
+      "id": "roman-den",
+      "name": "The Roman Tunnels",
+      "type": "wilderness-dungeon",
+      "region": "orava-mountains",
+      "population": 0,
+      "description": "Roman-era survey tunnels from the empire's eastern reach. A worked stone doorway half-collapsed into a hillside. One chamber inside. A stone basin. The Letavec sleeps here.",
+      "sessionContent": "session-13-letavec-resolution"
+    }
+  ]
+}

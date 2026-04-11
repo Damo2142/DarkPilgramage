@@ -1,0 +1,51 @@
+{
+  "id": "vrykolakas",
+  "name": "Vrykolakas",
+  "type": "undead",
+  "size": "medium",
+  "cr": 3,
+  "xp": 700,
+  "ac": 12,
+  "hp": 52,
+  "hpDice": "8d8 + 16",
+  "speed": "30ft",
+  "stats": { "str": 14, "dex": 14, "con": 14, "int": 10, "wis": 10, "cha": 16 },
+  "damageResistances": ["necrotic"],
+  "damageImmunities": ["poison"],
+  "conditionImmunities": ["poisoned"],
+  "senses": { "darkvision": 60, "passivePerception": 10 },
+  "traits": [
+    {
+      "name": "Perfect Resemblance",
+      "description": "The Vrykolakas looks exactly like the person it was. Warm. Breathing. A DC 20 Medicine check is required to determine it is dead without magical assistance."
+    },
+    {
+      "name": "Plague Presence",
+      "description": "Creatures who sleep within 30ft of the Vrykolakas must make DC 13 CON save or gain one level of Exhaustion and lose the benefits of the rest. On three consecutive failed saves the creature contracts Vrykolakas Fever."
+    },
+    {
+      "name": "Vrykolakas Fever",
+      "description": "A wasting disease. After contracting: 1 week — appears 10 years older, disadvantage on STR and CON checks. 2 weeks — appears 20 years older, speed halved. 3 weeks — death, then rises as a Vrykolakas after 24 hours. Cured by proper burial of the original Vrykolakas with correct rites."
+    },
+    {
+      "name": "Night Visitor",
+      "description": "The Vrykolakas visits creatures it knew in life while they sleep. It sits on their chest causing the Plague Presence effect. The visited creature cannot wake while it is present — they experience vivid nightmares of the dead person."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Slam",
+      "attackBonus": 4,
+      "damage": "2d6 + 2",
+      "damageType": "bludgeoning"
+    },
+    {
+      "name": "Wasting Touch",
+      "description": "Target makes DC 13 CON save or contracts Vrykolakas Fever immediately."
+    }
+  ],
+  "permanentDestruction": "Exhumation of the body. Proper burial rites performed by a cleric. The body must be reburied with specific rites — destruction of the body alone does not work and may accelerate the fever in those already infected.",
+  "detection": "Detect Poison and Disease (Zarina's spell) reveals the Vrykolakas Fever in infected creatures. DC 15 Medicine after casting identifies the disease as spread by proximity to the undead. Cannot detect the Vrykolakas itself — it appears living.",
+  "lore": "A man who was excommunicated rises after death as something that spreads wasting sickness by proximity. It visits the living out of habit — it goes where it always went. It sits with family. It walks familiar roads. It does not understand that it is killing them.",
+  "campaignPlacement": "Čachtická Dolina village, Session 14. CR 3 against level 12 party — not a combat challenge. Detection and proper rites are the solution. Zarina's spell is the key."
+}

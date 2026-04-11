@@ -21,6 +21,13 @@ class CampaignService {
     this.downtimeEvents = [];    // { id, description, trigger, effects, fired }
     this.xpLog = [];             // { playerId, amount, reason, session, timestamp }
     this.sessionRecaps = [];     // { session, date, narrative, summary, decisions }
+
+    // Campaign expansion data
+    this.futureHooks = [];       // loaded from config/future-hooks.json
+    this.settlements = [];       // loaded from config/world/settlements.json
+    this.creatures = new Map();  // id -> creature stat block from config/creatures/*.json
+    this.arc = null;             // loaded from config/campaign/arc.json
+    this.settlementReputation = {}; // settlement id -> { standing, known, events }
   }
 
   async init(orchestrator) {
@@ -36,8 +43,84 @@ class CampaignService {
     }
 
     this._loadFromConfig(this.config);
+    this._loadCampaignExpansionData();
     this._loadPersistentData();
     this._setupRoutes();
+
+    // Inject future hooks into AI context builder so the Co-DM is aware
+    try {
+      const ai = this.orchestrator.getService('ai-engine');
+      if (ai?.contextBuilder?.setCampaignFutureHooks) {
+        ai.contextBuilder.setCampaignFutureHooks(this.futureHooks);
+        console.log(`[Campaign] Injected ${this.futureHooks.length} future hooks into AI context`);
+      }
+    } catch (e) {
+      // ai-engine may not be loaded yet — ignore
+    }
+  }
+
+  _loadCampaignExpansionData() {
+    const cfgRoot = path.join(__dirname, '..', '..', 'config');
+
+    // Future hooks
+    try {
+      const fhPath = path.join(cfgRoot, 'future-hooks.json');
+      if (fs.existsSync(fhPath)) {
+        const data = JSON.parse(fs.readFileSync(fhPath, 'utf-8'));
+        this.futureHooks = data.hooks || [];
+        console.log(`[Campaign] Loaded ${this.futureHooks.length} future hooks`);
+      }
+    } catch (err) {
+      console.error('[Campaign] Failed to load future-hooks.json:', err.message);
+    }
+
+    // Settlements
+    try {
+      const sPath = path.join(cfgRoot, 'world', 'settlements.json');
+      if (fs.existsSync(sPath)) {
+        const data = JSON.parse(fs.readFileSync(sPath, 'utf-8'));
+        this.settlements = data.settlements || [];
+        // Initialize settlement reputation entries
+        for (const s of this.settlements) {
+          if (!this.settlementReputation[s.id]) {
+            this.settlementReputation[s.id] = { standing: 0, known: false, events: [] };
+          }
+        }
+        console.log(`[Campaign] Loaded ${this.settlements.length} settlements`);
+      }
+    } catch (err) {
+      console.error('[Campaign] Failed to load settlements.json:', err.message);
+    }
+
+    // Creatures
+    try {
+      const creaturesDir = path.join(cfgRoot, 'creatures');
+      if (fs.existsSync(creaturesDir)) {
+        const files = fs.readdirSync(creaturesDir).filter(f => f.endsWith('.json'));
+        for (const f of files) {
+          try {
+            const c = JSON.parse(fs.readFileSync(path.join(creaturesDir, f), 'utf-8'));
+            if (c.id) this.creatures.set(c.id, c);
+          } catch (e) {
+            console.error(`[Campaign] Bad creature file ${f}: ${e.message}`);
+          }
+        }
+        console.log(`[Campaign] Loaded ${this.creatures.size} creature stat blocks`);
+      }
+    } catch (err) {
+      console.error('[Campaign] Failed to load creatures:', err.message);
+    }
+
+    // Campaign arc
+    try {
+      const arcPath = path.join(cfgRoot, 'campaign', 'arc.json');
+      if (fs.existsSync(arcPath)) {
+        this.arc = JSON.parse(fs.readFileSync(arcPath, 'utf-8'));
+        console.log(`[Campaign] Loaded campaign arc: ${this.arc.title}`);
+      }
+    } catch (err) {
+      console.error('[Campaign] Failed to load arc.json:', err.message);
+    }
   }
 
   async start() {
@@ -106,7 +189,11 @@ class CampaignService {
       loreEntries: this.lore.size,
       downtimeEvents: this.downtimeEvents.length,
       sessionRecaps: this.sessionRecaps.length,
-      xpEntries: this.xpLog.length
+      xpEntries: this.xpLog.length,
+      futureHooks: this.futureHooks.length,
+      settlements: this.settlements.length,
+      creatures: this.creatures.size,
+      arc: this.arc?.title || null
     };
   }
 
@@ -652,6 +739,69 @@ Keep each event to 1-2 sentences. Format as JSON array: [{"title": "...", "descr
       res.json(this.getPlayerLore(req.params.playerId));
     });
 
+    // --- Future Hooks ---
+    app.get('/api/future-hooks', (req, res) => {
+      // Sorted by payoff session ascending
+      const sortKey = (h) => {
+        const s = (h.payoffSession || '').toString();
+        const m = s.match(/(\d+)/);
+        return m ? parseInt(m[1]) : 999;
+      };
+      const sorted = [...this.futureHooks].sort((a, b) => sortKey(a) - sortKey(b));
+      res.json(sorted);
+    });
+
+    app.get('/api/future-hooks/:id', (req, res) => {
+      const hook = this.futureHooks.find(h => h.id === req.params.id);
+      if (!hook) return res.status(404).json({ error: 'hook not found' });
+      res.json(hook);
+    });
+
+    // --- Settlements ---
+    app.get('/api/settlements', (req, res) => {
+      // Merge reputation into each
+      const merged = this.settlements.map(s => ({
+        ...s,
+        reputation: this.settlementReputation[s.id] || { standing: 0, known: false, events: [] }
+      }));
+      res.json(merged);
+    });
+
+    app.get('/api/settlements/:id', (req, res) => {
+      const s = this.settlements.find(x => x.id === req.params.id);
+      if (!s) return res.status(404).json({ error: 'settlement not found' });
+      res.json({ ...s, reputation: this.settlementReputation[s.id] || { standing: 0, known: false, events: [] } });
+    });
+
+    app.post('/api/settlements/:id/reputation', (req, res) => {
+      const { delta, reason } = req.body;
+      if (!this.settlementReputation[req.params.id]) {
+        this.settlementReputation[req.params.id] = { standing: 0, known: false, events: [] };
+      }
+      const rep = this.settlementReputation[req.params.id];
+      rep.standing += parseInt(delta || 0);
+      rep.known = true;
+      rep.events.push({ delta, reason, timestamp: new Date().toISOString() });
+      this.bus.dispatch('campaign:settlement_reputation_change', { settlementId: req.params.id, delta, reason, newStanding: rep.standing });
+      res.json({ ok: true, reputation: rep });
+    });
+
+    // --- Creatures ---
+    app.get('/api/creatures', (req, res) => {
+      res.json(Array.from(this.creatures.values()));
+    });
+
+    app.get('/api/creatures/:id', (req, res) => {
+      const c = this.creatures.get(req.params.id);
+      if (!c) return res.status(404).json({ error: 'creature not found' });
+      res.json(c);
+    });
+
+    // --- Campaign arc ---
+    app.get('/api/campaign/arc', (req, res) => {
+      res.json(this.arc || {});
+    });
+
     // --- Full campaign state ---
     app.get('/api/campaign', (req, res) => {
       res.json({
@@ -664,7 +814,12 @@ Keep each event to 1-2 sentences. Format as JSON array: [{"title": "...", "descr
           for (const pid of Object.keys(players)) { result[pid] = this.getPlayerXP(pid); }
           return result;
         })(),
-        downtimeEvents: this.downtimeEvents.filter(e => !e.fired).length
+        downtimeEvents: this.downtimeEvents.filter(e => !e.fired).length,
+        futureHooks: this.futureHooks.length,
+        settlements: this.settlements.length,
+        creatures: this.creatures.size,
+        arc: this.arc ? { title: this.arc.title, currentAct: 1 } : null,
+        settlementReputation: this.settlementReputation
       });
     });
   }

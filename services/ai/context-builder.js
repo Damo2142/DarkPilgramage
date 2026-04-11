@@ -230,6 +230,14 @@ class ContextBuilder {
     this._mapService = mapSvc;
   }
 
+  /**
+   * Inject the campaign future hooks list (loaded by campaign service)
+   * so AI prompts can reference all planted seeds.
+   */
+  setCampaignFutureHooks(hooks) {
+    this._campaignFutureHooks = hooks || [];
+  }
+
   _formatWorldState() {
     const world = this.state.get('world') || {};
     const parts = [];
@@ -285,6 +293,26 @@ class ContextBuilder {
     if (activeHooks.length) {
       parts.push(`Active story hooks: ${activeHooks.map(h => `[${h.status}] ${h.description}`).join('; ')}`);
     }
+
+    // Campaign expansion future hooks (loaded from config/future-hooks.json by campaign service)
+    const campaignHooks = this._campaignFutureHooks || [];
+    if (campaignHooks.length) {
+      const summaries = campaignHooks.map(h =>
+        `${h.title} (${h.creature}) [${h.status}] payoff:${h.payoffSession || '?'} — ${h.description?.slice(0, 200) || ''}`
+      );
+      parts.push(`Campaign Future Hooks (DM-only context):\n  ${summaries.join('\n  ')}`);
+    }
+
+    // Current settlement and active threats
+    const journey = this.state.get('journey');
+    if (journey && journey.active) {
+      parts.push(`Active Journey: ${journey.origin} -> ${journey.destination} (day ${journey.daysTraveled + 1}, ${journey.daysRemaining} remaining, terrain: ${journey.currentTerrain}, weather: ${journey.currentWeather})`);
+      if (journey.campChoice) parts.push(`Camp choice: ${journey.campChoice}`);
+      if (journey.complications?.length) parts.push(`Journey complications: ${journey.complications.map(c => c.description).join('; ')}`);
+    }
+
+    // Vladislav special context — he is aware of False Hydra, Penitent, Letavec
+    parts.push('AI behavioral guidance: Vladislav has hydraAwareness and penitentAversion flags. Never contradict his knowledge of the False Hydra (he knows, finds it useful) or his disturbance at the Penitent (he will not go near infected creatures). He knows about the Noční Letavec and trades information for leverage in social combat. Aldous Kern\'s journal references "W." consistently across every interaction. Henryk should mention boot wax casually at some point.');
 
     // Reputation
     const rep = world.reputation || {};

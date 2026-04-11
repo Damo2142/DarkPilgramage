@@ -107,6 +107,19 @@
         }
       },
       {
+        "id": "letavec_dm_intro",
+        "gameTime": "1274-10-15T17:30:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "DM-only — the Letavec is outside tonight",
+          "text": "The Letavec is outside tonight. It has scented the inn. The blizzard and Brother Aldric's holy symbol are keeping it at the tree line. It will remember. In the morning when the survivors leave it will be waiting.",
+          "priority": 1,
+          "category": "story",
+          "dmOnly": true,
+          "linkedHook": "nocni-letavec"
+        }
+      },
+      {
         "id": "fire_burns_low",
         "offsetMinutes": 45,
         "event": "dm:whisper",
@@ -683,14 +696,19 @@
         "items": [
           { "id": "obs-1730-vlad-food", "tier": 1, "text": "Vladislav has not touched his food or drink" },
           { "id": "obs-1730-tomas-window", "tier": 2, "dc": 12, "text": "Tomas keeps glancing at the window, then quickly looking away.", "linkedSecret": "tomas_is_werewolf" },
-          { "id": "obs-1730-vlad-chair", "tier": 2, "dc": 14, "text": "Vladislav's chair faces the cellar door, not the room. He chose that position deliberately.", "linkedSecret": "both_want_cellar" }
+          { "id": "obs-1730-vlad-chair", "tier": 2, "dc": 14, "text": "Vladislav's chair faces the cellar door, not the room. He chose that position deliberately.", "linkedSecret": "both_want_cellar" },
+          { "id": "obs-aldous-1", "tier": 2, "dc": 13, "text": "The man by the door ordered two drinks. He is sitting alone. He has not touched either of them. He keeps looking at the empty chair across from him.", "linkedSecret": "false-hydra-seed" },
+          { "id": "obs-aldous-2", "tier": 2, "dc": 15, "text": "The pilgrim near the door just waved at someone across the room. There is nobody there. He stopped mid-wave looked confused and went back to his drink.", "linkedSecret": "false-hydra-seed" },
+          { "id": "obs-letavec-1", "tier": 2, "dc": 14, "text": "Something circled the inn twice before the storm peaked. The tracks in the snow at the tree line are wrong — too large for a wolf, the wrong shape for a bear, and they stop at the edge of the trees without continuing in any direction.", "linkedSecret": "nocni-letavec-seed", "timing": "Only available if any player goes near a window or door during the early session" }
         ]
       },
       {
         "eventId": "vladislav_watches",
         "items": [
           { "id": "obs-1900-vlad-tracks", "tier": 2, "dc": 15, "text": "His eyes track one of you specifically — not the room. He is watching someone.", "linkedSecret": "vladislav_is_vampire" },
-          { "id": "obs-1900-vlad-still", "tier": 2, "dc": 13, "text": "He has not shifted position in over an hour. Not even to adjust his cloak. Nobody sits that still." }
+          { "id": "obs-1900-vlad-still", "tier": 2, "dc": 13, "text": "He has not shifted position in over an hour. Not even to adjust his cloak. Nobody sits that still." },
+          { "id": "obs-aldous-3", "tier": 3, "dc": 12, "investigationType": "insight", "text": "Aldous Kern — DC12 Insight — he refers to 'we' and 'us' but is visibly alone and has no explanation for it", "dmSuggest": "Something about the pilgrim troubles you. He keeps speaking as though he is not alone.", "linkedSecret": "false-hydra-seed" },
+          { "id": "obs-aldous-zarina", "tier": 2, "dc": 12, "targetCharacter": "zarina-firethorn", "bypassPPCheck": true, "text": "You have interviewed enough people to know when someone is editing themselves. The pilgrim by the door keeps catching a pronoun he does not mean to use. He is not lying. He genuinely does not know what he is missing.", "linkedSecret": "false-hydra-seed" }
         ]
       },
       {
@@ -731,6 +749,32 @@
           { "id": "obs-2300-vlad-jaw", "tier": 2, "dc": 13, "text": "Vladislav's jaw tightens when the holy symbol catches the light. A muscle jumps in his cheek.", "linkedSecret": "vladislav_is_vampire" },
           { "id": "obs-2300-vlad-marks", "tier": 2, "dc": 15, "text": "His hand grips the chair arm so hard it leaves marks in the wood. Finger-shaped grooves pressed into oak.", "linkedSecret": "vladislav_is_vampire" }
         ]
+      },
+      {
+        "eventId": "cellar_entry",
+        "trigger": "scene-change:cellar OR beat:cellar_investigation",
+        "items": [
+          { "id": "obs-gasspore-1", "tier": 1, "text": "There is something floating in the center of the cellar. Round. Large. With stalks extending from its surface. Your stomach drops.", "dmWhisper": "Gas Spore visible — players may mistake it for a Beholder — do not correct them yet" },
+          { "id": "obs-gasspore-2", "tier": 2, "dc": 12, "triggerRange": 60, "text": "The shape floats without intention — it drifts on air currents rather than moving with purpose. A Beholder moves. This thing drifts.", "linkedSecret": "gas-spore-identity" },
+          { "id": "obs-gasspore-3", "tier": 2, "dc": 13, "triggerRange": 30, "text": "The eyestalks hang wrong — limp, like wilted stems. The smell reaches you now. Earthy. Damp. Like a cellar after rain, not like a living thing.", "linkedSecret": "gas-spore-identity" },
+          { "id": "obs-gasspore-4", "tier": 2, "dc": 15, "triggerRange": 15, "text": "This is not a Beholder. The surface is soft and mottled like a mushroom cap. The central eye is milky and fixed — it has never seen anything. This is something that wants you to think it is a Beholder.", "linkedSecret": "gas-spore-identity", "onSuccess": "token-label-update:gas-spore-revealed" },
+          { "id": "obs-gasspore-zarina", "tier": 2, "dc": 12, "targetCharacter": "zarina-firethorn", "bypassPPCheck": true, "text": "You have seen men freeze when they see something they cannot categorize. Your instinct is different — you look for what is wrong with the thing not what it is. The stalks are wrong. The movement is wrong. The smell is wrong. This is not what it appears to be.", "linkedSecret": "gas-spore-identity" }
+        ]
+      }
+    ],
+
+    "items": [
+      {
+        "id": "bag-of-holding-cellar",
+        "name": "Worn Leather Bag",
+        "type": "container",
+        "location": "cellar-corner",
+        "description": "A worn leather bag sitting in the corner of the cellar near the coffin. It is heavier inside than outside. It belongs to no one living.",
+        "trueNature": "Bag of Holding",
+        "hiddenFlag": "bagman:true",
+        "linkedFutureHook": "bagman",
+        "dmNote": "Players who take this bag are carrying the Bagman seed. Activate the encounter at any point on the road to Houska.",
+        "spurtReaction": "Spurt will not go near it at Dread 41+. He watches it from across the room."
       }
     ],
 
@@ -1090,6 +1134,140 @@
         "Holy symbol brandished with genuine faith",
         "Dawn approaches and he becomes desperate"
       ],
+      "letavecKnowledge": {
+        "aware": true,
+        "encountered": 1251,
+        "knowsDenLocation": true,
+        "knowsChosenTargets": true,
+        "knowsBasinWeakness": true,
+        "willVolunteer": false,
+        "leverage": true,
+        "directQuestion": "There are older things than me in these mountains. That should concern you considerably.",
+        "socialCombatUnlocks": [
+          { "momentum": 3, "reveals": "It has been active before. I have seen it." },
+          { "momentum": 5, "reveals": "It does not want to kill you. That is not a comfort." },
+          { "momentum": 7, "reveals": "It wants something specific from specific people in your group. You should determine which ones before it does." },
+          { "momentum": 9, "reveals": "There is a place in the mountains. Roman stonework. That is where it sleeps." },
+          { "momentum": 10, "reveals": "The basin. Destroy the basin. Everything else is temporary." }
+        ]
+      },
+      "hydraAwareness": true,
+      "penitentAversion": true,
+      "bagmanAwareness": false,
+      "dialogueHistory": []
+    },
+    "aldous-kern": {
+      "id": "aldous-kern",
+      "name": "Aldous Kern",
+      "trueIdentity": "Traveler — False Hydra future victim",
+      "role": "background",
+      "status": "alive",
+      "disposition": "distracted",
+      "location": "corner table near door",
+      "voiceProfile": "pilgrim_aldous",
+      "description": "A thin man in a pilgrim's coat, mid-forties, travelling alone. He has the look of someone who has been walking for a long time. He sits with his hands around a cup he has not drunk from.",
+      "personality": "Distracted, gentle, loses his train of thought mid-sentence. He is not unwell exactly. Something is already wrong with him that he cannot name.",
+      "secret": "He was traveling with his brother Willem. Willem was taken by the False Hydra three days ago on the road near Houska. Aldous does not remember Willem exists. He keeps starting sentences with 'we' and catching himself confused.",
+      "knowledge": [
+        "He is on pilgrimage to Houska Castle",
+        "He has been on the road three weeks",
+        "He arrived at the inn breathing hard despite the cold — something was behind him on the road",
+        "He carries a small journal with entries referencing 'W.' throughout — he cannot explain who W. is",
+        "He does not remember his brother Willem exists"
+      ],
+      "dialogue": {
+        "greeting": "Forgive me. I was... somewhere else. Have you come far? We — I have been on the road three weeks now. Heading to Houska on pilgrimage.",
+        "destination": "Houska, yes. There is meant to be something there worth seeing. A gateway, they say. I had reasons for going that seemed important. I cannot quite... it will come to me.",
+        "companion": "No I am alone. I travel alone. I have always... yes. Alone.",
+        "name": "Kern. Aldous Kern. My father's name before me.",
+        "journal": "If players ask about his journal: he looks down at it, confused. The entries reference 'W.' throughout. He cannot explain who W. is. The last entry this morning trails off mid-sentence."
+      },
+      "behaviors": [
+        "Occasionally starts to wave at someone across the room then stops confused",
+        "Orders two drinks by accident stares at the second one",
+        "Refers to 'we' then corrects to 'I' and looks briefly lost",
+        "Writes in a small journal — entries reference W. throughout without explanation",
+        "He arrived breathing hard despite the cold. He has not explained why he was moving fast. He keeps glancing at the door."
+      ],
+      "aiDialogueBrief": "Aldous is gentle and distracted. He loses thoughts mid-sentence. He is traveling to Houska — he had a reason that felt important but cannot remember it clearly. He refers to 'we' and 'us' involuntarily then catches himself and looks confused. He does not know his brother Willem exists. He cannot be told — he will hear the words and they will not stick. His journal sits open on the table with entries referencing 'W.' throughout. He is not dangerous. He is a warning the party does not yet have context to understand. Sample voice: 'Three weeks on the road. Or — yes, three weeks. I keep thinking it felt longer with... anyway. Are you bound for the castle as well?'",
+      "addressableAs": ["Aldous", "Kern", "the pilgrim", "the man by the door"],
+      "knowledgeBoundaries": [
+        "He does not know Willem exists — cannot be told, words do not stick",
+        "He does not know why he is going to Houska with any clarity",
+        "He cannot explain the journal entries referencing W.",
+        "He is not aware anything is wrong with him"
+      ],
+      "futureHook": "Never arrives at Houska. If players kept notes or read their Chromebook journal they will find his name. Nobody in Pernštejn village will remember him.",
+      "linkedFutureHook": "false-hydra",
+      "moralProfile": "none",
+      "staminaProfile": "none",
+      "combatant": false,
+      "token": {
+        "icon": "pilgrim",
+        "location": "corner-table-door",
+        "moveable": false
+      },
+      "dialogueHistory": []
+    },
+    "gas-spore": {
+      "id": "gas-spore",
+      "name": "Gas Spore",
+      "displayName": "Something in the dark",
+      "trueIdentity": "Gas Spore — Beholder Mimic (CR 1/2)",
+      "role": "hazard-creature",
+      "location": "cellar-center",
+      "description": "A large round shape floating in the darkness of the cellar. From a distance it is unmistakably the silhouette of a Beholder — the central eye, the eyestalks, the floating mass. Up close the details are wrong. The stalks hang limp. The surface is mottled and soft. The central eye is milky and fixed. It smells of damp earth and old mushrooms.",
+      "secret": "This is a Gas Spore — a fungal creature that mimics the silhouette of a Beholder. It has been floating in the cellar for three weeks feeding on organic matter. It is not intelligent. It does not hunt. When it dies or takes significant damage it detonates in a 20-foot radius explosion of necrotic energy and infectious spores.",
+      "combatant": true,
+      "stats": {
+        "hp": 1,
+        "ac": 5,
+        "speed": "10ft float",
+        "str": 5,
+        "dex": 1,
+        "con": 10,
+        "int": 1,
+        "wis": 1,
+        "cha": 1,
+        "passivePerception": 6,
+        "cr": "0.5"
+      },
+      "staminaProfile": "none",
+      "moralProfile": "none",
+      "immunities": ["prone", "grappled", "restrained"],
+      "traits": [
+        {
+          "name": "Death Burst",
+          "description": "When the gas spore drops to 0 hit points or takes 10 or more damage from a single hit, it explodes. Each creature within 20 feet must make a DC 15 Constitution saving throw taking 10d10 necrotic damage on a failed save or half on success. On a failed save the creature is also infected with spores — see Spore Infection."
+        },
+        {
+          "name": "Spore Infection",
+          "description": "An infected creature must succeed on a DC 15 Constitution saving throw after 24 hours or die. If it dies its body becomes a Gas Spore after another 24 hours. Remove infection with Lesser Restoration or similar magic.",
+          "systemFlag": "sporeInfection",
+          "duration": "24h-game-time",
+          "saveInterval": "24h-game-time",
+          "saveDC": 15
+        },
+        {
+          "name": "False Appearance",
+          "description": "While motionless the Gas Spore is indistinguishable from a Beholder to any creature that has not succeeded on a DC 15 Nature check or moved within 30 feet and actively examined it.",
+          "systemFlag": "beholderMimic"
+        }
+      ],
+      "piotrRelationship": "Piotr has been chained near it for three weeks. He calls it 'the eye.' He believes Vladislav sent it to watch him. He is terrified of it detonating and will warn players away from it without explaining why. He presses himself against the wall when players approach it.",
+      "sporeInfectionNarratives": {
+        "12h": "You feel pressure behind your eyes. A strange lightness in your chest. You tell yourself it is nothing.",
+        "20h": "The pressure has become something else. When you breathe too deeply something shifts inside you. You do not tell the others.",
+        "24h": "Something blooms inside you all at once. There is no pain exactly — just a terrible fullness and then nothing."
+      },
+      "tokenDisplay": {
+        "icon": "beholder",
+        "playerLabel": "Something in the dark",
+        "dmLabel": "Gas Spore (Beholder Mimic)",
+        "appearance": "beholder-silhouette",
+        "initialOnInitiative": false,
+        "combatTriggerRange": 5
+      },
       "dialogueHistory": []
     }
   },
@@ -1127,12 +1305,19 @@
       "Carries valuable goods and is afraid of thieves",
       "Noticed the stranger doesn't eat or drink"
     ],
+    "inventory": [
+      { "id": "boot-wax", "name": "boot wax", "futureHook": "false-hydra-breaking-song", "note": "Future ear protection against the False Hydra's song at Houska" }
+    ],
+    "behaviors": [
+      "He mentions boot wax casually at some point during the session — 'The roads have ruined my boots. I packed wax but I keep forgetting to use it.'"
+    ],
     "dialogueHints": {
       "road": "'I've traveled this road twenty times. Never seen a storm this bad. Never felt this... wrong.'",
       "stranger": "'Man hasn't touched his food. Hasn't moved. I've been watching — he doesn't even blink. That's not natural.'",
       "business": "Perks up briefly about trade, then catches himself. 'None of that matters if we don't make it through the night.'",
       "disappearances": "'People go missing on mountain roads. It happens. But three in one month? From the same inn?' (whispers) 'That doesn't happen.'",
-      "danger": "'I'll pay double for an escort out of here at first light. Triple. Name your price.'"
+      "danger": "'I'll pay double for an escort out of here at first light. Triple. Name your price.'",
+      "boot_wax": "'The roads have ruined my boots. I packed wax but I keep forgetting to use it. Trader I bought it from said it would last me the whole pilgrimage season. Whole damn block of it sitting in my pack.'"
     },
     "dialogueHistory": []
   },

@@ -1,0 +1,56 @@
+{
+  "id": "neck",
+  "name": "The Neck",
+  "alternateNames": ["Nøkk", "Vodník"],
+  "type": "fey",
+  "size": "medium",
+  "cr": 3,
+  "xp": 700,
+  "ac": 13,
+  "hp": 49,
+  "hpDice": "9d8 + 9",
+  "speed": "30ft, 60ft swim",
+  "stats": { "str": 14, "dex": 16, "con": 12, "int": 14, "wis": 12, "cha": 20 },
+  "damageImmunities": ["cold"],
+  "senses": { "darkvision": 60, "passivePerception": 11 },
+  "traits": [
+    {
+      "name": "Beguiling Music",
+      "description": "Any creature within 60ft that can hear the Neck's music makes DC 15 WIS save at the start of each turn or be Charmed. While Charmed the creature uses its movement to approach the water source nearest the Neck. The Neck cannot play music while attacking."
+    },
+    {
+      "name": "Amphibious",
+      "description": "Can breathe air and water."
+    },
+    {
+      "name": "Water Dependency",
+      "description": "The Neck must remain within 30ft of a body of water. If forced beyond this it takes 20 necrotic damage at the start of each turn."
+    },
+    {
+      "name": "Drowning Pull",
+      "description": "Any creature that enters the water within 30ft of the Neck is immediately Grappled (escape DC 14) by unseen currents. While Grappled underwater the creature begins suffocating."
+    },
+    {
+      "name": "Kobold Immunity",
+      "description": "Kobolds are immune to the Beguiling Music — their relationship with sound and magic works differently. Spurt can hear the music and finds it beautiful and is completely unaffected by its compulsion. He watches the party walk toward the river with bafflement."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "Two Slam attacks if not playing music."
+    },
+    {
+      "name": "Slam",
+      "attackBonus": 5,
+      "damage": "1d8 + 3",
+      "damageType": "bludgeoning"
+    },
+    {
+      "name": "Captivating Music",
+      "description": "Begins playing — all creatures within 60ft make DC 15 WIS save each turn or move toward the water."
+    }
+  ],
+  "lore": "A water spirit that sits by rivers and plays music of heartbreaking beauty. It does not hate the creatures it drowns. It simply plays. The music is real — genuinely the most beautiful thing anyone who hears it has ever experienced. That is the tragedy of it.",
+  "campaignPlacement": "Vlčí Průsmyk river crossing, Session 4. CR 3 against level 5-6 party. The mechanical challenge is keeping the party together when half of them are walking into a river."
+}

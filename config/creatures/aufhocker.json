@@ -1,0 +1,45 @@
+{
+  "id": "aufhocker",
+  "name": "Aufhocker",
+  "type": "fiend",
+  "size": "small",
+  "cr": 2,
+  "xp": 450,
+  "ac": 12,
+  "hp": 36,
+  "hpDice": "8d6 + 8",
+  "speed": "0ft alone, matches host's speed when attached",
+  "stats": { "str": 18, "dex": 14, "con": 12, "int": 6, "wis": 10, "cha": 8 },
+  "damageResistances": ["bludgeoning piercing slashing from nonmagical weapons"],
+  "traits": [
+    {
+      "name": "False Appearance",
+      "description": "While motionless the Aufhocker is indistinguishable from a small animal, a dropped bundle, or a resting child. DC 16 Perception to identify it before it attaches."
+    },
+    {
+      "name": "Crushing Weight",
+      "description": "When attached to a host: host's speed is halved, host makes DC 13 STR save each round or speed reduced to 0. Weight feels like it doubles each round — mechanically it causes 1 level of Exhaustion per minute of attachment."
+    },
+    {
+      "name": "Iron Grip",
+      "description": "Cannot be removed by STR checks alone. Immune to being grappled or restrained from the host's attempts. Must be tricked off — see Removal."
+    },
+    {
+      "name": "Solitary Hunter",
+      "description": "The Aufhocker only attaches to creatures who are alone. If a second creature comes within 30ft of an attached Aufhocker it immediately releases and becomes a false appearance again."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Attach",
+      "description": "Leaps onto a lone creature within 5ft. Target makes DC 14 DEX save or Aufhocker is attached. Attached Aufhocker cannot be targeted separately from host."
+    },
+    {
+      "name": "Squeeze",
+      "description": "Attached only. Host takes 2d8 + 4 bludgeoning damage."
+    }
+  ],
+  "removal": "Running water — carrying the host across a stream forces the Aufhocker to release. A church threshold. Speaking its name three times in its native German — 'Aufhocker, Aufhocker, Aufhocker' — forces a DC 12 WIS save or release. The party must discover these methods through investigation or local knowledge.",
+  "lore": "It looks like nothing. A bundle someone dropped. A sleeping cat. A tired child on the road. The moment it is lifted or touched it is on your back and it will not come off by any force you can muster. It grows heavier with every step. People have died within sight of their destination, unable to take the last few steps.",
+  "campaignPlacement": "Pastierska Dolina valley, Session 2. CR 2 against level 3-4 party. The trick is that you cannot fight it — you have to trick it. Party members who split up are vulnerable. This encounter teaches the lesson: stay together."
+}

@@ -86,6 +86,17 @@ class NpcHandler {
       // No NPC config file, that's fine
     }
 
+    // Inject session-config NPC brief and knowledge boundaries (e.g. Aldous Kern's False Hydra editing)
+    if (npc.aiDialogueBrief) {
+      npcNotes += `\n\nAI Dialogue Brief: ${npc.aiDialogueBrief}`;
+    }
+    if (Array.isArray(npc.knowledgeBoundaries) && npc.knowledgeBoundaries.length) {
+      npcNotes += `\n\nKnowledge Boundaries (the NPC literally cannot communicate these):\n  - ${npc.knowledgeBoundaries.join('\n  - ')}`;
+    }
+    if (Array.isArray(npc.behaviors) && npc.behaviors.length) {
+      npcNotes += `\n\nObservable Behaviors:\n  - ${npc.behaviors.join('\n  - ')}`;
+    }
+
     const dialogueFormatRule = `\n\nCRITICAL FORMAT RULE: Your response must BEGIN with spoken dialogue in quotation marks. Never begin with a character name followed by a verb. Never begin with a stage direction or physical action. The first character of your response must be an opening quotation mark.
 Correct: "You are kind to ask. It has been a difficult week." — she looks away.
 Wrong: Marta whispers, "You are kind"
@@ -247,6 +258,14 @@ Wrong: Marta flinches, her eyes darting to the door`;
 
     // Direct name mention
     if (text.includes(firstName) && firstName.length > 2) return true;
+
+    // NPC explicit addressableAs aliases (e.g. Aldous Kern: "the pilgrim", "the man by the door")
+    if (Array.isArray(npc.addressableAs)) {
+      for (const alias of npc.addressableAs) {
+        const a = (alias || '').toLowerCase();
+        if (a.length > 2 && text.includes(a)) return true;
+      }
+    }
 
     // Role mention
     if (npc.role) {

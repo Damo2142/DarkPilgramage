@@ -1365,6 +1365,68 @@
       </div>
       </div>
 
+      <div class="panel-section" data-panel="campaign-future-hooks">
+      <div class="section-header"><span class="drag-handle">⠿</span>Campaign Future Hooks</div>
+      <div style="padding:6px 8px;">
+        <div style="font-size:9px;color:var(--text-dim);margin-bottom:6px;">All planted creature seeds across the campaign arc — sorted by payoff session</div>
+        <div id="campaign-future-hooks-list" style="max-height:340px;overflow-y:auto;font-size:10px;"></div>
+      </div>
+      </div>
+
+      <div class="panel-section" data-panel="journey">
+      <div class="section-header"><span class="drag-handle">⠿</span>Journey</div>
+      <div style="padding:6px 8px;">
+        <div id="journey-state" style="font-size:11px;margin-bottom:8px;color:var(--text-dim);">No active journey.</div>
+        <div style="margin-bottom:6px;">
+          <div style="font-size:10px;color:var(--accent);font-family:Cinzel,serif;margin-bottom:3px;">Start Journey</div>
+          <input type="text" id="journey-origin" placeholder="Origin (settlement id)" style="width:100%;margin-bottom:3px;font-size:10px;padding:3px;">
+          <input type="text" id="journey-destination" placeholder="Destination (settlement id)" style="width:100%;margin-bottom:3px;font-size:10px;padding:3px;">
+          <select id="journey-terrain" style="width:100%;margin-bottom:3px;font-size:10px;padding:3px;">
+            <option value="good-road">Good road (DC 8)</option>
+            <option value="mountain-road" selected>Mountain road (DC 12)</option>
+            <option value="mountain-path">Mountain path (DC 12)</option>
+            <option value="deep-forest">Deep forest (DC 15)</option>
+            <option value="high-pass">High pass (DC 16)</option>
+          </select>
+          <button class="sm primary" onclick="startJourney()" style="font-size:10px;">Start</button>
+        </div>
+        <div style="margin-bottom:6px;">
+          <div style="font-size:10px;color:var(--accent);font-family:Cinzel,serif;margin-bottom:3px;">Daily Phases</div>
+          <div style="display:flex;gap:3px;flex-wrap:wrap;">
+            <button class="sm" onclick="advanceJourney('morning')" style="font-size:9px;">Morning</button>
+            <button class="sm" onclick="advanceJourney('afternoon')" style="font-size:9px;">Afternoon</button>
+            <button class="sm" onclick="advanceJourney('evening')" style="font-size:9px;">Evening</button>
+            <button class="sm" onclick="advanceJourney('night')" style="font-size:9px;">Night</button>
+            <button class="sm" onclick="advanceJourney('arrived')" style="font-size:9px;">Arrived</button>
+          </div>
+        </div>
+        <div style="margin-bottom:6px;">
+          <div style="font-size:10px;color:var(--accent);font-family:Cinzel,serif;margin-bottom:3px;">Camp Choice</div>
+          <select id="journey-camp" style="width:100%;font-size:10px;padding:3px;" onchange="setCampChoice(this.value)">
+            <option value="">— Select —</option>
+            <option value="church">Church (high safety, consecrated)</option>
+            <option value="inn">Inn (medium)</option>
+            <option value="cave">Cave (medium)</option>
+            <option value="open-camp">Open camp (low)</option>
+            <option value="monastery">Monastery (medium-high, consecrated)</option>
+          </select>
+        </div>
+        <div style="margin-bottom:6px;">
+          <input type="text" id="journey-complication" placeholder="Add complication" style="width:60%;font-size:10px;padding:3px;">
+          <button class="sm" onclick="addComplication()" style="font-size:9px;">Log</button>
+        </div>
+        <div id="journey-complications" style="font-size:9px;color:var(--text-dim);max-height:80px;overflow-y:auto;"></div>
+      </div>
+      </div>
+
+      <div class="panel-section" data-panel="settlements">
+      <div class="section-header"><span class="drag-handle">⠿</span>Settlements</div>
+      <div style="padding:6px 8px;">
+        <div style="font-size:9px;color:var(--text-dim);margin-bottom:6px;">Carpathian gazetteer — current threats and reputation</div>
+        <div id="settlements-list" style="max-height:300px;overflow-y:auto;font-size:10px;"></div>
+      </div>
+      </div>
+
       <div class="panel-section" data-panel="between-sessions">
       <div class="section-header"><span class="drag-handle">⠿</span>Between Sessions</div>
       <div style="padding:6px 8px;">
@@ -1662,8 +1724,9 @@
         addNpcSuggestion(msg.data);
         break;
       case 'npc:approved':
-        // NPC spoke to players — show in transcript so DM sees what was said
+        // NPC spoke to players — show in transcript and read to earbud
         addTranscript({ speaker: msg.data.npc || 'NPC', text: msg.data.text });
+        Earbud.speak(msg.data.text, 5);
         break;
       case 'ai:atmosphere':
         addTranscript({ speaker: 'system', text: `AI suggests: ${msg.data.profile} (${msg.data.reason}, confidence: ${msg.data.confidence})` });
@@ -1785,6 +1848,22 @@
             addTranscript({ speaker: 'co-dm', text: msg.data.text });
           }
         }
+        break;
+      // Ambient life events
+      case 'ambient:observation':
+        if (msg.data) addTranscript({ speaker: msg.data.npcName || 'ambient', text: msg.data.text });
+        break;
+      case 'ambient:environment':
+        if (msg.data) addTranscript({ speaker: 'world', text: msg.data.text });
+        break;
+      case 'ambient:npc_move':
+        if (msg.data) addTranscript({ speaker: msg.data.npcName || 'NPC', text: msg.data.action });
+        break;
+      case 'ambient:dwell_reaction':
+        if (msg.data) addTranscript({ speaker: msg.data.npcName || 'NPC', text: msg.data.text });
+        break;
+      case 'ambient:performance':
+        if (msg.data) addTranscript({ speaker: 'Katya', text: '🎵 ' + (msg.data.title || 'Performance') });
         break;
       case 'wounds:updated':
         if (msg.data) DmWounds.onUpdate(msg.data);
@@ -3173,8 +3252,12 @@
     _npcTimers: {},      // { [suggestionId]: { countdown, autoread } }
     _prevDread: {},      // { [playerId]: score }
 
+    _waitingForAck: false,
+
     speak(text, priority = 5) {
       if (!this.enabled || !text) return;
+      // Drop low-priority items if queue is getting long (> 5 items)
+      if (this._queue.length >= 5 && priority >= 4) return;
       this._queue.push({ text, priority });
       this._queue.sort((a, b) => a.priority - b.priority);
       // Interrupt if something lower priority is currently playing
@@ -3182,11 +3265,17 @@
         window.speechSynthesis.cancel();
         this._speaking = false;
       }
-      if (!this._speaking) this._next();
+      if (!this._speaking && !this._waitingForAck) this._next();
+    },
+
+    acknowledge() {
+      // Called when DM presses function key — advance to next queued item
+      this._waitingForAck = false;
+      this._next();
     },
 
     _next() {
-      if (!this._queue.length) { this._speaking = false; this._currentPriority = 99; return; }
+      if (!this._queue.length) { this._speaking = false; this._currentPriority = 99; this._waitingForAck = false; return; }
       const { text, priority } = this._queue.shift();
       this._speaking = true;
       this._currentPriority = priority;
@@ -3194,7 +3283,18 @@
       utt.volume = this.volume;
       utt.rate = this.rate;
       utt.pitch = 0.9;
-      utt.onend = utt.onerror = () => { this._speaking = false; setTimeout(() => this._next(), 150); };
+      utt.onend = utt.onerror = () => {
+        this._speaking = false;
+        if (priority <= 2) {
+          // Critical items auto-advance after 1 second
+          setTimeout(() => this._next(), 1000);
+        } else {
+          // Non-critical: wait for DM to press function key before next item
+          this._waitingForAck = true;
+          // But auto-advance after 15 seconds if DM doesn't press
+          setTimeout(() => { if (this._waitingForAck) this.acknowledge(); }, 15000);
+        }
+      };
       window.speechSynthesis.speak(utt);
     },
 
@@ -5258,6 +5358,112 @@
       addTranscript({ speaker: 'system', text: 'No pending downtime events' });
     }
   }
+  // ── Campaign Future Hooks (loaded from config/future-hooks.json) ──
+  async function refreshCampaignFutureHooks() {
+    try {
+      var resp = await fetch('/api/future-hooks');
+      var hooks = await resp.json();
+      var el = document.getElementById('campaign-future-hooks-list');
+      if (!el) return;
+      if (!hooks.length) { el.innerHTML = '<span style="color:var(--text-dim);">No hooks loaded</span>'; return; }
+      var statusColor = { 'seeded':'#7fb069', 'planned':'#d4a017', 'not-yet-built':'#7a7a7a', 'paid_off':'#5a5a5a' };
+      el.innerHTML = hooks.map(function(h, i) {
+        var color = statusColor[h.status] || '#999';
+        var seedsHtml = (h.seeds || []).map(function(s) {
+          if (typeof s === 'string') return '<li>' + esc(s) + '</li>';
+          return '<li>' + esc(JSON.stringify(s)) + '</li>';
+        }).join('');
+        return '<div style="border:1px solid var(--border);border-radius:4px;padding:5px;margin-bottom:5px;background:var(--bg);">'
+          + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+          + '<span style="color:var(--accent);font-weight:bold;">' + esc(h.title) + '</span>'
+          + '<span style="background:' + color + ';color:#000;padding:1px 5px;border-radius:3px;font-size:8px;text-transform:uppercase;">' + esc(h.status || '') + '</span>'
+          + '</div>'
+          + '<div style="color:var(--text-dim);font-size:9px;">' + esc(h.creature || '') + ' — Payoff: ' + esc(h.payoffSession || '?') + '</div>'
+          + '<div style="color:var(--text);font-size:9px;margin-top:3px;">' + esc((h.description || '').slice(0, 220)) + (h.description && h.description.length > 220 ? '…' : '') + '</div>'
+          + (seedsHtml ? '<details style="margin-top:3px;"><summary style="font-size:9px;color:var(--accent);cursor:pointer;">Seeds (' + (h.seeds || []).length + ')</summary><ul style="font-size:9px;color:var(--text-dim);margin:3px 0 0 14px;padding:0;">' + seedsHtml + '</ul></details>' : '')
+          + (h.chosenTargets ? '<div style="font-size:9px;color:var(--text-dim);margin-top:3px;"><b>Chosen Targets:</b> ' + Object.keys(h.chosenTargets).join(', ') + '</div>' : '')
+          + (h.vladislavConnection ? '<div style="font-size:9px;color:#a44;margin-top:3px;"><b>Vladislav:</b> ' + esc(h.vladislavConnection) + '</div>' : '')
+          + '<button class="sm" style="font-size:8px;margin-top:3px;" ' + (h.buildStatus === 'not-yet-built' ? 'disabled' : '') + ' onclick="alert(\'Build template for: ' + esc(h.id) + '\')">Build</button>'
+          + '</div>';
+      }).join('');
+    } catch (e) {}
+  }
+
+  // ── Settlements ──
+  async function refreshSettlements() {
+    try {
+      var resp = await fetch('/api/settlements');
+      var settlements = await resp.json();
+      var el = document.getElementById('settlements-list');
+      if (!el) return;
+      if (!settlements.length) { el.innerHTML = '<span style="color:var(--text-dim);">No settlements loaded</span>'; return; }
+      el.innerHTML = settlements.map(function(s) {
+        var rep = s.reputation || { standing:0, known:false };
+        var standingColor = rep.standing > 0 ? '#7fb069' : (rep.standing < 0 ? '#a44' : '#888');
+        return '<div style="border-bottom:1px solid var(--bg);padding:4px 0;">'
+          + '<div style="display:flex;justify-content:space-between;">'
+          + '<span style="color:var(--accent);">' + esc(s.name) + '</span>'
+          + '<span style="font-size:8px;color:var(--text-dim);">' + esc(s.type) + ' — ' + esc(s.region || '') + '</span>'
+          + '</div>'
+          + (s.currentThreat ? '<div style="font-size:9px;color:#a44;">Threat: ' + esc(s.currentThreat) + '</div>' : '')
+          + '<div style="font-size:9px;color:var(--text-dim);">Pop: ' + (s.population || 0) + ' · Standing: <span style="color:' + standingColor + ';">' + rep.standing + '</span>' + (rep.known ? ' (known)' : '') + '</div>'
+          + '</div>';
+      }).join('');
+    } catch (e) {}
+  }
+
+  // ── Journey ──
+  async function startJourney() {
+    var origin = document.getElementById('journey-origin').value.trim();
+    var destination = document.getElementById('journey-destination').value.trim();
+    var terrain = document.getElementById('journey-terrain').value;
+    if (!origin || !destination) { alert('Origin and destination required'); return; }
+    var resp = await fetch('/api/world/journey/start', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ origin: origin, destination: destination, terrain: terrain }) });
+    var data = await resp.json();
+    addTranscript({ speaker:'system', text:'Journey started: ' + origin + ' -> ' + destination });
+    refreshJourney();
+  }
+  async function advanceJourney(phase) {
+    var resp = await fetch('/api/world/journey/advance', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ phase: phase }) });
+    var data = await resp.json();
+    if (data.result?.note) addTranscript({ speaker:'system', text:'Journey ' + phase + ': ' + data.result.note });
+    if (data.result?.navigationDC) addTranscript({ speaker:'system', text:'Navigation DC: ' + data.result.navigationDC + ' (' + data.result.terrain + ')' });
+    refreshJourney();
+  }
+  async function setCampChoice(choice) {
+    if (!choice) return;
+    await fetch('/api/world/journey/camp', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ choice: choice }) });
+    refreshJourney();
+  }
+  async function addComplication() {
+    var d = document.getElementById('journey-complication').value.trim();
+    if (!d) return;
+    await fetch('/api/world/journey/complication', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ description: d }) });
+    document.getElementById('journey-complication').value = '';
+    refreshJourney();
+  }
+  async function refreshJourney() {
+    try {
+      var resp = await fetch('/api/world/journey');
+      var j = await resp.json();
+      var el = document.getElementById('journey-state');
+      if (!el) return;
+      if (!j.active) { el.innerHTML = 'No active journey.'; }
+      else {
+        el.innerHTML = '<b>' + esc(j.origin) + '</b> &rarr; <b>' + esc(j.destination) + '</b><br>'
+          + 'Day ' + (j.daysTraveled + 1) + ' (' + j.daysRemaining + ' remaining)<br>'
+          + 'Terrain: ' + esc(j.currentTerrain) + ' · Weather: ' + esc(j.currentWeather) + '<br>'
+          + (j.campChoice ? 'Camp: ' + esc(j.campChoice) : 'No camp set');
+      }
+      var cel = document.getElementById('journey-complications');
+      if (cel) {
+        cel.innerHTML = (j.complications || []).map(function(c) {
+          return '<div>· ' + esc(c.description || '') + '</div>';
+        }).join('') || '<i>No complications</i>';
+      }
+    } catch (e) {}
+  }
+
   function showTimelineForm() { document.getElementById('tl-form').style.display = 'block'; }
   async function addTimelineEntry() {
     var title = document.getElementById('tl-title').value.trim();
@@ -5287,6 +5493,9 @@
       renderTimelineList(data.timeline || []);
       renderLoreList(data.lore || []);
     } catch(e) {}
+    refreshCampaignFutureHooks();
+    refreshSettlements();
+    refreshJourney();
   }
   function renderXPList(xpData) {
     var el = document.getElementById('xp-list');
@@ -6063,6 +6272,10 @@
     if (e.key === 'Escape') {
       if (wallDrawMode) { wallDrawStart = null; wallDrawPreview = null; toggleWallDrawMode(); }
       if (lightPlaceMode) toggleLightPlaceMode();
+    }
+    if (e.key === 'F1') {
+      e.preventDefault();
+      Earbud.acknowledge();
     }
   });
 

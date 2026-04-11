@@ -1,0 +1,54 @@
+{
+  "id": "hound-of-tindalos",
+  "name": "Hound of the Angles",
+  "type": "aberration",
+  "size": "medium",
+  "cr": 5,
+  "xp": 1800,
+  "ac": 15,
+  "hp": 82,
+  "hpDice": "11d8 + 33",
+  "speed": "40ft, can move through solid objects via angles",
+  "stats": { "str": 18, "dex": 16, "con": 16, "int": 10, "wis": 14, "cha": 8 },
+  "damageResistances": ["bludgeoning piercing slashing from nonmagical weapons"],
+  "senses": { "truesight": 60, "passivePerception": 12 },
+  "traits": [
+    {
+      "name": "Angle Travel",
+      "description": "The Hound can enter our world through any acute angle — a corner where two walls meet, an architectural join, a sharp geometric edge. It phases through solid material to reach angles. It cannot enter a space with no acute angles — a room carved from natural cave with curved surfaces, a circular tent, open flat terrain."
+    },
+    {
+      "name": "Geometric Hunter",
+      "description": "The Hound is attracted by specific magical signatures — objects touched by dimensional travel, certain spells, items from places where the geometry of reality has been stressed. Once attracted it hunts the anchor until the anchor is removed or destroyed."
+    },
+    {
+      "name": "Phase Movement",
+      "description": "The Hound moves through walls by passing through the angles where they meet. It does not open doors. It arrives through corners. Creatures who see it emerge from a corner for the first time make DC 14 WIS save or be Frightened until the end of their next turn."
+    },
+    {
+      "name": "No Curved Surfaces",
+      "description": "The Hound cannot enter a space where all surfaces are curved — no angles means no entry point. The wine cellar of the monastery (carved from natural cave) is completely inaccessible to it."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "Two Bite attacks."
+    },
+    {
+      "name": "Bite",
+      "attackBonus": 7,
+      "damage": "2d8 + 4",
+      "damageType": "piercing plus 2d6 psychic"
+    },
+    {
+      "name": "Ichor Spray",
+      "recharge": "5-6",
+      "description": "15ft cone. DC 14 DEX save or 4d8 acid damage and blinded until end of next turn."
+    }
+  ],
+  "removal": "Destroy the anchor object — the item attracting the Hound. Once the anchor is gone the Hound loses interest and phases back through the nearest angle. It cannot be permanently killed — only driven away by removing what attracted it.",
+  "safeZone": "Any curved space — natural cave, circular tent, curved ceiling. The monastery wine cellar. Outdoor flat terrain with no structures.",
+  "lore": "It lives in the angles. It has always lived in the angles. Medieval architecture is full of them — sharp stone corners, vaulted ceilings, the joins between walls and floors. The monastery it currently hunts is essentially a highway for it. It is not malicious. It is territorial about what attracted it.",
+  "campaignPlacement": "Klášter Sv. Prokopa monastery, Session 13. CR 5 against level 11 party — not a combat challenge at that level. A puzzle about geometry and safe spaces and finding the anchor."
+}

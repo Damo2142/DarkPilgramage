@@ -1,0 +1,54 @@
+{
+  "id": "strigoi",
+  "name": "Strigoi",
+  "type": "undead",
+  "size": "medium",
+  "cr": 2,
+  "xp": 450,
+  "ac": 13,
+  "hp": 45,
+  "hpDice": "6d8 + 18",
+  "speed": "30ft",
+  "stats": { "str": 16, "dex": 12, "con": 16, "int": 8, "wis": 10, "cha": 14 },
+  "damageResistances": ["necrotic", "bludgeoning piercing slashing from nonmagical weapons"],
+  "damageImmunities": ["poison"],
+  "conditionImmunities": ["poisoned", "exhaustion"],
+  "senses": { "darkvision": 60, "passivePerception": 10 },
+  "traits": [
+    {
+      "name": "Remembered Voice",
+      "description": "The Strigoi speaks and moves exactly as it did in life. Creatures who knew it cannot make themselves attack it on the first round of combat — WIS save DC 12 or use movement to approach it instead of attacking."
+    },
+    {
+      "name": "Home Calling",
+      "description": "The Strigoi can only be permanently destroyed in its home or at its grave. Destroyed elsewhere it reforms at its grave at the next moonrise."
+    },
+    {
+      "name": "Invited Entry",
+      "description": "The Strigoi cannot enter a home uninvited. Once invited it may enter freely thereafter."
+    },
+    {
+      "name": "Sunlight Sensitivity",
+      "description": "Disadvantage on attack rolls and Perception checks in direct sunlight."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "Two Slam attacks."
+    },
+    {
+      "name": "Slam",
+      "attackBonus": 5,
+      "damage": "2d6 + 3",
+      "damageType": "bludgeoning"
+    },
+    {
+      "name": "Life Drain",
+      "description": "One creature within 5ft makes DC 13 CON save or takes 2d6 necrotic and max HP reduced by same amount until long rest."
+    }
+  ],
+  "permanentDestruction": "Must be staked through the heart with a wooden stake while in its home or at its grave, then decapitated, then buried with mouth filled with garlic at a crossroads. Each step separately required.",
+  "lore": "Not a noble vampire. A dead thing that remembered where it lived and went home. It came back because it died wrong — no last rites, unresolved grievance, improper burial. It does not understand that it is dead. It is confused why its family treats it strangely.",
+  "campaignPlacement": "Raková village, Session 1. The dead son Marek. CR 2 against level 2-3 party — manageable if they understand what it is and prepare. Unkillable if they try to fight it outside its home without knowing the destruction requirements."
+}

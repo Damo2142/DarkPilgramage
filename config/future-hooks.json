@@ -1,0 +1,229 @@
+{
+  "hooks": [
+    {
+      "id": "false-hydra",
+      "title": "The Singing Below Houska",
+      "creature": "False Hydra",
+      "plantedSession": "session-0",
+      "status": "seeded",
+      "buildStatus": "not-yet-built",
+      "triggerLocation": "Pernštejn village approaching Houska Castle",
+      "payoffSession": "Session 2-3",
+      "description": "A False Hydra grows beneath Houska Castle. It has been feeding on the surrounding village for months. The vampire network coexisting with Houska has been feeding it travelers to keep it docile. Vladislav considers it a useful tool he did not create. Aldous Kern's brother Willem was taken three days before Session 0. Aldous never arrives at Houska. If the party kept written records of Session 0 they will find his name. Nobody in Pernštejn will remember him.",
+      "mechanics": {
+        "exposureTracker": "Per player 0-100 accumulates in real time faster during sleep",
+        "songSuppression": "Tier 2 observations about missing people suppressed at all exposure levels",
+        "journalEditing": "Journal entries quietly edited at medium exposure",
+        "tokenRemoval": "Target token and player panel vanish at high exposure",
+        "takenPlayerSequence": "Screen whites out with private message sequence",
+        "hydraAI": "AI maintains edited reality across all NPCs simultaneously"
+      },
+      "exposureTiers": [
+        { "tier": "Unaffected", "range": "0-25", "effect": "Tier 2 observations about missing people suppressed" },
+        { "tier": "Touched", "range": "26-50", "effect": "Journal entries edited, NPC references to taken people erased" },
+        { "tier": "Singing", "range": "51-75", "effect": "Most isolated party member flagged as target" },
+        { "tier": "Taken", "range": "76-100", "effect": "Token vanishes, panel vanishes, party forgets" }
+      ],
+      "breakingSongMethods": [
+        "Wax earplugs — Henryk's boot wax from Session 0",
+        "Written notes pre-exposure — the song cannot edit paper",
+        "Spurt speaking Draconic — song does not process Draconic thought patterns",
+        "Holy ground — Brother Aldric can consecrate a safe zone if he survived Session 0",
+        "Aldous Kern's voice from inside the Hydra — audible to characters with Horror score 60+"
+      ],
+      "seeds": [
+        "Aldous Kern present at The Pallid Hart referring to 'we'",
+        "His journal references 'W.' throughout",
+        "He ordered two drinks — one for a person who no longer exists",
+        "He never arrives at Houska",
+        "Henryk carries boot wax — future ear protection",
+        "Spurt's Draconic at high Dread is partially immune"
+      ],
+      "vladislavConnection": "Knows about it. Uses it as a tool. Will not warn the party.",
+      "victory": "Killing it restores memories in a radius but not perfectly. Some things it ate are simply gone. The party wins and something is still missing.",
+      "systemsRequired": [
+        "exposure-tracker",
+        "song-suppression",
+        "journal-editing",
+        "token-removal",
+        "taken-player-screen-sequence",
+        "hydra-ai-intelligence"
+      ]
+    },
+    {
+      "id": "gas-spore-pit",
+      "title": "The Floating Eyes of Houska",
+      "creature": "Gas Spore colony",
+      "plantedSession": "session-0",
+      "status": "seeded",
+      "buildStatus": "not-yet-built",
+      "triggerLocation": "Houska Castle pit level",
+      "payoffSession": "Session 2-3",
+      "description": "The cellar Gas Spore in Session 0 was one. The pit at Houska contains dozens. Travelers fed to the False Hydra whose bodies became Gas Spores, floating in the darkness of the pit for months. Players who survived the cellar encounter will recognize them immediately and know exactly how dangerous the pit is. Players who did not encounter the cellar one will not know what they are looking at until it is too late.",
+      "seeds": [
+        "Session 0 cellar Gas Spore — teaches players what these are",
+        "Piotr calling it 'the eye' — echoed in the pit where dozens float",
+        "Spore infection mechanic already built in Session 0"
+      ],
+      "vladislavConnection": "The vampire network feeds the Hydra. The Hydra's victims become Gas Spores. The pit is full of both."
+    },
+    {
+      "id": "bagman",
+      "title": "What Lives in the Bag",
+      "creature": "Bagman",
+      "plantedSession": "session-1-transition",
+      "status": "planned",
+      "buildStatus": "not-yet-built",
+      "triggerLocation": "Road between Orava and Houska — or Session 0 cellar",
+      "payoffSession": "Session 1-2",
+      "description": "The party finds a bag of holding. It may be on Aldous Kern's body if they find it on the road — he never arrived at Houska. It may be among Vladislav's coffin contents in the Session 0 cellar — a previous victim's belongings. The bag works perfectly for weeks. Players use it to carry documents, loot, equipment. It becomes trusted. Then one night someone reaches in without looking and the Bagman grabs their wrist.",
+      "mechanics": {
+        "bagFlag": "Equipment item gets bagman:true flag invisible to players",
+        "dmTrigger": "DM activates encounter manually from dashboard at chosen moment",
+        "spurtBehavior": "At Dread 41+ Spurt refuses to go near the bag without explanation"
+      },
+      "seeds": [
+        "Aldous Kern's body on the road — his bag of holding",
+        "Vladislav's cellar — previous victim's belongings",
+        "Spurt's refusal to approach it from the moment it is found"
+      ],
+      "spurtNote": "Add to spurt-agent.js: at Dread 41+ if a bag of holding with bagman:true flag is in party inventory, Spurt refuses to approach it and cannot explain why. He watches it."
+    },
+    {
+      "id": "oblex",
+      "title": "The Memory Eater",
+      "creature": "Adult Oblex",
+      "plantedSession": "session-2",
+      "status": "planned",
+      "buildStatus": "not-yet-built",
+      "triggerLocation": "Houska Castle — upper levels",
+      "payoffSession": "Session 2",
+      "description": "The Oblex has been in Houska for months consuming staff and visitors. Players arrive and meet people — pilgrims, servants, a scholar researching the castle. Some of them are the Oblex wearing consumed memories. The real people are dead. What's left knows everything they knew. The Oblex can be multiple simulacra simultaneously, each tethered to its main body by a nearly invisible mucus strand.",
+      "tells": [
+        "Faint sulfur smell near simulacra",
+        "Mucus strand nearly invisible in dim light",
+        "Simulacra describe emotions rather than showing them — 'I am very frightened' instead of looking frightened",
+        "They answer questions slightly too completely — they have the full memory not the lived experience"
+      ],
+      "zarinaMoment": "Her professional background in behavioral analysis means she notices emotional flatness immediately. She has interviewed enough people under stress to know what fear actually looks like. The Oblex simulacra do not know. Her private observation: 'You have interviewed enough people under pressure to know the difference between feeling fear and describing fear. This person is describing it.'",
+      "distinction": "Oblex wears dead people from outside using their memories. Doppelganger reads thoughts and mimics. Penitent becomes. These feel distinct — ensure AI plays each differently.",
+      "vladislavConnection": "The Oblex is not part of his network. He finds it useful that it keeps the castle populated with apparent staff. He feeds it occasionally."
+    },
+    {
+      "id": "doppelganger",
+      "title": "The Perfect Spy",
+      "creature": "Doppelganger",
+      "plantedSession": "session-2",
+      "status": "planned",
+      "buildStatus": "not-yet-built",
+      "triggerLocation": "Houska Castle",
+      "payoffSession": "Session 2",
+      "description": "The Doppelganger has replaced a Church of Light inquisitor who arrived to investigate Houska. The real inquisitor is alive in a cellar room. The Doppelganger has been attending meetings, gathering information, playing both sides. It can read surface thoughts — it knows what you want to hear and will be exactly what you need it to be.",
+      "mechanics": {
+        "thoughtReading": "Advantage on all Deception checks — reads surface thoughts to tailor answers",
+        "perfectAnswers": "Insight DC 18 to notice it answers questions before they are fully asked",
+        "distinction": "A separate creature with its own agenda wearing a living person's face while that person is still alive somewhere"
+      },
+      "tells": [
+        "Answers are suspiciously perfect",
+        "Insight DC 18: it answers questions the player was thinking before asking",
+        "The real inquisitor can be found alive — finding them breaks the deception entirely"
+      ],
+      "zarinaMoment": "Insight +2, passive 12. She will not catch it passively. If she actively rolls and succeeds: 'The answers are too good. Nobody knows exactly what you want to hear without being told.'"
+    },
+    {
+      "id": "leucrotta",
+      "title": "The Voice in the Trees",
+      "creature": "Leucrotta",
+      "plantedSession": "session-1-transition",
+      "status": "planned",
+      "buildStatus": "not-yet-built",
+      "triggerLocation": "Mountain road between castles",
+      "payoffSession": "Session 1-2 transition or Session 2-3 transition",
+      "description": "The Leucrotta has been hunting the mountain pass for years. It perfectly mimics any voice it has heard. If Tomas the werewolf guided the party from Session 0 it has heard his voice and will use it. If any NPC died in Session 0 it can call in their voice. Night camp on the mountain road — someone hears a voice from the treeline. Unmistakably someone they know. Investigation reveals no footprints — just bony hoof prints going in circles.",
+      "mechanics": {
+        "voiceMimicry": "Delivered through Echo TTS system in the voice profile of whoever it is mimicking — actually heard through the room speaker not just described",
+        "tracks": "Cloven hoof prints that go in circles — DC 13 Survival to find them, DC 15 Nature to identify as not deer",
+        "appearance": "Body like a stag, head like a badger with bony ridge instead of teeth — wrong in every particular"
+      },
+      "seeds": [
+        "Tomas as guide from Session 0 — Leucrotta hears his voice",
+        "Any Session 0 NPC death — Leucrotta adds that voice to its library",
+        "Aldous Kern on the road — Leucrotta heard him too"
+      ],
+      "echoTTSNote": "The Leucrotta voice mimicry must be delivered through the room speaker via Echo TTS using the actual voice profile of the mimicked NPC — this is the moment that makes players genuinely uncomfortable. Not described. Actually heard."
+    },
+    {
+      "id": "mimic",
+      "title": "The Chest That Waits",
+      "creature": "Mimic",
+      "plantedSession": "session-3",
+      "status": "planned",
+      "buildStatus": "not-yet-built",
+      "triggerLocation": "Čachtice Castle — Lady Bathory's treasury room",
+      "payoffSession": "Session 3",
+      "description": "Three chests in the treasury room. Two are normal. One is the Mimic. It has been in that room for years and has learned patience. It waits until a player is alone before revealing itself. Vladislav's Brood knows about it and leaves it fed just enough to stay in that room. The Mimic has developed rudimentary intelligence from years of watching.",
+      "mechanics": {
+        "isolationTrigger": "AI tracks party positions — Mimic reveals only when one player is genuinely alone",
+        "tell": "The Mimic chest has no lock. DC 13 Passive Investigation: 'The chest has no keyhole.'",
+        "patience": "Will not trigger if multiple players are present — it has waited years, it can wait another hour"
+      },
+      "aiNote": "The AI running the Mimic should monitor all player token positions. Trigger reveal condition only when one player token is in the treasury room and all others are at least two rooms away."
+    },
+    {
+      "id": "penitent",
+      "title": "The Becoming",
+      "creature": "Penitent (custom)",
+      "plantedSession": "session-2",
+      "status": "planned",
+      "buildStatus": "not-yet-built",
+      "statBlock": "config/creatures/penitent.json",
+      "triggerLocation": "Houska Castle or road to Houska",
+      "payoffSession": "Session 2",
+      "description": "The Penitent came through the weakened gateway beneath Houska Castle. It is not demonic — it predates the classifications of good and evil. It assimilates because that is what it does the way a fire burns. It serves nothing and no one. It simply spreads. Vladislav finds it disturbing. Even he will not go near infected creatures.",
+      "infectionVector": "Slam attack failed CON save DC 13 or Assimilate action. Conversion takes 16 hours across 5 stages.",
+      "stages": "See config/creatures/penitent.json for full stage mechanics",
+      "detection": {
+        "detectMagic": "Nothing — it is biological not magical",
+        "detectPoisonDisease": "Zarina's spell — DC 15 Medicine after casting reveals cellular anomalies. AI describes: 'Something is wrong at a level below illness. It is a process. Something is being made.'",
+        "mirror": "Shows infected creature correctly — not supernatural",
+        "fireAversion": "Stage 2+ instinctively avoid open flames. At Session 0 22:00 fireplace death an infected creature feels strange relief they cannot explain.",
+        "passivePerception15": "Stage 4 physical tells — wrong joint angle, eyes not tracking, responding to sounds before they happen"
+      },
+      "privateChannel": "Stage 5 converted player receives dual objectives via private DM-to-player channel. They continue playing their character but are double-agenting their own party. Build private DM channel as part of Penitent system when constructed.",
+      "commonEnemy": "Both party and Vladislav's Brood are threatened. Neither can comfortably handle it. Creates uneasy temporary alliance.",
+      "zarinaMoment": "Detect Poison and Disease makes her the primary detection tool. Her spell list feels earned not convenient.",
+      "seeds": [
+        "Houska gateway weakening allows it through",
+        "Vladislav's visible discomfort — he will not explain why",
+        "Fire aversion connects to Session 0 fireplace event if party is infected by then",
+        "Road companion who was scratched two days ago and did not mention it"
+      ]
+    },
+    {
+      "id": "nocni-letavec",
+      "title": "The Night Flier",
+      "creature": "Noční Letavec (custom)",
+      "statBlock": "config/creatures/nocni-letavec.json",
+      "plantedSession": "session-0",
+      "status": "seeded",
+      "buildStatus": "not-yet-built",
+      "payoffSession": "Session 1 through Session 3",
+      "description": "An ancient predator that has hunted these mountains for centuries. Active for 13 nights every 13 years. It has selected specific party members for specific harvests and will follow them across the entire campaign arc. It cannot be permanently killed without destroying its dormant basin in the Roman-era tunnels beneath the Orava mountains.",
+      "seeds": [
+        "Tracks around The Pallid Hart on Session 0 night — too large for any mountain animal",
+        "Aldous Kern arriving at the inn moving fast — he was on the road after dark and something was behind him",
+        "Blizzard forcing everyone off the mountain road — locals know what hunts on active cycle nights",
+        "Vladislav knows what it is and will not say"
+      ],
+      "chosenTargets": {
+        "barry-frascht": "His hunter's vision — Van Helsing bloodline quality not tasted in generations",
+        "zarina-firethorn": "Her analytical pattern recognition — has never harvested an intelligence analyst",
+        "spurt": "His Wild Magic — chaotic Kobold sorcery is genuinely rare to it"
+      },
+      "permanentSolution": "Destroy the stone basin in the Roman-era den between Orava and Houska",
+      "vladislavConnection": "Encountered it in 1251. Knows everything. Will trade information for leverage.",
+      "campaignArc": "Persistent threat across all three castles. Creates urgency between sessions. The 13-night countdown is a real pressure the party cannot ignore."
+    }
+  ]
+}

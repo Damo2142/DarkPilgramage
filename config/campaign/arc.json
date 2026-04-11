@@ -1,0 +1,86 @@
+{
+  "title": "The Dark Pilgrimage",
+  "setting": "October 1274, Carpathian Mountains and Central Europe",
+  "philosophy": "The world does not scale to the party. The party scales to the world. Knowing when to run is a skill as important as knowing how to fight. The mountains are not a backdrop — they are a character.",
+  "levelProgression": [
+    { "level": 1, "milestone": "Session 0 start" },
+    { "level": 2, "milestone": "Survived The Pallid Hart — Vladislav, Tomas, Gas Spore, the Letavec outside" },
+    { "level": 3, "milestone": "Solved the Strigoi in Raková" },
+    { "level": 4, "milestone": "Survived the Shepherd's Valley and helped the defector" },
+    { "level": 5, "milestone": "Solved the Nachtmahr in Dolná Súča" },
+    { "level": 6, "milestone": "Crossed Wolf's Pass, survived first Letavec contact" },
+    { "level": 7, "milestone": "Survived the Erlking's forest with something intact" },
+    { "level": 8, "milestone": "Arrived at Houska having survived the road" },
+    { "level": 9, "milestone": "Resolved the False Hydra or the Penitent" },
+    { "level": 10, "milestone": "Left Houska alive" },
+    { "level": 11, "milestone": "Survived the Wild Hunt and solved the Wailing" },
+    { "level": 12, "milestone": "Arrived at Čachtice" }
+  ],
+  "encounterDesignPhilosophy": {
+    "tier1_manageable": "30% of encounters — party can fight and probably win if they play well",
+    "tier2_dangerous": "30% of encounters — victory not guaranteed, retreat always valid",
+    "tier3_run": "25% of encounters — party cannot reliably win direct confrontation, survival is the goal",
+    "tier4_do_not_engage": "15% of encounters — party has no business fighting this at current level"
+  },
+  "xpPhilosophy": {
+    "grants_xp": [
+      "Surviving an encounter with something stronger — even if you ran",
+      "Solving a problem without combat",
+      "Discovering a truth",
+      "Protecting someone who could not protect themselves",
+      "Making a decision that costs something"
+    ],
+    "does_not_grant_xp": [
+      "Killing things weaker than you",
+      "Looting bodies",
+      "Finding treasure"
+    ]
+  },
+  "acts": [
+    {
+      "act": 1,
+      "title": "The Orava Mountains",
+      "sessions": "0-4",
+      "levels": "1-6",
+      "settlements": ["palid-hart-crossroads", "rakova", "shepherds-valley", "dolna-suca", "high-pass"],
+      "climax": "Crossing Wolf's Pass and first direct Letavec contact",
+      "theme": "Learning that the world is dangerous and you are small in it"
+    },
+    {
+      "act": 2,
+      "title": "The Road to Houska",
+      "sessions": "5-7",
+      "levels": "6-8",
+      "settlements": ["pernsjtejn", "krivoklatsky-les"],
+      "climax": "Arrival at Houska having survived the road and the Erlking",
+      "theme": "The journey is the content — the destination is earned"
+    },
+    {
+      "act": 3,
+      "title": "Houska and Bohemia",
+      "sessions": "7-10",
+      "levels": "8-10",
+      "settlements": ["houska-castle"],
+      "climax": "Resolving the False Hydra or the Penitent and leaving Houska alive",
+      "theme": "Nothing here is what it appears to be"
+    },
+    {
+      "act": 4,
+      "title": "The Road to Čachtice",
+      "sessions": "10-14",
+      "levels": "10-12",
+      "settlements": ["trebic", "wild-hunt-road", "crossroads-wailing", "mountain-monastery", "cakticka-dolina"],
+      "climax": "Finding the Letavec den and resolving its arc permanently",
+      "theme": "What you leave unfinished follows you"
+    },
+    {
+      "act": 5,
+      "title": "Čachtice",
+      "sessions": "14-18",
+      "levels": "12",
+      "settlements": ["cachtice-castle"],
+      "climax": "Whatever Vladislav's arc resolves into",
+      "theme": "The end of a pilgrimage is never what the pilgrim expected"
+    }
+  ]
+}

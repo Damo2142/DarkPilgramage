@@ -190,6 +190,11 @@
     .tab-btn.active{color:#e8c060;border-bottom-color:#e8c060;}
     .gtab{display:none;}
     .gtab.active{display:block;}
+    /* PHASE 5C — chat tab uses flex column layout */
+    #gtab-chat.active{display:flex !important;}
+    /* PHASE 5C — chat history message styling on the dedicated tab */
+    #chat-history .chat-msg{align-self:flex-start;max-width:90%;}
+    #chat-history{overscroll-behavior:contain;}
 
     /* Limb rows */
     .limb-row{
@@ -606,9 +611,10 @@
   <!-- FIX3B — Map touch hint shown briefly when own token is selected -->
   <div id="map-touch-hint">TAP DESTINATION TO MOVE</div>
 
-  <!-- TAB BAR -->
+  <!-- TAB BAR — PHASE 5A: CHAT is the second tab -->
   <div id="tab-bar">
     <button class="tab-btn active" data-tab="map" onclick="switchTab('map')">Map</button>
+    <button class="tab-btn" data-tab="chat" onclick="switchTab('chat')">Chat</button>
     <button class="tab-btn" data-tab="condition" onclick="switchTab('condition')">Condition</button>
     <button class="tab-btn" data-tab="arms" onclick="switchTab('arms')">Arms &amp; Armor</button>
     <button class="tab-btn" data-tab="magic" onclick="switchTab('magic')">Gifts &amp; Magic</button>
@@ -626,6 +632,16 @@
           <div style="font-family:Georgia,serif;color:#e8c060;font-size:14px;" id="zone-banner-text"></div>
         </div>
         <button id="rotate-btn-tab" onclick="PlayerMap._toggleRotateMode()" style="position:absolute;bottom:8px;right:8px;z-index:10;background:rgba(30,30,40,0.85);color:#aaa;border:1px solid #555;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;">Rotate</button>
+      </div>
+    </div>
+
+    <!-- TAB: CHAT — PHASE 5C: dedicated full-screen chat interface -->
+    <div class="gtab" id="gtab-chat" style="padding:0;height:calc(100vh - 100px);display:none;flex-direction:column;">
+      <div id="chat-history" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 16px;background:#1e1a14;display:flex;flex-direction:column;gap:6px;"></div>
+      <div id="chat-input-bar" style="flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:10px;background:#0e0c0a;border-top:1px solid #3a3028;">
+        <input id="chat-tab-input" type="text" placeholder="Speak to Max, an NPC, or another player..." onkeydown="if(event.key==='Enter')ChatTab.send()" style="flex:1;background:#1a1814;color:#e8d0a0;border:1px solid #3a3028;border-radius:6px;padding:12px 14px;font-size:15px;font-family:inherit;min-height:42px;">
+        <button id="chat-tab-mic" onclick="ChatTab.toggleMic()" title="Tap to record" style="background:#2a2420;color:#e8c060;border:1px solid #3a3028;border-radius:6px;padding:10px 14px;font-size:18px;cursor:pointer;min-height:42px;min-width:50px;">🎤</button>
+        <button onclick="ChatTab.send()" style="background:#2a2420;color:#e8c060;border:1px solid #3a3028;border-radius:6px;padding:10px 16px;font-size:14px;font-family:inherit;cursor:pointer;min-height:42px;">SEND</button>
       </div>
     </div>
 
@@ -5138,8 +5154,13 @@ if (navigator.permissions) {
 <style>
   body { padding-bottom: 56px !important; }
   body.map-fullscreen { padding-bottom: 0 !important; }
-  /* FIX10 — persistent chat history. Scrollable, last 50 msgs. */
-  #chat-stack {
+  /* PHASE 5E — CHAT is now its own dedicated tab. The legacy floating
+     bar/stack is hidden (CSS rules below remain for layout reference
+     but the !important hides supersedes them). */
+  #chat-stack, #chat-bar, #chat-bar-pull { display: none !important; }
+  body { padding-bottom: 0 !important; }
+  body.map-fullscreen { padding-bottom: 0 !important; }
+  #chat-stack-vestige {
     position:fixed; left:0; right:0; bottom:52px;
     z-index:150; pointer-events:auto;
     display:flex; flex-direction:column; gap:4px;
@@ -5280,10 +5301,13 @@ var ChatBar = {
   // hearing — ALL persistent. Only `system` messages auto-fade (10s).
   // Perception flashes are handled by a separate component (showObservation),
   // not by ChatBar — they were never in this stack to begin with.
-  MAX_HISTORY: 50,
+  // PHASE 5C — prefers the dedicated #chat-history (CHAT tab) over the
+  // legacy floating #chat-stack. Both still receive messages so the
+  // wrapping logic works regardless of which UI variant is in the DOM.
+  MAX_HISTORY: 100,
   appendMessage: function(msg) {
     // msg = { type: max|npc|narrator|player|partial|system, speaker?, text }
-    var stack = document.getElementById('chat-stack');
+    var stack = document.getElementById('chat-history') || document.getElementById('chat-stack');
     if (!stack) return;
     var type = msg.type || 'player';
     var div = document.createElement('div');
@@ -5323,6 +5347,46 @@ var ChatBar = {
   _esc: function(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 };
 window.ChatBar = ChatBar;
+
+// PHASE 5C — ChatTab is the dedicated CHAT tab interface.
+// It re-uses the ChatBar dedup, debounce, and rendering logic but binds
+// to the new #chat-tab-input / #chat-tab-mic / #chat-history elements.
+var ChatTab = {
+  _lastSendAt: 0,
+  send: function() {
+    var input = document.getElementById('chat-tab-input');
+    if (!input) return;
+    var text = (input.value || '').trim();
+    if (!text) return;
+    var now = Date.now();
+    if (now - ChatTab._lastSendAt < 3000) {
+      ChatBar.appendMessage({ type: 'system', text: '(slow down — wait 3s between messages)' });
+      input.value = '';
+      return;
+    }
+    ChatTab._lastSendAt = now;
+    input.value = '';
+    var seq = (++ChatBar._seqCounter) + ':' + now;
+    if (typeof send === 'function') {
+      send({ type: 'chat:message', channel: 'party', text: text, seq: seq, fromName: (window.char && char.name) || 'Player' });
+    }
+    ChatBar.appendMessage({ type: 'player', speaker: 'You', text: text });
+  },
+  toggleMic: function() {
+    var btn = document.getElementById('chat-tab-mic');
+    var input = document.getElementById('chat-tab-input');
+    if (window.PlayerMic && PlayerMic._active) {
+      if (PlayerMic.stop) PlayerMic.stop();
+      if (btn) { btn.textContent = '🎤'; btn.style.background = '#2a2420'; btn.style.color = '#e8c060'; }
+      if (input) input.placeholder = 'Speak to Max, an NPC, or another player...';
+    } else if (window.PlayerMic) {
+      PlayerMic.start();
+      if (btn) { btn.textContent = '⏺'; btn.style.background = '#aa2a1a'; btn.style.color = '#fff'; btn.style.animation = 'mic-pulse 1s ease-in-out infinite'; }
+      if (input) input.placeholder = 'Listening...';
+    }
+  }
+};
+window.ChatTab = ChatTab;
 
 // Hook incoming WS events into ChatBar — patches handleWsMessage if defined
 (function() {

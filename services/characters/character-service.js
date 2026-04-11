@@ -300,7 +300,6 @@ class CharacterService {
       // Apply campaign language overrides — replaces DDB-synced language list
       const langOverride = this._langOverrides && this._langOverrides[playerId];
       if (langOverride && Array.isArray(langOverride.languages)) {
-        // Replace simple ch.languages with structured list
         char.languages = langOverride.languages.map(l => l.displayName || l.id || l);
         char.languageStructured = langOverride.languages;
         char.languageNote = langOverride.languageNote || null;
@@ -367,6 +366,9 @@ class CharacterService {
     }
     // Stash for use in _loadAll where playerId is known
     this._langOverrides = langOverrides;
+    if (Object.keys(langOverrides).length) {
+      console.log('[Characters] Loaded language overrides for: ' + Object.keys(langOverrides).join(', '));
+    }
 
     for (const file of fs.readdirSync(this.charactersDir)) {
       if (!file.endsWith('.json')) continue;
@@ -469,7 +471,20 @@ class CharacterService {
 
   getCharacter(id) {
     const chars = this._readCharacterFiles();
-    return chars[String(id)] || null;
+    const char = chars[String(id)] || null;
+    if (!char) return null;
+    // Apply language override if any player assignment maps to this character
+    try {
+      const assignments = this._readAssignments();
+      const playerId = Object.keys(assignments).find(pid => String(assignments[pid]) === String(id));
+      const langOverride = playerId && this._langOverrides && this._langOverrides[playerId];
+      if (langOverride && Array.isArray(langOverride.languages)) {
+        char.languages = langOverride.languages.map(l => l.displayName || l.id || l);
+        char.languageStructured = langOverride.languages;
+        char.languageNote = langOverride.languageNote || null;
+      }
+    } catch (e) {}
+    return char;
   }
 
   assign(playerId, charId) {

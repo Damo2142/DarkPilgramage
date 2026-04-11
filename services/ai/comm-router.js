@@ -728,13 +728,14 @@ class CommRouter {
   /**
    * Get the structured language list for a player.
    * Returns array of { id, fluency, displayName? }
+   * Falls back to config/character-language-overrides.json if state is empty.
    */
   _playerLanguages(playerId) {
     const ch = this.state.get(`players.${playerId}.character`) || {};
     if (Array.isArray(ch.languageStructured) && ch.languageStructured.length) {
       return ch.languageStructured;
     }
-    if (Array.isArray(ch.languages)) {
+    if (Array.isArray(ch.languages) && ch.languages.length) {
       return ch.languages.map(l => {
         if (typeof l === 'string') {
           return { id: l.toLowerCase().replace(/[^a-z_]/g, '_'), displayName: l, fluency: 'fluent' };
@@ -742,6 +743,18 @@ class CommRouter {
         return l;
       });
     }
+    // Last-resort: read the override file directly (covers AI-controlled
+    // players like Spurt who don't have a state.players entry yet).
+    try {
+      if (!this._langOverrideCache) {
+        const fs = require('fs');
+        const path = require('path');
+        const p = path.join(__dirname, '..', '..', 'config', 'character-language-overrides.json');
+        this._langOverrideCache = fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : {};
+      }
+      const o = this._langOverrideCache[playerId];
+      if (o && Array.isArray(o.languages)) return o.languages;
+    } catch (e) {}
     return [{ id: 'common', displayName: 'Common', fluency: 'fluent' }];
   }
 

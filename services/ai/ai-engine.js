@@ -438,6 +438,15 @@ Stay strictly within what ${npcName} knows. 1-3 sentences of dialogue typical.`;
     // Section 6 — API health monitoring
     this._startHealthCheck();
 
+    // Max Director — intervention queue, staging drift, language gate
+    try {
+      const MaxDirector = require('./max-director');
+      this.maxDirector = new MaxDirector(this.orchestrator, this.bus, this.state, this.config);
+      this.maxDirector.init();
+    } catch (e) {
+      console.warn('[AIEngine] MaxDirector init failed:', e.message);
+    }
+
     console.log(`[AIEngine] Gemini: ${this.gemini.available ? 'connected' : 'disabled'}`);
   }
 

@@ -184,6 +184,29 @@ class DashboardService {
       res.json(this.config || {});
     });
 
+    // ─── ElevenLabs / Voice palette health API ─────────────────
+    this.app.get('/api/voice/health', (req, res) => {
+      try {
+        const voiceSvc = this.orchestrator.getService('voice');
+        if (!voiceSvc) return res.status(503).json({ error: 'voice service unavailable' });
+        res.json({
+          elevenLabs: voiceSvc.elevenLabsHealth || { status: 'UNKNOWN' },
+          palette: voiceSvc.voicePaletteStatus ? voiceSvc.voicePaletteStatus() : {}
+        });
+      } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
+    this.app.post('/api/voice/health/refresh', async (req, res) => {
+      try {
+        const voiceSvc = this.orchestrator.getService('voice');
+        if (!voiceSvc || typeof voiceSvc.checkElevenLabsHealth !== 'function') {
+          return res.status(503).json({ error: 'voice service unavailable' });
+        }
+        const h = await voiceSvc.checkElevenLabsHealth();
+        res.json({ ok: true, elevenLabs: h, palette: voiceSvc.voicePaletteStatus() });
+      } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
     // ─── Language management API (Tools tab) ───────────────────
     this.app.get('/api/languages', (req, res) => {
       try {

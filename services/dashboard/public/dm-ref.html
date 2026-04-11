@@ -1593,22 +1593,40 @@ var Tools = {
       pill.classList.toggle('offline', d.status !== 'ONLINE');
       $('tool-gemini-label').textContent = 'Gemini ' + (d.status || '?') + (d.lastResponseMs ? ' ' + d.lastResponseMs + 'ms' : '');
     });
-    // ElevenLabs status — best effort
+    // ElevenLabs status — real check via /api/voice/health
     var elPill = $('tool-eleven-pill');
-    elPill.classList.add('offline');
-    $('tool-eleven-label').textContent = 'ElevenLabs ?';
-    // Voice IDs from build notes — these are env-only, show known assignments
-    $('voice-ids').innerHTML = [
-      ['MAX_VOICE_ID', 'Max director voice'],
-      ['VOICE_M1', 'Old Gregor, Aldous Kern'],
-      ['VOICE_M2', 'Vladislav, Brother Aldric'],
-      ['VOICE_M3', 'Tomas, Henryk, Piotr'],
-      ['VOICE_F1', 'Marta'],
-      ['VOICE_F2', 'Katya'],
-      ['VOICE_F3', '(unassigned)']
-    ].map(function(row) {
-      return '<div class="tool-list-item"><span class="ti-name">' + esc(row[0]) + '</span><span class="ti-meta">' + esc(row[1]) + '</span></div>';
-    }).join('');
+    var labels = {
+      MAX_VOICE_ID: 'Max director voice',
+      VOICE_M1: 'Old Gregor, Aldous Kern',
+      VOICE_M2: 'Vladislav, Brother Aldric',
+      VOICE_M3: 'Tomas, Henryk, Piotr',
+      VOICE_F1: 'Marta',
+      VOICE_F2: 'Katya',
+      VOICE_F3: '(unassigned)'
+    };
+    var keys = ['MAX_VOICE_ID', 'VOICE_M1', 'VOICE_M2', 'VOICE_M3', 'VOICE_F1', 'VOICE_F2', 'VOICE_F3'];
+    var paletteKey = function(envKey) { return envKey === 'MAX_VOICE_ID' ? 'MAX' : envKey.replace('VOICE_', ''); };
+    fetch('/api/voice/health').then(function(r) { return r.json(); }).then(function(d) {
+      var el = (d && d.elevenLabs) || {};
+      var palette = (d && d.palette) || {};
+      var statusOk = el.status === 'ONLINE';
+      elPill.classList.toggle('online', statusOk);
+      elPill.classList.toggle('offline', !statusOk);
+      var label = 'ElevenLabs ' + (el.status || '?');
+      if (el.lastError) label += ' — ' + el.lastError;
+      if (statusOk && typeof el.charactersRemaining === 'number') label += ' (' + el.charactersRemaining + ' chars left)';
+      $('tool-eleven-label').textContent = label;
+      $('voice-ids').innerHTML = keys.map(function(k) {
+        var pk = paletteKey(k);
+        var p = palette[pk] || { configured: false, preview: '' };
+        var dot = p.configured ? '<span style="color:#7fb069;">✓</span>' : '<span style="color:#cc3020;">✕</span>';
+        var preview = p.configured ? p.preview : 'missing';
+        return '<div class="tool-list-item"><span class="ti-name">' + dot + ' ' + esc(k) + '</span><span class="ti-meta">' + esc(labels[k] || '') + ' · ' + esc(preview) + '</span></div>';
+      }).join('');
+    }).catch(function() {
+      elPill.classList.add('offline');
+      $('tool-eleven-label').textContent = 'ElevenLabs offline';
+    });
   },
   restartServices: function() {
     if (!confirm('Restart all services? This may interrupt the session.')) return;

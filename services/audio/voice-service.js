@@ -45,6 +45,27 @@ class VoiceService {
     this.surroundDevices = this.config.voice?.surroundDevices || [];
     this.defaultVolume = this.config.voice?.defaultVolume || 60;
 
+    // ElevenLabs voice palette — read from process.env (with config fallback)
+    const cfgPalette = (this.config.voice && this.config.voice.palette) || {};
+    this.voicePalette = {
+      MAX: process.env.MAX_VOICE_ID || cfgPalette.MAX || '',
+      M1:  process.env.VOICE_M1     || cfgPalette.M1  || '',
+      M2:  process.env.VOICE_M2     || cfgPalette.M2  || '',
+      M3:  process.env.VOICE_M3     || cfgPalette.M3  || '',
+      F1:  process.env.VOICE_F1     || cfgPalette.F1  || '',
+      F2:  process.env.VOICE_F2     || cfgPalette.F2  || '',
+      F3:  process.env.VOICE_F3     || cfgPalette.F3  || ''
+    };
+    // ElevenLabs health state
+    this.elevenLabsHealth = {
+      status: 'UNKNOWN',
+      lastCheckedAt: null,
+      lastError: null,
+      voiceIdsConfigured: 0,
+      voiceIdsTotal: 7
+    };
+    this.elevenLabsHealth.voiceIdsConfigured = Object.values(this.voicePalette).filter(v => v && v.length).length;
+
     // NPC voice profiles — SSML prosody settings
     this.voiceProfiles = {
       innkeeper_marta: {
@@ -147,6 +168,12 @@ class VoiceService {
       console.log('[VoiceService] To enable: log into alexa.amazon.com, get cookie and csrf token');
       console.log('[VoiceService] Add to .env: ALEXA_COOKIE="..." and ALEXA_CSRF="..."');
       this._subscribeEvents();
+      // Still check ElevenLabs even if Alexa is offline — Max + NPC voice may still work
+      this.checkElevenLabsHealth().then(h => {
+        console.log('[VoiceService] ElevenLabs health: ' + h.status +
+          ' (' + this.elevenLabsHealth.voiceIdsConfigured + '/' + this.elevenLabsHealth.voiceIdsTotal + ' voice IDs configured)' +
+          (h.lastError ? ' — ' + h.lastError : ''));
+      }).catch(() => {});
       return;
     }
 
@@ -166,6 +193,16 @@ class VoiceService {
     }
 
     this._subscribeEvents();
+
+    // Fire ElevenLabs health check on startup (non-blocking) and refresh hourly
+    this.checkElevenLabsHealth().then(h => {
+      console.log('[VoiceService] ElevenLabs health: ' + h.status +
+        ' (' + this.elevenLabsHealth.voiceIdsConfigured + '/' + this.elevenLabsHealth.voiceIdsTotal + ' voice IDs configured)' +
+        (h.lastError ? ' — ' + h.lastError : ''));
+    }).catch(() => {});
+    if (!this._healthInterval) {
+      this._healthInterval = setInterval(() => this.checkElevenLabsHealth().catch(() => {}), 60 * 60 * 1000);
+    }
 
     // Broadcast device list
     this.bus.dispatch('voice:devices', {
@@ -358,8 +395,59 @@ class VoiceService {
       soundEffects: Object.keys(this.soundEffects),
       ambientMode: 'browser',
       directionalActive: !!this._directionalInterval,
-      horrorLevel: this._currentHorrorLevel
+      horrorLevel: this._currentHorrorLevel,
+      voicePalette: this.voicePaletteStatus(),
+      elevenLabs: this.elevenLabsHealth
     };
+  }
+
+  voicePaletteStatus() {
+    const result = {};
+    for (const [k, v] of Object.entries(this.voicePalette || {})) {
+      result[k] = { configured: !!(v && v.length), preview: v ? (v.slice(0, 6) + '…') : '' };
+    }
+    return result;
+  }
+
+  /**
+   * Real ElevenLabs health check — calls the voices endpoint with the API key.
+   * Sets this.elevenLabsHealth and dispatches an event.
+   */
+  async checkElevenLabsHealth() {
+    const apiKey = process.env.ELEVENLABS_API_KEY;
+    this.elevenLabsHealth.lastCheckedAt = new Date().toISOString();
+    if (!apiKey) {
+      this.elevenLabsHealth.status = 'NO_KEY';
+      this.elevenLabsHealth.lastError = 'ELEVENLABS_API_KEY not set in .env';
+      return this.elevenLabsHealth;
+    }
+    try {
+      const fetchFn = global.fetch || require('node-fetch');
+      const resp = await fetchFn('https://api.elevenlabs.io/v1/user/subscription', {
+        headers: { 'xi-api-key': apiKey, 'Accept': 'application/json' }
+      });
+      if (resp.status === 401) {
+        this.elevenLabsHealth.status = 'INVALID_KEY';
+        this.elevenLabsHealth.lastError = 'API returned 401 — key invalid or revoked';
+      } else if (resp.status === 429) {
+        this.elevenLabsHealth.status = 'RATE_LIMITED';
+        this.elevenLabsHealth.lastError = 'API returned 429 — rate limited';
+      } else if (!resp.ok) {
+        this.elevenLabsHealth.status = 'ERROR';
+        this.elevenLabsHealth.lastError = 'API returned ' + resp.status;
+      } else {
+        const data = await resp.json().catch(() => ({}));
+        this.elevenLabsHealth.status = 'ONLINE';
+        this.elevenLabsHealth.lastError = null;
+        this.elevenLabsHealth.tier = data.tier || null;
+        this.elevenLabsHealth.charactersRemaining = (data.character_limit || 0) - (data.character_count || 0);
+      }
+    } catch (e) {
+      this.elevenLabsHealth.status = 'NETWORK_ERROR';
+      this.elevenLabsHealth.lastError = e.message;
+    }
+    if (this.bus) this.bus.dispatch('elevenlabs:health', this.elevenLabsHealth);
+    return this.elevenLabsHealth;
   }
 
   // ── Public API ─────────────────────────────────────────────────────

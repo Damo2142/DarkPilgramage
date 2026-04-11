@@ -393,6 +393,14 @@ Routes confirmed in `services/dashboard/dashboard-service.js` (lines 34, 39, 45,
 - Confirmed working URL: `https://192.168.0.198:3200/player/jerome`
 - No port changes required
 
+### FINAL PUSH STATUS
+- All sections 23-35 committed locally
+- Co-DM submodule branch `main` has 13 new commits this overnight run
+- Parent repo `feature/phase-r-complete` updated with new submodule pointer
+- `git push origin feature/phase-r-complete` FAILED — auth issue
+  (`Invalid username or token. Password authentication is not supported`)
+- Known issue from previous work — Dave needs to set up GitHub PAT or SSH key
+
 ### REQUIRES HUMAN ATTENTION BEFORE WEEKEND DRY RUN
 1. Restart Docker container to pick up service JS changes (volume mounts only
    cover HTML — service .js requires `docker compose build --no-cache`)

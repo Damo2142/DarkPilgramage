@@ -5,10 +5,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DM — Map</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Source+Sans+3:wght@300;400;600&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { height: 100%; width: 100%; overflow: hidden; background: #000; font-family: 'Source Sans 3', sans-serif; }
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: 'Source Sans 3', sans-serif;
+      color: #c8b89a;
+    }
+
+    #map-wrap {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      right: 0;
+      transition: right 0.3s ease;
+    }
+    #map-wrap.panel-open { right: 320px; }
     canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
 
+    /* Floating top-right toolbar (existing) */
     #floating-toolbar {
       position: fixed;
       top: 16px;
@@ -20,9 +39,10 @@
       padding: 6px;
       display: flex;
       gap: 4px;
-      transition: opacity 0.4s ease;
+      transition: opacity 0.4s ease, right 0.3s ease;
       opacity: 1;
     }
+    #floating-toolbar.panel-open { right: 336px; }
     #floating-toolbar.hidden { opacity: 0; pointer-events: none; }
     #floating-toolbar button {
       background: #251f17;
@@ -49,28 +69,192 @@
       font-size: 10px;
       font-family: monospace;
       border-radius: 3px;
-      transition: opacity 0.4s ease;
       opacity: 0.6;
     }
+
+    /* ── Slide-out controls panel (right edge) ── */
+    #controls-tab {
+      position: fixed;
+      top: 50%;
+      right: 0;
+      transform: translateY(-50%);
+      z-index: 200;
+      background: #251f17;
+      border: 1px solid #4a3a28;
+      border-right: none;
+      color: #e8c060;
+      padding: 12px 6px;
+      cursor: pointer;
+      border-radius: 4px 0 0 4px;
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      letter-spacing: 1px;
+      writing-mode: vertical-rl;
+      transform-origin: center;
+      transition: right 0.3s ease;
+    }
+    #controls-tab.panel-open { right: 320px; }
+    #controls-tab:hover { background: #4a3a28; color: #fff; }
+
+    #controls-panel {
+      position: fixed;
+      top: 0;
+      right: -320px;
+      bottom: 0;
+      width: 320px;
+      background: #141210;
+      border-left: 1px solid #4a3a28;
+      color: #c8b89a;
+      overflow-y: auto;
+      transition: right 0.3s ease;
+      z-index: 150;
+      padding: 12px;
+      font-size: 11px;
+    }
+    #controls-panel.open { right: 0; }
+    #controls-panel h2 {
+      font-family: 'Cinzel', serif;
+      font-size: 13px;
+      color: #e8c060;
+      margin: 14px 0 6px;
+      border-bottom: 1px solid #4a3a28;
+      padding-bottom: 4px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    #controls-panel h2:first-child { margin-top: 0; }
+    #controls-panel select,
+    #controls-panel button {
+      width: 100%;
+      background: #251f17;
+      border: 1px solid #4a3a28;
+      color: #c8b89a;
+      padding: 6px 8px;
+      font-family: inherit;
+      font-size: 11px;
+      border-radius: 3px;
+      margin-bottom: 4px;
+      cursor: pointer;
+    }
+    #controls-panel button.primary { background: #4a3a28; color: #e8c060; }
+    #controls-panel button:hover { background: #382c1e; color: #fff; }
+    #controls-panel button.danger { color: #d04040; }
+    #controls-panel .row {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 4px;
+    }
+    #controls-panel .row button { margin-bottom: 0; }
+    #controls-panel label {
+      display: block;
+      font-size: 10px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 2px;
+      margin-top: 6px;
+    }
+    #controls-panel input[type="range"] {
+      width: 100%;
+      accent-color: #c9a54e;
+    }
+    #controls-panel input[type="checkbox"] {
+      accent-color: #c9a54e;
+      vertical-align: middle;
+    }
+    .zone-row,
+    .npc-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 0;
+      border-bottom: 1px solid #2a2218;
+      font-size: 10px;
+    }
+    .zone-row:last-child,
+    .npc-row:last-child { border-bottom: none; }
+    .zone-row .name,
+    .npc-row .name { flex: 1; color: #e8d0a0; }
+    .zone-row button,
+    .npc-row button {
+      width: auto;
+      padding: 2px 6px;
+      font-size: 9px;
+      margin: 0;
+    }
+    .placement-mode-banner {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #aa2a1a;
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-size: 12px;
+      z-index: 200;
+      display: none;
+      font-family: 'Cinzel', serif;
+      letter-spacing: 1px;
+    }
+    .placement-mode-banner.active { display: block; }
   </style>
 </head>
 <body>
-<canvas id="map"></canvas>
+
+<div id="map-wrap">
+  <canvas id="map"></canvas>
+</div>
 
 <div id="floating-toolbar">
   <button id="btn-fog" onclick="DmMap.toggleFogMode()" title="Fog of war reveal tool">FOG</button>
-  <button id="btn-tokens" onclick="DmMap.toggleTokenVis()" title="Toggle hidden token visibility">TOK</button>
-  <button id="btn-grid" onclick="DmMap.toggleGrid()" title="Toggle grid">GRID</button>
+  <button id="btn-tokens" onclick="DmMap.toggleTokenVis()" title="Toggle hidden token visibility" class="active">TOK</button>
+  <button id="btn-grid" onclick="DmMap.toggleGrid()" title="Toggle grid" class="active">GRID</button>
   <button onclick="DmMap.resetView()" title="Reset view">RESET</button>
 </div>
 
 <div id="status-line">Connecting...</div>
 
+<div id="controls-tab" onclick="DmMap.toggleControls()">CONTROLS ▶</div>
+
+<div id="controls-panel">
+  <h2>Scene</h2>
+  <select id="scene-select"></select>
+  <div class="row">
+    <button class="primary" onclick="DmMap.loadSelectedScene()">Load Scene</button>
+    <button onclick="DmMap.saveSceneState()">Save State</button>
+  </div>
+
+  <h2>Fog of War</h2>
+  <div class="row">
+    <button class="primary" onclick="DmMap.revealAll()">Reveal All</button>
+    <button onclick="DmMap.hideAll()">Hide All</button>
+  </div>
+  <div id="zone-list"></div>
+
+  <h2>Display</h2>
+  <label>Token Size <span id="token-size-val">100%</span></label>
+  <input type="range" id="token-size" min="50" max="200" value="100" oninput="DmMap.updateDisplay()">
+  <label>Token Opacity <span id="token-opacity-val">100%</span></label>
+  <input type="range" id="token-opacity" min="20" max="100" value="100" oninput="DmMap.updateDisplay()">
+  <label><input type="checkbox" id="show-grid" checked onchange="DmMap.updateDisplay()"> Show Grid</label>
+  <label>Grid Opacity <span id="grid-opacity-val">35%</span></label>
+  <input type="range" id="grid-opacity" min="0" max="100" value="35" oninput="DmMap.updateDisplay()">
+
+  <h2>NPC Tokens</h2>
+  <div id="npc-list"></div>
+</div>
+
+<div class="placement-mode-banner" id="placement-banner">
+  Click the map to place <span id="placement-name"></span>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════════════════════
 // /dm/map — DM full-viewport map view
-// Standalone file. Connects to same WebSocket session.
-// DM layer active: hidden tokens at 40% opacity dashed border.
+// Uses the original VTT token rendering style from index.html
+// (HP ring, dread aura, fill color, label letter, name below).
+// Slide-out right-edge controls panel for scene/fog/display/NPC management.
 // ═══════════════════════════════════════════════════════════════
 var DmMap = (function() {
   var ws = null;
@@ -80,25 +264,54 @@ var DmMap = (function() {
   var walls = [];
   var fogRevealed = [];
   var animations = [];
-  var showGrid = true;
+  var allMaps = [];
+  var npcsList = [];
+  var playersState = {};
+
+  // Display settings
+  var displaySettings = {
+    tokenSize: 1.0,
+    tokenOpacity: 1.0,
+    showGrid: true,
+    gridOpacity: 0.35
+  };
+
   var showHiddenTokens = true;
   var fogMode = false;
   var draggingToken = null;
   var dragOffset = { x: 0, y: 0 };
-  var dragStartPos = null;
+  var panning = false;
+  var panStart = null;
+  var placementNpcId = null;
+
+  // Original VTT token colors
+  var colors = {
+    pc: '#4080c0',
+    npc: '#c9a54e',
+    hidden: '#a03030',
+    hpGreen: '#30a050',
+    hpOrange: '#c07030',
+    hpRed: '#d04040',
+    grid: 'rgba(255,255,255,0.35)',
+    selection: '#c9a54e'
+  };
 
   var cam = { x: 0, y: 0, zoom: 1 };
   var canvas = document.getElementById('map');
   var ctx = canvas.getContext('2d');
   var statusLine = document.getElementById('status-line');
   var toolbar = document.getElementById('floating-toolbar');
+  var controlsTab = document.getElementById('controls-tab');
+  var controlsPanel = document.getElementById('controls-panel');
+  var mapWrap = document.getElementById('map-wrap');
   var toolbarHideTimer = null;
 
   function setStatus(text) { statusLine.textContent = text; }
 
   function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    var rect = mapWrap.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
     centerCamera();
     render();
   }
@@ -106,22 +319,17 @@ var DmMap = (function() {
   function centerCamera() {
     if (!mapData) return;
     cam.x = 0; cam.y = 0;
-    cam.zoom = Math.min(canvas.width / mapData.width, canvas.height / mapData.height) * 0.95;
+    cam.zoom = Math.min(canvas.width / mapData.width, canvas.height / mapData.height) * 0.9;
   }
 
   function connect() {
     var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     ws = new WebSocket(proto + '//' + location.host);
-    ws.onopen = function() { setStatus('Connected'); };
+    ws.onopen = function() { setStatus('Connected'); loadMapsList(); loadNpcsList(); };
     ws.onmessage = function(e) {
       try { handleMsg(JSON.parse(e.data)); } catch (err) { console.error('[DmMap]', err); }
     };
     ws.onclose = function() { setStatus('Disconnected — reconnecting...'); setTimeout(connect, 3000); };
-    ws.onerror = function() { setStatus('Connection error'); };
-  }
-
-  function wsSend(type, data) {
-    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: type, ...data }));
   }
 
   function handleMsg(msg) {
@@ -135,7 +343,9 @@ var DmMap = (function() {
           walls = s.map.walls || [];
           fogRevealed = s.map.fogRevealed || [];
           loadMapImage();
+          renderZoneList();
         }
+        if (s.players) playersState = s.players;
         render();
         break;
       }
@@ -154,6 +364,12 @@ var DmMap = (function() {
         }
         if (p === 'map.fogRevealed') { fogRevealed = v || []; render(); }
         if (p === 'map.walls') { walls = v || []; render(); }
+        if (p && p.indexOf('players.') === 0) {
+          var pidParts = p.split('.');
+          var pid = pidParts[1];
+          if (!playersState[pid]) playersState[pid] = {};
+          if (pidParts.length === 2) playersState[pid] = v;
+        }
         break;
       }
       case 'map:activated':
@@ -164,6 +380,7 @@ var DmMap = (function() {
           walls = msg.data.map.walls || [];
           fogRevealed = msg.data.map.fogRevealed || [];
           loadMapImage();
+          renderZoneList();
         }
         render();
         break;
@@ -171,13 +388,8 @@ var DmMap = (function() {
       case 'map:token_moved': {
         var d = msg.data || {};
         if (d.tokenId && tokens[d.tokenId]) {
-          if (d.duration && d.duration > 0) {
-            startAnimation(d.tokenId, d.x, d.y, d.duration);
-          } else {
-            tokens[d.tokenId].x = d.x;
-            tokens[d.tokenId].y = d.y;
-            render();
-          }
+          if (d.duration && d.duration > 0) startAnimation(d.tokenId, d.x, d.y, d.duration);
+          else { tokens[d.tokenId].x = d.x; tokens[d.tokenId].y = d.y; render(); }
         }
         break;
       }
@@ -189,10 +401,7 @@ var DmMap = (function() {
         break;
       }
       case 'map:token_added': {
-        if (msg.data && msg.data.tokenId && msg.data.token) {
-          tokens[msg.data.tokenId] = msg.data.token;
-          render();
-        }
+        if (msg.data && msg.data.tokenId && msg.data.token) { tokens[msg.data.tokenId] = msg.data.token; render(); }
         break;
       }
       case 'map:token_removed': {
@@ -210,6 +419,7 @@ var DmMap = (function() {
     img.src = '/assets/maps/' + mapData.image;
   }
 
+  // ── Animation ──
   function easeInOut(t) { return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; }
 
   function startAnimation(tokenId, toX, toY, duration) {
@@ -217,15 +427,9 @@ var DmMap = (function() {
     if (!tok) return;
     animations = animations.filter(function(a) { return a.tokenId !== tokenId; });
     animations.push({
-      tokenId: tokenId,
-      fromX: tok.x, fromY: tok.y,
-      toX: toX, toY: toY,
-      startTime: performance.now(),
-      duration: duration,
-      onComplete: function() {
-        tokens[tokenId].x = toX;
-        tokens[tokenId].y = toY;
-      }
+      tokenId: tokenId, fromX: tok.x, fromY: tok.y, toX: toX, toY: toY,
+      startTime: performance.now(), duration: duration,
+      onComplete: function() { tokens[tokenId].x = toX; tokens[tokenId].y = toY; }
     });
     requestAnimationFrame(animLoop);
   }
@@ -235,13 +439,9 @@ var DmMap = (function() {
     var stillAnimating = false;
     for (var i = 0; i < animations.length; i++) {
       var a = animations[i];
-      var elapsed = now - a.startTime;
-      var t = Math.min(1, elapsed / a.duration);
-      if (t >= 1) {
-        if (a.onComplete && !a._completed) { a.onComplete(); a._completed = true; }
-      } else {
-        stillAnimating = true;
-      }
+      var t = Math.min(1, (now - a.startTime) / a.duration);
+      if (t >= 1) { if (a.onComplete && !a._completed) { a.onComplete(); a._completed = true; } }
+      else { stillAnimating = true; }
     }
     animations = animations.filter(function(a) { return !a._completed; });
     render();
@@ -252,36 +452,42 @@ var DmMap = (function() {
     var anim = null;
     for (var i = 0; i < animations.length; i++) if (animations[i].tokenId === id) { anim = animations[i]; break; }
     if (anim) {
-      var elapsed = performance.now() - anim.startTime;
-      var t = Math.min(1, elapsed / anim.duration);
+      var t = Math.min(1, (performance.now() - anim.startTime) / anim.duration);
       var eased = easeInOut(t);
-      return {
-        x: anim.fromX + (anim.toX - anim.fromX) * eased,
-        y: anim.fromY + (anim.toY - anim.fromY) * eased
-      };
+      return { x: anim.fromX + (anim.toX - anim.fromX) * eased, y: anim.fromY + (anim.toY - anim.fromY) * eased };
     }
     return { x: tok.x, y: tok.y };
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // RENDER — original VTT style from index.html
+  // ═══════════════════════════════════════════════════════════════
   function render() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    var W = canvas.width;
+    var H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#050508';
+    ctx.fillRect(0, 0, W, H);
     if (!mapData) return;
 
     ctx.save();
-    ctx.translate(canvas.width / 2 + cam.x * cam.zoom, canvas.height / 2 + cam.y * cam.zoom);
+    ctx.translate(W / 2 + cam.x, H / 2 + cam.y);
     ctx.scale(cam.zoom, cam.zoom);
 
     var mw = mapData.width;
     var mh = mapData.height;
 
-    if (mapImage) ctx.drawImage(mapImage, -mw / 2, -mh / 2, mw, mh);
+    if (mapImage) {
+      ctx.drawImage(mapImage, -mw / 2, -mh / 2, mw, mh);
+    } else {
+      ctx.fillStyle = '#0a0a12';
+      ctx.fillRect(-mw / 2, -mh / 2, mw, mh);
+    }
 
     var gs = mapData.gridSize || 64;
-    if (showGrid) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-      ctx.lineWidth = 0.5;
+    if (displaySettings.showGrid) {
+      ctx.strokeStyle = 'rgba(255,255,255,' + displaySettings.gridOpacity + ')';
+      ctx.lineWidth = 1;
       for (var x = 0; x <= mw; x += gs) {
         ctx.beginPath(); ctx.moveTo(x - mw/2, -mh/2); ctx.lineTo(x - mw/2, mh/2); ctx.stroke();
       }
@@ -290,123 +496,256 @@ var DmMap = (function() {
       }
     }
 
-    // Fog of war — DM sees through but with overlay
-    if (fogRevealed.length > 0) {
-      ctx.save();
-      ctx.fillStyle = 'rgba(0,0,0,0.35)';
-      ctx.fillRect(-mw/2, -mh/2, mw, mh);
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      for (var fi = 0; fi < fogRevealed.length; fi++) {
-        var rect = fogRevealed[fi];
-        ctx.fillRect(rect.x - mw/2, rect.y - mh/2, rect.w, rect.h);
+    // Zones (DM reference)
+    if (mapData.zones) {
+      for (var zi = 0; zi < mapData.zones.length; zi++) {
+        var zone = mapData.zones[zi];
+        ctx.strokeStyle = 'rgba(80,120,200,0.25)';
+        ctx.lineWidth = 1;
+        if (zone.points && zone.points.length >= 3) {
+          ctx.beginPath();
+          ctx.moveTo(zone.points[0].x - mw/2, zone.points[0].y - mh/2);
+          for (var pi = 1; pi < zone.points.length; pi++) ctx.lineTo(zone.points[pi].x - mw/2, zone.points[pi].y - mh/2);
+          ctx.closePath();
+          ctx.stroke();
+        } else if (zone.x != null && zone.w != null) {
+          ctx.strokeRect(zone.x - mw/2, zone.y - mh/2, zone.w, zone.h);
+        }
+        // Zone label
+        if (zone.name) {
+          var lx, ly;
+          if (zone.points && zone.points.length >= 3) {
+            var sx = 0, sy = 0;
+            for (var pp = 0; pp < zone.points.length; pp++) { sx += zone.points[pp].x; sy += zone.points[pp].y; }
+            lx = sx / zone.points.length - mw/2;
+            ly = sy / zone.points.length - mh/2;
+          } else {
+            lx = zone.x - mw/2 + (zone.w || 0)/2;
+            ly = zone.y - mh/2 + (zone.h || 0)/2;
+          }
+          ctx.fillStyle = 'rgba(255,255,255,0.9)';
+          ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+          ctx.font = 'bold 14px Source Sans 3, sans-serif';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.lineWidth = 3;
+          ctx.strokeText(zone.name, lx, ly);
+          ctx.fillText(zone.name, lx, ly);
+        }
       }
-      ctx.restore();
     }
 
-    // Tokens — DM layer
+    // Walls (typed with colors)
+    if (walls && walls.length) {
+      ctx.lineCap = 'round';
+      for (var wi = 0; wi < walls.length; wi++) {
+        var w = walls[wi];
+        var wtype = w.type || 'wall';
+        var wx1 = w.x1 - mw/2, wy1 = w.y1 - mh/2, wx2 = w.x2 - mw/2, wy2 = w.y2 - mh/2;
+        if (wtype === 'door') {
+          ctx.strokeStyle = w.open ? 'rgba(100,180,80,0.6)' : 'rgba(184,134,11,0.8)';
+          ctx.lineWidth = 4;
+          if (w.open) ctx.setLineDash([4, 6]); else ctx.setLineDash([]);
+          ctx.beginPath(); ctx.moveTo(wx1, wy1); ctx.lineTo(wx2, wy2); ctx.stroke();
+          ctx.setLineDash([]);
+        } else if (wtype === 'window') {
+          ctx.strokeStyle = 'rgba(64,128,200,0.8)';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath(); ctx.moveTo(wx1, wy1); ctx.lineTo(wx2, wy2); ctx.stroke();
+          ctx.setLineDash([]);
+        } else {
+          ctx.strokeStyle = 'rgba(220,40,40,0.7)';
+          ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.moveTo(wx1, wy1); ctx.lineTo(wx2, wy2); ctx.stroke();
+        }
+      }
+    }
+
+    // Tokens — original VTT style
     for (var id in tokens) {
       var tok = tokens[id];
       if (tok.hidden && !showHiddenTokens) continue;
-      var pos = getTokenRenderPos(id, tok);
-      var tx = pos.x - mw / 2;
-      var ty = pos.y - mh / 2;
-      var r = ((tok.size || gs) / 2) * 0.85;
-      var isPlayer = tok.type === 'pc' || tok.isPC;
-
-      ctx.save();
-      if (tok.hidden) {
-        ctx.globalAlpha = 0.4;
-        ctx.setLineDash([6, 4]);
-      }
-      ctx.fillStyle = tok.color || (isPlayer ? '#5a9ad9' : '#a44');
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(tx, ty, r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      ctx.restore();
-
-      // Label
-      var name = tok.name || tok.label || id;
-      ctx.font = 'bold 12px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#000';
-      ctx.fillText(name, tx + 1, ty + r + 15);
-      ctx.fillStyle = tok.hidden ? '#888' : '#e8d0a0';
-      ctx.fillText(name, tx, ty + r + 14);
+      _renderToken(id, tok, mw, mh);
     }
 
     ctx.restore();
   }
 
-  // ── Mouse interaction ──
-  function getMousePos(ev) {
-    var rect = canvas.getBoundingClientRect();
-    var sx = ev.clientX - rect.left;
-    var sy = ev.clientY - rect.top;
-    if (!mapData) return { x: 0, y: 0 };
-    var mw = mapData.width;
-    var mh = mapData.height;
-    var wx = (sx - canvas.width / 2 - cam.x * cam.zoom) / cam.zoom + mw / 2;
-    var wy = (sy - canvas.height / 2 - cam.y * cam.zoom) / cam.zoom + mh / 2;
-    return { x: wx, y: wy };
+  function _renderToken(id, tok, mw, mh) {
+    var gs = mapData.gridSize;
+    var pos = getTokenRenderPos(id, tok);
+    var x = pos.x - mw / 2;
+    var y = pos.y - mh / 2;
+    var r = gs * 0.4 * displaySettings.tokenSize;
+
+    ctx.save();
+    ctx.globalAlpha = displaySettings.tokenOpacity;
+
+    // Dread aura for PCs
+    if (tok.type === 'pc') {
+      var dread = (playersState[id] && playersState[id].dread && playersState[id].dread.score) || 0;
+      if (dread > 20) {
+        var auraR = r + 4 + (dread / 100) * 12;
+        var grad = ctx.createRadialGradient(x, y, r, x, y, auraR);
+        var intensity = Math.min(dread / 100, 1);
+        grad.addColorStop(0, 'rgba(' + Math.round(120 + 80*intensity) + ',30,' + Math.round(120 - 80*intensity) + ',' + (0.2 + intensity * 0.3) + ')');
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(x, y, auraR, 0, Math.PI*2); ctx.fill();
+      }
+    }
+
+    // HP ring
+    var hp = tok.hp || { current: 1, max: 1 };
+    var hpPct = Math.max(0, hp.current / (hp.max || 1));
+    var ringR = r + 3;
+    ctx.beginPath(); ctx.arc(x, y, ringR, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(60,60,70,0.6)'; ctx.lineWidth = 3; ctx.stroke();
+    if (hpPct > 0) {
+      var hpColor = hpPct > 0.5 ? colors.hpGreen : hpPct > 0.25 ? colors.hpOrange : colors.hpRed;
+      ctx.beginPath();
+      ctx.arc(x, y, ringR, -Math.PI/2, -Math.PI/2 + Math.PI*2*hpPct);
+      ctx.strokeStyle = hpColor; ctx.lineWidth = 3; ctx.stroke();
+    }
+
+    // Token circle
+    var isHidden = tok.hidden;
+    var fillColor = tok.type === 'pc' ? colors.pc : isHidden ? colors.hidden : colors.npc;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
+    ctx.fillStyle = fillColor; ctx.fill();
+
+    // Hidden indicator overlay
+    if (isHidden) {
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(160,48,48,0.3)'; ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = (r*0.7) + 'px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('👁', x, y);
+    } else {
+      // Token label (first letter)
+      var label = (tok.name || id).charAt(0).toUpperCase();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold ' + (r*0.9) + 'px Cinzel, serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(label, x, y);
+    }
+
+    // Facing arrow
+    if (tok.facing != null) {
+      var fAngle = tok.facing;
+      var arrowLen = r * 0.5;
+      var arrowX = x + Math.cos(fAngle) * r;
+      var arrowY = y + Math.sin(fAngle) * r;
+      ctx.save();
+      ctx.translate(arrowX, arrowY);
+      ctx.rotate(fAngle);
+      ctx.beginPath();
+      ctx.moveTo(arrowLen * 0.5, 0);
+      ctx.lineTo(-arrowLen * 0.3, -arrowLen * 0.35);
+      ctx.lineTo(-arrowLen * 0.3, arrowLen * 0.35);
+      ctx.closePath();
+      ctx.fillStyle = tok.type === 'pc' ? '#c9a54e' : '#e0c060';
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Name label below
+    var nameSizePx = Math.max(2, gs * 0.10);
+    var nameText = tok.name || id;
+    ctx.font = 'bold ' + nameSizePx + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.strokeStyle = 'rgba(0,0,0,0.9)';
+    ctx.lineWidth = Math.max(1, nameSizePx * 0.25);
+    ctx.lineJoin = 'round';
+    ctx.strokeText(nameText, x, y + r + nameSizePx * 0.8);
+    ctx.fillStyle = isHidden ? '#e06060' : '#f0f0f0';
+    ctx.fillText(nameText, x, y + r + nameSizePx * 0.8);
+
+    ctx.restore();
   }
 
-  function findTokenAt(wx, wy) {
+  // ── Mouse interaction ──
+  function screenToMap(sx, sy) {
+    if (!mapData) return { x: 0, y: 0 };
+    var W = canvas.width;
+    var H = canvas.height;
+    var mx = ((sx - W/2 - cam.x) / cam.zoom) + mapData.width/2;
+    var my = ((sy - H/2 - cam.y) / cam.zoom) + mapData.height/2;
+    return { x: mx, y: my };
+  }
+
+  function findTokenAt(sx, sy) {
     if (!mapData) return null;
-    var gs = mapData.gridSize || 64;
-    for (var id in tokens) {
+    var pos = screenToMap(sx, sy);
+    var gs = mapData.gridSize;
+    var hitR = gs * 0.45 * displaySettings.tokenSize;
+    var ids = Object.keys(tokens);
+    for (var i = ids.length - 1; i >= 0; i--) {
+      var id = ids[i];
       var tok = tokens[id];
-      var r = ((tok.size || gs) / 2) * 0.85;
-      var dx = wx - tok.x;
-      var dy = wy - tok.y;
-      if (Math.sqrt(dx * dx + dy * dy) <= r) return { id: id, token: tok };
+      var dx = pos.x - tok.x;
+      var dy = pos.y - tok.y;
+      if (dx*dx + dy*dy < hitR*hitR) return { id: id, token: tok };
     }
     return null;
   }
 
   canvas.addEventListener('mousedown', function(ev) {
     showToolbar();
-    var pos = getMousePos(ev);
-    var hit = findTokenAt(pos.x, pos.y);
-    if (hit && ev.button === 0) {
-      draggingToken = hit;
-      dragStartPos = { x: hit.token.x, y: hit.token.y };
-      dragOffset = { x: pos.x - hit.token.x, y: pos.y - hit.token.y };
+    var rect = canvas.getBoundingClientRect();
+    var sx = ev.clientX - rect.left;
+    var sy = ev.clientY - rect.top;
+
+    // Placement mode
+    if (placementNpcId) {
+      var pos = screenToMap(sx, sy);
+      placeNpcOnMap(placementNpcId, pos.x, pos.y);
+      return;
+    }
+
+    if (ev.button === 0) {
+      var hit = findTokenAt(sx, sy);
+      if (hit) {
+        draggingToken = hit;
+        var pos2 = screenToMap(sx, sy);
+        dragOffset = { x: pos2.x - hit.token.x, y: pos2.y - hit.token.y };
+      } else {
+        panning = true;
+        panStart = { x: ev.clientX, y: ev.clientY, camX: cam.x, camY: cam.y };
+      }
     } else if (ev.button === 1 || ev.button === 2 || ev.shiftKey) {
-      // Pan
-      draggingToken = '__pan';
-      dragOffset = { x: ev.clientX, y: ev.clientY };
+      panning = true;
+      panStart = { x: ev.clientX, y: ev.clientY, camX: cam.x, camY: cam.y };
     }
   });
 
   canvas.addEventListener('mousemove', function(ev) {
     showToolbar();
-    var pos = getMousePos(ev);
-    if (draggingToken === '__pan') {
-      cam.x += (ev.clientX - dragOffset.x) / cam.zoom;
-      cam.y += (ev.clientY - dragOffset.y) / cam.zoom;
-      dragOffset = { x: ev.clientX, y: ev.clientY };
-      render();
-    } else if (draggingToken) {
+    if (draggingToken) {
+      var rect = canvas.getBoundingClientRect();
+      var pos = screenToMap(ev.clientX - rect.left, ev.clientY - rect.top);
       tokens[draggingToken.id].x = pos.x - dragOffset.x;
       tokens[draggingToken.id].y = pos.y - dragOffset.y;
+      render();
+    } else if (panning && panStart) {
+      cam.x = panStart.camX + (ev.clientX - panStart.x);
+      cam.y = panStart.camY + (ev.clientY - panStart.y);
       render();
     }
   });
 
   canvas.addEventListener('mouseup', function(ev) {
     if (draggingToken && draggingToken !== '__pan') {
-      // Send token move to server
-      fetch('/api/map/token/' + encodeURIComponent(draggingToken.id) + '/move', {
-        method: 'PUT',
+      fetch('/api/map/token/move', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ x: tokens[draggingToken.id].x, y: tokens[draggingToken.id].y, force: true })
+        body: JSON.stringify({ tokenId: draggingToken.id, x: tokens[draggingToken.id].x, y: tokens[draggingToken.id].y, force: true })
       }).catch(function(){});
     }
     draggingToken = null;
+    panning = false;
+    panStart = null;
   });
 
   canvas.addEventListener('contextmenu', function(ev) { ev.preventDefault(); });
@@ -424,29 +763,220 @@ var DmMap = (function() {
   function showToolbar() {
     toolbar.classList.remove('hidden');
     if (toolbarHideTimer) clearTimeout(toolbarHideTimer);
-    toolbarHideTimer = setTimeout(function() {
-      toolbar.classList.add('hidden');
-    }, 3000);
+    toolbarHideTimer = setTimeout(function() { toolbar.classList.add('hidden'); }, 3000);
   }
   document.body.addEventListener('mousemove', showToolbar);
 
-  // ── Public API ──
+  // ── Controls panel ──
+  function toggleControls() {
+    var open = controlsPanel.classList.toggle('open');
+    controlsTab.classList.toggle('panel-open', open);
+    mapWrap.classList.toggle('panel-open', open);
+    toolbar.classList.toggle('panel-open', open);
+    controlsTab.textContent = open ? 'CONTROLS ◀' : 'CONTROLS ▶';
+    setTimeout(resize, 320);
+  }
+
+  function loadMapsList() {
+    fetch('/api/map/list').then(function(r) { return r.json(); }).then(function(data) {
+      allMaps = data.maps || data || [];
+      var sel = document.getElementById('scene-select');
+      sel.innerHTML = '';
+      for (var i = 0; i < allMaps.length; i++) {
+        var m = allMaps[i];
+        var opt = document.createElement('option');
+        opt.value = m.id || m;
+        opt.textContent = m.name || m.id || m;
+        if (mapData && (m.id === mapData.id || m === mapData.id)) opt.selected = true;
+        sel.appendChild(opt);
+      }
+    }).catch(function(){});
+  }
+
+  function loadSelectedScene() {
+    var sel = document.getElementById('scene-select');
+    var id = sel.value;
+    if (!id) return;
+    fetch('/api/map/load/' + encodeURIComponent(id), { method: 'POST' }).catch(function(){});
+  }
+
+  function saveSceneState() {
+    fetch('/api/map/save-state', { method: 'POST' }).then(function(r) { return r.json(); }).then(function() {
+      setStatus('Scene state saved');
+      setTimeout(function() { setStatus('Connected'); }, 2000);
+    }).catch(function(){});
+  }
+
+  function renderZoneList() {
+    var el = document.getElementById('zone-list');
+    if (!el) return;
+    var zones = (mapData && mapData.zones) || [];
+    if (!zones.length) { el.innerHTML = '<div style="font-size:9px;color:#666;padding:4px 0;">No zones in this scene</div>'; return; }
+    el.innerHTML = zones.map(function(z, i) {
+      var name = z.name || ('Zone ' + (i + 1));
+      return '<div class="zone-row"><span class="name">' + esc(name) + '</span>' +
+        '<button onclick="DmMap.revealZone(' + i + ')">Show</button>' +
+        '<button onclick="DmMap.hideZone(' + i + ')">Hide</button></div>';
+    }).join('');
+  }
+
+  function revealZone(idx) {
+    var zone = mapData && mapData.zones && mapData.zones[idx];
+    if (!zone) return;
+    fetch('/api/map/zone/reveal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ zoneId: zone.id || zone.name, revealed: true })
+    }).catch(function(){});
+  }
+
+  function hideZone(idx) {
+    var zone = mapData && mapData.zones && mapData.zones[idx];
+    if (!zone) return;
+    fetch('/api/map/zone/reveal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ zoneId: zone.id || zone.name, revealed: false })
+    }).catch(function(){});
+  }
+
+  function revealAll() {
+    fetch('/api/map/zone/reveal-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ revealed: true })
+    }).catch(function(){});
+  }
+
+  function hideAll() {
+    fetch('/api/map/zone/reveal-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ revealed: false })
+    }).catch(function(){});
+  }
+
+  function updateDisplay() {
+    displaySettings.tokenSize = document.getElementById('token-size').value / 100;
+    displaySettings.tokenOpacity = document.getElementById('token-opacity').value / 100;
+    displaySettings.showGrid = document.getElementById('show-grid').checked;
+    displaySettings.gridOpacity = document.getElementById('grid-opacity').value / 100;
+    document.getElementById('token-size-val').textContent = document.getElementById('token-size').value + '%';
+    document.getElementById('token-opacity-val').textContent = document.getElementById('token-opacity').value + '%';
+    document.getElementById('grid-opacity-val').textContent = document.getElementById('grid-opacity').value + '%';
+    render();
+  }
+
+  function loadNpcsList() {
+    fetch('/api/state').then(function(r) { return r.json(); }).then(function(data) {
+      var npcs = (data.state && data.state.npcs) || data.npcs || {};
+      var configNpcs = ['patron-farmer', 'patron-merchant', 'patron-pilgrim', 'patron-minstrel'];
+      npcsList = [];
+      for (var k in npcs) {
+        if (npcs[k] && npcs[k].name) npcsList.push({ id: k, name: npcs[k].name, hidden: !!npcs[k].hidden });
+      }
+      // Add config-level patrons (resolved server-side)
+      for (var ci = 0; ci < configNpcs.length; ci++) {
+        var ck = configNpcs[ci];
+        if (data.config && data.config[ck]) {
+          npcsList.push({ id: ck, name: data.config[ck].name, hidden: false });
+        }
+      }
+      renderNpcList();
+    }).catch(function(){});
+  }
+
+  function renderNpcList() {
+    var el = document.getElementById('npc-list');
+    if (!el) return;
+    if (!npcsList.length) { el.innerHTML = '<div style="font-size:9px;color:#666;padding:4px 0;">No NPCs loaded</div>'; return; }
+    el.innerHTML = npcsList.map(function(n) {
+      var onMap = !!tokens[n.id];
+      var posIndicator = onMap ? '●' : '○';
+      var posColor = onMap ? '#7fb069' : '#666';
+      return '<div class="npc-row">' +
+        '<span style="color:' + posColor + ';">' + posIndicator + '</span>' +
+        '<span class="name">' + esc(n.name) + '</span>' +
+        '<button onclick="DmMap.startPlace(\'' + n.id + '\')">' + (onMap ? 'Move' : 'Place') + '</button>' +
+        '<button onclick="DmMap.toggleNpcVisibility(\'' + n.id + '\')">' + (n.hidden || (tokens[n.id] && tokens[n.id].hidden) ? 'Show' : 'Hide') + '</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  function startPlace(npcId) {
+    placementNpcId = npcId;
+    var npc = npcsList.find(function(n) { return n.id === npcId; });
+    document.getElementById('placement-name').textContent = npc ? npc.name : npcId;
+    document.getElementById('placement-banner').classList.add('active');
+  }
+
+  function placeNpcOnMap(npcId, x, y) {
+    var existing = tokens[npcId];
+    if (existing) {
+      // Move existing token
+      fetch('/api/map/token/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tokenId: npcId, x: x, y: y, force: true })
+      }).catch(function(){});
+    } else {
+      // Add new token
+      var npc = npcsList.find(function(n) { return n.id === npcId; });
+      fetch('/api/map/token/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tokenId: npcId,
+          name: npc ? npc.name : npcId,
+          type: 'npc',
+          x: x,
+          y: y
+        })
+      }).catch(function(){});
+    }
+    placementNpcId = null;
+    document.getElementById('placement-banner').classList.remove('active');
+    setTimeout(loadNpcsList, 500);
+  }
+
+  function toggleNpcVisibility(npcId) {
+    var tok = tokens[npcId];
+    if (!tok) return;
+    var newVisible = !!tok.hidden; // toggle
+    fetch('/api/map/token/visibility', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tokenId: npcId, visible: newVisible })
+    }).catch(function(){});
+    tok.hidden = !newVisible;
+    tok.visible = newVisible;
+    setTimeout(loadNpcsList, 200);
+    render();
+  }
+
+  function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  // Public API
   return {
-    toggleFogMode: function() {
-      fogMode = !fogMode;
-      document.getElementById('btn-fog').classList.toggle('active', fogMode);
-    },
-    toggleTokenVis: function() {
-      showHiddenTokens = !showHiddenTokens;
-      document.getElementById('btn-tokens').classList.toggle('active', showHiddenTokens);
-      render();
-    },
+    toggleFogMode: function() { fogMode = !fogMode; document.getElementById('btn-fog').classList.toggle('active', fogMode); },
+    toggleTokenVis: function() { showHiddenTokens = !showHiddenTokens; document.getElementById('btn-tokens').classList.toggle('active', showHiddenTokens); render(); },
     toggleGrid: function() {
-      showGrid = !showGrid;
-      document.getElementById('btn-grid').classList.toggle('active', showGrid);
+      displaySettings.showGrid = !displaySettings.showGrid;
+      document.getElementById('btn-grid').classList.toggle('active', displaySettings.showGrid);
+      document.getElementById('show-grid').checked = displaySettings.showGrid;
       render();
     },
     resetView: function() { centerCamera(); render(); },
+    toggleControls: toggleControls,
+    loadSelectedScene: loadSelectedScene,
+    saveSceneState: saveSceneState,
+    revealZone: revealZone,
+    hideZone: hideZone,
+    revealAll: revealAll,
+    hideAll: hideAll,
+    updateDisplay: updateDisplay,
+    startPlace: startPlace,
+    toggleNpcVisibility: toggleNpcVisibility,
     init: function() {
       window.addEventListener('resize', resize);
       resize();

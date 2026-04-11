@@ -1251,9 +1251,12 @@ function confirmRest(type) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// WEBSOCKET
+// WEBSOCKET (PHASE 4B — single connection per page)
 // ═══════════════════════════════════════════════════════════════
 function connect() {
+  // Reuse an existing open or connecting socket
+  if (window._wsInitialized && ws && (ws.readyState === 0 || ws.readyState === 1)) return;
+  window._wsInitialized = true;
   var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   ws = new WebSocket(proto + '//' + location.host);
   ws.onopen = function() {
@@ -1265,6 +1268,7 @@ function connect() {
   };
   ws.onclose = function() {
     addWhisper({ tag: 'SYSTEM', text: 'Disconnected — reconnecting...' });
+    window._wsInitialized = false;
     setTimeout(connect, 3000);
   };
 }

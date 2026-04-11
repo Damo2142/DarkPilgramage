@@ -1768,6 +1768,9 @@
 
   var _dashConnected = false;
   function connect() {
+    // PHASE 4B — single WS per page
+    if (window._wsInitialized && ws && (ws.readyState === 0 || ws.readyState === 1)) return;
+    window._wsInitialized = true;
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     ws = new WebSocket(`${proto}//${location.host}`);
 

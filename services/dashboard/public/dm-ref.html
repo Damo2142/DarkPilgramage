@@ -1902,13 +1902,16 @@ window.showTab = showTab;
 // WEBSOCKET
 // ═══════════════════════════════════════════════════════════════
 function connect() {
+  // PHASE 4B — single WS per page
+  if (window._wsInitialized && ws && (ws.readyState === 0 || ws.readyState === 1)) return;
+  window._wsInitialized = true;
   var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   ws = new WebSocket(proto + '//' + location.host);
   ws.onopen = function() { loadConfig(); };
   ws.onmessage = function(ev) {
     try { handleMsg(JSON.parse(ev.data)); } catch (err) { console.error(err); }
   };
-  ws.onclose = function() { setTimeout(connect, 3000); };
+  ws.onclose = function() { window._wsInitialized = false; setTimeout(connect, 3000); };
 }
 
 function loadConfig() {

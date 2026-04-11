@@ -84,13 +84,16 @@ function resize() {
 window.addEventListener('resize', resize);
 
 function connect() {
+  // PHASE 4B — single WS per page
+  if (window._wsInitialized && ws && (ws.readyState === 0 || ws.readyState === 1)) return;
+  window._wsInitialized = true;
   var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   ws = new WebSocket(proto + '//' + location.host);
   ws.onopen = function() { document.body.classList.remove('disconnected'); };
   ws.onmessage = function(e) {
     try { handleMsg(JSON.parse(e.data)); } catch (err) { console.error('[Table]', err); }
   };
-  ws.onclose = function() { document.body.classList.add('disconnected'); setTimeout(connect, 3000); };
+  ws.onclose = function() { document.body.classList.add('disconnected'); window._wsInitialized = false; setTimeout(connect, 3000); };
   ws.onerror = function() { document.body.classList.add('disconnected'); };
 }
 

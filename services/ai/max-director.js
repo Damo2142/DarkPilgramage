@@ -33,6 +33,10 @@ class MaxDirector {
     this.tickInterval = null;
     this.driftInterval = null;
 
+    // FIX-3C — content-based dedup. Identical text within 60s is dropped.
+    this._recentDelivered = [];       // [{ message, at }]
+    this._contentDedupMs = 60 * 1000;
+
     // FIX-C2 — pause + throttle state
     this.paused = false;
     this.pausedUntil = 0;
@@ -142,6 +146,14 @@ class MaxDirector {
       sourceData: item.sourceData || null
     };
 
+    // FIX-3C — content-based dedup: drop if same text was delivered in
+    // the last 60 seconds, regardless of priority or category. URGENT
+    // bypasses this check (a true emergency may legitimately repeat).
+    if (entry.priority !== 'URGENT' && this._wasRecentlyDelivered(entry.message)) {
+      console.log('[MaxDirector] DEDUP content (60s) — dropped: ' + entry.message.slice(0, 60));
+      return null;
+    }
+
     // URGENT — deliver immediately, bypass queue + throttle + pause
     if (entry.priority === 'URGENT') {
       this._deliver(entry, true);
@@ -213,6 +225,19 @@ class MaxDirector {
     this.queue.shift();
   }
 
+  _wasRecentlyDelivered(message) {
+    const now = Date.now();
+    // Sweep expired
+    this._recentDelivered = this._recentDelivered.filter(r => now - r.at < this._contentDedupMs);
+    const norm = String(message || '').trim().toLowerCase();
+    return this._recentDelivered.some(r => r.message === norm);
+  }
+  _recordDelivered(message) {
+    const norm = String(message || '').trim().toLowerCase();
+    this._recentDelivered.push({ message: norm, at: Date.now() });
+    if (this._recentDelivered.length > 50) this._recentDelivered.shift();
+  }
+
   _deliver(entry, urgent) {
     if (!entry || !entry.message) return;
     // Block non-URGENT during pause
@@ -221,6 +246,7 @@ class MaxDirector {
       return;
     }
     this.lastDeliveredAt = Date.now();
+    this._recordDelivered(entry.message);
     // Re-emit whisper with _maxRouted flag so we don't re-enqueue.
     // dm:whisper goes to the dashboard whisper log only — voice goes via voice:speak.
     this.bus.dispatch('dm:whisper', {

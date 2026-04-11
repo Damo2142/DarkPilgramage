@@ -7,15 +7,23 @@
       "region": "orava-mountains",
       "population": 0,
       "description": "A crossroads inn on the mountain road above Orava. No permanent population beyond the innkeeper and her husband. A stopping point for travelers who miscalculate the mountain road.",
-      "keyNPCs": ["marta-kowalski", "piotr-kowalski"],
+      "keyNPCs": [
+        "marta-kowalski",
+        "piotr-kowalski"
+      ],
       "currentThreat": "vladislav-dragan, tomas-birkov, gas-spore",
       "reputation": {},
-      "services": ["lodging", "food", "stabling"],
+      "services": [
+        "lodging",
+        "food",
+        "stabling"
+      ],
       "distanceToNext": {
         "rakova": "3 hours on foot in snow",
         "orava-castle": "6 hours"
       },
-      "sessionContent": "session-0"
+      "sessionContent": "session-0",
+      "priceModifier": 1.3
     },
     {
       "id": "rakova",
@@ -47,13 +55,19 @@
       "currentThreat": "strigoi",
       "threatDetails": "Dead son Marek returned two weeks ago. Widow Agnes let him in. Three families have died since. Two more are sick.",
       "reputation": {},
-      "services": ["lodging-limited", "food", "smithy", "church"],
+      "services": [
+        "lodging-limited",
+        "food",
+        "smithy",
+        "church"
+      ],
       "distanceToNext": {
         "palid-hart": "3 hours",
         "dolna-suca": "2 days"
       },
       "sessionContent": "session-1",
-      "ifPartyLeavesThreatUnsolved": "Strigoi moves to next household. By Session 3 twelve more dead. Village on the verge of collapse. Word has spread to Dolná Súča — travelers warned away from Raková."
+      "ifPartyLeavesThreatUnsolved": "Strigoi moves to next household. By Session 3 twelve more dead. Village on the verge of collapse. Word has spread to Dolná Súča — travelers warned away from Raková.",
+      "priceModifier": 1.2
     },
     {
       "id": "shepherds-valley",
@@ -76,7 +90,8 @@
       "threatDetails": "Hunts lone travelers through the valley. Has been here for thirty years. Locals know not to travel alone through it.",
       "reputation": {},
       "services": [],
-      "sessionContent": "session-2"
+      "sessionContent": "session-2",
+      "priceModifier": 2
     },
     {
       "id": "dolna-suca",
@@ -108,14 +123,23 @@
       "currentThreat": "nachtmahr",
       "threatDetails": "Three weeks of disrupted sleep across the entire town. The Nachtmahr was attracted by something — a piece of carved bone in Canon Vojtěch's library that was brought back from a burial site by a well-meaning parishioner. The bone is the anchor.",
       "reputation": {},
-      "services": ["lodging", "food", "smithy", "church", "market", "stabling", "healer"],
+      "services": [
+        "lodging",
+        "food",
+        "smithy",
+        "church",
+        "market",
+        "stabling",
+        "healer"
+      ],
       "distanceToNext": {
         "rakova": "2 days",
         "high-pass": "1 day"
       },
       "sessionContent": "session-3",
       "nachtmahrAnchor": "Carved bone from pre-Christian burial site in Canon Vojtěch's library — remove it from the building and burn it to break the Nachtmahr's hold",
-      "ifPartyLeavesThreatUnsolved": "Town continues deteriorating. On return journey Tomáš is dead. Canon Vojtěch has made his decision about the grave and is facing excommunication proceedings."
+      "ifPartyLeavesThreatUnsolved": "Town continues deteriorating. On return journey Tomáš is dead. Canon Vojtěch has made his decision about the grave and is facing excommunication proceedings.",
+      "priceModifier": 0.95
     },
     {
       "id": "high-pass",
@@ -130,7 +154,8 @@
       "reputation": {},
       "services": [],
       "sessionContent": "session-4",
-      "letavecFirstContact": "Night 2 of the pass. It lands on a rock 50 feet away. It looks at the chosen targets for a long moment. It does not attack. It flies away. This is not a fight. This is an introduction."
+      "letavecFirstContact": "Night 2 of the pass. It lands on a rock 50 feet away. It looks at the chosen targets for a long moment. It does not attack. It flies away. This is not a fight. This is an introduction.",
+      "priceModifier": 2
     },
     {
       "id": "pernsjtejn",
@@ -150,12 +175,16 @@
       "currentThreat": "false-hydra",
       "threatDetails": "False Hydra beneath Houska has been feeding on the village for months. Exposure begins accumulating the moment the party arrives.",
       "reputation": {},
-      "services": ["lodging", "food"],
+      "services": [
+        "lodging",
+        "food"
+      ],
       "distanceToNext": {
         "houska-castle": "3 hours"
       },
       "sessionContent": "session-5",
-      "falseHydraExposureRate": "20 per night sleeping here unprotected"
+      "falseHydraExposureRate": "20 per night sleeping here unprotected",
+      "priceModifier": 1.1
     },
     {
       "id": "krivoklatsky-les",
@@ -178,7 +207,8 @@
       "region": "bohemia",
       "population": 40,
       "description": "Built over a pit said to be a gateway to Hell. The stonework is older than it should be. The lower levels are older still. The vampire network has been gathering here for six months. The False Hydra is below. The Oblex is in the upper levels. The Doppelganger has replaced the Church investigator. The Penitent is emerging from the pit.",
-      "sessionContent": "session-7-through-10"
+      "sessionContent": "session-7-through-10",
+      "priceModifier": 2
     },
     {
       "id": "road-village-moroaica",
@@ -203,7 +233,8 @@
       ],
       "currentThreat": "moroaica",
       "sessionContent": "session-10-11",
-      "delayMechanic": "Horses need rest, road washes out, supply issue — party must stay minimum 3 days"
+      "delayMechanic": "Horses need rest, road washes out, supply issue — party must stay minimum 3 days",
+      "priceModifier": 1
     },
     {
       "id": "wild-hunt-road",
@@ -250,7 +281,8 @@
       "currentThreat": "hound-of-tindalos",
       "threatDetails": "The artifact in Brother Methodius's cell is the anchor. The wine cellar has no sharp corners — it was carved from a natural cave. Safe zone.",
       "sessionContent": "session-13",
-      "letavecDenNearby": "The Roman survey tunnel entrance is one day's walk from the monastery. Abbot Ratibor has old documents referencing it."
+      "letavecDenNearby": "The Roman survey tunnel entrance is one day's walk from the monastery. Abbot Ratibor has old documents referencing it.",
+      "priceModifier": 0.8
     },
     {
       "id": "village-near-cachtice",
@@ -260,7 +292,8 @@
       "population": 190,
       "description": "The village directly below Čachtice Castle. Has a complicated relationship with the castle above it — employed by it, frightened of it, dependent on it. The Vrykolakas arrived here two weeks ago.",
       "currentThreat": "vrykolakas",
-      "sessionContent": "session-14"
+      "sessionContent": "session-14",
+      "priceModifier": 1.2
     },
     {
       "id": "cachtice-castle",
@@ -269,7 +302,8 @@
       "region": "western-hungary",
       "population": 60,
       "description": "Lady Bathory's domain. Beautiful and wrong. The treasury has three chests. The Mimic has been in one of them for years. The Wailing is in the east tower where something happened that nobody will speak of.",
-      "sessionContent": "session-15-through-18"
+      "sessionContent": "session-15-through-18",
+      "priceModifier": 1.5
     },
     {
       "id": "roman-den",

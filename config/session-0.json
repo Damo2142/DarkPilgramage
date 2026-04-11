@@ -981,6 +981,19 @@
       "disposition": "nervous",
       "location": "behind the bar",
       "roomPosition": "bar — Echo nearest kitchen or bar position",
+      "prices": {
+        "room_common": { "cp": 2, "description": "A straw pallet in the common room shared with whoever else is there" },
+        "room_private": { "sp": 1, "description": "A small private room with a bolt on the door" },
+        "meal_simple": { "cp": 3, "description": "Bread, hard cheese, something hot" },
+        "meal_full": { "cp": 8, "description": "Bread, meat of some kind, vegetables, small beer" },
+        "ale_common": { "cp": 1, "description": "A tankard of the house ale" },
+        "ale_good": { "cp": 3, "description": "Better ale from the lower cellar" },
+        "wine": { "cp": 5, "description": "Wine of uncertain origin and mediocre quality" },
+        "stabling": { "cp": 5, "description": "Hay, water, a stall for the night" },
+        "bath": { "cp": 2, "description": "Hot water carried up — she charges for the wood" }
+      },
+      "creditPolicy": "Extends credit to people she trusts. Trust level Considering or higher gets one night credit. She does not forget debts.",
+      "priceNegotiation": "Does not negotiate on room price. Will throw in a meal for a group that has been decent to her.",
       "voiceProfileDetails": {
         "character": "warm, slightly breathless, sentences that start strong and get quieter as she pulls back from what she almost says",
         "rate": "slightly faster than normal — keeping busy to stay calm",
@@ -1374,6 +1387,15 @@
     "inventory": [
       { "id": "boot-wax", "name": "boot wax", "futureHook": "false-hydra-breaking-song", "note": "Future ear protection against the False Hydra's song at Houska" }
     ],
+    "prices": {
+      "torch": { "cp": 1, "description": "A good torch, will last an hour" },
+      "rope_hemp_50ft": { "sp": 1, "description": "Hempen rope, fifty feet, well made" },
+      "rations_1day": { "cp": 5, "description": "Dried food for one day, not pleasant but adequate" },
+      "boot_wax": { "cp": 3, "description": "A small pot of boot wax, keeps leather from cracking" },
+      "candle": { "cp": 1, "description": "Tallow candle, burns for an hour" }
+    },
+    "creditPolicy": "Cash only. He is a merchant.",
+    "priceNegotiation": "Will negotiate on bulk purchases. Reduce price by 10 percent for buying three or more of the same item.",
     "behaviors": [
       "He mentions boot wax casually at some point during the session — 'The roads have ruined my boots. I packed wax but I keep forgetting to use it.'"
     ],

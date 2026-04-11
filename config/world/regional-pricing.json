@@ -1,0 +1,86 @@
+{
+  "currencyDisplayMap": {
+    "principle": "Internal system uses cp/sp/gp/pp. Historical names are display only shown to players in regional context.",
+    "byRegion": {
+      "german": {
+        "cp": "Pfennig",
+        "sp": "Groschen",
+        "gp": "Florin",
+        "pp": "Mark"
+      },
+      "slovak": {
+        "cp": "Denár",
+        "sp": "Groš",
+        "gp": "Gulden",
+        "pp": "Mark"
+      },
+      "czech-bohemian": {
+        "cp": "Denár",
+        "sp": "Groš",
+        "gp": "Florin",
+        "pp": "Mark"
+      },
+      "moravian": {
+        "cp": "Denár",
+        "sp": "Groš",
+        "gp": "Florin",
+        "pp": "Mark"
+      },
+      "hungarian": {
+        "cp": "Dénár",
+        "sp": "Garas",
+        "gp": "Forint",
+        "pp": "Mark"
+      },
+      "default-european": {
+        "cp": "Denier",
+        "sp": "Groschen",
+        "gp": "Florin",
+        "pp": "Mark"
+      }
+    },
+    "exchangeRates": {
+      "cp_per_sp": 12,
+      "sp_per_gp": 20,
+      "gp_per_pp": 10
+    }
+  },
+  "settlementToRegion": {
+    "palid-hart-crossroads": "slovak",
+    "rakova": "slovak",
+    "shepherds-valley": "slovak",
+    "dolna-suca": "slovak",
+    "high-pass": "slovak",
+    "pernsjtejn": "czech-bohemian",
+    "krivoklatsky-les": "czech-bohemian",
+    "houska-castle": "czech-bohemian",
+    "road-village-moroaica": "moravian",
+    "wild-hunt-road": "moravian",
+    "crossroads-wailing": "moravian",
+    "mountain-monastery": "moravian",
+    "village-near-cachtice": "hungarian",
+    "cachtice-castle": "hungarian"
+  },
+  "betweenSessionExpenses": {
+    "comfortable": { "sp": 2, "description": "Private rooms, full meals" },
+    "modest": { "cp": 5, "description": "Shared rooms, simple meals" },
+    "poor": { "cp": 1, "description": "Camping or foraging" },
+    "wretched": { "cp": 0, "description": "Sleeping rough — stamina consequences and wound risk" }
+  },
+  "resourceConsumption": {
+    "principle": "Tracked invisibly. Surface only as story, never as numbers.",
+    "rations": {
+      "perDayActive": 1,
+      "perDayResting": 0.5,
+      "surfaceThresholdDays": 2
+    },
+    "ammo": {
+      "decrementPerRangedAttack": 1,
+      "surfaceThreshold": 5
+    },
+    "torchFuelMinutes": 60,
+    "torchSurfaceThresholdMinutes": 15,
+    "healersKitCharges": 10,
+    "healersKitSurfaceThreshold": 2
+  }
+}

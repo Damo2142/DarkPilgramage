@@ -86,6 +86,54 @@ class CharacterService {
         const wounds = this.state.get('players.' + req.params.playerId + '.wounds') || this._defaultWounds();
         res.json({ wounds });
       });
+
+      // ── Purse / monetary system ──
+      app.get('/api/purse/:playerId', (req, res) => {
+        const purse = this.state.get('players.' + req.params.playerId + '.character.purse')
+          || { cp: 0, sp: 0, gp: 0, pp: 0, transactions: [] };
+        res.json(purse);
+      });
+
+      app.post('/api/purse/:playerId/transaction', (req, res) => {
+        const { playerId } = req.params;
+        const { delta, description, npc, location } = req.body || {};
+        if (!delta || typeof delta !== 'object') return res.status(400).json({ error: 'delta object required' });
+        const purse = this.state.get('players.' + playerId + '.character.purse')
+          || { cp: 0, sp: 0, gp: 0, pp: 0, transactions: [] };
+        for (const k of ['cp', 'sp', 'gp', 'pp']) {
+          if (typeof delta[k] === 'number') purse[k] = (purse[k] || 0) + delta[k];
+        }
+        purse.transactions = purse.transactions || [];
+        purse.transactions.push({
+          delta, description: description || '', npc: npc || null, location: location || null,
+          timestamp: new Date().toISOString()
+        });
+        this.state.set('players.' + playerId + '.character.purse', purse);
+        this.bus.dispatch('purse:transaction', { playerId, delta, description });
+        res.json({ ok: true, purse });
+      });
+
+      // ── Resource consumption (invisible by default — surfaces as story) ──
+      app.post('/api/resources/:playerId/consume', (req, res) => {
+        const { playerId } = req.params;
+        const { resource, amount } = req.body || {};
+        if (!resource) return res.status(400).json({ error: 'resource required' });
+        const path = 'players.' + playerId + '.resources.' + resource;
+        const current = this.state.get(path) || 0;
+        const newVal = Math.max(0, current - (amount || 1));
+        this.state.set(path, newVal);
+        // Surface threshold check
+        const thresholds = { rations: 2, ammo: 5, torches: 1, healersKit: 2 };
+        if (thresholds[resource] && newVal <= thresholds[resource] && current > thresholds[resource]) {
+          this.bus.dispatch('resource:surface', { playerId, resource, value: newVal });
+        }
+        res.json({ ok: true, resource, value: newVal });
+      });
+
+      app.get('/api/resources/:playerId', (req, res) => {
+        const r = this.state.get('players.' + req.params.playerId + '.resources') || {};
+        res.json(r);
+      });
     }
   }
 
@@ -200,6 +248,17 @@ class CharacterService {
         // Merge americas origin from overlay (does NOT modify the read-only file)
         if (originsOverlay[String(id)]?.americasOrigin) {
           data.americasOrigin = originsOverlay[String(id)].americasOrigin;
+        }
+        // Initialize purse from DDB currency if not present in state
+        if (!data.purse) {
+          const ddbCurrency = data.currency || {};
+          data.purse = {
+            cp: ddbCurrency.cp || 0,
+            sp: ddbCurrency.sp || 0,
+            gp: ddbCurrency.gp || 0,
+            pp: ddbCurrency.pp || 0,
+            transactions: []
+          };
         }
         chars[String(id)] = data;
       } catch (err) {

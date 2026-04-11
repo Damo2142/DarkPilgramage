@@ -693,6 +693,7 @@
 
   <header>
     <h1>⛧ DARK PILGRIMAGE — CO-DM</h1>
+    <div id="test-mode-banner" style="display:none;background:#a44;color:#fff;padding:2px 12px;border-radius:3px;font-weight:bold;font-size:11px;letter-spacing:2px;text-transform:uppercase;">TEST MODE ACTIVE</div>
     <div class="header-status">
       <span><span class="dot" id="ws-dot"></span><span id="ws-label">—</span></span>
       <span><span class="dot green" id="earbud-indicator" title="Earbud TTS"></span>🎧</span>
@@ -1377,6 +1378,43 @@
             <span style="font-size:11px;color:var(--accent);font-family:Cinzel,serif;">Backstory Hooks</span>
           </div>
           <div id="backstory-list" style="max-height:80px;overflow-y:auto;font-size:10px;color:var(--text-dim);"></div>
+        </div>
+      </div>
+      </div>
+
+      <div class="panel-section" data-panel="test-mode">
+      <div class="section-header"><span class="drag-handle">⠿</span>Test Mode</div>
+      <div style="padding:6px 8px;">
+        <label style="display:block;font-size:11px;cursor:pointer;margin-bottom:6px;"><input type="checkbox" id="test-mode-toggle" onchange="TestMode.toggle()"> Activate Test Mode</label>
+        <div id="test-mode-status" style="font-size:9px;color:var(--text-dim);margin-bottom:6px;">Test Mode inactive</div>
+        <div id="test-mode-controls" style="display:none;">
+          <div style="border:1px solid #a44;border-radius:4px;padding:4px;margin-bottom:4px;">
+            <button class="danger sm" onclick="TestMode.resetCampaign()" style="font-size:9px;">Reset Campaign</button>
+            <button class="danger sm" onclick="TestMode.resetSession()" style="font-size:9px;">Reset Session</button>
+          </div>
+          <div style="margin-bottom:4px;">
+            <input type="number" id="test-skip-amount" placeholder="amount" style="width:50px;font-size:10px;padding:2px;">
+            <select id="test-skip-unit" style="font-size:10px;padding:2px;">
+              <option value="hours">hours</option>
+              <option value="days">days</option>
+              <option value="weeks">weeks</option>
+            </select>
+            <button class="sm" onclick="TestMode.skipTime()" style="font-size:9px;">Skip Time</button>
+          </div>
+          <div style="margin-bottom:4px;">
+            <input type="text" id="test-snap-name" placeholder="snapshot name" style="font-size:10px;padding:2px;width:90px;">
+            <button class="sm" onclick="TestMode.saveSnapshot()" style="font-size:9px;">Save State</button>
+          </div>
+          <div style="margin-bottom:4px;">
+            <select id="test-snap-list" style="font-size:10px;padding:2px;width:120px;"></select>
+            <button class="sm" onclick="TestMode.restoreSnapshot()" style="font-size:9px;">Restore</button>
+          </div>
+          <div style="margin-bottom:4px;">
+            <input type="text" id="test-npc-name" placeholder="NPC name" style="font-size:10px;padding:2px;width:80px;">
+            <input type="text" id="test-npc-msg" placeholder="message" style="font-size:10px;padding:2px;width:80px;">
+            <button class="sm" onclick="TestMode.npcDialogue()" style="font-size:9px;">Test NPC</button>
+          </div>
+          <div id="test-output" style="font-size:9px;color:var(--text);background:var(--bg);padding:4px;margin-top:4px;max-height:100px;overflow-y:auto;"></div>
         </div>
       </div>
       </div>
@@ -5382,6 +5420,74 @@
       addTranscript({ speaker: 'system', text: 'No pending downtime events' });
     }
   }
+  // ── Test Mode ──
+  var TestMode = {
+    toggle: async function() {
+      var enabled = document.getElementById('test-mode-toggle').checked;
+      var resp = await fetch('/api/test-mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: enabled })
+      });
+      var data = await resp.json();
+      if (data.error) { alert(data.error); document.getElementById('test-mode-toggle').checked = false; return; }
+      document.getElementById('test-mode-banner').style.display = data.testMode ? 'inline-block' : 'none';
+      document.getElementById('test-mode-status').textContent = data.testMode ? 'TEST MODE ACTIVE — actions logged with TEST prefix' : 'Test Mode inactive';
+      document.getElementById('test-mode-controls').style.display = data.testMode ? 'block' : 'none';
+      if (data.testMode) TestMode.refreshSnapshots();
+    },
+    resetCampaign: async function() {
+      var c = prompt('This will completely reset the campaign. Type RESET to confirm:');
+      if (c !== 'RESET') return;
+      await fetch('/api/test/reset-campaign', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: 'RESET' }) });
+      addTranscript({ speaker: 'system', text: '[TEST] Campaign reset' });
+      SessionMode.refresh();
+    },
+    resetSession: function() { alert('Reset session restores from last auto-snapshot — use Restore Snapshot list'); },
+    skipTime: async function() {
+      var amount = document.getElementById('test-skip-amount').value;
+      var unit = document.getElementById('test-skip-unit').value;
+      if (!amount) return;
+      var resp = await fetch('/api/test/skip-time', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: parseInt(amount), unit: unit }) });
+      var data = await resp.json();
+      addTranscript({ speaker: 'system', text: '[TEST] Skipped ' + amount + ' ' + unit + ' — new game time ' + (data.newTime || 'unknown') });
+    },
+    saveSnapshot: async function() {
+      var name = document.getElementById('test-snap-name').value || 'snapshot';
+      var resp = await fetch('/api/test/snapshot', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name }) });
+      var data = await resp.json();
+      if (data.ok) { addTranscript({ speaker: 'system', text: '[TEST] Saved snapshot: ' + name }); TestMode.refreshSnapshots(); }
+    },
+    restoreSnapshot: async function() {
+      var id = document.getElementById('test-snap-list').value;
+      if (!id) return;
+      if (!confirm('Restore snapshot? Current state will be lost.')) return;
+      var resp = await fetch('/api/test/restore/' + id, { method: 'POST' });
+      var data = await resp.json();
+      if (data.ok) addTranscript({ speaker: 'system', text: '[TEST] Snapshot restored' });
+    },
+    refreshSnapshots: async function() {
+      var resp = await fetch('/api/test/snapshots');
+      var snaps = await resp.json();
+      var sel = document.getElementById('test-snap-list');
+      sel.innerHTML = snaps.map(function(s) { return '<option value="' + s.id + '">' + esc(s.name) + '</option>'; }).join('');
+    },
+    npcDialogue: async function() {
+      var name = document.getElementById('test-npc-name').value;
+      var msg = document.getElementById('test-npc-msg').value;
+      if (!name || !msg) return;
+      var out = document.getElementById('test-output');
+      out.innerHTML += '<div>[TEST] To ' + esc(name) + ': ' + esc(msg) + '</div>';
+      try {
+        var resp = await fetch('/api/ai/npc/dialogue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ npcId: name, prompt: msg }) });
+        var data = await resp.json();
+        out.innerHTML += '<div style="color:var(--accent);">' + esc(name) + ': ' + esc(data.text || data.dialogue || '...') + '</div>';
+      } catch (e) {
+        out.innerHTML += '<div style="color:#a44;">Error</div>';
+      }
+    }
+  };
+
   // ── Session Mode (3-button system) ──
   var SessionMode = {
     refresh: async function() {

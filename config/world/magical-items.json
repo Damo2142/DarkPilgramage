@@ -1,0 +1,83 @@
+{
+  "_principle": "Every magical item has a history. Not labeled as magical. Players discover what they do through use and investigation.",
+  "magicalItems": [
+    {
+      "id": "hunters-cloak",
+      "name": "A Dark Traveling Cloak",
+      "apparent": "A heavy traveling cloak, dark wool, well-made, slightly too old to be new",
+      "effect": "Advantage on Stealth checks in natural environments. Disadvantage on Stealth in urban environments.",
+      "history": "Made for a hunter — the specific kind. Barry's bloodline. If Barry wears it he feels like it was made for him because it was made for someone like him.",
+      "curse": false,
+      "discovery": "The advantage only becomes apparent after wearing it for a day of travel."
+    },
+    {
+      "id": "ring-of-warmth-addiction",
+      "name": "A Plain Iron Ring",
+      "apparent": "An unremarkable iron ring, no markings, slightly warm to the touch",
+      "effect": "Wearer is comfortable in any temperature — never suffers cold damage or cold weather exhaustion.",
+      "history": "Made by someone who nearly froze to death. The warmth is real. The price is what you give for warmth when you are desperate.",
+      "curse": true,
+      "curseDescription": "After wearing for three days the wearer makes DC 13 WIS save each morning or refuses to remove it. After seven days DC increases to 16. After two weeks they become hostile toward anyone suggesting removal. The ring is not evil. It is simply warm and it remembers being cold.",
+      "discovery": "The warmth is immediately apparent. The reluctance to remove it emerges gradually over days."
+    },
+    {
+      "id": "sword-that-hungers",
+      "name": "A Longsword",
+      "apparent": "A well-made longsword with an unusual dark patina on the blade. Balance is exceptional.",
+      "effect": "Plus 1 to attack and damage rolls. On a critical hit deals an additional 1d6 necrotic damage.",
+      "history": "Used in many battles. Remembers all of them. Has opinions about being sheathed when there is something nearby that could be fought.",
+      "curse": true,
+      "curseDescription": "After carrying for one week the wielder must make DC 12 WIS save when entering a potential combat situation or draw the sword involuntarily. After two weeks DC 14 and they feel mild discomfort when sheathed for more than four hours.",
+      "discovery": "The plus 1 is felt immediately. The draw compulsion first manifests as a strong urge the player can describe as their character being eager for combat."
+    },
+    {
+      "id": "mirror-of-truth",
+      "name": "A Small Hand Mirror",
+      "apparent": "A silver hand mirror, old, the handle engraved with a pattern that might be vines or might be something else",
+      "effect": "Any creature seen in this mirror appears as they truly are — Doppelgangers show their real form, Oblex simulacra show the absence where a person should be, vampires show nothing at all.",
+      "history": "Made specifically for hunting. Barry's bloodline — or someone like them.",
+      "curse": false,
+      "session0Note": "In Session 0 it shows Vladislav nothing where his reflection should be if anyone thinks to use it near him.",
+      "discovery": "The true-seeing property only becomes apparent when the mirror is used near something that is not what it appears."
+    },
+    {
+      "id": "boots-of-silent-approach",
+      "name": "A Pair of Boots",
+      "apparent": "Good leather boots, barely worn, odd that they were left behind",
+      "effect": "Advantage on Stealth checks involving movement. The boots make no sound when walking on any surface.",
+      "history": "The previous owner did not survive whatever they were sneaking toward. The boots are fine. The owner's judgment was not.",
+      "curse": false,
+      "discovery": "Players notice the boots make no sound on their third or fourth day of wearing them when they step on something that should have made noise and it does not."
+    },
+    {
+      "id": "journal-of-the-hunter",
+      "name": "A Worn Leather Journal",
+      "apparent": "A journal, extensively written in, in a hand that becomes increasingly urgent as the entries progress",
+      "effect": "Contains extensive notes on vampire weaknesses, werewolf behavior, and undead lore specific to Central European tradition. Reading for one hour grants advantage on the next relevant Knowledge check about those creature types.",
+      "history": "Written by a hunter. The last entry is dated three years ago and ends mid-sentence.",
+      "curse": false,
+      "barryNote": "If Barry reads this journal he recognizes some of the instincts described as things he does without thinking. The handwriting in the margins is in a different hand. Barry may eventually recognize it.",
+      "discovery": "The journal is in Common — Latin — readable immediately. Its value as a reference is apparent from the first few pages."
+    }
+  ],
+  "traps": {
+    "environmental": [
+      { "id": "rotting-bridge", "description": "Rotting bridge over a gorge", "perceptionDC": 14 },
+      { "id": "unstable-slope", "description": "Unstable slope", "survivalDC": 13, "trigger": "small rockfall" },
+      { "id": "thin-ice", "description": "Thin ice over water", "perceptionDC": 12 },
+      { "id": "cave-overhang", "description": "Cave entrance with poorly balanced overhang", "perceptionDC": 14 }
+    ],
+    "intentional": [
+      { "id": "bandit-tripwire", "description": "Bandit camp perimeter tripwire and noise-maker", "perceptionDC": 13 },
+      { "id": "cellar-pressure-plate", "description": "Cellar pressure plate", "perceptionDC": 14 },
+      { "id": "contact-poison-lock", "description": "Chest with contact poison on lock", "investigationDC": 15, "saveDC": 14 },
+      { "id": "needle-handle", "description": "Door with needle in the handle", "investigationDC": 13, "saveDC": 12 }
+    ],
+    "cursed-location": [
+      { "id": "threshold", "description": "A threshold that cannot be crossed without a specific item or knowledge" },
+      { "id": "compass-spinning-room", "description": "A room where compasses spin and direction becomes uncertain" },
+      { "id": "truth-mirror", "description": "A mirror that shows the viewer something true about themselves they would rather not know" }
+    ],
+    "rule": "Every trap tells a story. Who placed it. Why. What were they protecting or preventing. Trap discovery uses passive perception or active Investigation. Never announced. Described as the player noticing something specific."
+  }
+}

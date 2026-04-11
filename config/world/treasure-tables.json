@@ -1,0 +1,45 @@
+{
+  "_principle": "Coin presentation always as story. Never as 'you find 14 gold pieces.' Always as what it actually is in the world. The amount tells a story. The condition of the coin tells a story. Where it was hidden tells a story.",
+  "categories": {
+    "none-obvious": {
+      "description": "Nothing obviously valuable but something is there if they look",
+      "findDC": 13,
+      "contents": ["personal-effects", "one-document-chance-40"]
+    },
+    "personal-effects": {
+      "description": "What the person or creature had on them",
+      "contents": ["coin-small", "mundane-items", "document-chance-30"]
+    },
+    "small-cache": {
+      "description": "Hidden or overlooked",
+      "findDC": 12,
+      "contents": ["coin-modest", "one-useful-item", "curiosity-chance-40", "document-chance-50"]
+    },
+    "significant-find": {
+      "description": "Someone was carrying or hiding something of real value",
+      "contents": ["coin-significant", "one-quality-item", "one-document", "magical-item-chance-20"]
+    },
+    "exceptional": {
+      "description": "Rare — only on high-danger encounters or significant locations",
+      "contents": ["coin-substantial", "multiple-items", "one-magical-item", "cursed-item-chance-30"]
+    }
+  },
+  "coinByPartyLevel": {
+    "1-3": { "small": "2d6 cp", "modest": "1d6 sp", "significant": "2d6 sp", "substantial": "1d6 gp" },
+    "4-6": { "small": "1d6 sp", "modest": "2d6 sp", "significant": "1d6 gp", "substantial": "2d6 gp" },
+    "7-9": { "small": "2d6 sp", "modest": "1d6 gp", "significant": "2d6 gp", "substantial": "5d6 gp" },
+    "10-12": { "small": "1d6 gp", "modest": "3d6 gp", "significant": "5d6 gp", "substantial": "2d6 pp" }
+  },
+  "narrationExamples": {
+    "smallHidden": "Folded into the lining of his coat — seven Groschen and a Florin, more than a laborer would carry, not enough to explain why he was on this road alone.",
+    "modestLockbox": "The lockbox opens to reveal sixty or seventy Pfennig and one Florin with a notch cut in its edge — marked coin, someone's private system for tracking something.",
+    "significantPouch": "A leather pouch heavier than it looks. Inside: silver mostly, one or two gold, and a single Mark coin so old the inscription has been worn smooth by handling."
+  },
+  "weaponsByCondition": {
+    "weapons": ["longsword", "dagger", "short sword", "crossbow", "bow", "spear", "axe", "mace"],
+    "armor": ["chain mail", "leather", "padded", "plate piece"],
+    "tools": ["rope", "tinderbox", "cooking equipment", "medical supplies", "trade goods", "navigation tools"],
+    "conditionStates": ["pristine", "lightly worn", "worn", "damaged", "badly damaged"],
+    "rule": "All found weapons and armor have condition state assigned on discovery — rarely pristine, usually Worn or Damaged with specific description of how"
+  }
+}

@@ -1,0 +1,182 @@
+{
+  "_principle": "Encounters are not random. They are weighted selections from curated tables based on location, time of day, weather, active threats, party level, narrative state, and what has already happened recently. The result feels unpredictable but is always coherent with the world.",
+  "frequency": {
+    "daytimeHours": 4,
+    "nighttimeHours": 2,
+    "campImmediate": true,
+    "splitImmediate": true,
+    "baseChanceDaytime": 0.30,
+    "baseChanceNighttime": 0.50
+  },
+  "modifiers": {
+    "goodRoad": -0.10,
+    "wilderness": 0.10,
+    "storm": { "human": -0.20, "creature": 0.10 },
+    "stealth": -0.15,
+    "letavecActive": { "night": 0.20 }
+  },
+  "regions": {
+    "orava-mountains": {
+      "road": [
+        {
+          "id": "wolf-pack",
+          "name": "Wolf Pack",
+          "type": "combat-potential",
+          "cr": 0.25,
+          "partyLevelMin": 1,
+          "partyLevelMax": 99,
+          "weight": 15,
+          "timeOfDay": "any",
+          "weather": "any",
+          "activeThreatsRequired": [],
+          "description": "Pack of three to six wolves that has been following the party before making presence known. They test before they attack. A firm response may drive them off. The largest one moves differently — not quite right, not quite wolf.",
+          "behaviorProfile": "predator-testing",
+          "treasure": "den-cache-with-previous-traveler-pack",
+          "narrativeHook": "Den nearby has a cache containing a previous traveler's pack",
+          "dreadSpike": 3,
+          "linkedCreature": "wolf"
+        },
+        {
+          "id": "desperate-bandits",
+          "name": "Desperate Bandits",
+          "type": "social-or-complication",
+          "cr": 0.5,
+          "partyLevelMin": 1,
+          "partyLevelMax": 99,
+          "weight": 12,
+          "timeOfDay": "any",
+          "weather": "any",
+          "description": "Three to five thin poorly-equipped men blocking the road. Not hardened criminals — people who ran out of options. Want coin, not violence. One wearing a coat with an insignia the party may recognize from earlier in the campaign.",
+          "behaviorProfile": "desperate-not-violent",
+          "treasure": "small-cache",
+          "narrativeHook": "They know the road and have useful information if treated diplomatically"
+        },
+        {
+          "id": "dead-traveler",
+          "name": "Dead Traveler",
+          "type": "discovery",
+          "cr": 0,
+          "weight": 10,
+          "timeOfDay": "any",
+          "description": "A body on the road or just off it. Not long dead. Cause of death not immediately obvious. AI checks active campaign threads and generates a connection to something encountered or yet to encounter.",
+          "checks": [
+            { "skill": "Medicine", "dc": 12, "success": "cause of death" },
+            { "skill": "Investigation", "dc": 13, "success": "anything on body" }
+          ],
+          "treasure": "personal-effects",
+          "narrativeHook": "Always give them a name and a reason to have been on this road"
+        },
+        {
+          "id": "merchant-trouble",
+          "name": "Merchant in Trouble",
+          "type": "social",
+          "cr": 0,
+          "weight": 8,
+          "timeOfDay": "day",
+          "description": "Small merchant operation with a problem — wheel broken, horse lame, axle cracked. Needs help or protection. Has been to or is going to a location relevant to campaign.",
+          "treasure": "personal-effects-plus-merchant-goods",
+          "reputationCheck": "mountain-villagers"
+        },
+        {
+          "id": "letavec-sighting",
+          "name": "Letavec Sighting",
+          "type": "atmosphere",
+          "cr": 0,
+          "weight": 8,
+          "timeOfDay": "dusk-or-night",
+          "activeThreatsRequired": ["nocni-letavec"],
+          "description": "Something large crosses the sky — wrong shape for a bird, too large, moving with purpose. Chosen targets get Tier 2 private observation that it was looking at them specifically.",
+          "dreadSpike": 5,
+          "treasure": "none",
+          "linkedCreature": "nocni-letavec"
+        },
+        {
+          "id": "strange-tracks",
+          "name": "Strange Tracks",
+          "type": "discovery",
+          "cr": 0,
+          "weight": 7,
+          "description": "Tracks on road or mud that are wrong. Not animal. Not human. Something heavy that moved with deliberate lightness. Tracks begin in middle of road with no approach trail.",
+          "checks": [
+            { "skill": "Survival", "dc": 14, "success": "read them" },
+            { "skill": "Nature", "dc": 15, "success": "identify" }
+          ],
+          "narrativeHook": "Zarina gets private observation regardless of roll. Linked to Kamenný.",
+          "treasure": "none"
+        },
+        {
+          "id": "refugee-family",
+          "name": "Refugee Family",
+          "type": "social",
+          "cr": 0,
+          "weight": 8,
+          "description": "Family on road moving fast with everything they could carry. Going away from something specific. Will not say exactly what they saw but will say which direction they came from.",
+          "treasure": "none"
+        },
+        {
+          "id": "creature-fleeing",
+          "name": "Fleeing Creature",
+          "type": "combat-incoming",
+          "cr": "varies",
+          "weight": 6,
+          "description": "A creature runs through or past the party — not attacking them, running from something. Three rounds later whatever it was running from arrives.",
+          "narrativeHook": "Pursuing thing always more dangerous than fleeing thing. This encounter teaches that some things are prey.",
+          "treasure": "on-pursuing-creature"
+        },
+        {
+          "id": "abandoned-camp",
+          "name": "Abandoned Camp",
+          "type": "discovery",
+          "cr": 0,
+          "weight": 9,
+          "description": "A camp recently used and recently abandoned in haste. Fire still warm or recently cold. Belongings left behind.",
+          "treasure": "personal-effects-plus-one-document",
+          "narrativeHook": "Always give the absent person a name through their belongings"
+        },
+        {
+          "id": "church-patrol",
+          "name": "Church Patrol",
+          "type": "social",
+          "cr": 1,
+          "partyLevelMin": 3,
+          "weight": 5,
+          "description": "Three to five Church of Light soldiers with junior inquisitor. Looking for something — possibly the party if reputation has reached them.",
+          "behaviorProfile": "authoritative-investigating",
+          "reputationCheck": "church-of-light"
+        }
+      ],
+      "wilderness": [
+        { "id": "nocturnal-howl", "name": "Nocturnal Howl", "type": "atmosphere", "weight": 8, "timeOfDay": "night", "description": "A long low howl from a ridge no wolf has business being on. Spurt's hackles rise even though Kobolds do not have hackles." },
+        { "id": "frost-spirit", "name": "Frost Spirit", "type": "atmosphere", "weight": 5, "timeOfDay": "night", "weather": "snow", "description": "A figure of frost stands at the tree line. Not threatening. Not moving. It is gone the moment anyone tries to look at it directly." }
+      ],
+      "high-pass": [
+        { "id": "rockfall", "name": "Rockfall", "type": "hazard", "weight": 10, "description": "Loose stones above. DC 13 Perception to notice before passing under. DC 14 DEX save or 2d6 bludgeoning when triggered." },
+        { "id": "neck-music", "name": "Distant Music", "type": "atmosphere", "weight": 7, "timeOfDay": "night", "description": "Music drifts up from the river crossing below. Heartbreakingly beautiful. Spurt is unaffected. Everyone else feels the pull.", "linkedCreature": "neck" }
+      ]
+    },
+    "bohemia": {
+      "road": [
+        { "id": "false-hydra-villager", "name": "Confused Villager", "type": "social", "weight": 12, "description": "A villager from a hamlet ahead, walking the wrong direction with the wrong belongings. When asked about family they give an answer that does not add up. They do not notice it does not add up.", "linkedCreature": "false-hydra" },
+        { "id": "missing-list", "name": "List of Missing", "type": "discovery", "weight": 8, "description": "A piece of paper folded into a tree. A list of names. Some of the names have been crossed out. Reading carefully one of the crossed-out names appears twice.", "linkedCreature": "false-hydra" },
+        { "id": "watchful-deer", "name": "Watchful Deer", "type": "atmosphere", "weight": 7, "description": "A deer in the road that does not flee. It watches the party for a long moment then walks slowly into the trees as if showing them a path. Spurt thinks it is the most interesting thing he has ever seen.", "linkedCreature": "erlking" }
+      ],
+      "forest": [
+        { "id": "child-figures", "name": "Children at the Tree Line", "type": "atmosphere", "weight": 9, "description": "Two child-shaped figures stand at the edge of the trees. Their proportions are wrong in a way that takes a second look to identify. They beckon. They do not speak.", "linkedCreature": "erlking" }
+      ]
+    },
+    "moravia": {
+      "road": [
+        { "id": "distant-horns", "name": "Distant Horns", "type": "atmosphere", "weight": 10, "timeOfDay": "night", "description": "On the wind — far away — a sound like horns. It is gone the moment anyone tries to listen for it. Spurt at Dread 61+ recognizes it immediately and starts running for cover.", "linkedCreature": "wild-hunt" },
+        { "id": "sky-hoofprints", "name": "Hoofprints in the Sky", "type": "discovery", "weight": 6, "description": "Early morning frost on the ground. Hoofprints visible — not on the ground. In the sky. Frozen into the air at a height of about thirty feet, in a long curve heading west.", "linkedCreature": "wild-hunt" },
+        { "id": "fled-livestock", "name": "Fled Livestock", "type": "discovery", "weight": 7, "description": "A flock or herd that has bolted in one direction with such force that fences are broken. The direction they fled is the direction the party is going.", "linkedCreature": "wild-hunt" }
+      ]
+    },
+    "western-hungary": {
+      "road": [
+        { "id": "turning-back", "name": "Travelers Turning Back", "type": "social", "weight": 11, "description": "A small group of travelers walking the opposite direction the party is going. When asked their destination they give a different answer than they were going to give. They do not want to talk about Čachtice." },
+        { "id": "vague-locals", "name": "Vague Locals", "type": "social", "weight": 9, "description": "A village inn. The locals are friendly. Ask about the castle and the friendliness becomes a kind of practiced politeness that is itself a warning." },
+        { "id": "heavy-air", "name": "Heavy Air", "type": "atmosphere", "weight": 6, "description": "A specific heaviness to the air that is probably imagination. Probably. The party's horses do not believe it is imagination." }
+      ]
+    }
+  }
+}

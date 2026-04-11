@@ -1382,6 +1382,45 @@
       </div>
       </div>
 
+      <div class="panel-section" data-panel="encounters">
+      <div class="section-header"><span class="drag-handle">⠿</span>Encounters</div>
+      <div style="padding:6px 8px;">
+        <div style="margin-bottom:4px;">
+          <select id="enc-region" style="font-size:10px;padding:2px;">
+            <option value="orava-mountains">Orava Mountains</option>
+            <option value="bohemia">Bohemia</option>
+            <option value="moravia">Moravia</option>
+            <option value="western-hungary">Western Hungary</option>
+          </select>
+          <select id="enc-terrain" style="font-size:10px;padding:2px;">
+            <option value="road">Road</option>
+            <option value="wilderness">Wilderness</option>
+            <option value="forest">Forest</option>
+            <option value="high-pass">High Pass</option>
+          </select>
+        </div>
+        <button class="sm primary" onclick="EncounterMgr.select()" style="font-size:9px;">Roll Encounter</button>
+        <button class="sm" onclick="EncounterMgr.list()" style="font-size:9px;">List All</button>
+        <div id="encounter-output" style="font-size:9px;margin-top:4px;max-height:200px;overflow-y:auto;"></div>
+      </div>
+      </div>
+
+      <div class="panel-section" data-panel="treasure">
+      <div class="section-header"><span class="drag-handle">⠿</span>Treasure</div>
+      <div style="padding:6px 8px;">
+        <select id="treasure-cat" style="font-size:10px;padding:2px;width:100%;margin-bottom:4px;">
+          <option value="none-obvious">None obvious</option>
+          <option value="personal-effects">Personal effects</option>
+          <option value="small-cache">Small cache</option>
+          <option value="significant-find">Significant find</option>
+          <option value="exceptional">Exceptional</option>
+        </select>
+        <input type="number" id="treasure-level" placeholder="party level" value="3" style="font-size:10px;padding:2px;width:60px;">
+        <button class="sm primary" onclick="TreasureMgr.generate()" style="font-size:9px;">Generate</button>
+        <div id="treasure-output" style="font-size:9px;margin-top:4px;max-height:200px;overflow-y:auto;"></div>
+      </div>
+      </div>
+
       <div class="panel-section" data-panel="test-mode">
       <div class="section-header"><span class="drag-handle">⠿</span>Test Mode</div>
       <div style="padding:6px 8px;">
@@ -5420,6 +5459,50 @@
       addTranscript({ speaker: 'system', text: 'No pending downtime events' });
     }
   }
+  // ── Encounter Manager ──
+  var EncounterMgr = {
+    select: async function() {
+      var region = document.getElementById('enc-region').value;
+      var terrain = document.getElementById('enc-terrain').value;
+      var resp = await fetch('/api/encounters/select', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ region: region, terrain: terrain, partyLevel: 3, timeOfDay: 'day', weather: 'any', activeThreats: [] })
+      });
+      var data = await resp.json();
+      var out = document.getElementById('encounter-output');
+      if (!data.selected) { out.innerHTML = '<i>No encounter</i>'; return; }
+      var e = data.selected;
+      out.innerHTML = '<div style="border:1px solid var(--border);padding:4px;"><b style="color:var(--accent);">' + esc(e.name) + '</b> (' + esc(e.type || '') + ', CR ' + esc(String(e.cr || 0)) + ')<br>' + esc(e.description || '') + '</div>';
+    },
+    list: async function() {
+      var region = document.getElementById('enc-region').value;
+      var terrain = document.getElementById('enc-terrain').value;
+      var resp = await fetch('/api/encounters/' + region + '/' + terrain);
+      var list = await resp.json();
+      var out = document.getElementById('encounter-output');
+      out.innerHTML = list.map(function(e) {
+        return '<div style="border-bottom:1px solid var(--border);padding:2px 0;"><b>' + esc(e.name) + '</b> (w' + (e.weight || 1) + ')<br><span style="color:var(--text-dim);font-size:8px;">' + esc(e.description || '').slice(0, 120) + '</span></div>';
+      }).join('') || '<i>none</i>';
+    }
+  };
+
+  // ── Treasure Manager ──
+  var TreasureMgr = {
+    generate: async function() {
+      var category = document.getElementById('treasure-cat').value;
+      var level = parseInt(document.getElementById('treasure-level').value) || 3;
+      var resp = await fetch('/api/treasure/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: category, partyLevel: level })
+      });
+      var data = await resp.json();
+      var out = document.getElementById('treasure-output');
+      out.innerHTML = '<b>' + esc(category) + '</b><br>Coins: ' + JSON.stringify(data.coins) + '<br>Contents: ' + JSON.stringify(data.contents);
+    }
+  };
+
   // ── Test Mode ──
   var TestMode = {
     toggle: async function() {

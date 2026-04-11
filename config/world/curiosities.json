@@ -1,0 +1,34 @@
+{
+  "curiosities": [
+    {
+      "id": "compass-wrong",
+      "name": "A Small Brass Compass",
+      "description": "It does not point north. It points consistently in a specific direction that is not north and adjusts as they travel to maintain a consistent bearing toward something that moves with them or is very far away.",
+      "dmNote": "DM decides what the compass is pointing at. Could be the Letavec den. Could be something else entirely. Leave it mysterious."
+    },
+    {
+      "id": "carved-figure",
+      "name": "A Small Carved Figure",
+      "description": "Stone, well-worn, carved into a shape that is almost human but not quite. The proportions are wrong in a specific way that is hard to articulate. Spurt immediately wants it and cannot explain why.",
+      "spurtReaction": "He picks it up before anyone else can reach it. At Dread 41 or higher he talks to it quietly when he thinks nobody is listening."
+    },
+    {
+      "id": "locket-portrait",
+      "name": "A Silver Locket",
+      "description": "Contains a small painted portrait of a person. Old. The person looks disturbingly like a party member — not exactly, but enough. Engraved on the back with initials and a date from forty years ago.",
+      "narrativeHook": "AI assigns the resemblance to whichever party member the connection would be most dramatically interesting for."
+    },
+    {
+      "id": "key-no-lock",
+      "name": "A Key",
+      "description": "Iron, heavy, old. Opens something. The lock it opens is not here. Worn smooth where a hand held it for years. Whatever it opens was important enough to carry this key a long time.",
+      "dmNote": "The lock exists somewhere in the campaign. DM places it. The key finding the lock is a session moment."
+    },
+    {
+      "id": "sealed-letter",
+      "name": "A Sealed Letter",
+      "description": "Wax seal intact. Addressed in a language the party may or may not read. Breaking the seal reads the letter. Not breaking it preserves whatever relationship the seal represents.",
+      "dmNote": "The choice of whether to break the seal is itself the treasure."
+    }
+  ]
+}

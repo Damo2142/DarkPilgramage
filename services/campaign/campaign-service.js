@@ -69,6 +69,24 @@ class CampaignService {
   _loadCampaignExpansionData() {
     const cfgRoot = path.join(__dirname, '..', '..', 'config');
 
+    // Encounter tables / treasure / curiosities / magical items
+    try {
+      const enc = path.join(cfgRoot, 'world', 'encounter-tables.json');
+      if (fs.existsSync(enc)) this.encounterTables = JSON.parse(fs.readFileSync(enc, 'utf-8'));
+    } catch (e) {}
+    try {
+      const tr = path.join(cfgRoot, 'world', 'treasure-tables.json');
+      if (fs.existsSync(tr)) this.treasureTables = JSON.parse(fs.readFileSync(tr, 'utf-8'));
+    } catch (e) {}
+    try {
+      const cu = path.join(cfgRoot, 'world', 'curiosities.json');
+      if (fs.existsSync(cu)) this.curiosities = JSON.parse(fs.readFileSync(cu, 'utf-8')).curiosities || [];
+    } catch (e) {}
+    try {
+      const mi = path.join(cfgRoot, 'world', 'magical-items.json');
+      if (fs.existsSync(mi)) this.magicalItemsData = JSON.parse(fs.readFileSync(mi, 'utf-8'));
+    } catch (e) {}
+
     // Future hooks
     try {
       const fhPath = path.join(cfgRoot, 'future-hooks.json');
@@ -902,6 +920,68 @@ Keep each event to 1-2 sentences. Format as JSON array: [{"title": "...", "descr
 
     app.get('/api/campaign/lore/player/:playerId', (req, res) => {
       res.json(this.getPlayerLore(req.params.playerId));
+    });
+
+    // --- Encounters and treasure ---
+    app.get('/api/encounters/:region/:terrain', (req, res) => {
+      const { region, terrain } = req.params;
+      const list = this.encounterTables?.regions?.[region]?.[terrain] || [];
+      res.json(list);
+    });
+
+    app.get('/api/encounters', (req, res) => {
+      res.json(this.encounterTables || {});
+    });
+
+    app.post('/api/encounters/select', (req, res) => {
+      const { region, terrain, partyLevel, timeOfDay, weather, activeThreats } = req.body || {};
+      const list = this.encounterTables?.regions?.[region]?.[terrain] || [];
+      // Filter
+      let candidates = list.filter(e => {
+        if (e.partyLevelMin && partyLevel < e.partyLevelMin) return false;
+        if (e.partyLevelMax && partyLevel > e.partyLevelMax) return false;
+        if (e.timeOfDay && e.timeOfDay !== 'any' && e.timeOfDay !== timeOfDay) return false;
+        if (e.weather && e.weather !== 'any' && e.weather !== weather) return false;
+        if (e.activeThreatsRequired && e.activeThreatsRequired.length) {
+          const hasAll = e.activeThreatsRequired.every(t => (activeThreats || []).includes(t));
+          if (!hasAll) return false;
+        }
+        return true;
+      });
+      // Weighted random
+      const totalWeight = candidates.reduce((s, c) => s + (c.weight || 1), 0);
+      let r = Math.random() * totalWeight;
+      let selected = candidates[0];
+      for (const c of candidates) {
+        r -= c.weight || 1;
+        if (r <= 0) { selected = c; break; }
+      }
+      res.json({ selected, candidates: candidates.length });
+    });
+
+    app.get('/api/treasure', (req, res) => {
+      res.json(this.treasureTables || {});
+    });
+
+    app.get('/api/curiosities', (req, res) => {
+      res.json(this.curiosities || []);
+    });
+
+    app.get('/api/magical-items', (req, res) => {
+      res.json(this.magicalItemsData?.magicalItems || []);
+    });
+
+    app.get('/api/traps', (req, res) => {
+      res.json(this.magicalItemsData?.traps || {});
+    });
+
+    app.post('/api/treasure/generate', (req, res) => {
+      const { category, partyLevel } = req.body || {};
+      const cat = this.treasureTables?.categories?.[category];
+      if (!cat) return res.status(400).json({ error: 'unknown category' });
+      const levelKey = partyLevel <= 3 ? '1-3' : (partyLevel <= 6 ? '4-6' : (partyLevel <= 9 ? '7-9' : '10-12'));
+      const coins = this.treasureTables?.coinByPartyLevel?.[levelKey] || {};
+      res.json({ category, contents: cat.contents, coins, narration: 'See narration examples in treasure-tables.json' });
     });
 
     // --- Session mode (3-button system) ---

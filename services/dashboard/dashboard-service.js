@@ -197,6 +197,26 @@ class DashboardService {
       res.json(this.config || {});
     });
 
+    // ─── Latency telemetry (CR-3) ───────────────────────────────
+    // Tracks Max audio pipeline latency. Populated by voice-service via
+    // the max:latency event the dashboard subscribes to via wildcard.
+    this._latencySamples = [];
+    this.bus.subscribe('max:latency', (env) => {
+      const d = env.data || {};
+      this._latencySamples.push({ ms: d.latencyMs, at: Date.now(), text: d.text });
+      if (this._latencySamples.length > 100) this._latencySamples.shift();
+    }, 'dashboard');
+
+    this.app.get('/api/latency/max', (req, res) => {
+      const samples = this._latencySamples;
+      if (!samples.length) return res.json({ samples: 0 });
+      const sorted = samples.map(s => s.ms).sort((a, b) => a - b);
+      const avg = Math.round(sorted.reduce((a, b) => a + b, 0) / sorted.length);
+      const median = sorted[Math.floor(sorted.length / 2)];
+      const p95 = sorted[Math.floor(sorted.length * 0.95)] || sorted[sorted.length - 1];
+      res.json({ samples: sorted.length, avgMs: avg, medianMs: median, p95Ms: p95, recent: samples.slice(-5) });
+    });
+
     // ─── Service restart API (CR-5) ─────────────────────────────
     this.app.get('/api/services', (req, res) => {
       try {

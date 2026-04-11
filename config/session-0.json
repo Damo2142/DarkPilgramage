@@ -232,6 +232,7 @@
         "data": {
           "description": "Scratching sounds from beneath the floor. The cellar.",
           "readAloud": "A sound. From below. Scritch. Scritch-scritch. Like nails on wood. Everyone hears it. Marta freezes.",
+          "staticNarration": "From beneath the floor — scritch, scritch-scritch. Nails on wood. Marta freezes mid-pour.",
           "checks": [{ "skill": "Perception", "dc": 12, "success": "It's coming from directly under the bar — the cellar." }]
         },
         "repeating": true,

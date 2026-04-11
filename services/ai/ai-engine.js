@@ -28,9 +28,18 @@ class AIEngine {
     this.autonomy = null;
     this.spurt = null;
     this.pacing = null;
-    // HAL Co-DM direct query system
+    // HAL/Max Co-DM direct query system
     this._halHistory = []; // last 20 exchanges { query, response, timestamp }
     this._halSystemPrompt = '';
+
+    // Section 6 — API health monitoring
+    this._apiHealth = {
+      status: 'OFFLINE', // ONLINE | DEGRADED | OFFLINE
+      lastSuccess: null,
+      consecutiveFailures: 0,
+      lastResponseMs: null,
+      checkInterval: null
+    };
   }
 
   async init(orchestrator) {
@@ -86,6 +95,27 @@ class AIEngine {
             this.halQuery(halQuery, 'voice');
             return; // Don't feed HAL queries into the normal NPC/story pipeline
           }
+        }
+      }
+
+      // Player speech is in-character by default unless prefixed with "out of character" or "OOC"
+      if (segment.speaker !== 'dm' && segment.speaker !== 'system') {
+        const text = (segment.text || '').trim();
+        const oocMatch = text.match(/^(out of character|ooc|o\.o\.c\.)[:\s,]*/i);
+        if (oocMatch) {
+          // Strip OOC prefix, mark as out-of-character
+          segment.text = text.slice(oocMatch[0].length);
+          segment.inCharacter = false;
+        } else {
+          segment.inCharacter = true;
+          // Tag with character name for context
+          const charData = this.state.get(`players.${segment.speaker}.character`);
+          if (charData?.name) segment.characterName = charData.name;
+        }
+
+        // Check which NPCs are within hearing range of this player's token
+        if (segment.inCharacter) {
+          segment.nearbyNpcs = this._getNpcsInRange(segment.speaker, 30); // 30ft hearing range
         }
       }
 
@@ -392,6 +422,9 @@ Stay strictly within what ${npcName} knows. 1-3 sentences of dialogue typical.`;
     // Start Pacing Monitor
     this.pacing.start();
 
+    // Section 6 — API health monitoring
+    this._startHealthCheck();
+
     console.log(`[AIEngine] Gemini: ${this.gemini.available ? 'connected' : 'disabled'}`);
   }
 
@@ -399,6 +432,60 @@ Stay strictly within what ${npcName} knows. 1-3 sentences of dialogue typical.`;
     this.autonomy.stop();
     this.spurt.stop();
     this.pacing.stop();
+    if (this._apiHealth.checkInterval) clearInterval(this._apiHealth.checkInterval);
+  }
+
+  _startHealthCheck() {
+    // Initial check after 5s, then every 60s
+    setTimeout(() => this._checkApiHealth(), 5000);
+    this._apiHealth.checkInterval = setInterval(() => this._checkApiHealth(), 60000);
+  }
+
+  async _checkApiHealth() {
+    if (!this.gemini.available) {
+      this._setApiStatus('OFFLINE');
+      return;
+    }
+    const t0 = Date.now();
+    try {
+      const result = await this.gemini.generate('Respond with the single word: ready', '', { maxTokens: 5, temperature: 0 });
+      const ms = Date.now() - t0;
+      this._apiHealth.lastResponseMs = ms;
+      this._apiHealth.lastSuccess = new Date().toISOString();
+      this._apiHealth.consecutiveFailures = 0;
+      if (ms > 5000) this._setApiStatus('DEGRADED');
+      else this._setApiStatus('ONLINE');
+    } catch (err) {
+      this._apiHealth.consecutiveFailures++;
+      this._apiHealth.lastResponseMs = null;
+      if (this._apiHealth.consecutiveFailures >= 2) {
+        this._setApiStatus('OFFLINE');
+      } else {
+        this._setApiStatus('DEGRADED');
+      }
+    }
+  }
+
+  _setApiStatus(newStatus) {
+    if (this._apiHealth.status !== newStatus) {
+      const old = this._apiHealth.status;
+      this._apiHealth.status = newStatus;
+      console.log(`[AIEngine] API status: ${old} -> ${newStatus}`);
+      this.bus.dispatch('ai:health', {
+        status: newStatus,
+        lastSuccess: this._apiHealth.lastSuccess,
+        lastResponseMs: this._apiHealth.lastResponseMs,
+        consecutiveFailures: this._apiHealth.consecutiveFailures
+      });
+      // When recovering from OFFLINE, fire Max recovery note
+      if (old === 'OFFLINE' && newStatus !== 'OFFLINE') {
+        const scene = this.state.get('scene') || {};
+        this.bus.dispatch('dm:whisper', {
+          text: `Back online. ${scene.name || 'session active'}. Ready.`,
+          priority: 1, category: 'system', source: 'max'
+        });
+      }
+    }
   }
 
   getStatus() {
@@ -414,6 +501,51 @@ Stay strictly within what ${npcName} knows. 1-3 sentences of dialogue typical.`;
       spurt: this.spurt.getStats(),
       pacing: this.pacing.getStats()
     };
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PROXIMITY — which NPCs can hear a player?
+  // ═══════════════════════════════════════════════════════════════
+
+  _getNpcsInRange(playerId, rangeFeet) {
+    const tokens = this.state.get('map.tokens') || {};
+    const gridSize = this.state.get('map.gridSize') || 70;
+    const feetPerGrid = 5;
+    const rangeGrid = (rangeFeet / feetPerGrid) * gridSize;
+
+    // Find player token
+    let playerToken = null;
+    for (const [id, tok] of Object.entries(tokens)) {
+      if (id === playerId || tok.actorSlug === playerId) {
+        playerToken = tok;
+        break;
+      }
+      // Match by character name
+      const charName = this.state.get(`players.${playerId}.character.name`) || '';
+      if (charName && (tok.name || '').toLowerCase() === charName.toLowerCase()) {
+        playerToken = tok;
+        break;
+      }
+    }
+    if (!playerToken) return [];
+
+    // Find NPCs within range
+    const nearby = [];
+    for (const [id, tok] of Object.entries(tokens)) {
+      if (tok.type !== 'npc' || tok.hidden) continue;
+      const dx = tok.x - playerToken.x;
+      const dy = tok.y - playerToken.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist <= rangeGrid) {
+        nearby.push({
+          tokenId: id,
+          name: tok.name,
+          actorSlug: tok.actorSlug,
+          distanceFeet: Math.round((dist / gridSize) * feetPerGrid)
+        });
+      }
+    }
+    return nearby;
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -700,6 +832,36 @@ Sample voice: "Spurt knows this is bad place. Spurt's tail is all prickly. But S
   _setupRoutes() {
     const app = this.orchestrator.getService('dashboard')?.app;
     if (!app) return;
+
+    // Section 6 — API health endpoint
+    app.get('/api/ai/health', (req, res) => {
+      res.json({
+        status: this._apiHealth.status,
+        lastSuccess: this._apiHealth.lastSuccess,
+        lastResponseMs: this._apiHealth.lastResponseMs,
+        consecutiveFailures: this._apiHealth.consecutiveFailures,
+        geminiAvailable: this.gemini.available
+      });
+    });
+
+    // Section 8 — Max query endpoint (alias of HAL)
+    app.post('/api/max/query', async (req, res) => {
+      const t0 = Date.now();
+      const { query } = req.body;
+      if (!query) return res.status(400).json({ error: 'query required' });
+      // If API offline, return manual fallback message
+      if (this._apiHealth.status === 'OFFLINE') {
+        const scene = this.state.get('scene') || {};
+        return res.json({
+          ok: false,
+          offline: true,
+          text: `AI offline. Use reference page. Current scene: ${scene.name || 'unknown'}.`,
+          latencyMs: Date.now() - t0
+        });
+      }
+      const result = await this.halQuery(query, 'typed');
+      res.json({ ok: true, ...result, text: result.response, latencyMs: Date.now() - t0 });
+    });
 
     // HAL Co-DM query
     app.post('/api/hal/query', async (req, res) => {

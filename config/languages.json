@@ -1,0 +1,182 @@
+{
+  "languages": [
+    {
+      "id": "common",
+      "name": "Common",
+      "displayName": "Common (Latin)",
+      "region": "European",
+      "family": "Romance",
+      "notes": "Lingua franca of educated medieval Europe. The universal language of the church, scholarship, and international trade. Not everyone speaks it — peasants and rural folk often speak only their regional tongue.",
+      "mutuallyIntelligibleWith": ["latin"],
+      "partiallyIntelligibleWith": [],
+      "knownBy": "Educated travelers, clergy, merchants, nobility"
+    },
+    {
+      "id": "latin",
+      "name": "Latin",
+      "displayName": "Latin (Church)",
+      "region": "European",
+      "family": "Romance",
+      "notes": "Ecclesiastical Latin — slightly different register from Common but mutually intelligible with educated speakers. Language of the Catholic church, formal documents, and scholarly works.",
+      "mutuallyIntelligibleWith": ["common"],
+      "partiallyIntelligibleWith": [],
+      "knownBy": "Brother Aldric, educated clergy, university scholars"
+    },
+    {
+      "id": "slovak",
+      "name": "Slovak",
+      "displayName": "Slovak",
+      "region": "European",
+      "family": "Slavic",
+      "notes": "Regional language of the Carpathian area. In 1274 nearly identical to Old Czech — speakers of one understand the other without difficulty. Partially intelligible with Polish and Old Russian.",
+      "mutuallyIntelligibleWith": ["czech", "old_czech"],
+      "partiallyIntelligibleWith": ["polish", "old_russian", "old_church_slavonic"],
+      "knownBy": "Old Gregor, Marta, Tomas, Piotr, local Carpathian NPCs"
+    },
+    {
+      "id": "german",
+      "name": "German",
+      "displayName": "German (Middle High)",
+      "region": "European",
+      "family": "Germanic",
+      "notes": "Dominant trade and nobility language of Central Europe. The language of the Holy Roman Empire, Habsburg court, and most merchant guilds. Katya knows it as a professional necessity.",
+      "mutuallyIntelligibleWith": [],
+      "partiallyIntelligibleWith": ["yiddish"],
+      "knownBy": "Katya Voss, Henryk the Merchant, Habsburg nobility, guild merchants"
+    },
+    {
+      "id": "english",
+      "name": "English",
+      "displayName": "English (Middle)",
+      "region": "European",
+      "family": "Germanic",
+      "notes": "Middle English — uncommon in Central Europe. Brother Aldric's native tongue. Zarina's father was English — she grew up hearing his idealized stories of England though not the language itself.",
+      "mutuallyIntelligibleWith": [],
+      "partiallyIntelligibleWith": ["german"],
+      "knownBy": "Brother Aldric"
+    },
+    {
+      "id": "french",
+      "name": "French",
+      "displayName": "Old French",
+      "region": "European",
+      "family": "Romance",
+      "notes": "Court and noble language of Western Europe. Language of the troubadour tradition. Katya knows songs in Old French — she performs them even if her audience cannot understand the words. The sound is what matters.",
+      "mutuallyIntelligibleWith": [],
+      "partiallyIntelligibleWith": ["latin", "common"],
+      "knownBy": "Katya Voss (songs and performance only), Western European nobility, Vladislav"
+    },
+    {
+      "id": "magyar",
+      "name": "Magyar",
+      "displayName": "Magyar (Hungarian)",
+      "region": "European",
+      "family": "Uralic",
+      "notes": "Administrative language of the Kingdom of Hungary. Completely unrelated to any Slavic or Germanic language — a linguistic island in Central Europe. Required to deal with Hungarian nobility, castle staff, and border officials. Will become critical at Orava Castle.",
+      "mutuallyIntelligibleWith": [],
+      "partiallyIntelligibleWith": [],
+      "knownBy": "Hungarian nobles, Orava Castle staff, border officials, King Ladislaus IV's court"
+    },
+    {
+      "id": "old_russian",
+      "name": "Old Russian",
+      "displayName": "Old Russian (Rus)",
+      "region": "European",
+      "family": "Slavic",
+      "notes": "Language of Kievan Rus traders and refugees. The Mongol invasion 25 years ago shattered Kievan Rus — survivors and refugees spread across Central Europe. Partially intelligible with Slovak and Polish. A Rus speaker and a Slovak speaker can manage basic communication with effort.",
+      "mutuallyIntelligibleWith": [],
+      "partiallyIntelligibleWith": ["slovak", "polish", "old_church_slavonic"],
+      "knownBy": "Rus traders, Orthodox clergy, Mongol-displaced refugees, Vladislav"
+    },
+    {
+      "id": "polish",
+      "name": "Polish",
+      "displayName": "Polish",
+      "region": "European",
+      "family": "Slavic",
+      "notes": "Northern Slavic language. Partially intelligible with Slovak and Czech. Polish merchants and pilgrims travel through this region regularly.",
+      "mutuallyIntelligibleWith": [],
+      "partiallyIntelligibleWith": ["slovak", "old_russian", "old_church_slavonic"],
+      "knownBy": "Polish travelers, northern merchants"
+    },
+    {
+      "id": "old_church_slavonic",
+      "name": "Church Slavonic",
+      "displayName": "Church Slavonic",
+      "region": "European",
+      "family": "Slavic",
+      "notes": "Liturgical language of the Eastern Orthodox church. Created in 863 AD by Saints Cyril and Methodius. Partially intelligible with modern Slavic languages. Vladislav knew its creators personally — this is a tell for anyone paying attention to his age.",
+      "mutuallyIntelligibleWith": [],
+      "partiallyIntelligibleWith": ["slovak", "old_russian", "polish"],
+      "knownBy": "Vladislav Dragan, Orthodox clergy, educated Eastern church scholars"
+    },
+    {
+      "id": "cuman",
+      "name": "Cuman",
+      "displayName": "Cuman",
+      "region": "European",
+      "family": "Turkic",
+      "notes": "Steppe language of the Cuman people — Turkic family, related to other steppe tongues. King Ladislaus IV of Hungary was raised speaking Cuman and is more comfortable in it than Magyar. Rusza the horse trader speaks it natively. Hearing it in a Carpathian inn in 1274 means something about where a person came from and why they're here.",
+      "mutuallyIntelligibleWith": [],
+      "partiallyIntelligibleWith": [],
+      "knownBy": "Rusza, Cuman refugees, King Ladislaus IV's court, some Hungarian border soldiers"
+    },
+    {
+      "id": "yiddish",
+      "name": "Yiddish",
+      "displayName": "Yiddish",
+      "region": "European",
+      "family": "Germanic",
+      "notes": "Language of Jewish communities throughout Central Europe. Germanic base with Hebrew and Slavic elements. Jewish merchants are present throughout this trade region — knowing Yiddish opens certain doors.",
+      "mutuallyIntelligibleWith": [],
+      "partiallyIntelligibleWith": ["german"],
+      "knownBy": "Jewish merchant communities, some German speakers"
+    },
+    {
+      "id": "greek",
+      "name": "Greek",
+      "displayName": "Byzantine Greek",
+      "region": "European",
+      "family": "Hellenic",
+      "notes": "Language of the Byzantine Empire and the Eastern church. Academic, theological, and diplomatic use. The Byzantine Empire is declining but Greek remains the language of Eastern scholarship. Vladislav has 600 years of reason to speak it.",
+      "mutuallyIntelligibleWith": [],
+      "partiallyIntelligibleWith": ["latin"],
+      "knownBy": "Vladislav, educated clergy, Byzantine traders, Eastern church scholars"
+    },
+    {
+      "id": "arabic",
+      "name": "Arabic",
+      "displayName": "Arabic",
+      "region": "European",
+      "family": "Semitic",
+      "notes": "Via trade routes, Crusade contact, and mathematical and philosophical scholarship. Arabic numerals and algebra reached Europe through Arabic texts. Rare in Central Europe but not unknown among traveling scholars.",
+      "mutuallyIntelligibleWith": [],
+      "partiallyIntelligibleWith": [],
+      "knownBy": "Vladislav, traveling scholars, spice merchants from the east"
+    },
+    {
+      "id": "elvish_americas",
+      "name": "Elvish (Americas)",
+      "displayName": "Elvish (Americas dialect)",
+      "region": "Americas",
+      "family": "Americas Elvish",
+      "notes": "The language of Zarina's mother's people. Completely unknown to all Europeans — not a variant of any known Elvish tongue, a fully separate language family from a continent Europeans do not know exists. To European ears it sounds like no language they have ever encountered. Zarina grew up speaking it alongside English stories from her father.",
+      "mutuallyIntelligibleWith": [],
+      "partiallyIntelligibleWith": [],
+      "knownBy": "Zarina Firethorn, Americas elves",
+      "specialRule": "No European NPC recognizes this as a language they know. Vladislav has heard something like it before — once, long ago. He does not say where or when."
+    },
+    {
+      "id": "draconic",
+      "name": "Draconic",
+      "displayName": "Draconic",
+      "region": "Universal",
+      "family": "Draconic",
+      "notes": "The universal dragon tongue. Valid everywhere in the world — it predates human civilization on every continent. Spurt speaks it natively as a Kobold Sorcerer. No NPC in Session 0 speaks it, but some recognize it. Vladislav recognizes it immediately and his expression shifts.",
+      "mutuallyIntelligibleWith": [],
+      "partiallyIntelligibleWith": [],
+      "knownBy": "Spurt, any dragon-adjacent creature",
+      "specialRule": "Vladislav immediately recognizes Draconic if spoken. His expression shifts. He says nothing but he is now more interested in Spurt than before. Flag as HIGH priority Max whisper."
+    }
+  ]
+}

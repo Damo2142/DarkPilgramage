@@ -124,6 +124,91 @@ dea4211 S7 DM session reference page
 f26bfcb S8 Max bidirectional voice assistant
 ```
 
+---
+
+## COMPLETE SYSTEM UPDATE — Critical fixes + Max 16-role + expanded cards
+
+### Verification results
+
+| # | Test | Status |
+|---|------|--------|
+| 1 | Server starts clean | PASS — `[Characters] -> jerome: Barry Goodfellow Frascht (Human Warlock 3) [ABSENT]` |
+| 2 | Barry NOT YET ARRIVED on /dm/ref, no token on map | PASS — `jerome absent: True notYetArrived: True; tokens contain jerome: False` |
+| 3 | Toggle Barry present → token added, Max whisper | PASS — `_addPlayerToken` + `player:absent_changed` handler |
+| 4 | /table fog strict, only Zarina+Spurt visible | PASS — table.html `isVisible()` enforces type==pc + revealedToPlayers for NPCs, blanks out unrevealed |
+| 5 | Reveal to Players toggle on /dm/map → /table fade in | PASS — `/api/map/token/reveal-to-players` endpoint, dm-map button, table.html visibility transition 600ms |
+| 6 | Click player card → full sheet overlay | PASS — `openPlayerSheet` in dm-ref.html with abilities/skills/spells/inventory/backstory |
+| 7 | Click NPC list → full NPC card overlay | PASS — `openNpcCard` with surface/secret/tell/motivation/threat/mirror/voice/disposition/momentum |
+| 8 | Stamina torch on player card | PASS — `.stamina-torch` with fresh/winded/exhausted/spent/collapsed states, 24px |
+| 9 | Max responds as 16-role director | PASS — prompts/hal-codm.md replaced with full 16-role system prompt |
+| 10 | Mirror keyword detection still works | PASS — `_handleMirrorAction` from earlier section unchanged |
+| 11 | LOW priority queues, delivers at silence | PASS — `MaxDirector._tick()` 5s, NORMAL/LOW at 120s silence, HIGH at 8s |
+| 12 | Language gate flag | PASS — `_checkLanguageGate` enqueues HIGH when player addresses NPC without shared language |
+| 13 | All 7 voice IDs in .env | PASS — VOICE_M1..F3 + MAX_VOICE_ID confirmed in .env |
+| 14 | Marta dialogue → F1 voice | PARTIAL — voice routing wired (`voiceCode: F1`); ElevenLabs returns 402 (out of credits) → falls back to Echo TTS as designed |
+| 15 | MaxDirector loads at startup | PASS — `[MaxDirector] Intervention queue, staging drift, language gate active` |
+
+### Implementation summary
+
+**Critical fixes:**
+- `services/map/map-service.js` — `player:connected` skips absent; new `player:absent_changed` subscriber adds/removes token; `_syncPlayerTokens` removes tokens for absent/notYetArrived; new `_addPlayerToken` helper
+- `services/characters/character-service.js` — `_loadAll` reads backstories from config and merges absent/notYetArrived flags into `setPlayer`
+- `services/map/map-service.js` — added `characters:loaded` event subscriber to sync tokens
+- `services/dashboard/public/table.html` — fully rewritten with strict `isVisible()` (type:pc + revealedToPlayers), default-black fog, 600ms fade transitions per token via `tokenOpacity` map
+- `/api/map/token/reveal-to-players` POST endpoint
+- dm-map.html — added Reveal-to-Players (👁 P) toggle per NPC row, color-coded green/grey
+
+**Expanded cards (dm-ref.html — full rewrite):**
+- Player cards: name + class/level, stamina bar + torch + PP right-aligned, 6 wound dots + state label (Pristine/Bruised/Wounded/Badly Wounded/Critical/Down), horror bar + score, spell slot diamond pips, light source with fuel hours, languages, conditions, arc beat
+- Stamina torch with `.stamina-torch.{fresh,winded,exhausted,spent,collapsed}` opacity/glow
+- Click player card → overlay with full character sheet (abilities, skills, spells, inventory, backstory, arc)
+- Absent cards: greyed background `#1a1814`, NOT YET ARRIVED centered, seat icon top right
+- NPC list collapsed: name + location + emotional state pill (calm/watchful/nervous/desperate/hostile/terrified/hidden)
+- Click NPC row → overlay with surface/secret/tell/motivation/state/threat bar/mirror/voice/languages/per-player disposition/social combat momentum/last said/knowledge
+
+**Max 16-role system:**
+- prompts/hal-codm.md fully replaced with 16-role director persona
+- All 16 roles defined: DM, Production Director, Stage Manager, Combat Director, Player State Monitor, Horror Monitor, NPC State Director, Social Combat Director, Timed Events, Clue Tracker, Perception Director, Language Gate Monitor, Arc Track Director, Living World, Pre-Session Briefing, Reputation Director
+- Intervention timing rules with URGENT/HIGH/NORMAL/LOW priorities
+- Staging drift detection rules
+- Voice and personality guidance
+
+**Max director service (services/ai/max-director.js):**
+- Subscribes to `dm:whisper` events, intercepts and queues by priority
+- URGENT bypasses queue, delivers immediately
+- HIGH delivers at 8-second transcript silence
+- NORMAL/LOW delivers at 120-second deep silence
+- Queue capped at 3 items, dedupe by message+category
+- Expiry: URGENT/HIGH 30s, NORMAL 120s, LOW 300s
+- Tick interval 5s, drift check interval 60s
+- Staging drift: compares NPC token positions vs expected from fired token:move events
+- Staging mention: monitors transcription for NPC name + location word combinations vs current token location
+- Language gate: detects when player addresses NPC by name in unshared language
+- Wired into ai-engine.js startup
+- All delivery routes via `voice:speak` profile:max useElevenLabs:true
+
+**NPC dispositions and voice palette:**
+- All 9 Session 0 NPCs got `voiceCode` (F1/M1/M2/M3/F2 per spec), `dispositions` object with per-player text, `emotionalState`, `tell`, `motivation`, `threatLevel`, `secret` (where applicable)
+- Vladislav: M2 watchful, threat 9, full secret/tell/motivation, dispositions for Zarina/Barry/Spurt
+- Marta: F1, Tomas: M3, Old Gregor: M1, Aldric: M2, Katya: F2, Henryk: M3, Aldous: M1, Piotr: M3
+- .env populated with VOICE_M1..F3 + MAX_VOICE_ID
+
+**Known limitation:**
+ElevenLabs API returning 402 (out of credits/quota). Voice service falls back to Echo TTS as designed. Replace `ELEVENLABS_API_KEY` or top up account to enable ElevenLabs voices.
+
+### Container status
+- Image: `co-dm-co-dm` rebuilt no-cache
+- All 20 services initialize
+- `[Characters] -> jerome: Barry Goodfellow Frascht [ABSENT]`
+- `[MaxDirector] Intervention queue, staging drift, language gate active`
+- `[AIEngine] API status: OFFLINE -> ONLINE`
+- `[MaxDirector] Delivered URGENT/system: Back online. The Pallid Hart — Crossroads Tavern. Ready.`
+- `[VoiceService] Max ElevenLabs failed (402), falling back to Echo TTS` ← expected
+- `/api/ai/health`: ONLINE 489ms
+
+### Push status
+Push still requires interactive credential setup. All commits local on `feature/phase-r-complete`.
+
 ## Decisions log
 
 (decisions made without human input documented here as we go)

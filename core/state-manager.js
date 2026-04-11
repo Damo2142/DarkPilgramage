@@ -126,7 +126,21 @@ class StateManager {
       this._state.players = sessionConfig.players;
     }
     if (sessionConfig.npcs) {
-      this._state.npcs = sessionConfig.npcs;
+      this._state.npcs = { ...sessionConfig.npcs };
+    } else {
+      this._state.npcs = this._state.npcs || {};
+    }
+    // Also fold patron-* root keys into the npcs map so the token panel
+    // and language tools see them as NPCs (not loose config blocks).
+    for (const key of Object.keys(sessionConfig)) {
+      if (!key.startsWith('patron-')) continue;
+      const p = sessionConfig[key];
+      if (p && typeof p === 'object' && p.name) {
+        // Don't clobber an entry already declared inside config.npcs
+        if (!this._state.npcs[key]) {
+          this._state.npcs[key] = { id: key, ...p };
+        }
+      }
     }
     if (sessionConfig.story) {
       this._state.story = { ...this._state.story, ...sessionConfig.story };

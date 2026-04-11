@@ -1013,22 +1013,47 @@ var DmMap = (function() {
   }
 
   function loadNpcsList() {
-    fetch('/api/state').then(function(r) { return r.json(); }).then(function(data) {
+    // Pull NPCs from state first, then merge any patron-* keys from session-config
+    // (session-config endpoint exposes the raw session-0.json so root-level patrons
+    // are visible even before the loadSession merge has run).
+    Promise.all([
+      fetch('/api/state').then(function(r) { return r.json(); }),
+      fetch('/api/session-config').then(function(r) { return r.json(); }).catch(function() { return {}; })
+    ]).then(function(results) {
+      var data = results[0];
+      var cfg = results[1] || {};
       var npcs = (data.state && data.state.npcs) || data.npcs || {};
-      var configNpcs = ['patron-farmer', 'patron-merchant', 'patron-pilgrim', 'patron-minstrel'];
+      var seen = {};
       npcsList = [];
       for (var k in npcs) {
-        if (npcs[k] && npcs[k].name) npcsList.push({ id: k, name: npcs[k].name, hidden: !!npcs[k].hidden });
+        if (npcs[k] && npcs[k].name) {
+          npcsList.push({ id: k, name: npcs[k].name, hidden: !!npcs[k].hidden });
+          seen[k] = true;
+        }
       }
-      // Add config-level patrons (resolved server-side)
-      for (var ci = 0; ci < configNpcs.length; ci++) {
-        var ck = configNpcs[ci];
-        if (data.config && data.config[ck]) {
-          npcsList.push({ id: ck, name: data.config[ck].name, hidden: false });
+      // Merge any patron-* / root NPC keys from session config that aren't in state
+      for (var ck in cfg) {
+        if (!ck.startsWith('patron-')) continue;
+        if (seen[ck]) continue;
+        var p = cfg[ck];
+        if (p && typeof p === 'object' && p.name) {
+          npcsList.push({ id: ck, name: p.name, hidden: false });
+          seen[ck] = true;
         }
       }
       renderNpcList();
     }).catch(function(){});
+  }
+
+  function _findTokenForNpc(npcId) {
+    // Direct id match
+    if (tokens[npcId]) return tokens[npcId];
+    // Search by actorSlug (map files use uniquified ids like patron-farmer-mmmq6srj2)
+    for (var tid in tokens) {
+      var t = tokens[tid];
+      if (t && (t.actorSlug === npcId || t.npcId === npcId)) return t;
+    }
+    return null;
   }
 
   function renderNpcList() {
@@ -1036,7 +1061,7 @@ var DmMap = (function() {
     if (!el) return;
     if (!npcsList.length) { el.innerHTML = '<div style="font-size:9px;color:#666;padding:4px 0;">No NPCs loaded</div>'; return; }
     el.innerHTML = npcsList.map(function(n) {
-      var tok = tokens[n.id];
+      var tok = _findTokenForNpc(n.id);
       var onMap = !!tok;
       var revealedToPlayers = !!(tok && tok.revealedToPlayers);
       var posIndicator = onMap ? '●' : '○';

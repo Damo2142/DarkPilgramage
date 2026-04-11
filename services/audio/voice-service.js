@@ -290,7 +290,7 @@ class VoiceService {
     }
 
     // Public NPC dialogue → room speaker
-    this._speakNpcPublic(text, npc || npcId || 'NPC', this._npcVoiceId(data));
+    this._speakNpcPublic(text, npc || npcId || 'NPC', this._npcVoiceId(data), npcId);
   }
 
   /**
@@ -329,18 +329,31 @@ class VoiceService {
     }
   }
 
-  async _speakNpcPublic(text, npcName, voiceId) {
+  async _speakNpcPublic(text, npcName, voiceId, npcId) {
     if (!text) return;
+    // PHASE 7D — pulse the speaker's token
+    const durationMs = this._estimateSpeechMs(text);
+    if (npcId) {
+      this.bus.dispatch('token:speaking', { tokenId: npcId, npc: npcName, durationMs });
+    }
     if (!voiceId) {
       this.bus.dispatch('npc:audio:speak', { text, channel: 'room', fallback: true, npc: npcName });
       return;
     }
     const url = await this._elevenLabsToFile(text, voiceId, this.npcCacheDir, 'npc');
     if (url) {
-      this.bus.dispatch('npc:audio', { url, text, channel: 'room', npc: npcName });
+      this.bus.dispatch('npc:audio', { url, text, channel: 'room', npc: npcName, npcId, durationMs });
     } else {
       this.bus.dispatch('npc:audio:speak', { text, channel: 'room', fallback: true, npc: npcName });
     }
+  }
+
+  // Roughly estimate spoken duration so the pulse animation lasts the
+  // right amount of time. ElevenLabs at default rate ≈ 150 words/minute.
+  _estimateSpeechMs(text) {
+    if (!text) return 1500;
+    const words = String(text).split(/\s+/).filter(Boolean).length;
+    return Math.max(1500, Math.round(words * 400)); // 400ms per word, min 1.5s
   }
 
   // ── DM earbud (PC) ─────────────────────────────────────────────────

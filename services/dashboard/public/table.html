@@ -97,8 +97,47 @@ function connect() {
   ws.onerror = function() { document.body.classList.add('disconnected'); };
 }
 
+// PHASE 7D — token speaking pulse state
+var speakingTokens = {}; // tokenId -> { until, color }
+var SPEAK_COLORS = {
+  'hooded-stranger': '#c0c8d0',  // Vladislav — cold silver-white, subtly wrong
+  'vladislav':       '#c0c8d0',
+  'tomas':           '#e07020',  // Tomas — agitated amber
+  'piotr':           '#aa2010',  // Piotr — dim red
+  'pc':              '#5a9ad9',  // player tokens — blue
+  'default':         '#e89040'   // living NPCs — warm amber
+};
+function _speakColor(tokenId, tok) {
+  if (tok && (tok.type === 'pc' || tok.isPC)) return SPEAK_COLORS.pc;
+  return SPEAK_COLORS[tokenId] || SPEAK_COLORS[tok && tok.actorSlug] || SPEAK_COLORS.default;
+}
+function startTokenPulse(tokenId, durationMs) {
+  if (!tokenId) return;
+  var tok = tokens[tokenId] || tokens[Object.keys(tokens).find(function(k){return tokens[k] && tokens[k].actorSlug===tokenId;})];
+  speakingTokens[tokenId] = { until: Date.now() + (durationMs || 2000), color: _speakColor(tokenId, tok), startedAt: Date.now() };
+  if (!_pulseAnim) _pulseAnim = requestAnimationFrame(_pulseLoop);
+}
+var _pulseAnim = null;
+function _pulseLoop() {
+  var now = Date.now();
+  var any = false;
+  for (var tid in speakingTokens) {
+    if (speakingTokens[tid].until > now) any = true;
+    else delete speakingTokens[tid];
+  }
+  render();
+  if (any) _pulseAnim = requestAnimationFrame(_pulseLoop);
+  else _pulseAnim = null;
+}
+
 function handleMsg(msg) {
   var t = msg.type || msg.event;
+  // PHASE 7D — token speaking pulse
+  if (t === 'token:speaking') {
+    var d = msg.data || {};
+    if (d.tokenId) startTokenPulse(d.tokenId, d.durationMs);
+    return;
+  }
   switch (t) {
     case 'init': {
       var s = msg.state || {};
@@ -368,6 +407,27 @@ function render() {
       ctx.globalAlpha = op;
 
       var isPlayer = tok.type === 'pc' || tok.isPC;
+
+      // PHASE 7D — speaking pulse halo
+      var sp = speakingTokens[id] || speakingTokens[tok.actorSlug];
+      if (sp && sp.until > Date.now()) {
+        var elapsed = Date.now() - sp.startedAt;
+        // Tomas has irregular rhythm; everyone else is smooth sine
+        var freqHz = (id === 'tomas' || tok.actorSlug === 'tomas') ? (1.6 + Math.sin(elapsed * 0.013) * 0.6) : 1.25;
+        var phase = (elapsed / 1000) * freqHz * Math.PI * 2;
+        var pulseAmp = (Math.sin(phase) + 1) / 2; // 0..1
+        var haloR = r * (1.5 + pulseAmp * 0.6);
+        var alpha = 0.25 + pulseAmp * 0.4;
+        ctx.save();
+        ctx.globalAlpha = alpha * op;
+        ctx.strokeStyle = sp.color;
+        ctx.lineWidth = 6 + pulseAmp * 4;
+        ctx.beginPath();
+        ctx.arc(tx, ty, haloR, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
       ctx.fillStyle = tok.color || (isPlayer ? '#5a9ad9' : '#a44');
       ctx.strokeStyle = '#000';
       ctx.lineWidth = 3;

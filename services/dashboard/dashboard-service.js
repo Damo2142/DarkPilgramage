@@ -92,6 +92,13 @@ class DashboardService {
       res.sendFile(path.join(__dirname, 'public', 'launcher.html'));
     });
 
+    // /dm/classic — original dashboard accessible from the new three-display nav.
+    // Same file as /classic; both routes serve it unchanged so the DM has a fallback
+    // for any control not yet surfaced in the new layout.
+    this.app.get('/dm/classic', (req, res) => {
+      res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    });
+
     // Legacy dashboard preserved at /classic
     this.app.get('/classic', (req, res) => {
       res.sendFile(path.join(__dirname, 'public', 'index.html'));

@@ -462,7 +462,10 @@ class MapService {
         visible: req.body.visible !== false,
         hidden: req.body.hidden || false,
         hp: req.body.hp || { current: 10, max: 10 },
-        ac: req.body.ac || 10
+        ac: req.body.ac || 10,
+        // FIX8 — anonymous by default. DM must explicitly Reveal Name.
+        nameRevealedToPlayers: false,
+        publicName: req.body.publicName || ''
       };
 
       this.state.set(`map.tokens.${tokenId}`, token);
@@ -531,6 +534,13 @@ class MapService {
       this.state.set(`map.tokens.${tokenId}.publicName`, publicName || '');
       this.bus.dispatch('map:token_public_name_changed', { tokenId, publicName: publicName || '' });
       res.json({ tokenId, publicName: publicName || '' });
+    });
+
+    // POST /api/map/tokens/anonymize-all — set nameRevealedToPlayers=false on every token.
+    // Used at session start so the table starts strictly anonymous regardless of saved state.
+    app.post('/api/map/tokens/anonymize-all', (req, res) => {
+      const count = this._anonymizeAllTokens();
+      res.json({ ok: true, anonymized: count });
     });
 
     // POST /api/map/zone/reveal — reveal or hide a zone
@@ -1391,7 +1401,32 @@ class MapService {
     }
   }
 
+  _anonymizeAllTokens() {
+    const tokens = this.state.get('map.tokens') || {};
+    let count = 0;
+    for (const [tid, tok] of Object.entries(tokens)) {
+      if (!tok) continue;
+      if (tok.nameRevealedToPlayers !== false) {
+        this.state.set(`map.tokens.${tid}.nameRevealedToPlayers`, false);
+        count++;
+      }
+    }
+    if (count) {
+      this.bus.dispatch('map:tokens_anonymized', { count });
+      console.log('[MapService] Anonymized ' + count + ' token names (session start / explicit request)');
+    }
+    return count;
+  }
+
   _setupEventListeners() {
+    // FIX8 — strict anonymity at session start.
+    // Whenever a session begins or the state is reset, every token's name is
+    // hidden from /table by default. DM must explicitly reveal each one.
+    this.bus.subscribe('session:started', () => { try { this._anonymizeAllTokens(); } catch (e) {} }, 'map');
+    this.bus.subscribe('campaign:started', () => { try { this._anonymizeAllTokens(); } catch (e) {} }, 'map');
+    this.bus.subscribe('state:session_reset', () => { try { this._anonymizeAllTokens(); } catch (e) {} }, 'map');
+    this.bus.subscribe('map:activated', () => { try { this._anonymizeAllTokens(); } catch (e) {} }, 'map');
+
     // When HP updates, sync to map token
     this.bus.subscribe('hp:update', (env) => {
       const { playerId, current, max } = env.data;

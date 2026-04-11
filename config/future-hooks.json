@@ -201,6 +201,18 @@
       ]
     },
     {
+      "id": "poludnitsa",
+      "title": "Lady Midday",
+      "creature": "Poludnitsa",
+      "statBlock": "config/creatures/poludnitsa.json",
+      "status": "planned",
+      "buildStatus": "creature-file-complete",
+      "triggerLocation": "Open harvest fields between castles, 11am-1pm, October",
+      "payoffSession": "Any session involving mountain road travel in October",
+      "description": "She appears in harvest fields and demands conversation. The party must keep talking or suffer. If they succeed she tells them something true.",
+      "successReward": "One piece of genuine regional knowledge chosen by AI based on what would be most dramatically useful at this point in the campaign"
+    },
+    {
       "id": "nocni-letavec",
       "title": "The Night Flier",
       "creature": "Noční Letavec (custom)",

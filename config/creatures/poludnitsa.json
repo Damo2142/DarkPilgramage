@@ -1,0 +1,53 @@
+{
+  "id": "poludnitsa",
+  "name": "Poludnitsa",
+  "commonName": "Lady Midday",
+  "type": "fey",
+  "size": "medium",
+  "alignment": "neutral",
+  "cr": 5,
+  "xp": 1800,
+  "ac": 14,
+  "hp": 78,
+  "hpDice": "12d8 + 24",
+  "speed": "30ft walk, can become a dust devil 40ft fly",
+  "stats": { "str": 10, "dex": 18, "con": 14, "int": 18, "wis": 16, "cha": 20 },
+  "savingThrows": { "wis": 6, "cha": 8 },
+  "skills": { "insight": 9, "persuasion": 11, "history": 7 },
+  "damageImmunities": ["fire", "radiant"],
+  "conditionImmunities": ["charmed", "exhaustion", "frightened"],
+  "senses": { "truesight": 60, "passivePerception": 13 },
+  "languages": "All languages",
+  "traits": [
+    {
+      "name": "Noon Binding",
+      "description": "The Poludnitsa only appears between 11am and 1pm in open fields or harvest areas during harvest season. In the Carpathians harvest season is October. She disappears the moment the sun begins its descent and shadow returns."
+    },
+    {
+      "name": "The Conversation",
+      "description": "When the Poludnitsa engages a creature in conversation that creature must make a DC 15 WIS save at the start of each minute or be compelled to continue speaking. Every creature engaged must contribute something each minute — a question, an observation, a story. In any minute where conversation flags all engaged creatures make DC 13 INT save or take 1d6 psychic damage and one level of Exhaustion."
+    },
+    {
+      "name": "Infinite Patience",
+      "description": "She will converse for the full two hours of her window if needed. She never tires. She never repeats herself. If conversation is successfully maintained until she departs she leaves peacefully and the conversationalists gain one piece of genuine regional knowledge she has chosen to share."
+    },
+    {
+      "name": "Harvest Sense",
+      "description": "The Poludnitsa knows the name of every person in the field she appears in without being told. She uses names immediately. This is deeply unsettling."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Withering Touch",
+      "description": "Only used if conversation is ended by fleeing. Melee plus 8 to hit, 4d10 radiant damage and one level of Exhaustion. She does not pursue — she simply touches the ones who tried to run."
+    },
+    {
+      "name": "Question",
+      "description": "She asks a question. If the target cannot answer — falls silent, gives a deliberately evasive non-answer — they make DC 14 INT save or take 2d8 psychic damage."
+    }
+  ],
+  "successReward": "If the party maintains conversation for her full window she shares one piece of genuine knowledge — a truth about the Carpathians, a warning about what is ahead, something she has observed from her fields for a very long time. She does not editorialize. She states what she knows and departs.",
+  "lore": "She has been appearing in the harvest fields since before these fields had names. She wants conversation. She finds humans interesting in the way that a very old and very patient mind finds briefly-lived things interesting — with a tenderness that is not entirely comfortable to be the object of.",
+  "campaignPlacement": "Mountain valley harvest fields between castles. October is harvest season in the Carpathians. She may appear whenever the party crosses open agricultural land between 11am and 1pm. Her appearance is not guaranteed — the DM decides when this encounter is dramatically appropriate.",
+  "futureHookId": "poludnitsa"
+}

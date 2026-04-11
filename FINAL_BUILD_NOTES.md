@@ -278,3 +278,65 @@ All resolutions correct. Vladislav speaks every European language so falls back 
 
 **P8-comm-router-access.** Comm router is owned by ai-engine, not the orchestrator service registry. Dashboard endpoints reach it via `orchestrator.getService('ai-engine').commRouter`. Documented so future services know where to look.
 
+## Outstanding Fixes Round (April 11 — 9 fixes) — 2026-04-11
+
+| Fix | Subject | Commit |
+|-----|---------|--------|
+| FIX1 | Start Campaign / Start Session buttons restored on /dm | b299472 |
+| FIX2 | Max query debounce — single response per submission | b299472 (same edit) |
+| FIX3 | Player MAP tab full screen + tap-to-move touch controls | 27013a8 |
+| FIX4 | Persistent chat bar on every player Chromebook tab | bc8d8d1 |
+| FIX5 | Mic transcription debug logging (MIC-AUDIO + WHISPER-IN) | 502e367 |
+| FIX6 | ElevenLabs voice IDs from process.env + real health check | 8d89394 |
+| FIX7 | /table fog black until player token enters room | 7304da2 |
+| FIX8 | Tokens anonymous on /table by default until DM reveals | 32c7bc4 |
+| FIX9 | Katya/Henryk/Gregor/Aldric in NPC TOKENS panel | d82b360 |
+
+### Live verification (after rebuild)
+```
+GET /api/health                       → 200
+GET /api/session-mode                 → {"mode":"pre-campaign","testMode":false}
+POST /api/test-mode {"enabled":true}  → {"ok":true,"testMode":true}
+GET /api/voice/health                 → INVALID_KEY (specific 401 error, all 7 voice IDs configured)
+GET /api/languages/npcs               → 9 NPCs including all 4 patrons
+POST /api/languages/preview marta+kim → resolves correctly through patron pipeline
+```
+
+ElevenLabs reports `INVALID_KEY: API returned 401 — key invalid or revoked`. The fix is working — the user now sees the *specific* failure (401) instead of `?`. The actual ElevenLabs API key in .env needs to be rotated separately; that is a credentials problem, not a code problem.
+
+### Decisions
+
+**FIX1.** Start Campaign + Start Session buttons live in a new `#session-controls` row on /dm above the status bar (NOT inside the existing status bar — that's where atmosphere pills + panic live and is too crowded). SessionMode polls `/api/session-mode` every 15s so the buttons stay in sync if the user changes mode from another tab. In pre-campaign with TestMode off, the Start Campaign button is marked `.disabled` (visual cue) but still clickable — clicking it warns "Test Mode is OFF. This will START THE LIVE CAMPAIGN. Continue?" so the DM can deliberately go live.
+
+**FIX2.** Max debounce uses both a `_maxFiring` re-entry guard and a 2-second `_maxLastFireAt` window. Send button is also visually disabled with text `...` while a query is in flight. The combination prevents the four-fire bug from any source: rapid Enter, double-click, ghost touches, or the previous spread of WS + REST + button calls.
+
+**FIX3A.** MAP tab full-screen mode is implemented with a body class (`map-fullscreen`) and CSS overrides rather than a special MAP-only HTML page. This means PlayerMap shares all the wound/inventory state with the rest of the page — no duplicate canvas, no separate WS connection. Tab bar overlays at the very top (36px) and auto-hides via `.tabs-hidden` after 3 seconds. Tap to top edge brings it back.
+
+**FIX3B.** Tap-to-select-then-tap is implemented as a tap-detector layer ON TOP OF the existing drag system, not a replacement. A "quick tap" is < 12px movement and < 500ms. This means:
+- Quick tap on own token → selects it (gold glow + hint), drag was canceled before any movement.
+- Quick tap on empty area while selected → fires `_completeMoveToken` directly (the same code path drag uses), so all rate limiting / wall collision / door prompts apply.
+- Slow drag still works exactly as before for desktop / large touch.
+The selection state is `this._selectedTokenId === PID` so it survives across re-renders.
+
+**FIX4.** Chat bar has its own `<style>` and `<script>` block at the bottom of index.html so it doesn't get tangled in the main scripts. ChatBar wraps `handleWsMessage` / `handleMsg` via a 200ms-interval polling installer (gives up after 5s) so it works regardless of which handler the page actually uses. This was necessary because the page has multiple inline script blocks and the WS dispatcher is defined in one of them — we can't import it directly. Messages are limited to 3 visible at a time and auto-fade after 12 seconds.
+
+**FIX5.** Debug logging is sampled (one per 50 chunks) so it's useful but not noisy. The audio-service also fires a one-time warning when STT is not ready, showing the gemini/sttReady/whisperReady flags. This means a single glance at the logs tells you exactly where the mic pipeline is broken: no MIC-AUDIO logs = mic isn't sending; MIC-AUDIO but no WHISPER-IN = audio service not subscribed; WHISPER-IN with NOT-READY = STT backend failed to start.
+
+**FIX6.** Voice palette is loaded once in `init()` from `process.env` with config fallback. The health check is a real GET to `/v1/user/subscription` (cheap and always available, unlike `/v1/text-to-speech` which costs credits). The check distinguishes 6 distinct failure modes (NO_KEY, INVALID_KEY, RATE_LIMITED, ERROR, NETWORK_ERROR, ONLINE) so the Tools tab shows the actual reason. Health refreshes hourly; manual refresh via `POST /api/voice/health/refresh`. The dashboard pill turns green only on ONLINE.
+
+**FIX7.** The fog problem was two layers stacked:
+1. table.html had a fallback that drew the entire map when no zones were revealed — REMOVED.
+2. The pallidhearfloor1 common-room zone was 4900x2800 (the WHOLE map), so revealing it revealed everything. Shrunk to 0,0 → 4340x2800 (left of the kitchen wall at x=4340). Kitchen, storage-east, storage-west, cellar-access rebuilt with sane in-bounds coordinates.
+
+The auto-reveal-on-entry logic in `_moveToken` already handled the rest — when a player token crosses a zone boundary, that zone's `revealed` flag flips to true and never reverts.
+
+**FIX8.** Default `nameRevealedToPlayers = false` was already the renderer's intent, but tokens often had it set true from saved state (DDB sync, player connect, manual reveal). Solved by adding `_anonymizeAllTokens()` which fires on `session:started`, `campaign:started`, `state:session_reset`, and `map:activated` — every entry path into a "fresh" state. Also added explicit `nameRevealedToPlayers: false` to the add-token endpoint so the field is never undefined. Existing context menu (Set Public Name / Reveal Name / Hide Name) was already wired to backend endpoints — no UI changes needed.
+
+**FIX9.** The four patron NPCs lived at the root of session-0.json (`patron-farmer`, `patron-merchant`, `patron-pilgrim`, `patron-minstrel`) instead of inside `npcs:`. State manager `loadSession` now folds patron-* root keys into `state.npcs` so the rest of the system sees them as first-class NPCs. The dm-map token panel `loadNpcsList` also merges `/api/session-config` patron entries as a belt-and-braces fallback, and `_findTokenForNpc` does an actorSlug lookup so the panel correctly shows "Move" instead of "Place" for patrons whose actual map token id is `patron-farmer-mmmq6srj2` (uniquified).
+
+### Known limitation
+ElevenLabs API key in `.env` returns 401 — needs rotation. The code is correct; this is a credentials issue. The Tools tab now surfaces the specific reason so the user knows to rotate the key.
+
+### Push status
+9 commits on `feature/phase-r-complete`. Push still requires interactive credential setup (no PAT in env, no credential helper).
+

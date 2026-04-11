@@ -52,10 +52,14 @@ class CharacterService {
     console.log('[Characters] Loaded ' + loaded + ' character(s) into game state');
     // Auto-sync from DDB if configured
     const ddbConf = this._readDdbConfig();
-    if (ddbConf.characterIds && ddbConf.characterIds.length && process.env.COBALT_COOKIE) {
+    const cookie = process.env.COBALT_COOKIE || process.env.DDB_COBALT_TOKEN;
+    if (ddbConf.characterIds && ddbConf.characterIds.length && cookie) {
       console.log('[Characters] Auto-syncing ' + ddbConf.characterIds.length + ' character(s) from D&D Beyond...');
       this.ddbSyncAll().catch(e => console.warn('[Characters] Auto-sync failed:', e.message));
     }
+    // DDB cookie health check on startup + every 4 hours
+    setTimeout(() => this._checkDdbCookieHealth(), 5000);
+    setInterval(() => this._checkDdbCookieHealth(), 4 * 60 * 60 * 1000);
     // Listen for player inventory/spell updates and persist to disk
     this.bus.subscribe('player:inventory_update', (env) => this._persistPlayerCharacter(env.data.playerId), 'characters');
     this.bus.subscribe('player:spells_update', (env) => this._persistPlayerCharacter(env.data.playerId), 'characters');
@@ -538,6 +542,109 @@ class CharacterService {
     fs.writeFileSync(this._ddbConfigPath, JSON.stringify(config, null, 2));
   }
 
+  /**
+   * Validate DDB API response before parsing — DDB returns HTML when the
+   * cookie has expired (login redirect). Throw a clear error and update
+   * status before any JSON.parse() runs.
+   */
+  async _parseDdbResponse(res, label) {
+    const text = await res.text();
+    if (text.trim().startsWith('<')) {
+      this._setDdbStatus('COOKIE_EXPIRED');
+      throw new Error('DDB returned HTML — cookie likely expired. Re-authenticate via Tools tab. (' + label + ')');
+    }
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      throw new Error('DDB returned non-JSON for ' + label + ': ' + text.slice(0, 100));
+    }
+  }
+
+  /**
+   * DDB cookie/auth status. Surfaces to all DM displays via state and bus.
+   */
+  _setDdbStatus(status) {
+    if (this._ddbStatus === status) return;
+    this._ddbStatus = status;
+    this.state.set('ddb.status', status);
+    this.state.set('ddb.statusUpdatedAt', new Date().toISOString());
+    this.bus.dispatch('ddb:status', { status });
+    console.log('[DDB] Status: ' + status);
+  }
+
+  getDdbStatus() {
+    return this._ddbStatus || 'UNKNOWN';
+  }
+
+  /**
+   * Periodic cookie health check. Runs on startup + every 4 hours.
+   * Pulls one character header (cheap) to verify the cookie still works.
+   */
+  async _checkDdbCookieHealth() {
+    const cookie = process.env.COBALT_COOKIE || process.env.DDB_COBALT_TOKEN;
+    if (!cookie) {
+      this._setDdbStatus('NO_COOKIE');
+      return;
+    }
+    const conf = this._readDdbConfig();
+    const probeId = (conf.characterIds && conf.characterIds[0]);
+    if (!probeId) {
+      this._setDdbStatus('NO_CHARACTERS');
+      return;
+    }
+    try {
+      const res = await fetch(DDB_API + '/' + probeId, {
+        headers: {
+          'Authorization': 'Bearer ' + cookie,
+          'Cookie': 'CobaltSession=' + cookie,
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0',
+          'Origin': 'https://www.dndbeyond.com',
+          'Referer': 'https://www.dndbeyond.com/'
+        }
+      });
+      const text = await res.text();
+      if (!res.ok || text.trim().startsWith('<')) {
+        this._setDdbStatus('COOKIE_EXPIRED');
+        return;
+      }
+      try {
+        JSON.parse(text);
+        this._setDdbStatus('ONLINE');
+      } catch (e) {
+        this._setDdbStatus('COOKIE_EXPIRED');
+      }
+    } catch (e) {
+      this._setDdbStatus('OFFLINE');
+    }
+  }
+
+  /**
+   * Save the cobalt cookie to .env. Runtime env updated immediately so
+   * subsequent fetches use it without restart.
+   */
+  saveCobaltCookie(cookie) {
+    if (!cookie) throw new Error('cookie required');
+    process.env.COBALT_COOKIE = cookie;
+    process.env.DDB_COBALT_TOKEN = cookie;
+    // Persist to .env file (best effort)
+    try {
+      const envPath = path.join(__dirname, '..', '..', '.env');
+      let content = '';
+      if (fs.existsSync(envPath)) content = fs.readFileSync(envPath, 'utf8');
+      const lines = content.split('\n').filter(l => !l.startsWith('COBALT_COOKIE=') && !l.startsWith('DDB_COBALT_TOKEN='));
+      lines.push('COBALT_COOKIE=' + cookie);
+      lines.push('DDB_COBALT_TOKEN=' + cookie);
+      fs.writeFileSync(envPath, lines.filter(Boolean).join('\n') + '\n');
+    } catch (e) {
+      console.warn('[DDB] Could not persist cookie to .env:', e.message);
+    }
+    this._setDdbStatus('ONLINE');
+    // Trigger health check
+    this._checkDdbCookieHealth();
+    return { ok: true };
+  }
+
   async ddbSyncAll() {
     const conf = this._readDdbConfig();
     const ids = conf.characterIds || [];
@@ -561,7 +668,7 @@ class CharacterService {
   }
 
   async ddbSyncOne(ddbId) {
-    const cookie = process.env.COBALT_COOKIE;
+    const cookie = process.env.COBALT_COOKIE || process.env.DDB_COBALT_TOKEN;
     if (!cookie) throw new Error('COBALT_COOKIE not set in .env');
 
     console.log('[DDB] Fetching character ' + ddbId + '...');
@@ -578,13 +685,17 @@ class CharacterService {
     });
 
     if (!res.ok) {
-      if (res.status === 401 || res.status === 403) throw new Error('Auth failed — COBALT_COOKIE expired');
+      if (res.status === 401 || res.status === 403) {
+        this._setDdbStatus('COOKIE_EXPIRED');
+        throw new Error('DDB cookie expired. Re-authenticate via Tools tab.');
+      }
       if (res.status === 404) throw new Error('Character ' + ddbId + ' not found on DDB');
       throw new Error('DDB API returned ' + res.status);
     }
 
-    const json = await res.json();
+    const json = await this._parseDdbResponse(res, 'character ' + ddbId);
     if (!json.data) throw new Error('Unexpected DDB response format');
+    this._setDdbStatus('ONLINE');
 
     const char = this._mapDdbCharacter(json.data, ddbId);
 

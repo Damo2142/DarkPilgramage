@@ -459,6 +459,10 @@
       <span class="nav-dot" id="nav-ai-dot"></span>
       <span id="nav-ai-text">AI ?</span>
     </span>
+    <span class="nav-status" id="nav-ddb" style="cursor:pointer;" onclick="showTab('tools')" title="Click to open Tools">
+      <span class="nav-dot" id="nav-ddb-dot"></span>
+      <span id="nav-ddb-text">DDB ?</span>
+    </span>
     <span class="nav-status">
       <span class="nav-clock" id="nav-clock">17:30</span>
       <span id="nav-tod">EVENING</span>
@@ -504,10 +508,33 @@
     <div class="tool-section">
       <h3>D&amp;D Beyond Sync</h3>
       <div class="tool-row">
+        <span class="pill" id="ddb-status-pill"><span class="pill-dot"></span><span id="ddb-status-label">DDB ?</span></span>
+      </div>
+      <div class="tool-row">
         <button class="tool-btn primary" onclick="Tools.ddbPull()">⬇ Pull from DDB</button>
         <button class="tool-btn" onclick="Tools.ddbPush()">⬆ Push to DDB</button>
         <button class="tool-btn" onclick="Tools.ddbReload()">↻ Reload from Files</button>
+        <button class="tool-btn" onclick="Tools.ddbCheckHealth()">🔍 Check Cookie</button>
       </div>
+      <div class="tool-row">
+        <label>Cobalt Session Cookie</label>
+      </div>
+      <div class="tool-row">
+        <input type="password" id="ddb-cookie" placeholder="Paste CobaltSession cookie value here" style="flex:1;">
+        <button class="tool-btn primary" onclick="Tools.ddbSaveCookie()">Save Cookie</button>
+      </div>
+      <details style="margin:8px 0;font-size:11px;color:var(--text-dim);">
+        <summary style="cursor:pointer;color:var(--gold);">How to refresh cookie</summary>
+        <ol style="margin:8px 0 8px 24px;line-height:1.6;">
+          <li>Open Chrome and go to dndbeyond.com</li>
+          <li>Log in if not already logged in</li>
+          <li>Press F12 to open DevTools</li>
+          <li>Go to Application tab → Cookies → dndbeyond.com</li>
+          <li>Find the cookie named <b>CobaltSession</b></li>
+          <li>Copy the Value</li>
+          <li>Paste into the cookie field above and click Save Cookie</li>
+        </ol>
+      </details>
       <div class="tool-row">
         <label>DDB Character IDs</label>
       </div>
@@ -664,6 +691,8 @@ function pollHealth() {
     apiHealth.latency = d.lastResponseMs || null;
     updateNavStrip();
   }).catch(function() { apiHealth.status = 'OFFLINE'; updateNavStrip(); });
+  // Also refresh DDB status
+  if (window.Tools) Tools.refreshDdbStatus();
 }
 setInterval(pollHealth, 60000);
 setTimeout(pollHealth, 1500);
@@ -1311,6 +1340,7 @@ function renderChat() {
 var Tools = {
   refresh: function() {
     Tools.loadDdb();
+    Tools.refreshDdbStatus();
     Tools.loadSession();
     Tools.loadPlayerMgmt();
     Tools.loadNpcMgmt();
@@ -1371,6 +1401,49 @@ var Tools = {
     fetch('/api/characters/reload', { method: 'POST' }).then(function(r) { return r.json(); }).then(function() {
       Tools.output('ddb-output', 'Reloaded from files');
       Tools.loadDdb();
+    }).catch(function() {});
+  },
+  ddbCheckHealth: function() {
+    Tools.output('ddb-output', 'Checking cookie health...');
+    fetch('/api/ddb/check-health', { method: 'POST' }).then(function(r) { return r.json(); }).then(function(d) {
+      Tools.output('ddb-output', 'DDB status: ' + (d.status || 'unknown'));
+      Tools.refreshDdbStatus();
+    }).catch(function(e) { Tools.output('ddb-output', 'Health check failed: ' + e.message); });
+  },
+  ddbSaveCookie: function() {
+    var cookie = document.getElementById('ddb-cookie').value.trim();
+    if (!cookie) { alert('Paste your CobaltSession cookie value first'); return; }
+    fetch('/api/ddb/cookie', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cookie: cookie })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.ok) {
+        Tools.output('ddb-output', 'Cookie saved. Status: ' + (d.status || 'unknown'));
+        document.getElementById('ddb-cookie').value = '';
+        Tools.refreshDdbStatus();
+      } else {
+        Tools.output('ddb-output', 'Save failed: ' + (d.error || 'unknown'));
+      }
+    }).catch(function(e) { Tools.output('ddb-output', 'Save failed: ' + e.message); });
+  },
+  refreshDdbStatus: function() {
+    fetch('/api/ddb/status').then(function(r) { return r.json(); }).then(function(d) {
+      var pill = document.getElementById('ddb-status-pill');
+      var label = document.getElementById('ddb-status-label');
+      if (!pill) return;
+      pill.classList.remove('online', 'offline');
+      var status = d.status || 'UNKNOWN';
+      if (status === 'ONLINE') pill.classList.add('online');
+      else pill.classList.add('offline');
+      label.textContent = 'DDB ' + status;
+      // Also update nav strip indicator
+      var navPill = document.getElementById('nav-ddb-text');
+      var navDot = document.getElementById('nav-ddb-dot');
+      if (navPill) {
+        navPill.textContent = status === 'ONLINE' ? 'DDB OK' : 'DDB ' + status;
+        navDot.className = 'nav-dot ' + (status === 'ONLINE' ? 'online' : 'offline');
+      }
     }).catch(function() {});
   },
   ddbSaveConfig: function() {
@@ -1656,6 +1729,10 @@ function handleMsg(msg) {
     apiHealth.status = (msg.data && msg.data.status) || msg.status;
     apiHealth.latency = (msg.data && msg.data.lastResponseMs) || null;
     updateNavStrip();
+    return;
+  }
+  if (t === 'ddb:status') {
+    if (window.Tools) Tools.refreshDdbStatus();
     return;
   }
 }

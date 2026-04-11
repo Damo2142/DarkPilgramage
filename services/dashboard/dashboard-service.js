@@ -496,7 +496,85 @@ Answer concisely (2-4 sentences). If it's a rules question, give the D&D 5e rule
       const svc = this.orchestrator.getService('characters');
       if (!svc) return res.status(503).json({ error: 'Character service not running' });
       const conf = svc._readDdbConfig();
-      res.json({ ...conf, hasCookie: !!process.env.COBALT_COOKIE, lastSync: svc._lastSync });
+      res.json({ ...conf, hasCookie: !!(process.env.COBALT_COOKIE || process.env.DDB_COBALT_TOKEN), lastSync: svc._lastSync });
+    });
+
+    // GET /api/ddb/status — current cookie/auth status
+    this.app.get('/api/ddb/status', (req, res) => {
+      const svc = this.orchestrator.getService('characters');
+      if (!svc) return res.status(503).json({ error: 'Character service not running' });
+      res.json({
+        status: svc.getDdbStatus(),
+        hasCookie: !!(process.env.COBALT_COOKIE || process.env.DDB_COBALT_TOKEN),
+        statusUpdatedAt: this.state.get('ddb.statusUpdatedAt') || null
+      });
+    });
+
+    // POST /api/ddb/cookie — save cobalt session cookie
+    // body: { cookie }
+    this.app.post('/api/ddb/cookie', (req, res) => {
+      const svc = this.orchestrator.getService('characters');
+      if (!svc) return res.status(503).json({ error: 'Character service not running' });
+      const { cookie } = req.body || {};
+      if (!cookie) return res.status(400).json({ error: 'cookie required' });
+      try {
+        svc.saveCobaltCookie(cookie);
+        res.json({ ok: true, status: svc.getDdbStatus() });
+      } catch (e) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // POST /api/ddb/check-health — manually trigger cookie health check
+    this.app.post('/api/ddb/check-health', async (req, res) => {
+      const svc = this.orchestrator.getService('characters');
+      if (!svc) return res.status(503).json({ error: 'Character service not running' });
+      await svc._checkDdbCookieHealth();
+      res.json({ status: svc.getDdbStatus() });
+    });
+
+    // Alias for /api/characters/sync used by dm-ref tools tab
+    this.app.post('/api/characters/sync', async (req, res) => {
+      const svc = this.orchestrator.getService('characters');
+      if (!svc) return res.status(503).json({ error: 'Character service not running' });
+      try {
+        const result = await svc.ddbSyncAll();
+        res.json(result);
+      } catch (e) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // Alias for /api/characters/reload
+    this.app.post('/api/characters/reload', (req, res) => {
+      const svc = this.orchestrator.getService('characters');
+      if (!svc) return res.status(503).json({ error: 'Character service not running' });
+      const count = svc.reload();
+      res.json({ ok: true, count });
+    });
+
+    // Alias for /api/characters/assign
+    this.app.post('/api/characters/assign', (req, res) => {
+      const svc = this.orchestrator.getService('characters');
+      if (!svc) return res.status(503).json({ error: 'Character service not running' });
+      const { playerId, characterId } = req.body || {};
+      if (!playerId) return res.status(400).json({ error: 'playerId required' });
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const aPath = path.join(__dirname, '..', '..', 'config', 'character-assignments.json');
+        let assignments = {};
+        if (fs.existsSync(aPath)) {
+          try { assignments = JSON.parse(fs.readFileSync(aPath, 'utf8')); } catch (e) {}
+        }
+        if (characterId) assignments[playerId] = String(characterId);
+        else delete assignments[playerId];
+        fs.writeFileSync(aPath, JSON.stringify(assignments, null, 2));
+        svc.reload();
+        res.json({ ok: true, assignments });
+      } catch (e) {
+        res.status(500).json({ error: e.message });
+      }
     });
 
     // POST /api/ddb/config — save DDB sync configuration

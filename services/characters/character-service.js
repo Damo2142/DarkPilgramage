@@ -296,6 +296,16 @@ class CharacterService {
       // Preserve existing absent/notYetArrived state if already set
       const existing = this.state.get('players.' + playerId) || {};
       const bs = backstories[playerId] || {};
+
+      // Apply campaign language overrides — replaces DDB-synced language list
+      const langOverride = this._langOverrides && this._langOverrides[playerId];
+      if (langOverride && Array.isArray(langOverride.languages)) {
+        // Replace simple ch.languages with structured list
+        char.languages = langOverride.languages.map(l => l.displayName || l.id || l);
+        char.languageStructured = langOverride.languages;
+        char.languageNote = langOverride.languageNote || null;
+      }
+
       const playerData = {
         name: playerId,
         character: char,
@@ -339,6 +349,24 @@ class CharacterService {
         langRules = JSON.parse(fs.readFileSync(langPath, 'utf8'));
       }
     } catch (err) {}
+
+    // Load character language overrides (campaign-specific)
+    let langOverrides = {};
+    try {
+      const overridePath = path.join(__dirname, '..', '..', 'config', 'character-language-overrides.json');
+      if (fs.existsSync(overridePath)) {
+        const data = JSON.parse(fs.readFileSync(overridePath, 'utf8'));
+        // Strip _note key
+        for (const k of Object.keys(data)) {
+          if (k.startsWith('_')) continue;
+          langOverrides[k] = data[k];
+        }
+      }
+    } catch (err) {
+      console.warn('[Characters] Language overrides parse failed:', err.message);
+    }
+    // Stash for use in _loadAll where playerId is known
+    this._langOverrides = langOverrides;
 
     for (const file of fs.readdirSync(this.charactersDir)) {
       if (!file.endsWith('.json')) continue;

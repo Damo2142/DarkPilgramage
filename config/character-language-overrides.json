@@ -1,0 +1,67 @@
+{
+  "_note": "Override DDB-synced language data with campaign-specific assignments. Keys are player IDs (kim, jerome, ed, jen, nick) — these match character-assignments.json.",
+  "kim": {
+    "characterName": "Zarina Firethorn",
+    "languages": [
+      {
+        "id": "common",
+        "displayName": "Common (Latin)",
+        "fluency": "fluent",
+        "note": null
+      },
+      {
+        "id": "elvish_americas",
+        "displayName": "Elvish (Americas dialect)",
+        "fluency": "fluent",
+        "note": "Unknown to all Europeans. Her mother's language."
+      },
+      {
+        "id": "draconic",
+        "displayName": "Draconic",
+        "fluency": "fluent",
+        "note": "Universal dragon tongue — understood everywhere."
+      }
+    ],
+    "languageNote": "Zarina's Elvish is from the Americas — completely unknown to any European NPC. To them it sounds like no language they have encountered. Her father was English but she did not learn English from him — only his stories of a place she has never seen."
+  },
+  "jerome": {
+    "characterName": "Barry Goodfellow Frascht",
+    "languages": [
+      {
+        "id": "common",
+        "displayName": "Common (Latin)",
+        "fluency": "fluent",
+        "note": null
+      }
+    ],
+    "languageNote": "Barry speaks Common. As a Van Helsing bloodline descendant he may have encountered other languages in his family's records — this can surface as an arc beat."
+  },
+  "ed": {
+    "characterName": "Spurt the Sorcerer",
+    "playerNote": "Spurt is currently played by AI but has the same character data slot.",
+    "languages": [
+      {
+        "id": "common",
+        "displayName": "Common (Latin)",
+        "fluency": "fluent",
+        "note": null
+      },
+      {
+        "id": "draconic",
+        "displayName": "Draconic",
+        "fluency": "fluent — native",
+        "note": "Universal dragon tongue. Spurt thinks in Draconic."
+      }
+    ],
+    "languageNote": "Spurt is from the Americas but speaks Common and Draconic. Draconic being universal means he can speak it anywhere in the world — it predates human civilization on every continent. In Session 0 no NPC speaks it but Vladislav recognizes it immediately."
+  },
+  "spurt": {
+    "_alias": "Same as ed — Spurt AI player slot.",
+    "characterName": "Spurt the Sorcerer",
+    "languages": [
+      { "id": "common", "displayName": "Common (Latin)", "fluency": "fluent", "note": null },
+      { "id": "draconic", "displayName": "Draconic", "fluency": "fluent — native", "note": "Universal dragon tongue. Spurt thinks in Draconic." }
+    ],
+    "languageNote": "Spurt is from the Americas. Speaks Common and Draconic. Draconic is universal."
+  }
+}

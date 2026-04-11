@@ -46,6 +46,32 @@ class DashboardService {
       res.sendFile(path.join(__dirname, 'public', 'tablet.html'));
     });
 
+    // /table — projection display for the player-facing screen
+    this.app.get('/table', (req, res) => {
+      res.sendFile(path.join(__dirname, 'public', 'table.html'));
+    });
+
+    // /dm — three-display DM interface center (laptop)
+    this.app.get('/dm', (req, res) => {
+      res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    });
+    this.app.get('/dm/map', (req, res) => {
+      res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    });
+    this.app.get('/dm/ref', (req, res) => {
+      res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    });
+    // /dm/brief — DM session reference page (built in S7)
+    this.app.get('/dm/brief', (req, res) => {
+      const briefPath = path.join(__dirname, '..', '..', 'sessions', 'current-brief.html');
+      const fs = require('fs');
+      if (fs.existsSync(briefPath)) {
+        res.sendFile(briefPath);
+      } else {
+        res.send('<html><body style="background:#141210;color:#c8b89a;font-family:serif;padding:40px;"><h1>Session brief not yet generated</h1><p>Click Start Session to generate.</p></body></html>');
+      }
+    });
+
     // Dashboard launcher (new main page)
     this.app.get('/launcher', (req, res) => {
       res.sendFile(path.join(__dirname, 'public', 'launcher.html'));

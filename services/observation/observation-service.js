@@ -33,6 +33,15 @@ class ObservationService {
     this.config = orchestrator.config;
 
     this._loadFromConfig(this.config);
+
+    // Section 3 — Window perception intercepts
+    try {
+      const PerceptionIntercepts = require('./perception-intercepts');
+      this.perceptionIntercepts = new PerceptionIntercepts(orchestrator, this.bus, this.state, this.config);
+      this.perceptionIntercepts.init();
+    } catch (err) {
+      console.warn('[Observation] perception-intercepts init failed:', err.message);
+    }
   }
 
   async start() {

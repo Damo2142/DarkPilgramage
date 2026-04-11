@@ -1117,7 +1117,10 @@ class MapService {
       x: snappedX,
       y: snappedY,
       oldX,
-      oldY
+      oldY,
+      duration: opts.duration || 0,
+      reason: opts.reason || 'manual',
+      hidden: !!opts.hidden
     });
 
     return { tokenId, x: snappedX, y: snappedY };
@@ -1372,6 +1375,38 @@ class MapService {
     // Auto-perception: check zones when tokens enter them
     this.bus.subscribe('map:zone_enter', (env) => {
       this._handleZonePerceptionCheck(env.data);
+    }, 'map');
+
+    // Section 3 — Autonomous token movement via token:move event
+    // Allows AI Co-DM and timed events to move tokens with animation duration.
+    this.bus.subscribe('token:move', (env) => {
+      const { entityId, to, duration, hidden, reason } = env.data || {};
+      if (!entityId || !to) return;
+      const token = this.state.get(`map.tokens.${entityId}`);
+      if (!token) {
+        console.log(`[MapService] token:move: no token for ${entityId}`);
+        return;
+      }
+      const gs = this.state.get('map.gridSize') || 70;
+      // Convert grid coords to pixels if values look like grid coords
+      const px = to.x < 200 ? to.x * gs : to.x;
+      const py = to.y < 200 ? to.y * gs : to.y;
+      this._moveToken(entityId, px, py, {
+        force: true,
+        duration: duration || 600,
+        reason: reason || 'autonomous',
+        hidden: !!hidden
+      });
+    }, 'map');
+
+    this.bus.subscribe('token:hide', (env) => {
+      const id = env.data?.entityId || env.data?.tokenId;
+      if (!id) return;
+      const tok = this.state.get(`map.tokens.${id}`);
+      if (tok) {
+        this.state.set(`map.tokens.${id}.hidden`, true);
+        this.bus.dispatch('map:token_full_update', { tokenId: id });
+      }
     }, 'map');
   }
 

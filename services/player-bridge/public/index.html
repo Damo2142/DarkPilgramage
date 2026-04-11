@@ -946,6 +946,43 @@ function switchTab(tabName) {
   const btn = document.querySelector('.tab-btn[data-tab="' + tabName + '"]');
   if (btn) btn.classList.add('active');
 }
+// ── Player Mic Capture ──────────────────────────────────────
+const PlayerMic = {
+  _active: false, _stream: null, _context: null, _processor: null,
+
+  async start() {
+    if (this._active) return;
+    try {
+      this._stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 16000 }
+      });
+      this._context = new AudioContext({ sampleRate: 16000 });
+      const source = this._context.createMediaStreamSource(this._stream);
+      this._processor = this._context.createScriptProcessor(4096, 1, 1);
+      this._processor.onaudioprocess = (e) => {
+        if (!this._active) return;
+        const f32 = e.inputBuffer.getChannelData(0);
+        const i16 = new Int16Array(f32.length);
+        for (let i = 0; i < f32.length; i++) i16[i] = Math.max(-32768, Math.min(32767, Math.round(f32[i] * 32767)));
+        send({ type: 'audio:chunk', data: { audio: Array.from(i16), sampleRate: 16000, playerId: PID } });
+      };
+      source.connect(this._processor);
+      this._processor.connect(this._context.destination);
+      this._active = true;
+      console.log('[PlayerMic] Streaming as', PID);
+    } catch (e) {
+      console.warn('[PlayerMic] Mic access denied:', e.message);
+    }
+  },
+
+  stop() {
+    this._active = false;
+    if (this._processor) { this._processor.disconnect(); this._processor = null; }
+    if (this._context) { this._context.close(); this._context = null; }
+    if (this._stream) { this._stream.getTracks().forEach(t => t.stop()); this._stream = null; }
+  }
+};
+
 function fmt(n){return n>=0?'+'+n:''+n;}
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
@@ -954,7 +991,7 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 var _serverBoot = null; // track server boot time to detect restarts
 function connect(){
   ws=new WebSocket(WSU);
-  ws.onopen=()=>$('conn-dot').classList.add('on');
+  ws.onopen=()=>{$('conn-dot').classList.add('on');PlayerMic.start();};
   ws.onmessage=e=>{try{handle(JSON.parse(e.data));}catch(err){console.error(err);}};
   ws.onclose=()=>{$('conn-dot').classList.remove('on');$('ovmsg').textContent='Reconnecting...';$('overlay').classList.remove('hidden');$('app').classList.remove('visible');setTimeout(connect,3000);};
   ws.onerror=console.error;
@@ -1003,6 +1040,7 @@ function handle(m){
     case 'stamina:updated': if(m.data) StaminaRing.update(m.data); break;
     case 'horror:effect': applyHorror(m.effect,m.payload,m.durationMs); break;
     case 'horror:clear': clearHorror(); break;
+    case 'perception:flash': showPerceptionFlash(m.description); break;
     case 'npc:dialogue': showToast(m.npc||'NPC',m.text,8000); break;
     case 'dm:private_message':
       if (m.style === 'observation') { showObservation(m.text, m.durationMs || 45000); }
@@ -1011,6 +1049,19 @@ function handle(m){
     case 'chat:party': addChat(m.fromName||m.from,'[Party] '+m.text,'var(--accent)'); if(m.from!==PID) showToast(m.fromName||m.from,m.text,4000); break;
     case 'chat:whisper': addChat(m.fromName||m.from,'[Whisper] '+m.text,'#c9a54e'); showToast(m.fromName||m.from,'(whisper) '+m.text,5000); break;
     case 'chat:dm_reply': addChat('DM',m.text,'#c9a54e'); showToast('DM',m.text,5000); break;
+    // Ambient life events
+    case 'ambient:observation':
+      showObservation(`${m.npcName} ${m.text}`, 30000);
+      break;
+    case 'ambient:environment':
+      showObservation(m.text, 25000);
+      break;
+    case 'ambient:dwell_reaction':
+      showObservation(m.text, 20000);
+      break;
+    case 'ambient:performance':
+      showObservation(m.content, 45000);
+      break;
     case 'quest:update': onQuestUpdate(m); break;
     case 'npc:chat_reply': onNpcChatReply(m); break;
     case 'npc:available': _availableNpcs = m.npcs || []; renderNpcSelect(); break;
@@ -2639,6 +2690,19 @@ function showToast(who,text,dur){
   setTimeout(function(){t.classList.add('fading');setTimeout(function(){t.remove();},500);},dur);
   // Also add to chat log
   addChat(who,text,who==='DM Whisper'?'#c9a54e':'var(--purple)');
+}
+
+// Section 3 — Window perception flash. No sound, no notification, no journal entry.
+function showPerceptionFlash(text) {
+  var f = document.createElement('div');
+  f.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9000;border:2px solid rgba(180,20,20,0.6);box-shadow:inset 0 0 40px rgba(180,20,20,0.2);transition:opacity 1s ease;opacity:1;display:flex;align-items:center;justify-content:center;';
+  var msg = document.createElement('div');
+  msg.style.cssText = 'font-size:16px;color:#e8d0a0;text-align:center;max-width:80%;font-family:serif;text-shadow:0 0 8px rgba(0,0,0,0.9);';
+  msg.textContent = text || '';
+  f.appendChild(msg);
+  document.body.appendChild(f);
+  // Hold 2 seconds, fade over 1 second
+  setTimeout(function() { f.style.opacity = '0'; setTimeout(function() { f.remove(); }, 1000); }, 2000);
 }
 
 // ── QUEST JOURNAL (Feature 47) ──────────────────────────────────────

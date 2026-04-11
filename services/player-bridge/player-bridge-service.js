@@ -336,6 +336,18 @@ class PlayerBridgeService {
       }
     }, 'player-bridge');
 
+    // Section 3 — Window perception flash (intercept hits)
+    this.bus.subscribe('player:perception_flash', (env) => {
+      const { playerId, description, margin, waypoint } = env.data || {};
+      if (!playerId) return;
+      this._sendToPlayer(playerId, {
+        type: 'perception:flash',
+        description,
+        margin,
+        waypoint
+      });
+    }, 'player-bridge');
+
     this.bus.subscribe('state:change', (env) => {
       const { path: statePath, value } = env.data;
 
@@ -474,6 +486,42 @@ class PlayerBridgeService {
         type: 'npc:dialogue',
         npc: env.data.npc,
         text: env.data.text
+      });
+    }, 'player-bridge');
+
+    // Ambient life events — broadcast to all players
+    this.bus.subscribe('ambient:observation', (env) => {
+      this._broadcast({
+        type: 'ambient:observation',
+        npcName: env.data.npcName,
+        text: env.data.text
+      });
+    }, 'player-bridge');
+
+    this.bus.subscribe('ambient:environment', (env) => {
+      this._broadcast({
+        type: 'ambient:environment',
+        text: env.data.text,
+        tier: env.data.tier
+      });
+    }, 'player-bridge');
+
+    this.bus.subscribe('ambient:dwell_reaction', (env) => {
+      // Send dwell reaction only to the lingering player
+      const { playerId, npcName, text } = env.data;
+      this._sendToPlayer(playerId, {
+        type: 'ambient:dwell_reaction',
+        npcName, text
+      });
+    }, 'player-bridge');
+
+    this.bus.subscribe('ambient:performance', (env) => {
+      this._broadcast({
+        type: 'ambient:performance',
+        npcName: env.data.npcName,
+        title: env.data.title,
+        content: env.data.content,
+        perfType: env.data.type
       });
     }, 'player-bridge');
 
@@ -795,6 +843,15 @@ class PlayerBridgeService {
         const p = this.players.get(playerId);
         if (p) p.audioStreaming = false;
         this.bus.dispatch('audio:player_stream_stop', { playerId });
+        break;
+
+      case 'audio:chunk':
+        // Player mic audio — dispatch for transcription
+        this.bus.dispatch('audio:chunk', {
+          playerId,
+          audio: msg.data?.audio || msg.audio,
+          sampleRate: msg.data?.sampleRate || msg.sampleRate || 16000
+        });
         break;
 
       case 'roll:result':

@@ -688,6 +688,49 @@
   </style>
 </head>
 <body>
+<script>
+  // ── Three-display view filter ──
+  // /dm /dm/map /dm/ref serve this same file. Apply CSS body class based on path.
+  (function() {
+    var path = location.pathname;
+    if (path === '/dm' || path === '/dm/') document.body.classList.add('view-dm-center');
+    else if (path === '/dm/map') document.body.classList.add('view-dm-map');
+    else if (path === '/dm/ref') document.body.classList.add('view-dm-ref');
+  })();
+</script>
+<style>
+  /* /dm — center display: focus on Max input, whisper log, timed events, session, atmosphere */
+  body.view-dm-center [data-panel="map"],
+  body.view-dm-center [data-panel="player-maps"],
+  body.view-dm-center [data-panel="combat"],
+  body.view-dm-center [data-panel="walls"],
+  body.view-dm-center [data-panel="lights"],
+  body.view-dm-center [data-panel="zones"],
+  body.view-dm-center [data-panel="actors"] { display: none !important; }
+
+  /* /dm/map — left display: full screen map only */
+  body.view-dm-map .panel-section { display: none !important; }
+  body.view-dm-map [data-panel="map"] {
+    display: block !important;
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 100;
+    border: none !important;
+  }
+
+  /* /dm/ref — right display: wounds, equipment, combat, players, world state */
+  body.view-dm-ref [data-panel="map"],
+  body.view-dm-ref [data-panel="walls"],
+  body.view-dm-ref [data-panel="lights"],
+  body.view-dm-ref [data-panel="zones"],
+  body.view-dm-ref [data-panel="hal"],
+  body.view-dm-ref [data-panel="transcript-input"],
+  body.view-dm-ref [data-panel="soundboard"],
+  body.view-dm-ref [data-panel="atmosphere"] { display: none !important; }
+</style>
+
 
   <div id="overlay">⛧ Connecting to Co-DM...</div>
 

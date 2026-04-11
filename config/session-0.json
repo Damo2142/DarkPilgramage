@@ -120,6 +120,81 @@
         }
       },
       {
+        "id": "vladislav_to_window",
+        "gameTime": "1274-10-15T21:00:00",
+        "event": "token:move",
+        "data": {
+          "entityId": "vladislav",
+          "to": { "x": 22, "y": 8 },
+          "duration": 800,
+          "hidden": false,
+          "reason": "ambient",
+          "staticNarration": "The man in the corner rises without a sound and moves to the east window. He stands with his back to the room, looking out into the dark."
+        }
+      },
+      {
+        "id": "tomas_to_rear_door",
+        "gameTime": "1274-10-15T22:30:00",
+        "event": "token:move",
+        "data": {
+          "entityId": "tomas",
+          "to": { "x": 14, "y": 14 },
+          "duration": 1000,
+          "hidden": true,
+          "reason": "flee",
+          "staticNarration": "Tomas mutters something about needing air. He crosses the common room toward the back. The door closes behind him without much sound."
+        }
+      },
+      {
+        "id": "marta_settles_at_bar",
+        "gameTime": "1274-10-15T23:00:00",
+        "event": "token:move",
+        "data": {
+          "entityId": "marta",
+          "to": { "x": 6, "y": 4 },
+          "duration": 600,
+          "hidden": false,
+          "reason": "ambient",
+          "staticNarration": "Marta returns to her place behind the bar. She does not move from it again tonight."
+        }
+      },
+      {
+        "id": "piotr_shifts_in_cellar",
+        "gameTime": "1274-10-16T02:00:00",
+        "event": "token:move",
+        "data": {
+          "entityId": "piotr",
+          "to": { "x": 13, "y": 8 },
+          "duration": 400,
+          "hidden": true,
+          "condition": "secret_revealed:cellar_contents",
+          "reason": "ambient",
+          "staticNarration": "Something in the cellar shifts. A few feet east. Then still again."
+        }
+      },
+      {
+        "id": "kamenny_appears",
+        "gameTime": "1274-10-16T05:30:00",
+        "event": "token:move",
+        "data": {
+          "entityId": "kamenny",
+          "to": { "x": 18, "y": 16 },
+          "duration": 600,
+          "hidden": true,
+          "reason": "event",
+          "staticNarration": "Outside the inn, near the wood shed, something stone-grey is suddenly there. It was not there a moment ago."
+        }
+      },
+      {
+        "id": "kamenny_gone",
+        "gameTime": "1274-10-16T06:00:00",
+        "event": "token:hide",
+        "data": {
+          "entityId": "kamenny",
+          "staticNarration": "Where the stone-grey shape stood there is only snow. No tracks. Nothing to suggest it was ever there."
+        }
+      },
+      {
         "id": "fire_burns_low",
         "offsetMinutes": 45,
         "event": "dm:whisper",
@@ -776,6 +851,13 @@
         "dmNote": "Players who take this bag are carrying the Bagman seed. Activate the encounter at any point on the road to Houska.",
         "spurtReaction": "Spurt will not go near it at Dread 41+. He watches it from across the room."
       }
+    ],
+
+    "windowWaypoints": [
+      { "id": "window-north", "wall": "north", "x": 12, "y": 2, "perceptionBaseDC": 15, "description": "north window of the common room" },
+      { "id": "window-south", "wall": "south", "x": 12, "y": 14, "perceptionBaseDC": 15, "description": "south window of the common room" },
+      { "id": "window-east", "wall": "east", "x": 22, "y": 8, "perceptionBaseDC": 15, "description": "east window of the common room" },
+      { "id": "window-west", "wall": "west", "x": 2, "y": 8, "perceptionBaseDC": 15, "description": "west window of the common room" }
     ],
 
     "hazards": [

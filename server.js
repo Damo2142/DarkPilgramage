@@ -19,6 +19,7 @@ const ObservationService = require('./services/observation/observation-service')
 const HorrorService = require('./services/horror/horror-service');
 const SocialCombatService = require('./services/social-combat/social-combat-service');
 const HazardService = require('./services/hazard/hazard-service');
+const AmbientLifeService = require('./services/ambient-life/ambient-life-service');
 const { loadConfig } = require('./utils/config-loader');
 
 // Auto-discover session config: CLI arg > config/session-0.json > defaults only
@@ -53,6 +54,7 @@ orchestrator.register(new ObservationService());
 orchestrator.register(new HorrorService());
 orchestrator.register(new SocialCombatService());
 orchestrator.register(new HazardService());
+orchestrator.register(new AmbientLifeService());
 
 orchestrator.startAll().catch(err => {
   console.error('Fatal startup error:', err);
@@ -68,5 +70,12 @@ async function gracefulShutdown(signal) {
 }
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('uncaughtException', err => console.error('Uncaught exception:', err));
-process.on('unhandledRejection', err => console.error('Unhandled rejection:', err));
+
+// CR-2 — global crash prevention. Log and continue. Node 15+ defaults to
+// crashing on unhandled rejection — explicit handlers keep the server up.
+process.on('uncaughtException', (err, origin) => {
+  console.error('[CRASH-PREVENTION] Uncaught exception (' + origin + '):', err && err.stack || err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[CRASH-PREVENTION] Unhandled rejection:', reason && reason.stack || reason);
+});

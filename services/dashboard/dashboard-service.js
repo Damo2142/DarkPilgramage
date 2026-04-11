@@ -418,6 +418,15 @@ Answer concisely (2-4 sentences). If it's a rules question, give the D&D 5e rule
       res.json({ profile });
     });
 
+    // Section 6 — Narrator whisper to specific player
+    // body: { playerId, text }
+    this.app.post('/api/narrator/whisper', (req, res) => {
+      const { playerId, text } = req.body || {};
+      if (!playerId || !text) return res.status(400).json({ error: 'playerId and text required' });
+      this.bus.dispatch('narrator:whisper_player', { playerId, text });
+      res.json({ ok: true });
+    });
+
     // ── Character / DDB routes ─────────────────────────────────────────────
     // GET  /api/characters          — list synced characters + assignments
     this.app.get('/api/characters', (req, res) => {

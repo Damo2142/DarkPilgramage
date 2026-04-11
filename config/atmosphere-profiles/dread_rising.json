@@ -4,16 +4,32 @@
   "description": "Mounting dread. Something is coming.",
   "horrorLevel": 6,
   "lights": {
-    "color": { "hue": 0, "sat": 80, "level": 20 },
-    "flicker": { "enabled": true, "intensity": 0.4, "speed": "fast" }
+    "color": {
+      "hue": 0,
+      "sat": 80,
+      "level": 20
+    },
+    "flicker": {
+      "enabled": true,
+      "intensity": 0.4,
+      "speed": "fast"
+    }
   },
   "playerEffects": {
     "atmoTint": "rgba(60,0,0,.18)",
-    "glitch": { "chance": 0.15, "durationMs": 800 }
+    "glitch": {
+      "chance": 0.15,
+      "durationMs": 800
+    }
   },
   "audio": {
     "ambient": "heartbeat_slow",
     "music": "dread_building",
-    "volume": { "ambient": 0.6, "music": 0.4, "effects": 0.9 }
-  }
+    "volume": {
+      "ambient": 0.6,
+      "music": 0.4,
+      "effects": 0.9
+    }
+  },
+  "noiseLevel": -10
 }

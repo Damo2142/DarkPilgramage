@@ -348,6 +348,41 @@ class PlayerBridgeService {
       });
     }, 'player-bridge');
 
+    // Section 6 — NPC speech routed to specific player by proximity tier
+    this.bus.subscribe('player:npc_speech', (env) => {
+      const d = env.data || {};
+      if (!d.playerId) return;
+      this._sendToPlayer(d.playerId, {
+        type: 'npc:speech',
+        npcId: d.npcId,
+        npcName: d.npcName,
+        text: d.text,
+        tier: d.tier || 'FULL'
+      });
+    }, 'player-bridge');
+
+    // Section 6 — Player to player private message
+    this.bus.subscribe('player:p2p_message', (env) => {
+      const d = env.data || {};
+      if (!d.toPlayerId) return;
+      this._sendToPlayer(d.toPlayerId, {
+        type: 'chat:p2p',
+        from: d.fromPlayerId,
+        fromName: d.fromName,
+        text: d.text
+      });
+    }, 'player-bridge');
+
+    // Section 6 — Narrator whisper to specific player
+    this.bus.subscribe('narrator:whisper_player', (env) => {
+      const d = env.data || {};
+      if (!d.playerId) return;
+      this._sendToPlayer(d.playerId, {
+        type: 'narrator:whisper',
+        text: d.text
+      });
+    }, 'player-bridge');
+
     this.bus.subscribe('state:change', (env) => {
       const { path: statePath, value } = env.data;
 

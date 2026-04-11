@@ -1,11 +1,17 @@
 {
   "id": "dawn",
   "name": "dawn",
-  "description": "Dawn breaks. Relief. Safety — for now.",
+  "description": "Dawn breaks. Relief. Safety \u2014 for now.",
   "horrorLevel": 0,
   "lights": {
-    "color": { "hue": 40, "sat": 50, "level": 80 },
-    "flicker": { "enabled": false }
+    "color": {
+      "hue": 40,
+      "sat": 50,
+      "level": 80
+    },
+    "flicker": {
+      "enabled": false
+    }
   },
   "playerEffects": {
     "atmoTint": "rgba(100,90,60,.05)"
@@ -13,6 +19,11 @@
   "audio": {
     "ambient": "birds_morning",
     "music": "relief_theme",
-    "volume": { "ambient": 0.4, "music": 0.2, "effects": 0.5 }
-  }
+    "volume": {
+      "ambient": 0.4,
+      "music": 0.2,
+      "effects": 0.5
+    }
+  },
+  "noiseLevel": 0
 }

@@ -4,8 +4,16 @@
   "description": "Cozy tavern, firelight, safe feeling",
   "horrorLevel": 0,
   "lights": {
-    "color": { "hue": 15, "sat": 80, "level": 70 },
-    "flicker": { "enabled": true, "intensity": 0.1, "speed": "slow" }
+    "color": {
+      "hue": 15,
+      "sat": 80,
+      "level": 70
+    },
+    "flicker": {
+      "enabled": true,
+      "intensity": 0.1,
+      "speed": "slow"
+    }
   },
   "playerEffects": {
     "atmoTint": "rgba(80,50,10,.06)"
@@ -13,6 +21,11 @@
   "audio": {
     "ambient": "fireplace_crackling",
     "music": "tavern_folk_quiet",
-    "volume": { "ambient": 0.5, "music": 0.25, "effects": 0.7 }
-  }
+    "volume": {
+      "ambient": 0.5,
+      "music": 0.25,
+      "effects": 0.7
+    }
+  },
+  "noiseLevel": 0
 }

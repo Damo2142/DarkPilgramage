@@ -4,8 +4,16 @@
   "description": "Something is wrong. Conversations falter.",
   "horrorLevel": 2,
   "lights": {
-    "color": { "hue": 10, "sat": 70, "level": 45 },
-    "flicker": { "enabled": true, "intensity": 0.2, "speed": "medium" }
+    "color": {
+      "hue": 10,
+      "sat": 70,
+      "level": 45
+    },
+    "flicker": {
+      "enabled": true,
+      "intensity": 0.2,
+      "speed": "medium"
+    }
   },
   "playerEffects": {
     "atmoTint": "rgba(60,30,0,.10)"
@@ -13,6 +21,11 @@
   "audio": {
     "ambient": "fireplace_crackling",
     "music": "tension_low",
-    "volume": { "ambient": 0.4, "music": 0.3, "effects": 0.8 }
-  }
+    "volume": {
+      "ambient": 0.4,
+      "music": 0.3,
+      "effects": 0.8
+    }
+  },
+  "noiseLevel": -5
 }

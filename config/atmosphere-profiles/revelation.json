@@ -4,16 +4,30 @@
   "description": "A major truth is revealed. Golden dramatic moment.",
   "horrorLevel": 4,
   "lights": {
-    "color": { "hue": 45, "sat": 80, "level": 50 },
-    "flicker": { "enabled": false }
+    "color": {
+      "hue": 45,
+      "sat": 80,
+      "level": 50
+    },
+    "flicker": {
+      "enabled": false
+    }
   },
   "playerEffects": {
     "atmoTint": "rgba(100,80,20,.10)",
-    "screenFlash": { "color": "rgba(201,165,78,.3)", "flashMs": 400 }
+    "screenFlash": {
+      "color": "rgba(201,165,78,.3)",
+      "flashMs": 400
+    }
   },
   "audio": {
     "ambient": "silence_tense",
     "music": "revelation_sting",
-    "volume": { "ambient": 0.2, "music": 0.6, "effects": 0.8 }
-  }
+    "volume": {
+      "ambient": 0.2,
+      "music": 0.6,
+      "effects": 0.8
+    }
+  },
+  "noiseLevel": 0
 }

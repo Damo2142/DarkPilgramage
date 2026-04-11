@@ -1,11 +1,17 @@
 {
   "id": "home_normal",
   "name": "Home Normal",
-  "description": "Standard home lighting — session ended, the world continues",
+  "description": "Standard home lighting \u2014 session ended, the world continues",
   "horrorLevel": 0,
   "lights": {
-    "color": { "hue": 30, "sat": 20, "level": 80 },
-    "flicker": { "enabled": false }
+    "color": {
+      "hue": 30,
+      "sat": 20,
+      "level": 80
+    },
+    "flicker": {
+      "enabled": false
+    }
   },
   "playerEffects": {
     "atmoTint": "rgba(0,0,0,0)"
@@ -13,10 +19,31 @@
   "audio": {
     "ambient": null,
     "music": null,
-    "volume": { "ambient": 0, "music": 0, "effects": 0 }
+    "volume": {
+      "ambient": 0,
+      "music": 0,
+      "effects": 0
+    }
   },
   "hubitat": {
-    "ambient": { "ids": [880, 881, 649, 582], "level": 80, "colorTemp": 3000, "transition": 30 },
-    "rgb": { "ids": [912, 913], "level": 0 }
-  }
+    "ambient": {
+      "ids": [
+        880,
+        881,
+        649,
+        582
+      ],
+      "level": 80,
+      "colorTemp": 3000,
+      "transition": 30
+    },
+    "rgb": {
+      "ids": [
+        912,
+        913
+      ],
+      "level": 0
+    }
+  },
+  "noiseLevel": 0
 }

@@ -4,8 +4,16 @@
   "description": "Active combat. Urgent, dangerous.",
   "horrorLevel": 5,
   "lights": {
-    "color": { "hue": 0, "sat": 90, "level": 35 },
-    "flicker": { "enabled": true, "intensity": 0.15, "speed": "medium" }
+    "color": {
+      "hue": 0,
+      "sat": 90,
+      "level": 35
+    },
+    "flicker": {
+      "enabled": true,
+      "intensity": 0.15,
+      "speed": "medium"
+    }
   },
   "playerEffects": {
     "atmoTint": "rgba(80,20,0,.12)"
@@ -13,6 +21,11 @@
   "audio": {
     "ambient": "combat_tension",
     "music": "combat_theme",
-    "volume": { "ambient": 0.3, "music": 0.5, "effects": 1.0 }
-  }
+    "volume": {
+      "ambient": 0.3,
+      "music": 0.5,
+      "effects": 1.0
+    }
+  },
+  "noiseLevel": -20
 }

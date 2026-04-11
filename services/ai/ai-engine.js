@@ -447,6 +447,15 @@ Stay strictly within what ${npcName} knows. 1-3 sentences of dialogue typical.`;
       console.warn('[AIEngine] MaxDirector init failed:', e.message);
     }
 
+    // Communication Router — 6-channel routing, proximity hearing, dice parsing
+    try {
+      const CommRouter = require('./comm-router');
+      this.commRouter = new CommRouter(this.orchestrator, this.bus, this.state, this.config);
+      this.commRouter.init();
+    } catch (e) {
+      console.warn('[AIEngine] CommRouter init failed:', e.message);
+    }
+
     console.log(`[AIEngine] Gemini: ${this.gemini.available ? 'connected' : 'disabled'}`);
   }
 

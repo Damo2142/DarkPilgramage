@@ -480,6 +480,15 @@
     </div>
   </div>
 
+  <div id="whisper-bar" style="flex:0 0 auto;background:var(--surface);border-top:1px solid var(--border);">
+    <button id="whisper-toggle" onclick="toggleWhisper()" style="width:100%;background:none;border:none;color:var(--text-dim);font-family:'Cinzel',serif;font-size:12px;letter-spacing:0.15em;padding:8px;cursor:pointer;">▲ NARRATOR WHISPER TO PLAYER</button>
+    <div id="whisper-area" style="display:none;padding:12px 24px 16px;gap:8px;">
+      <select id="whisper-target" style="background:var(--bg);border:1px solid var(--border);color:var(--text);font-size:14px;padding:10px;border-radius:4px;margin-right:8px;"></select>
+      <input type="text" id="whisper-text" placeholder="Whispered to player..." style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:14px;padding:10px 14px;border-radius:4px;" onkeydown="if(event.key==='Enter')sendWhisper()">
+      <button onclick="sendWhisper()" style="background:var(--gold);color:#000;border:none;font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:0.1em;padding:0 24px;border-radius:4px;cursor:pointer;">SEND</button>
+    </div>
+  </div>
+
   <div id="rest-bar">
     <button id="rest-toggle" onclick="toggleRest()">▲ REST</button>
     <div id="rest-area">
@@ -758,6 +767,46 @@ function sendMax() {
     if (d && d.text) addWhisper({ tag: 'MAX', text: d.text });
     else if (d && d.response) addWhisper({ tag: 'MAX', text: d.response });
   }).catch(function() {});
+}
+
+// Section 6 — Narrator whisper to specific player
+function toggleWhisper() {
+  var area = $('whisper-area');
+  var open = area.style.display !== 'flex';
+  area.style.display = open ? 'flex' : 'none';
+  if (open) {
+    loadWhisperPlayers();
+    $('whisper-text').focus();
+  }
+}
+
+function loadWhisperPlayers() {
+  fetch('/api/state').then(function(r) { return r.json(); }).then(function(s) {
+    var sel = $('whisper-target');
+    var players = (s && s.players) || {};
+    var html = '';
+    for (var pid in players) {
+      var p = players[pid];
+      if (!p || p.absent || p.notYetArrived) continue;
+      var name = (p.character && p.character.name) || pid;
+      html += '<option value="' + pid + '">' + esc(name) + '</option>';
+    }
+    sel.innerHTML = html || '<option value="">No players</option>';
+  });
+}
+
+function sendWhisper() {
+  var pid = $('whisper-target').value;
+  var text = $('whisper-text').value.trim();
+  if (!pid || !text) return;
+  fetch('/api/narrator/whisper', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ playerId: pid, text: text })
+  });
+  $('whisper-text').value = '';
+  $('whisper-area').style.display = 'none';
+  addWhisper({ tag: 'SYSTEM', text: 'Narrator → ' + pid + ': ' + text });
 }
 
 function setAtmo(profile) {

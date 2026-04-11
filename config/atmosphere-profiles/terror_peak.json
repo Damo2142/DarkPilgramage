@@ -4,17 +4,35 @@
   "description": "Maximum horror. The monster is here.",
   "horrorLevel": 9,
   "lights": {
-    "color": { "hue": 0, "sat": 100, "level": 10 },
-    "flicker": { "enabled": true, "intensity": 0.6, "speed": "fast" }
+    "color": {
+      "hue": 0,
+      "sat": 100,
+      "level": 10
+    },
+    "flicker": {
+      "enabled": true,
+      "intensity": 0.6,
+      "speed": "fast"
+    }
   },
   "playerEffects": {
     "atmoTint": "rgba(80,0,0,.22)",
-    "terrorPulse": { "durationMs": 2000 },
-    "glitch": { "chance": 0.3, "durationMs": 1200 }
+    "terrorPulse": {
+      "durationMs": 2000
+    },
+    "glitch": {
+      "chance": 0.3,
+      "durationMs": 1200
+    }
   },
   "audio": {
     "ambient": "heartbeat_fast",
     "music": "terror_drone",
-    "volume": { "ambient": 0.7, "music": 0.5, "effects": 1.0 }
-  }
+    "volume": {
+      "ambient": 0.7,
+      "music": 0.5,
+      "effects": 1.0
+    }
+  },
+  "noiseLevel": -10
 }

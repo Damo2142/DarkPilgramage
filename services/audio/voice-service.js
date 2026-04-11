@@ -1,21 +1,47 @@
 /**
  * Voice Service — FIX-D
  *
- * Echo/Alexa TTS has been removed entirely. This service is now a thin
- * dispatcher that turns voice events into ElevenLabs TTS calls and emits
- * routed audio events the dashboard browser plays via Web Audio API
- * setSinkId on the configured output devices.
+ * Responsibility: Generate ElevenLabs TTS for Max + NPCs and dispatch
+ *   channel-tagged audio events the browser plays via setSinkId.
+ *
+ * Depends on: orchestrator.bus, orchestrator.state, orchestrator.config
+ *   (no service-to-service method calls).
+ *
+ * Listens for:
+ *   voice:speak {text, profile, useElevenLabs} — single Max audio entry point
+ *   npc:approved {text, npc, npcId, _private?, _sourcePlayerId?} — NPC dialogue
+ *   codm:read_aloud {text} — narrator-style room speaker output
+ *   audio:sfx {effect}, audio:directional {effect, text}
+ *   audio:volume {volume, channel}, voice:enable {enabled}
+ *   voice:list_devices, atmo:profile_active {audio?}
+ *
+ * Emits:
+ *   max:audio {url, text, latencyMs} — earbud sink (browser plays MP3)
+ *   max:audio:speak {text, fallback} — earbud sink (Web Speech API fallback)
+ *   npc:audio {url, text, npc, npcId, durationMs} — room speaker sink
+ *   npc:audio:speak {text, npc, fallback} — silent text-only fallback
+ *   npc:audio:player {playerId, npc, text, url} — private NPC to one player
+ *   token:speaking {tokenId, npc, durationMs} — pulse halo on /table + /dm/map
+ *   sound:play {name, channel}, sound:ambient {name, channel}
+ *   max:latency {latencyMs, text}, elevenlabs:health
+ *   max:paused, max:resumed
  *
  * Channels (strict, no mixing):
- *
- *   max:audio          → DM earbud sink only (Max whispers, ElevenLabs)
- *   max:audio:speak    → DM earbud sink only (Web Speech API fallback)
- *   npc:audio          → Room speaker sink only (public NPC dialogue)
- *   npc:audio:player   → Specific player Chromebook only (private NPC)
+ *   max:audio          → DM earbud sink only
+ *   npc:audio          → Room speaker sink only
+ *   npc:audio:player   → Specific player Chromebook only
  *   sound:play         → Room speaker sink (SFX, ambient, atmosphere)
  *
  * No Echo, no Alexa cookie, no SSML, no behaviors API. Web Audio API
  * playback in the browser is the only output path.
+ *
+ * Key methods:
+ *   checkElevenLabsHealth(force) — real TTS endpoint probe (FIX-B4)
+ *   pauseMax(durationMs) / resumeMax() / isMaxPaused() — pause control
+ *   _speakMax(text) — Max → earbud
+ *   _speakNpcPublic(text, name, voiceId, npcId) — NPC → room speaker
+ *   _speakPlayerPrivate(text, name, playerId, voiceId) — NPC → one player
+ *   _elevenLabsToFile(text, voiceId, dir, prefix) — TTS generator
  */
 
 const fs = require('fs');

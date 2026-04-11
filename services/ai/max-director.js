@@ -1,9 +1,41 @@
 /**
- * Max Director — intervention queue, staging drift detection, language gate
- * monitoring, silence-based delivery.
+ * Max Director — intervention queue + throttle + dedup + pause control.
  *
- * Lives alongside ai-engine. Intercepts whisper events, queues by priority,
- * and delivers at appropriate silence windows. URGENT bypasses always.
+ * Responsibility: Gate every dm:whisper event so the DM earbud is never
+ *   overwhelmed. Three layers of dedup; strict throttle by priority and
+ *   silence; explicit pause for cinematic moments.
+ *
+ * Depends on: bus, state, ai-engine (host)
+ *
+ * Listens for:
+ *   dm:whisper {text, priority, category} — main intake. _maxRouted=true
+ *     bypasses enqueue (already-routed messages, e.g. from halQuery, the
+ *     pacing-monitor, or this _deliver method itself).
+ *   transcript:segment — silence detection + language gate
+ *   world:timed_event — staging drift expected position update
+ *
+ * Emits:
+ *   dm:whisper {text, _maxRouted:true} — re-emitted on delivery so
+ *     other subscribers (whisper log) see it but max-director doesn't
+ *     re-enqueue.
+ *   voice:speak {text, profile:'max'} — single Max audio source
+ *   max:delivered {entry}, max:pause_state {paused, until}
+ *
+ * Throttle rules (FIX-C2):
+ *   ACTIVE narration  (transcript activity within last 30s)  → 45s minimum gap
+ *   QUIET   moments   (no transcript for 30s+)               → 20s minimum gap
+ *   URGENT bypasses throttle, queue, AND pause
+ *
+ * Dedup layers:
+ *   - 60s content dedup (FIX-3C): identical text within 60s dropped
+ *   - 5s bus dedup (FIX-C3 in core/event-bus.js)
+ *   - 3s WS dedup (FIX-B6 in player-bridge)
+ *
+ * Key methods:
+ *   enqueue(item) — add to queue with content + pause + content dedup
+ *   _tick() — runs every 5s, checks throttle + silence, delivers next
+ *   setPaused(paused, durationMs) — pause/resume max audio + queue
+ *   isPaused() — auto-resumes when timer expires
  */
 
 const PRIORITIES = ['URGENT', 'HIGH', 'NORMAL', 'LOW'];

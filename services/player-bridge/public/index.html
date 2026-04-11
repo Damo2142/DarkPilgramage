@@ -139,7 +139,48 @@
     #tab-bar{
       display:flex;background:#2a2420;border-bottom:1px solid #3a3028;
       flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;
+      transition:opacity 0.3s, transform 0.3s;
     }
+    /* FIX3A — MAP tab full screen mode */
+    body.map-fullscreen #zone-body,
+    body.map-fullscreen #zone-observation,
+    body.map-fullscreen #wound-overlay-detail{ display:none !important; }
+    body.map-fullscreen #grimoire-content{
+      padding:0 !important;
+      height:calc(100vh - 36px) !important;
+    }
+    body.map-fullscreen #gtab-map{
+      height:calc(100vh - 36px) !important;
+      padding:0 !important;
+    }
+    body.map-fullscreen #panel-map{
+      height:100% !important;
+      padding:0 !important;
+    }
+    body.map-fullscreen #player-map-canvas{
+      width:100vw !important;
+      height:calc(100vh - 36px) !important;
+    }
+    body.map-fullscreen #tab-bar{
+      position:fixed;top:0;left:0;right:0;z-index:200;
+      background:rgba(20,18,16,0.92);
+      border-bottom:1px solid #3a3028;height:36px;
+    }
+    body.map-fullscreen.tabs-hidden #tab-bar{
+      opacity:0;transform:translateY(-100%);pointer-events:none;
+    }
+    /* Selection glow on player's own token */
+    .map-token-selected{
+      box-shadow:0 0 18px 6px rgba(232,192,96,0.7);
+    }
+    #map-touch-hint{
+      position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+      background:rgba(20,18,16,0.95);color:#e8c060;
+      font-family:Georgia,serif;font-size:13px;padding:8px 16px;
+      border:1px solid #4a3a28;border-radius:6px;z-index:199;
+      opacity:0;pointer-events:none;transition:opacity 0.3s;
+    }
+    #map-touch-hint.visible{opacity:1;}
     .tab-btn{
       padding:10px 16px;font-size:12px;text-transform:uppercase;letter-spacing:0.08em;
       color:#6a5a48;background:none;border:none;border-bottom:2px solid transparent;
@@ -561,6 +602,9 @@
   <div id="wound-overlay-detail" style="display:none;">
     <div id="wo-detail-text" style="font-style:italic;line-height:1.5;"></div>
   </div>
+
+  <!-- FIX3B — Map touch hint shown briefly when own token is selected -->
+  <div id="map-touch-hint">TAP DESTINATION TO MOVE</div>
 
   <!-- TAB BAR -->
   <div id="tab-bar">
@@ -1085,11 +1129,43 @@ function switchTab(tabName) {
   if (tab) tab.classList.add('active');
   const btn = document.querySelector('.tab-btn[data-tab="' + tabName + '"]');
   if (btn) btn.classList.add('active');
-  // When switching to MAP tab, force resize and render so canvas picks up panel size
-  if (tabName === 'map' && window.PlayerMap) {
-    setTimeout(() => { try { PlayerMap.resize(); PlayerMap.render(); } catch (e) {} }, 50);
+  // FIX3A — MAP tab full screen mode
+  if (tabName === 'map') {
+    document.body.classList.add('map-fullscreen');
+    _scheduleTabsAutoHide();
+    if (window.PlayerMap) {
+      setTimeout(() => { try { PlayerMap.resize(); PlayerMap.render(); } catch (e) {} }, 50);
+    }
+  } else {
+    document.body.classList.remove('map-fullscreen', 'tabs-hidden');
+    if (_tabsHideTimer) clearTimeout(_tabsHideTimer);
   }
 }
+
+// FIX3A — auto-hide tab bar after 3s in MAP mode; reappears on tap.
+var _tabsHideTimer = null;
+function _scheduleTabsAutoHide() {
+  if (_tabsHideTimer) clearTimeout(_tabsHideTimer);
+  document.body.classList.remove('tabs-hidden');
+  _tabsHideTimer = setTimeout(() => {
+    if (document.body.classList.contains('map-fullscreen')) {
+      document.body.classList.add('tabs-hidden');
+    }
+  }, 3000);
+}
+// Tap top edge of screen to show tabs again when hidden
+document.addEventListener('touchstart', function(ev) {
+  if (!document.body.classList.contains('map-fullscreen')) return;
+  if (!document.body.classList.contains('tabs-hidden')) return;
+  if (ev.touches && ev.touches[0] && ev.touches[0].clientY < 40) {
+    _scheduleTabsAutoHide();
+  }
+}, { passive: true });
+document.addEventListener('click', function(ev) {
+  if (!document.body.classList.contains('map-fullscreen')) return;
+  if (!document.body.classList.contains('tabs-hidden')) return;
+  if (ev.clientY < 40) _scheduleTabsAutoHide();
+});
 // ── Player Mic Capture ──────────────────────────────────────
 const PlayerMic = {
   _active: false, _stream: null, _context: null, _processor: null,
@@ -4254,6 +4330,20 @@ const PlayerMap = {
   _onMouseMove(e) { this._moveInteraction(e.clientX, e.clientY, e.clientX-this.canvas.getBoundingClientRect().left, e.clientY-this.canvas.getBoundingClientRect().top); },
   _onMouseUp(e) { this._endInteraction(e.clientX, e.clientY); },
 
+  _showMapHint(text) {
+    var el = document.getElementById('map-touch-hint');
+    if (!el) return;
+    el.textContent = text;
+    el.classList.add('visible');
+    if (this._hintTimer) clearTimeout(this._hintTimer);
+    this._hintTimer = setTimeout(() => el.classList.remove('visible'), 5000);
+  },
+  _hideMapHint() {
+    var el = document.getElementById('map-touch-hint');
+    if (el) el.classList.remove('visible');
+    if (this._hintTimer) { clearTimeout(this._hintTimer); this._hintTimer = null; }
+  },
+
   _onTouchStart(e) {
     e.preventDefault();
     if (e.touches.length===1) { const t=e.touches[0]; const r=this.canvas.getBoundingClientRect(); this._startInteraction(t.clientX-r.left, t.clientY-r.top, t.clientX, t.clientY); }
@@ -4332,6 +4422,19 @@ const PlayerMap = {
       }
     }
     this._tapStart = { sx, sy, cx, cy, time: Date.now() };
+    // FIX3B — if a token is already selected and the user taps somewhere
+    // that is NOT on their token, treat it as a "move to here" tap.
+    if (this._selectedTokenId === PID) {
+      const tidUnder = this._getMyTokenAt(sx, sy);
+      if (!tidUnder) {
+        const myTok = this.tokens[PID];
+        if (myTok) {
+          const {x: mx, y: my} = this.screenToMap(sx, sy);
+          this._tapMoveTarget = { x: mx, y: my };
+          // We'll execute the move on touchend if it's still a tap
+        }
+      }
+    }
     const tid = this._getMyTokenAt(sx, sy);
     if (tid) {
       const {x:mx,y:my}=this.screenToMap(sx,sy);
@@ -4419,6 +4522,65 @@ const PlayerMap = {
       }
       return;
     }
+    // FIX3B — detect quick tap (no significant movement)
+    var wasQuickTap = false;
+    if (this._tapStart) {
+      var dx = (cx || 0) - this._tapStart.cx;
+      var dy = (cy || 0) - this._tapStart.cy;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      var elapsed = Date.now() - this._tapStart.time;
+      if (dist < 12 && elapsed < 500) wasQuickTap = true;
+    }
+    // Quick tap on own token toggles selection
+    if (wasQuickTap && this.dragging && this.dragging.tokenId === PID) {
+      var tok = this.tokens[PID];
+      if (tok) { delete tok._dragVisualX; delete tok._dragVisualY; tok.x = tok._dragStartX; tok.y = tok._dragStartY; }
+      this.dragging = null;
+      this._moveState.active = false;
+      if (this._selectedTokenId === PID) {
+        // Tap on already-selected token = deselect
+        this._selectedTokenId = null;
+        this._hideMapHint();
+      } else {
+        this._selectedTokenId = PID;
+        this._showMapHint('TAP DESTINATION TO MOVE');
+      }
+      this.render();
+      return;
+    }
+    // Quick tap on empty area while own token selected = move there
+    if (wasQuickTap && this._selectedTokenId === PID && this._tapMoveTarget) {
+      var target = this._tapMoveTarget;
+      this._tapMoveTarget = null;
+      this._hideMapHint();
+      this._selectedTokenId = null;
+      // Reset any pan state from the empty-area touch
+      this.panning = false;
+      // Trigger the standard move pipeline by simulating a drag drop
+      var myTok2 = this.tokens[PID];
+      if (myTok2) {
+        var gs2 = this.mapData.gridSize;
+        var oldX2 = myTok2.x, oldY2 = myTok2.y;
+        var newX2 = Math.floor(target.x / gs2) * gs2 + gs2 / 2;
+        var newY2 = Math.floor(target.y / gs2) * gs2 + gs2 / 2;
+        // Wall block check
+        var blocked2 = (this.walls.length > 0) ? this._pathBlockedByWalls(oldX2, oldY2, newX2, newY2) : null;
+        if (blocked2) {
+          if (blocked2.type === 'door') {
+            this._promptDoor(blocked2, oldX2, oldY2, newX2, newY2, PID);
+          } else {
+            showToast('System', 'Movement blocked — solid wall', 2000);
+          }
+        } else {
+          // Range check via _completeMoveToken
+          this._completeMoveToken(myTok2, oldX2, oldY2, newX2, newY2, PID);
+        }
+      }
+      this.render();
+      return;
+    }
+    // Clear tap-move target if not used
+    this._tapMoveTarget = null;
     if (this.dragging) {
       const tok=this.tokens[this.dragging.tokenId];
       const dragTokenId = this.dragging.tokenId;

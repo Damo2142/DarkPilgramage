@@ -5115,18 +5115,27 @@ if (navigator.permissions) {
 <style>
   body { padding-bottom: 56px !important; }
   body.map-fullscreen { padding-bottom: 0 !important; }
+  /* FIX10 — persistent chat history. Scrollable, last 50 msgs. */
   #chat-stack {
     position:fixed; left:0; right:0; bottom:52px;
-    z-index:150; pointer-events:none;
+    z-index:150; pointer-events:auto;
     display:flex; flex-direction:column; gap:4px;
-    padding:8px 12px;
+    padding:8px 12px 4px;
+    max-height:38vh;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    background:linear-gradient(to bottom, rgba(20,18,16,0) 0%, rgba(20,18,16,0.55) 35%, rgba(20,18,16,0.85) 100%);
   }
+  #chat-stack::-webkit-scrollbar { width:4px; }
+  #chat-stack::-webkit-scrollbar-track { background:transparent; }
+  #chat-stack::-webkit-scrollbar-thumb { background:#3a3028; border-radius:2px; }
   .chat-msg {
     pointer-events:auto;
     background:rgba(20,18,16,0.92); border:1px solid #3a3028;
     border-radius:6px; padding:8px 12px; font-size:13px;
     color:#e8d0a0; max-width:90%; align-self:flex-start;
     animation: chat-msg-in 0.4s ease-out;
+    flex-shrink:0;
   }
   .chat-msg.max { color:#e8c060; border-color:#8a6a20; font-style:italic; }
   .chat-msg.npc { border-color:#a07020; }
@@ -5135,6 +5144,12 @@ if (navigator.permissions) {
   .chat-msg.player { color:#c8b89a; }
   .chat-msg.player .speaker { color:#7fa0c0; font-weight:600; margin-right:6px; }
   .chat-msg.partial { color:#8a7060; font-style:italic; opacity:0.9; }
+  .chat-msg.system { color:#8a7060; font-size:11px; font-style:italic; border-style:dashed; }
+  .chat-msg.fading { transition:opacity 1s; opacity:0; }
+  .chat-msg .ts {
+    display:block; font-size:9px; color:#6a5a48; margin-top:2px;
+    font-family:monospace; letter-spacing:0.05em;
+  }
   @keyframes chat-msg-in { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
   #chat-bar {
     position:fixed; left:0; right:0; bottom:0;
@@ -5226,31 +5241,50 @@ var ChatBar = {
       if (inp2) inp2.placeholder = 'Listening...';
     }
   },
+  // FIX10 — message persistence
+  // NPC dialogue, player chat, narrator whispers, max responses, partial
+  // hearing — ALL persistent. Only `system` messages auto-fade (10s).
+  // Perception flashes are handled by a separate component (showObservation),
+  // not by ChatBar — they were never in this stack to begin with.
+  MAX_HISTORY: 50,
   appendMessage: function(msg) {
-    // msg = { type: max|npc|narrator|player|partial, speaker?, text }
+    // msg = { type: max|npc|narrator|player|partial|system, speaker?, text }
     var stack = document.getElementById('chat-stack');
     if (!stack) return;
+    var type = msg.type || 'player';
     var div = document.createElement('div');
-    div.className = 'chat-msg ' + (msg.type || 'player');
+    div.className = 'chat-msg ' + type;
     var html = '';
     if (msg.speaker) html += '<span class="speaker">' + ChatBar._esc(msg.speaker) + '</span>';
     html += ChatBar._esc(msg.text || '');
+    var d = new Date();
+    var hh = String(d.getHours()).padStart(2, '0');
+    var mm = String(d.getMinutes()).padStart(2, '0');
+    html += '<span class="ts">' + hh + ':' + mm + '</span>';
     div.innerHTML = html;
     stack.appendChild(div);
     ChatBar.recent.push(div);
-    // Keep only last 3 visible
-    while (ChatBar.recent.length > 3) {
+    // Trim history to MAX_HISTORY messages (drop oldest)
+    while (ChatBar.recent.length > ChatBar.MAX_HISTORY) {
       var old = ChatBar.recent.shift();
       if (old && old.parentNode) old.parentNode.removeChild(old);
     }
-    // Auto-fade after 12 seconds
-    setTimeout(function() {
-      if (div && div.parentNode) {
-        div.style.transition = 'opacity 1s';
-        div.style.opacity = '0';
-        setTimeout(function() { if (div.parentNode) div.parentNode.removeChild(div); }, 1100);
-      }
-    }, 12000);
+    // Auto-scroll to bottom for the new message
+    try { stack.scrollTop = stack.scrollHeight; } catch (e) {}
+    // Persistence rules:
+    // - system: fade after 10s
+    // - everything else (max/npc/narrator/player/partial): persist
+    if (type === 'system') {
+      setTimeout(function() {
+        if (!div || !div.parentNode) return;
+        div.classList.add('fading');
+        setTimeout(function() {
+          if (div.parentNode) div.parentNode.removeChild(div);
+          var idx = ChatBar.recent.indexOf(div);
+          if (idx >= 0) ChatBar.recent.splice(idx, 1);
+        }, 1100);
+      }, 10000);
+    }
   },
   _esc: function(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 };

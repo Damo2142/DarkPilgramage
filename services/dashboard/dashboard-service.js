@@ -197,6 +197,56 @@ class DashboardService {
       res.json(this.config || {});
     });
 
+    // ─── Max pause / volume API (FIX-C2) ────────────────────────
+    this.app.post('/api/max/pause', (req, res) => {
+      try {
+        const { durationSec } = req.body || {};
+        const ms = (durationSec || 300) * 1000;
+        const voiceSvc = this.orchestrator.getService('voice');
+        if (voiceSvc && typeof voiceSvc.pauseMax === 'function') voiceSvc.pauseMax(ms);
+        const aiEngine = this.orchestrator.getService('ai-engine');
+        const md = aiEngine && aiEngine.maxDirector;
+        if (md && typeof md.setPaused === 'function') md.setPaused(true, ms);
+        res.json({ ok: true, durationMs: ms, until: Date.now() + ms });
+      } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+    this.app.post('/api/max/resume', (req, res) => {
+      try {
+        const voiceSvc = this.orchestrator.getService('voice');
+        if (voiceSvc && typeof voiceSvc.resumeMax === 'function') voiceSvc.resumeMax();
+        const aiEngine = this.orchestrator.getService('ai-engine');
+        const md = aiEngine && aiEngine.maxDirector;
+        if (md && typeof md.setPaused === 'function') md.setPaused(false);
+        res.json({ ok: true });
+      } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+    this.app.get('/api/max/status', (req, res) => {
+      try {
+        const voiceSvc = this.orchestrator.getService('voice');
+        const aiEngine = this.orchestrator.getService('ai-engine');
+        const md = aiEngine && aiEngine.maxDirector;
+        res.json({
+          paused: voiceSvc && voiceSvc.isMaxPaused ? voiceSvc.isMaxPaused() : false,
+          pausedUntil: voiceSvc ? voiceSvc._maxPausedUntil || 0 : 0,
+          volume: voiceSvc ? (voiceSvc._maxVolume != null ? voiceSvc._maxVolume : 0.7) : 0.7,
+          throttleMs: md ? md.activeThrottleMs : null,
+          queueLength: md ? (md.queue || []).length : 0
+        });
+      } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+    this.app.post('/api/max/volume', (req, res) => {
+      try {
+        const { volume } = req.body || {};
+        const v = Math.max(0, Math.min(1, parseFloat(volume)));
+        const voiceSvc = this.orchestrator.getService('voice');
+        if (voiceSvc) {
+          voiceSvc._maxVolume = v;
+          if (this.bus) this.bus.dispatch('max:volume', { volume: v });
+        }
+        res.json({ ok: true, volume: v });
+      } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
     // ─── ElevenLabs / Voice palette health API ─────────────────
     this.app.get('/api/voice/health', (req, res) => {
       try {

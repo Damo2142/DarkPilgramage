@@ -10,6 +10,15 @@ const PRIORITIES = ['URGENT', 'HIGH', 'NORMAL', 'LOW'];
 const PRIORITY_RANK = { URGENT: 0, HIGH: 1, NORMAL: 2, LOW: 3 };
 const EXPIRY_MS = { URGENT: 30000, HIGH: 30000, NORMAL: 120000, LOW: 300000 };
 
+// FIX-C2 — strict throttling rules.
+//   ACTIVE narration  (transcript activity within last 30s)  → 45s minimum gap
+//   QUIET   moments   (no transcript for 30s+)               → 20s minimum gap
+//   URGENT  bypasses both throttle and pause
+const THROTTLE_ACTIVE_MS = 45 * 1000;
+const THROTTLE_QUIET_MS  = 20 * 1000;
+const QUIET_THRESHOLD_MS = 30 * 1000;
+const PAUSE_DEFAULT_MS   = 5 * 60 * 1000;
+
 class MaxDirector {
   constructor(orchestrator, bus, state, config) {
     this.orchestrator = orchestrator;
@@ -23,6 +32,12 @@ class MaxDirector {
     this.lastDeliveredAt = 0;
     this.tickInterval = null;
     this.driftInterval = null;
+
+    // FIX-C2 — pause + throttle state
+    this.paused = false;
+    this.pausedUntil = 0;
+    this.activeThrottleMs = THROTTLE_ACTIVE_MS;
+    this.quietThrottleMs  = THROTTLE_QUIET_MS;
 
     // NPC expected positions from timed events that have fired
     this.expectedPositions = {};      // npcId -> { x, y, source: eventId }
@@ -88,6 +103,33 @@ class MaxDirector {
     if (this.driftInterval) clearInterval(this.driftInterval);
   }
 
+  // ─── Pause control ────────────────────────────────────────────
+  setPaused(paused, durationMs) {
+    if (paused) {
+      this.paused = true;
+      this.pausedUntil = Date.now() + (durationMs || PAUSE_DEFAULT_MS);
+      console.log('[MaxDirector] PAUSED for ' + Math.round((durationMs || PAUSE_DEFAULT_MS) / 1000) + 's');
+      // Drop everything except URGENT from the queue while paused
+      this.queue = this.queue.filter(q => q.priority === 'URGENT');
+    } else {
+      this.paused = false;
+      this.pausedUntil = 0;
+      console.log('[MaxDirector] RESUMED');
+    }
+    if (this.bus) this.bus.dispatch('max:pause_state', { paused: this.paused, until: this.pausedUntil });
+  }
+  isPaused() {
+    if (this.paused && this.pausedUntil > Date.now()) return true;
+    if (this.paused) {
+      // Auto-resume when timer expires
+      this.paused = false;
+      this.pausedUntil = 0;
+      if (this.bus) this.bus.dispatch('max:pause_state', { paused: false, until: 0 });
+      console.log('[MaxDirector] Auto-resumed (pause timer expired)');
+    }
+    return false;
+  }
+
   // ─── Queue management ─────────────────────────────────────────
   enqueue(item) {
     const entry = {
@@ -100,27 +142,37 @@ class MaxDirector {
       sourceData: item.sourceData || null
     };
 
-    // URGENT — deliver immediately, bypass queue
+    // URGENT — deliver immediately, bypass queue + throttle + pause
     if (entry.priority === 'URGENT') {
-      this._deliver(entry);
+      this._deliver(entry, true);
       return entry;
     }
 
-    // Queue with cap and dedupe by message+category
+    // FIX-C2 — drop non-URGENT during pause
+    if (this.isPaused()) {
+      console.log('[MaxDirector] Dropped (paused) ' + entry.priority + '/' + entry.category + ': ' + entry.message.slice(0, 60));
+      return null;
+    }
+
+    // Dedupe by message+category
     const dupe = this.queue.find(q => q.category === entry.category && q.message === entry.message);
     if (dupe) return dupe;
 
     this.queue.push(entry);
-    // Sort by priority then timestamp
     this.queue.sort((a, b) => {
       const pa = PRIORITY_RANK[a.priority] || 99;
       const pb = PRIORITY_RANK[b.priority] || 99;
       if (pa !== pb) return pa - pb;
       return a.timestamp - b.timestamp;
     });
-    // Trim queue
+    // FIX-C2 — when multiple are queued, keep only the highest priority entry
+    // and drop the rest unless they're URGENT. This eliminates the "Max
+    // overwhelm" where queued NORMAL/LOW pile up behind a slow HIGH.
+    if (this.queue.length > 1) {
+      const topPriority = this.queue[0].priority;
+      this.queue = this.queue.filter(q => q.priority === 'URGENT' || q.priority === topPriority);
+    }
     if (this.queue.length > this.maxQueueSize) {
-      // Drop the lowest-priority oldest items
       this.queue = this.queue.slice(0, this.maxQueueSize);
     }
     return entry;
@@ -131,42 +183,58 @@ class MaxDirector {
     const now = Date.now();
     this.queue = this.queue.filter(q => q.expiresAt > now);
 
+    // Auto-resume check
+    this.isPaused();
+
     if (!this.queue.length) return;
+    if (this.paused) return;
 
     const silenceMs = now - this.lastTranscriptAt;
+    const sinceLastDelivery = now - this.lastDeliveredAt;
     const next = this.queue[0];
 
-    // HIGH: deliver at 8-second silence
-    if (next.priority === 'HIGH' && silenceMs >= 8000) {
-      this._deliver(next);
-      this.queue.shift();
-      return;
+    // FIX-C2 — strict throttle.
+    //   ACTIVE narration → 45s minimum since last delivery, regardless of priority
+    //   QUIET (30s+ no transcript) → 20s minimum
+    const isQuiet = silenceMs >= QUIET_THRESHOLD_MS;
+    const minGap = isQuiet ? this.quietThrottleMs : this.activeThrottleMs;
+    if (sinceLastDelivery < minGap) return;
+
+    // Additional silence requirement so we don't talk over the DM mid-sentence:
+    //   HIGH wants ≥ 4s silence in active mode, immediate in quiet
+    //   NORMAL/LOW wants ≥ 8s silence
+    if (next.priority === 'HIGH') {
+      if (!isQuiet && silenceMs < 4000) return;
+    } else if (next.priority === 'NORMAL' || next.priority === 'LOW') {
+      if (silenceMs < 8000) return;
     }
 
-    // NORMAL/LOW: deliver at 120-second deep silence
-    if ((next.priority === 'NORMAL' || next.priority === 'LOW') && silenceMs >= 120000) {
-      this._deliver(next);
-      this.queue.shift();
-      return;
-    }
+    this._deliver(next);
+    this.queue.shift();
   }
 
-  _deliver(entry) {
+  _deliver(entry, urgent) {
     if (!entry || !entry.message) return;
+    // Block non-URGENT during pause
+    if (!urgent && this.isPaused()) {
+      console.log('[MaxDirector] Skipping delivery during pause: ' + entry.message.slice(0, 60));
+      return;
+    }
     this.lastDeliveredAt = Date.now();
-    // Re-emit whisper with _maxRouted flag so we don't re-enqueue
+    // Re-emit whisper with _maxRouted flag so we don't re-enqueue.
+    // dm:whisper goes to the dashboard whisper log only — voice goes via voice:speak.
     this.bus.dispatch('dm:whisper', {
       text: entry.message,
       priority: entry.priority,
       category: entry.category,
       source: 'max',
-      _maxRouted: true,
-      useElevenLabs: true
+      _maxRouted: true
+      // NOTE: useElevenLabs is dropped here so dm:whisper does NOT re-trigger
+      // the audio path. voice:speak below is the single source for Max audio.
     });
     this.bus.dispatch('voice:speak', {
       text: entry.message,
       profile: 'max',
-      device: 'earbud',
       useElevenLabs: true
     });
     this.bus.dispatch('max:delivered', { entry });

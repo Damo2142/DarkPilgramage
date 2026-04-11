@@ -258,12 +258,15 @@ class VoiceService {
 
     this.bus.subscribe('voice:speak', (env) => {
       const { text, profile, device, useElevenLabs } = env.data;
-      // Section 8 — Max voice via ElevenLabs
-      if (profile === 'max' || useElevenLabs) {
-        this._speakMaxElevenLabs(text, device || 'earbud');
-      } else {
-        this.speak(text, profile || 'narrator', device);
+      // FIX-C1 — STRICT channel separation:
+      //   Max → DM earbud only (browser audio via setSinkId)
+      //   anything else → respects device or falls through to room speaker (Alexa)
+      if (profile === 'max' || profile === 'hal' || useElevenLabs) {
+        // Max NEVER touches Alexa. Ignore any 'device' override.
+        this._speakMaxElevenLabs(text, 'earbud');
+        return;
       }
+      this.speak(text, profile || 'narrator', device);
     }, 'voice-service');
 
     // Section 6 — voice/audio enable/disable from session mode transitions
@@ -513,18 +516,26 @@ class VoiceService {
     return ECHO_DEVICES[this.primaryDevice];
   }
 
-  // Section 8 — Max voice via ElevenLabs (streamed to earbud channel)
-  // Falls back to Echo TTS if ElevenLabs unavailable, MAX_VOICE_ID empty, or call fails.
-  async _speakMaxElevenLabs(text, deviceName) {
+  // Section 8 — Max voice via ElevenLabs (streamed to DM earbud channel ONLY).
+  // FIX-C1 — Max audio NEVER touches the room speaker / Alexa. If ElevenLabs
+  // is unavailable, fall back to a browser SpeechSynthesis call on the earbud
+  // sink via the max:audio:speak event. Echo TTS fallback is removed because
+  // it leaked Max audio into the living room speaker.
+  async _speakMaxElevenLabs(text, _ignoredDeviceName) {
     if (!text) return;
+    // FIX-C2 honor pause flag — caller (max-director) is the gatekeeper, but
+    // double-check here so any other source can't bypass the pause.
+    if (this._maxPaused && this._maxPausedUntil > Date.now()) {
+      console.log('[VoiceService] Max paused — dropping speech: ' + text.slice(0, 60));
+      return;
+    }
     const t0 = Date.now();
     const apiKey = process.env.ELEVENLABS_API_KEY;
     const voiceId = process.env.MAX_VOICE_ID;
 
-    // Decision: skip ElevenLabs immediately if missing key or voice ID — no failed-call delay
     if (!apiKey || !voiceId) {
-      console.log('[VoiceService] Max: ElevenLabs unavailable, falling back to Echo TTS');
-      this.speak(text, 'narrator', deviceName || 'earbud');
+      console.log('[VoiceService] Max: ElevenLabs unavailable, dispatching browser-TTS fallback to earbud');
+      this.bus.dispatch('max:audio:speak', { text, fallback: true });
       return;
     }
 
@@ -545,8 +556,8 @@ class VoiceService {
       });
 
       if (!resp.ok) {
-        console.warn(`[VoiceService] Max ElevenLabs failed (${resp.status}), falling back to Echo TTS`);
-        this.speak(text, 'narrator', deviceName || 'earbud');
+        console.warn(`[VoiceService] Max ElevenLabs failed (${resp.status}), browser-TTS fallback to earbud`);
+        this.bus.dispatch('max:audio:speak', { text, fallback: true });
         return;
       }
 
@@ -562,22 +573,45 @@ class VoiceService {
       const latency = Date.now() - t0;
       console.log(`[VoiceService] Max ElevenLabs success (${latency}ms): ${text.slice(0, 60)}`);
 
-      // Dispatch sound:play event so dashboard browser plays it through earbud channel
-      this.bus.dispatch('sound:play', {
+      // FIX-C1 — dedicated max:audio event. Browser plays via setSinkId on the
+      // saved earbud sink. NEVER routed through Alexa / room speaker / sound:play.
+      this.bus.dispatch('max:audio', {
         url: `/assets/sounds/max/${filename}`,
-        device: 'earbud',
+        text,
         priority: 'high',
-        source: 'max'
+        source: 'max',
+        latencyMs: latency
       });
 
-      // Latency log for FINAL_BUILD_NOTES
       this.bus.dispatch('max:latency', { latencyMs: latency, text: text.slice(0, 60) });
 
-      // If latency exceeded 4s also fall back to Echo for next response (handled in halQuery)
     } catch (err) {
       console.error('[VoiceService] Max ElevenLabs error:', err.message);
-      this.speak(text, 'narrator', deviceName || 'earbud');
+      this.bus.dispatch('max:audio:speak', { text, fallback: true, error: err.message });
     }
+  }
+
+  // FIX-C2 — pause / resume Max audio
+  pauseMax(durationMs) {
+    this._maxPaused = true;
+    this._maxPausedUntil = Date.now() + (durationMs || 5 * 60 * 1000);
+    if (this.bus) this.bus.dispatch('max:paused', { until: this._maxPausedUntil });
+    console.log('[VoiceService] Max paused for ' + Math.round((durationMs || 300000) / 1000) + 's');
+  }
+  resumeMax() {
+    this._maxPaused = false;
+    this._maxPausedUntil = 0;
+    if (this.bus) this.bus.dispatch('max:resumed', { at: Date.now() });
+    console.log('[VoiceService] Max resumed');
+  }
+  isMaxPaused() {
+    if (this._maxPaused && this._maxPausedUntil > Date.now()) return true;
+    if (this._maxPaused) {
+      // Auto-resume when timer expires
+      this._maxPaused = false;
+      if (this.bus) this.bus.dispatch('max:resumed', { at: Date.now() });
+    }
+    return false;
   }
 
   async speak(text, profileName, deviceName) {
@@ -626,9 +660,19 @@ class VoiceService {
   _onNpcDialogue(data) {
     const { text, voiceProfile, npc } = data;
     if (!text) return;
+    // FIX-C1 — STRICT NPC routing.
+    //   Public NPC dialogue → room speaker (this.primaryDevice) ONLY.
+    //   Private NPC dialogue (data._private) → routed to the requesting
+    //     player's Chromebook by comm-router via player:npc_speech.
+    //     We do NOT speak it on the room speaker at all.
+    if (data && data._private) {
+      console.log('[VoiceService] NPC private — skipping room speaker for ' + (npc || 'NPC'));
+      return;
+    }
     const profile = voiceProfile || 'narrator';
     const announcement = npc ? `${npc} says: ${text}` : text;
-    this.speak(announcement, profile);
+    // Force room speaker — never accept an earbud override on NPC public lines
+    this.speak(announcement, profile, this.primaryDevice);
   }
 
   _speakNarration(text) {

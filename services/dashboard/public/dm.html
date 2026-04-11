@@ -528,6 +528,18 @@
     </label>
   </div>
 
+  <!-- FIX-C2 — MAX controls strip: pause + volume slider -->
+  <div id="max-controls" style="flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:10px 24px;background:#1e1a14;border-bottom:1px solid var(--border);">
+    <button id="btn-max-pause" class="session-btn danger large" onclick="MaxControls.togglePause()" style="min-width:160px;">⏸ PAUSE MAX (5m)</button>
+    <span id="max-pause-countdown" style="font-family:monospace;font-size:12px;color:var(--text-dim);min-width:90px;"></span>
+    <span class="spacer" style="flex:1;"></span>
+    <label style="display:flex;align-items:center;gap:8px;font-family:'Cinzel',serif;font-size:12px;letter-spacing:0.1em;color:var(--text-dim);">
+      MAX VOLUME
+      <input id="max-volume-slider" type="range" min="0" max="100" value="70" onchange="MaxControls.setVolume(this.value)" oninput="document.getElementById('max-volume-label').textContent=this.value+'%';" style="width:160px;accent-color:var(--gold);">
+      <span id="max-volume-label" style="font-family:monospace;color:var(--gold);min-width:42px;text-align:right;">70%</span>
+    </label>
+  </div>
+
   <div id="status-bar">
     <div class="status-pill" id="pill-clock">
       <span class="dot"></span>
@@ -963,6 +975,131 @@ window.SessionMode = SessionMode;
 setTimeout(function() { SessionMode.refresh(); }, 500);
 setInterval(function() { SessionMode.refresh(); }, 15000);
 
+// ═══════════════════════════════════════════════════════════════
+// MAX CONTROLS — pause + volume + earbud audio playback (FIX-C1/C2)
+// ═══════════════════════════════════════════════════════════════
+var MaxControls = {
+  paused: false,
+  pausedUntil: 0,
+  volume: 0.7,
+  _audio: null,
+  _earbudSinkId: null,
+  init: function() {
+    // Earbud sink id is stored by the audio device tools (FIX-B5)
+    try {
+      var saved = JSON.parse(localStorage.getItem('codm.audioDevices.v1') || '{}');
+      MaxControls._earbudSinkId = saved.earbud || localStorage.getItem('dp_earbud_output') || null;
+    } catch (e) {}
+    // Restore saved volume
+    try {
+      var v = parseFloat(localStorage.getItem('codm.maxVolume'));
+      if (v >= 0 && v <= 1) {
+        MaxControls.volume = v;
+        var slider = $('max-volume-slider');
+        if (slider) slider.value = Math.round(v * 100);
+        var lbl = $('max-volume-label');
+        if (lbl) lbl.textContent = Math.round(v * 100) + '%';
+      }
+    } catch (e) {}
+    MaxControls.refresh();
+  },
+  refresh: function() {
+    fetch('/api/max/status').then(function(r) { return r.json(); }).then(function(d) {
+      MaxControls.paused = !!d.paused;
+      MaxControls.pausedUntil = d.pausedUntil || 0;
+      if (typeof d.volume === 'number') MaxControls.volume = d.volume;
+      MaxControls._updateButton();
+    }).catch(function() {});
+  },
+  togglePause: function() {
+    if (MaxControls.paused) {
+      fetch('/api/max/resume', { method: 'POST' }).then(function(r) { return r.json(); }).then(function() {
+        MaxControls.paused = false;
+        MaxControls.pausedUntil = 0;
+        MaxControls._updateButton();
+        addWhisper({ tag: 'SYSTEM', text: 'Max resumed' });
+      });
+    } else {
+      fetch('/api/max/pause', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ durationSec: 300 })
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        MaxControls.paused = true;
+        MaxControls.pausedUntil = d.until || (Date.now() + 5 * 60 * 1000);
+        MaxControls._updateButton();
+        addWhisper({ tag: 'SYSTEM', text: 'Max paused for 5 minutes' });
+      });
+    }
+  },
+  setVolume: function(v) {
+    var vol = Math.max(0, Math.min(1, parseFloat(v) / 100));
+    MaxControls.volume = vol;
+    try { localStorage.setItem('codm.maxVolume', String(vol)); } catch (e) {}
+    if (MaxControls._audio) MaxControls._audio.volume = vol;
+    fetch('/api/max/volume', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ volume: vol })
+    }).catch(function() {});
+  },
+  _updateButton: function() {
+    var btn = $('btn-max-pause');
+    var cd = $('max-pause-countdown');
+    if (!btn) return;
+    if (MaxControls.paused) {
+      btn.textContent = '▶ RESUME MAX';
+      btn.classList.remove('danger');
+      btn.classList.add('large');
+      var remainMs = MaxControls.pausedUntil - Date.now();
+      if (cd) {
+        if (remainMs > 0) {
+          var s = Math.ceil(remainMs / 1000);
+          cd.textContent = 'paused (' + Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + ')';
+        } else {
+          cd.textContent = 'paused';
+        }
+      }
+    } else {
+      btn.textContent = '⏸ PAUSE MAX (5m)';
+      btn.classList.add('danger');
+      if (cd) cd.textContent = '';
+    }
+  },
+  // FIX-C1 — handle max:audio events from voice-service
+  handleMaxAudio: function(d) {
+    if (!d || !d.url) return;
+    if (MaxControls.paused) { console.log('[MaxControls] paused — dropping audio'); return; }
+    var audio = new Audio(d.url);
+    audio.volume = MaxControls.volume;
+    var play = function() {
+      audio.play().catch(function(e) {
+        console.warn('[MaxControls] audio play failed:', e.message);
+      });
+    };
+    if (MaxControls._earbudSinkId && audio.setSinkId) {
+      audio.setSinkId(MaxControls._earbudSinkId).then(play).catch(function() { play(); });
+    } else {
+      play();
+    }
+    MaxControls._audio = audio;
+  },
+  // FIX-C1 — browser-TTS fallback when ElevenLabs is unavailable
+  handleMaxFallback: function(d) {
+    if (!d || !d.text) return;
+    if (MaxControls.paused) return;
+    if (!('speechSynthesis' in window)) return;
+    var u = new SpeechSynthesisUtterance(d.text);
+    u.volume = MaxControls.volume;
+    u.rate = 1.05; u.pitch = 0.9;
+    window.speechSynthesis.speak(u);
+  }
+};
+window.MaxControls = MaxControls;
+setTimeout(MaxControls.init, 600);
+setInterval(function() { MaxControls._updateButton(); }, 1000);
+setInterval(function() { MaxControls.refresh(); }, 15000);
+
 // Section 6 — Narrator whisper to specific player
 function toggleWhisper() {
   var area = $('whisper-area');
@@ -1083,6 +1220,24 @@ function connect() {
 function handleMsg(msg) {
   var t = msg.type || msg.event;
   if (!t) return;
+
+  // FIX-C1 — Max audio plays on the DM earbud sink
+  if (t === 'max:audio') {
+    if (window.MaxControls) MaxControls.handleMaxAudio(msg.data || {});
+    return;
+  }
+  if (t === 'max:audio:speak') {
+    if (window.MaxControls) MaxControls.handleMaxFallback(msg.data || {});
+    return;
+  }
+  if (t === 'max:pause_state') {
+    if (msg.data) {
+      MaxControls.paused = !!msg.data.paused;
+      MaxControls.pausedUntil = msg.data.until || 0;
+      MaxControls._updateButton();
+    }
+    return;
+  }
 
   // Init payload
   if (t === 'init') {

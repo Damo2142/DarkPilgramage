@@ -867,8 +867,142 @@
 </div>
 
 <script>
-const PID = location.pathname.split('/player/')[1] || 'unknown';
-const WSU = (location.protocol==='https:'?'wss:':'ws:')+'//'+location.hostname+':3200?player='+PID;
+// Section 5 — Dry run mode detection
+const DRYRUN_MODE = location.pathname === '/player/dryrun' || location.search.includes('dryrun=1');
+let DRYRUN_CHARACTER = null;
+if (DRYRUN_MODE) {
+  DRYRUN_CHARACTER = localStorage.getItem('dryrunCharacter');
+  if (!DRYRUN_CHARACTER) {
+    DRYRUN_CHARACTER = prompt('DRY RUN MODE — Enter character name to impersonate (e.g. jerome, kim, spurt):');
+    if (DRYRUN_CHARACTER) localStorage.setItem('dryrunCharacter', DRYRUN_CHARACTER);
+  }
+}
+const PID = DRYRUN_MODE ? (DRYRUN_CHARACTER || 'dryrun') : (location.pathname.split('/player/')[1] || 'unknown');
+const WSU = (location.protocol==='https:'?'wss:':'ws:')+'//'+location.hostname+':3200?player='+PID+(DRYRUN_MODE?'&dryrun=1':'');
+
+// Dry run badge + test panel
+if (DRYRUN_MODE) {
+  window.addEventListener('DOMContentLoaded', function() {
+    var badge = document.createElement('div');
+    badge.id = 'dryrun-badge';
+    badge.style.cssText = 'position:fixed;top:8px;right:8px;background:#a44;color:#fff;padding:3px 10px;border-radius:3px;font-size:11px;font-weight:bold;letter-spacing:1px;z-index:9999;';
+    badge.textContent = 'DRY RUN';
+    document.body.appendChild(badge);
+
+    var checklist = document.createElement('div');
+    checklist.id = 'dryrun-checklist';
+    checklist.style.cssText = 'position:fixed;bottom:8px;right:8px;background:#1e1a14;border:1px solid #a44;color:#e8d0a0;padding:8px;border-radius:4px;font-size:10px;z-index:9998;max-width:240px;';
+    checklist.innerHTML = '<div style="font-weight:bold;color:#a44;margin-bottom:4px;cursor:pointer;" onclick="document.getElementById(\'dryrun-checks\').style.display=document.getElementById(\'dryrun-checks\').style.display===\'none\'?\'block\':\'none\'">UI CHECK ▾</div><div id="dryrun-checks">'
+      + ['Tabs CONDITION/ARMS/GIFTS/SOUL/NUMBERS','Colors bg #1e1a14, gold #e8c060','Wound silhouette visible','Stamina ring visible','Equipped items in ARMS','Spell slots in GIFTS','Mic button responsive','Chat input responsive']
+        .map(function(t,i){return '<label style="display:block;cursor:pointer;"><input type="checkbox" id="drycheck'+i+'" onchange="DryRun.saveCheck('+i+',this.checked)"> '+t+'</label>';}).join('')
+      + '</div>'
+      + '<div style="margin-top:6px;display:flex;flex-direction:column;gap:3px;">'
+      + '<button onclick="DryRun.testMic()" style="font-size:10px;">Test Mic</button>'
+      + '<button onclick="DryRun.testCamera()" style="font-size:10px;">Test Camera</button>'
+      + '<button onclick="DryRun.testChat()" style="font-size:10px;">Test Chat</button>'
+      + '<button onclick="DryRun.testMax()" style="font-size:10px;">Test Max</button>'
+      + '</div><div id="dryrun-output" style="font-size:9px;color:#888;margin-top:4px;max-height:100px;overflow-y:auto;"></div>';
+    document.body.appendChild(checklist);
+
+    // Restore saved check state
+    for (var i = 0; i < 8; i++) {
+      var saved = localStorage.getItem('drycheck' + i);
+      if (saved === '1') { var el = document.getElementById('drycheck' + i); if (el) el.checked = true; }
+    }
+  });
+
+  window.DryRun = {
+    saveCheck: function(i, checked) { localStorage.setItem('drycheck' + i, checked ? '1' : '0'); },
+    testMic: async function() {
+      var out = document.getElementById('dryrun-output');
+      out.innerHTML = '<div>Recording 3s...</div>';
+      var t0 = performance.now();
+      try {
+        var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        var rec = new MediaRecorder(stream);
+        var chunks = [];
+        rec.ondataavailable = function(e) { chunks.push(e.data); };
+        rec.start();
+        setTimeout(async function() {
+          rec.stop();
+          stream.getTracks().forEach(function(t) { t.stop(); });
+          rec.onstop = async function() {
+            var blob = new Blob(chunks);
+            var fd = new FormData();
+            fd.append('audio', blob, 'mic.webm');
+            try {
+              var resp = await fetch('/api/transcribe', { method: 'POST', body: fd });
+              var data = await resp.json();
+              var latency = Math.round(performance.now() - t0);
+              out.innerHTML = '<div>Mic OK (' + latency + 'ms): ' + (data.text || 'no transcription') + '</div>';
+            } catch (e) {
+              out.innerHTML = '<div>Mic transcribe failed: ' + e.message + '</div>';
+            }
+          };
+        }, 3000);
+      } catch (e) {
+        out.innerHTML = '<div>Mic permission denied</div>';
+      }
+    },
+    testCamera: async function() {
+      var out = document.getElementById('dryrun-output');
+      out.innerHTML = '<div>Capturing camera...</div>';
+      try {
+        var stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        var video = document.createElement('video');
+        video.srcObject = stream;
+        await video.play();
+        var canvas = document.createElement('canvas');
+        canvas.width = 320; canvas.height = 240;
+        canvas.getContext('2d').drawImage(video, 0, 0, 320, 240);
+        stream.getTracks().forEach(function(t) { t.stop(); });
+        var dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        var resp = await fetch('/api/camera/describe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: dataUrl, prompt: 'Describe what you see in this image in one sentence. This is a camera pipeline test.' })
+        });
+        var data = await resp.json();
+        out.innerHTML = '<div>Camera: ' + (data.description || data.text || 'no response') + '</div>';
+      } catch (e) {
+        out.innerHTML = '<div>Camera failed: ' + e.message + '</div>';
+      }
+    },
+    testChat: async function() {
+      var out = document.getElementById('dryrun-output');
+      out.innerHTML = '<div>Sending chat test...</div>';
+      try {
+        var resp = await fetch('/api/player/' + PID + '/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: 'I look around the inn carefully.' })
+        });
+        var data = await resp.json();
+        out.innerHTML = '<div>Chat: ' + (data.response || data.text || 'sent') + '</div>';
+      } catch (e) {
+        out.innerHTML = '<div>Chat failed: ' + e.message + '</div>';
+      }
+    },
+    testMax: async function() {
+      var out = document.getElementById('dryrun-output');
+      out.innerHTML = '<div>Querying Max...</div>';
+      var t0 = performance.now();
+      try {
+        var resp = await fetch('/api/max/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: 'Confirm you are ready for Session Zero.' })
+        });
+        var data = await resp.json();
+        var latency = Math.round(performance.now() - t0);
+        out.innerHTML = '<div>Max (' + latency + 'ms): ' + (data.text || data.response || 'no response') + '</div>';
+      } catch (e) {
+        out.innerHTML = '<div>Max failed: ' + e.message + '</div>';
+      }
+    }
+  };
+}
+const PID_ORIG = location.pathname.split('/player/')[1] || 'unknown';
 let ws, char={}, hpC=0, hpM=0, tmpH=0, dread=0;
 let attacks=[], spells=[], feats=[], slotState={};
 let activeConds=new Set(), ds={s:[false,false,false],f:[false,false,false]};

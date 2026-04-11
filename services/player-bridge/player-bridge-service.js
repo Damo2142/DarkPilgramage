@@ -688,6 +688,7 @@ class PlayerBridgeService {
   _onConnection(ws, req) {
     const params = new URL(req.url, 'http://localhost').searchParams;
     const playerId = params.get('player');
+    const isDryRun = params.get('dryrun') === '1';
 
     if (!playerId) {
       ws.send(JSON.stringify({ type: 'error', message: 'No player ID provided' }));
@@ -703,8 +704,13 @@ class PlayerBridgeService {
     this.players.set(playerId, {
       ws,
       connectedAt: Date.now(),
-      audioStreaming: false
+      audioStreaming: false,
+      dryRun: isDryRun
     });
+
+    if (isDryRun) {
+      console.log(`[PlayerBridge] DRY RUN connection: ${playerId} — actions will not persist`);
+    }
 
     this.state.set(`players.${playerId}.connected`, true);
     this.state.set(`players.${playerId}.deviceId`, playerId);

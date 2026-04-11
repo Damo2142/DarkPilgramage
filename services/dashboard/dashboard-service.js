@@ -35,6 +35,13 @@ class DashboardService {
       res.sendFile(path.join(__dirname, '..', 'player-bridge', 'public', 'index.html'));
     });
 
+    // Section 5 — Dry run player mode
+    // /player/dryrun serves the player bridge UI; client-side dryrun=1 query
+    // engages dry run badge and test buttons. Character selected at runtime.
+    this.app.get('/player/dryrun', (req, res) => {
+      res.sendFile(path.join(__dirname, '..', 'player-bridge', 'public', 'index.html'));
+    });
+
     // Panel pop-out routes — serve individual panel pages
     this.app.get('/panel/:panelId', (req, res) => {
       // All panels use the same wrapper — panelId is read client-side from URL

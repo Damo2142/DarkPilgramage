@@ -11,6 +11,8 @@
       --bg: #161412;
       --surface: #242018;
       --surface2: #2e2820;
+      --absent-bg: #1a1814;
+      --absent-text: #4a4030;
       --text: #f0e0c0;
       --text-dim: #b09070;
       --text-dimmer: #706050;
@@ -20,6 +22,8 @@
       --red: #cc3020;
       --purple: #8a7aaa;
       --blue: #4a8aaa;
+      --orange: #cc6030;
+      --terror: #aa2080;
       --border: #3a3028;
     }
 
@@ -74,10 +78,17 @@
       border: 1px solid var(--border);
       border-radius: 4px;
       padding: 14px 16px;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
       position: relative;
+      cursor: pointer;
+      transition: border-color 0.15s;
     }
-    .player-card.absent { opacity: 0.4; }
+    .player-card:hover { border-color: var(--gold); }
+    .player-card.absent {
+      background: var(--absent-bg);
+      cursor: default;
+    }
+    .player-card.absent:hover { border-color: var(--border); }
     .player-card .name-row {
       display: flex;
       justify-content: space-between;
@@ -93,6 +104,7 @@
     .player-card .pclass {
       font-size: 13px;
       color: var(--text-dim);
+      margin-right: 28px;
     }
     .player-card .seat {
       position: absolute;
@@ -101,20 +113,25 @@
       background: none;
       border: 1px solid var(--border);
       color: var(--text-dimmer);
-      font-size: 12px;
-      padding: 1px 6px;
+      font-size: 14px;
+      padding: 1px 8px;
       border-radius: 3px;
       cursor: pointer;
+      z-index: 5;
     }
     .player-card .seat:hover { color: var(--gold); border-color: var(--gold); }
-    .player-card .row {
+    .pc-divider {
+      border-top: 1px solid var(--border);
+      margin: 10px -16px 10px;
+    }
+    .pc-row {
       display: flex;
       align-items: center;
       gap: 12px;
       margin-bottom: 6px;
       font-size: 13px;
     }
-    .player-card .row .label {
+    .pc-row .label {
       width: 70px;
       flex-shrink: 0;
       color: var(--text-dimmer);
@@ -122,8 +139,14 @@
       text-transform: uppercase;
       letter-spacing: 0.08em;
     }
-    .player-card .row .value { color: var(--text); }
-    .player-card .row .value.right { margin-left: auto; }
+    .pc-row .value {
+      flex: 1;
+      color: var(--text);
+    }
+    .pc-row .value.dim { color: var(--text-dim); }
+    .pc-row .value.warn { color: var(--amber); }
+    .pc-row .value.crit { color: var(--red); }
+    .pc-row .right { margin-left: auto; color: var(--text); font-family: monospace; font-size: 13px; }
     .bar {
       flex: 1;
       height: 10px;
@@ -138,10 +161,32 @@
     .stamina .bar-fill { background: var(--green); }
     .stamina.warn .bar-fill { background: var(--amber); }
     .stamina.crit .bar-fill { background: var(--red); }
-    .horror .bar-fill { background: var(--text-dimmer); }
+    .horror .bar-fill { background: var(--green); }
     .horror.warn .bar-fill { background: var(--amber); }
     .horror.crit .bar-fill { background: var(--red); }
-    .wound-dots { display: flex; gap: 6px; }
+
+    /* Stamina torch icon */
+    .stamina-torch {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      text-align: center;
+      line-height: 24px;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .stamina-torch.fresh { opacity: 1; filter: drop-shadow(0 0 4px #f0c840); }
+    .stamina-torch.winded { opacity: 0.85; }
+    .stamina-torch.exhausted { opacity: 0.5; }
+    .stamina-torch.spent { opacity: 0.3; }
+    .stamina-torch.collapsed { opacity: 0.2; filter: grayscale(1); }
+
+    /* Wound dots */
+    .wound-dots {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
     .wound-dot {
       width: 14px;
       height: 14px;
@@ -153,6 +198,30 @@
     .wound-dot.w2 { background: #d47017; border-color: #d47017; }
     .wound-dot.w3 { background: var(--red); border-color: var(--red); }
     .wound-dot.w4 { background: #800000; border-color: #800000; }
+    .wound-state-label {
+      margin-left: 8px;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    /* Spell slot diamonds */
+    .slots {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+    .slot-pip {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      transform: rotate(45deg);
+      border: 1px solid var(--gold);
+    }
+    .slot-pip.filled { background: var(--gold); }
+    .slot-pip.empty { background: transparent; }
+    .slot-meta { font-size: 11px; color: var(--text-dim); margin-left: 6px; }
+
+    /* Arc */
     .arc-line {
       font-size: 12px;
       color: var(--text-dim);
@@ -161,11 +230,8 @@
       padding-top: 8px;
       border-top: 1px solid var(--border);
     }
-    .conditions-line {
-      font-size: 12px;
-      color: var(--amber);
-      margin-top: 4px;
-    }
+
+    /* Absent overlay */
     .absent-overlay {
       position: absolute;
       inset: 0;
@@ -173,9 +239,9 @@
       align-items: center;
       justify-content: center;
       font-family: 'Cinzel', serif;
-      font-size: 14px;
+      font-size: 16px;
       letter-spacing: 0.15em;
-      color: var(--text-dim);
+      color: var(--absent-text);
       pointer-events: none;
     }
 
@@ -253,10 +319,15 @@
     .npc-row {
       display: flex;
       gap: 12px;
-      padding: 4px 0;
+      align-items: center;
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.15s;
     }
+    .npc-row:hover { background: var(--surface); }
     .npc-row .npc-name {
-      width: 200px;
+      width: 180px;
       flex-shrink: 0;
       color: var(--text);
     }
@@ -264,19 +335,31 @@
       flex: 1;
       color: var(--text-dim);
     }
-    .npc-row.hidden .npc-name { color: var(--text-dimmer); }
-    .npc-row.hidden .npc-loc { color: var(--text-dimmer); }
-    .npc-row .hidden-tag {
-      color: var(--red);
+    .npc-row .emo-tag {
+      font-family: 'Source Sans 3', sans-serif;
       font-size: 11px;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.08em;
+      text-transform: lowercase;
+      padding: 2px 8px;
+      border-radius: 10px;
+      flex-shrink: 0;
     }
+    .emo-calm { background: rgba(106,170,106,0.15); color: var(--green); }
+    .emo-watchful { background: rgba(176,144,112,0.15); color: var(--text-dim); }
+    .emo-nervous { background: rgba(224,144,48,0.15); color: var(--amber); }
+    .emo-desperate { background: rgba(204,96,48,0.15); color: var(--orange); }
+    .emo-hostile { background: rgba(204,48,32,0.15); color: var(--red); }
+    .emo-terrified { background: rgba(170,32,128,0.15); color: var(--terror); }
+    .emo-hidden {
+      background: transparent;
+      color: var(--text-dimmer);
+      font-style: italic;
+    }
+    .npc-row.hidden .npc-name,
+    .npc-row.hidden .npc-loc { color: var(--text-dimmer); }
 
     /* ─── DISCOVERED ─── */
-    #clues-list {
-      max-height: 200px;
-      overflow-y: auto;
-    }
+    #clues-list { max-height: 200px; overflow-y: auto; }
     .clue-row {
       display: flex;
       gap: 12px;
@@ -320,13 +403,123 @@
       margin-top: 2px;
       line-height: 1.4;
     }
+
+    /* ─── OVERLAYS (player sheet, NPC card) ─── */
+    #overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+    #overlay.open { display: flex; }
+    #overlay-content {
+      background: var(--surface);
+      border: 1px solid var(--gold);
+      border-radius: 6px;
+      padding: 24px 32px;
+      max-width: 700px;
+      max-height: 90vh;
+      overflow-y: auto;
+      width: 100%;
+      position: relative;
+    }
+    #overlay-close {
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: 18px;
+      width: 30px;
+      height: 30px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #overlay-close:hover { color: var(--gold); border-color: var(--gold); }
+
+    .ov-title {
+      font-family: 'Cinzel', serif;
+      font-size: 22px;
+      color: var(--gold);
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+      padding-right: 50px;
+    }
+    .ov-subtitle {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .ov-section {
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+      margin-top: 14px;
+    }
+    .ov-section h3 {
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 8px;
+    }
+    .ov-row {
+      display: flex;
+      gap: 12px;
+      padding: 4px 0;
+      font-size: 13px;
+    }
+    .ov-row .ov-label {
+      width: 110px;
+      flex-shrink: 0;
+      color: var(--text-dimmer);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .ov-row .ov-val { flex: 1; color: var(--text); }
+    .ov-disp {
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      gap: 8px 12px;
+      font-size: 13px;
+    }
+    .ov-disp .name { color: var(--gold); }
+    .ov-disp .text { color: var(--text); }
+    .threat-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .threat-bar-fill {
+      width: 200px;
+      height: 12px;
+      background: var(--bg);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .threat-bar-fill > div {
+      height: 100%;
+      background: var(--red);
+    }
+    .momentum-list { font-size: 12px; }
+    .momentum-list div { padding: 4px 0; color: var(--text-dim); }
+    .momentum-list div b { color: var(--text); }
+    .momentum-current { color: var(--gold); font-weight: 600; }
   </style>
 </head>
 <body>
 
 <div id="screen">
 
-  <!-- LEFT COLUMN — Player & Combat -->
+  <!-- LEFT COLUMN — Players & Combat -->
   <div class="col">
     <h2>Players</h2>
     <div id="player-cards"></div>
@@ -351,17 +544,26 @@
 
 </div>
 
+<!-- Overlay for player sheet / NPC card -->
+<div id="overlay" onclick="if(event.target===this)closeOverlay()">
+  <div id="overlay-content">
+    <button id="overlay-close" onclick="closeOverlay()">×</button>
+    <div id="overlay-body"></div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════════════════════
 // /dm/ref — Status board
-// Read-only. Player cards, combat tracker, NPC positions, clues, chat.
+// Read-only. Player cards (expanded), combat, NPC positions, clues, chat.
+// Click a player card → full character sheet overlay.
+// Click an NPC row → full NPC brief overlay.
 // ═══════════════════════════════════════════════════════════════
 var ws = null;
-var stateData = { players: {}, npcs: {}, combat: null, world: {}, story: {} };
+var stateData = { players: {}, npcs: {}, combat: null, world: {}, story: {}, map: {} };
 var configData = {};
 var clues = [];
 var chatMessages = [];
-var sessionConfig = null;
 
 function $(id) { return document.getElementById(id); }
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
@@ -378,29 +580,75 @@ function fmtGameTime(iso) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// PLAYER CARDS
+// PLAYER CARDS — expanded
 // ═══════════════════════════════════════════════════════════════
+var WOUND_STATE_LABELS = ['Pristine', 'Bruised', 'Wounded', 'Badly Wounded', 'Critical', 'Down'];
+
+function aggregateWoundState(wounds) {
+  if (!wounds) return 0;
+  var max = 0;
+  var sum = 0;
+  ['head', 'torso', 'leftArm', 'rightArm', 'leftLeg', 'rightLeg'].forEach(function(limb) {
+    var s = wounds[limb] || 0;
+    if (s > max) max = s;
+    sum += s;
+  });
+  // Aggregate state index 0..5
+  if (max >= 4) return 5;
+  if (max >= 3) return 4;
+  if (max >= 2) return 3;
+  if (max >= 1 && sum >= 3) return 2;
+  if (sum >= 1) return 1;
+  return 0;
+}
+
+function staminaState(current, max) {
+  if (!max || max <= 0) return 'fresh';
+  var pct = (current / max) * 100;
+  if (pct >= 75) return 'fresh';
+  if (pct >= 50) return 'winded';
+  if (pct >= 25) return 'exhausted';
+  if (pct > 0) return 'spent';
+  return 'collapsed';
+}
+
 function renderPlayers() {
   var el = $('player-cards');
-  var players = stateData.players || {};
-  var pids = Object.keys(players).filter(function(pid) { return players[pid] && (players[pid].character || players[pid].notYetArrived || players[pid].absent); });
+  var allPlayers = stateData.players || {};
+  // Use union of state.players AND known config players (from backstories)
+  var pids = Object.keys(allPlayers).filter(function(pid) { return allPlayers[pid]; });
   if (!pids.length) {
     el.innerHTML = '<div style="color:var(--text-dimmer);text-align:center;padding:20px;font-style:italic;">No players loaded</div>';
     return;
   }
-  el.innerHTML = pids.map(function(pid) {
-    return renderPlayerCard(pid, players[pid]);
-  }).join('');
+  el.innerHTML = pids.map(function(pid) { return renderPlayerCard(pid, allPlayers[pid]); }).join('');
 }
 
 function renderPlayerCard(pid, p) {
   var ch = p.character || {};
   var name = ch.name || pid;
-  var className = ch.class || '';
+  var className = ch.class || ch.className || '';
   var level = ch.level || '';
   var pp = ch.passivePerception || ch.passive_perception || 10;
   var isAbsent = !!p.absent;
   var notYetArrived = !!p.notYetArrived;
+
+  if (notYetArrived) {
+    return '<div class="player-card absent">' +
+      '<button class="seat" onclick="event.stopPropagation();toggleAbsent(\'' + pid + '\')" title="Mark present">⚐</button>' +
+      '<div class="name-row"><div class="pname" style="color:var(--absent-text);">' + esc(name) + '</div></div>' +
+      '<div class="absent-overlay">NOT YET ARRIVED</div>' +
+      '<div style="height:120px;"></div>' +
+      '</div>';
+  }
+  if (isAbsent) {
+    return '<div class="player-card absent">' +
+      '<button class="seat" onclick="event.stopPropagation();toggleAbsent(\'' + pid + '\')" title="Mark present">⚐</button>' +
+      '<div class="name-row"><div class="pname" style="color:var(--absent-text);">' + esc(name) + '</div></div>' +
+      '<div class="absent-overlay">NOT YET ARRIVED</div>' +
+      '<div style="height:120px;"></div>' +
+      '</div>';
+  }
 
   // Stamina
   var stamina = p.stamina || {};
@@ -408,71 +656,110 @@ function renderPlayerCard(pid, p) {
   var staminaMax = stamina.max || 1;
   var staminaPct = Math.max(0, Math.min(100, (staminaCur / staminaMax) * 100));
   var staminaCls = staminaPct > 50 ? '' : staminaPct > 25 ? 'warn' : 'crit';
+  var torchState = stamina.state || staminaState(staminaCur, staminaMax);
+  var torchSvg = '<span class="stamina-torch ' + torchState + '" title="' + torchState + ' (' + staminaCur + '/' + staminaMax + ')">🔥</span>';
 
-  // Wounds — display as 6 dots
+  // Wounds
   var wounds = p.wounds || {};
   var limbOrder = ['head', 'torso', 'leftArm', 'rightArm', 'leftLeg', 'rightLeg'];
   var woundDots = limbOrder.map(function(limb) {
     var s = wounds[limb] || 0;
     return '<span class="wound-dot' + (s > 0 ? ' w' + s : '') + '" title="' + limb + ': ' + s + '"></span>';
   }).join('');
+  var woundStateLabel = WOUND_STATE_LABELS[aggregateWoundState(wounds)];
 
   // Horror
-  var horror = (p.horror && (p.horror.score || p.horror.value)) || 0;
+  var horror = (p.horror && (p.horror.score || p.horror.value)) || (p.dread && p.dread.score) || 0;
   var horrorPct = Math.max(0, Math.min(100, horror));
-  var horrorCls = horror > 75 ? 'crit' : horror > 50 ? 'warn' : '';
+  var horrorCls = horror > 70 ? 'crit' : horror > 40 ? 'warn' : '';
+
+  // Spell slots — render diamond pips
+  var slotsHtml = '';
+  var slotMeta = '';
+  if (ch.spellSlots) {
+    var allSlots = [];
+    var totalAvail = 0, totalMax = 0;
+    for (var lvl = 1; lvl <= 9; lvl++) {
+      var slot = ch.spellSlots[lvl] || ch.spellSlots['level' + lvl];
+      if (slot && slot.max) {
+        for (var s = 0; s < slot.max; s++) {
+          allSlots.push(s < (slot.current || 0) ? 'filled' : 'empty');
+        }
+        totalAvail += (slot.current || 0);
+        totalMax += slot.max;
+      }
+    }
+    if (allSlots.length) {
+      slotsHtml = allSlots.map(function(s) { return '<span class="slot-pip ' + s + '"></span>'; }).join('');
+      slotMeta = '<span class="slot-meta">(' + totalAvail + '/' + totalMax + ' remaining)</span>';
+    }
+  }
+
+  // Light source from inventory
+  var lightInfo = computeLightSource(ch.inventory || []);
+
+  // Languages
+  var languages = (ch.languages || []).join(', ') || 'Common';
 
   // Conditions
   var conds = (p.conditions || []).filter(Boolean);
-  var dread = (p.dread && p.dread.score) || 0;
+  var statusLine = conds.length ? conds.join(', ') : 'none';
 
   // Arc beat
   var arcBeat = (p.arcBeat || (p.arcProfile && p.arcProfile.currentBeat) || ch.background || '');
 
-  if (notYetArrived) {
-    return '<div class="player-card absent" style="position:relative;">' +
-      '<div class="name-row"><div class="pname">' + esc(name) + '</div></div>' +
-      '<div class="absent-overlay">NOT YET ARRIVED</div>' +
-      '<div style="height:80px;"></div>' +
-      '</div>';
-  }
-  if (isAbsent) {
-    return '<div class="player-card absent" style="position:relative;">' +
-      '<button class="seat" onclick="toggleAbsent(\'' + pid + '\')">⌧</button>' +
-      '<div class="name-row"><div class="pname">' + esc(name) + '</div></div>' +
-      '<div class="absent-overlay">ABSENT — OFF SCREEN</div>' +
-      '<div style="height:80px;"></div>' +
-      '</div>';
-  }
-
-  return '<div class="player-card">' +
-    '<button class="seat" onclick="toggleAbsent(\'' + pid + '\')">◇</button>' +
+  return '<div class="player-card" onclick="openPlayerSheet(\'' + pid + '\')">' +
+    '<button class="seat" onclick="event.stopPropagation();toggleAbsent(\'' + pid + '\')" title="Mark absent">⚐</button>' +
     '<div class="name-row">' +
       '<div class="pname">' + esc(name) + '</div>' +
       '<div class="pclass">' + esc(className) + ' ' + esc(level) + '</div>' +
     '</div>' +
-    '<div class="row stamina ' + staminaCls + '">' +
+    '<div class="pc-divider"></div>' +
+    '<div class="pc-row stamina ' + staminaCls + '">' +
       '<span class="label">Stamina</span>' +
       '<div class="bar"><div class="bar-fill" style="width:' + staminaPct + '%"></div></div>' +
-      '<span class="value right">PP ' + pp + '</span>' +
+      torchSvg +
+      '<span class="right">PP: ' + pp + '</span>' +
     '</div>' +
-    '<div class="row">' +
+    '<div class="pc-row">' +
       '<span class="label">Wounds</span>' +
-      '<div class="wound-dots">' + woundDots + '</div>' +
+      '<div class="wound-dots">' + woundDots + '<span class="wound-state-label">' + woundStateLabel + '</span></div>' +
     '</div>' +
-    '<div class="row horror ' + horrorCls + '">' +
+    '<div class="pc-row horror ' + horrorCls + '">' +
       '<span class="label">Horror</span>' +
       '<div class="bar"><div class="bar-fill" style="width:' + horrorPct + '%"></div></div>' +
+      '<span class="right">' + horror + '</span>' +
     '</div>' +
-    (conds.length ? '<div class="conditions-line">Conditions: ' + esc(conds.join(', ')) + '</div>' : '') +
-    (arcBeat ? '<div class="arc-line">' + esc(String(arcBeat).slice(0, 100)) + '</div>' : '') +
+    (slotsHtml ? '<div class="pc-divider"></div><div class="pc-row"><span class="label">Slots</span><div class="slots">' + slotsHtml + slotMeta + '</div></div>' : '<div class="pc-divider"></div>') +
+    '<div class="pc-row"><span class="label">Light</span><span class="value' + (lightInfo.warn ? ' warn' : '') + '">' + esc(lightInfo.text) + '</span></div>' +
+    '<div class="pc-row"><span class="label">Langs</span><span class="value">' + esc(languages) + '</span></div>' +
+    '<div class="pc-row"><span class="label">Status</span><span class="value' + (conds.length ? ' warn' : ' dim') + '">' + esc(statusLine) + '</span></div>' +
+    (arcBeat ? '<div class="arc-line">' + esc(String(arcBeat).slice(0, 200)) + '</div>' : '') +
     '</div>';
+}
+
+function computeLightSource(inventory) {
+  var lights = ['torch', 'lantern', 'lamp', 'candle'];
+  for (var i = 0; i < inventory.length; i++) {
+    var item = inventory[i];
+    var name = (item.name || '').toLowerCase();
+    if (item.equipped || (item.lit !== undefined ? item.lit : true)) {
+      for (var li = 0; li < lights.length; li++) {
+        if (name.indexOf(lights[li]) !== -1) {
+          var hours = item.fuelHours != null ? item.fuelHours : (lights[li] === 'torch' ? 1 : lights[li] === 'lantern' ? 6 : lights[li] === 'lamp' ? 6 : 1);
+          return { text: item.name + ' — ' + hours + 'h remaining', warn: hours < 1 };
+        }
+      }
+    }
+  }
+  return { text: 'No light source — DARK', warn: true };
 }
 
 function toggleAbsent(pid) {
   var p = stateData.players[pid] || {};
   var isAbsent = !!p.absent;
-  if (!confirm('Mark ' + (p.character?.name || pid) + (isAbsent ? ' as PRESENT?' : ' as absent for this session?'))) return;
+  var name = (p.character && p.character.name) || pid;
+  if (!confirm('Mark ' + name + (isAbsent ? ' as PRESENT?' : ' as absent for this session?'))) return;
   fetch('/api/absent/' + pid, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -480,8 +767,70 @@ function toggleAbsent(pid) {
   }).then(function(r) { return r.json(); }).then(function() {
     if (!stateData.players[pid]) stateData.players[pid] = {};
     stateData.players[pid].absent = !isAbsent;
+    if (!isAbsent) stateData.players[pid].notYetArrived = false;
     renderPlayers();
   });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PLAYER SHEET OVERLAY
+// ═══════════════════════════════════════════════════════════════
+function openPlayerSheet(pid) {
+  var p = stateData.players[pid];
+  if (!p) return;
+  var ch = p.character || {};
+  var ab = ch.abilities || ch.stats || {};
+  var skills = ch.skills || {};
+  var spells = ch.spells || [];
+  var inventory = ch.inventory || [];
+  var features = ch.features || [];
+  var html = '<div class="ov-title">' + esc(ch.name || pid) + '</div>' +
+    '<div class="ov-subtitle"><span>' + esc(ch.race || '') + ' ' + esc(ch.class || '') + ' ' + (ch.level || '') + '</span><span>HP ' + (ch.hp ? (ch.hp.current + '/' + ch.hp.max) : '?') + '  AC ' + (ch.ac || '?') + '</span></div>' +
+
+    '<div class="ov-section"><h3>Abilities</h3><div class="ov-disp">';
+  ['str','dex','con','int','wis','cha'].forEach(function(k) {
+    if (ab[k] != null) html += '<div class="name">' + k.toUpperCase() + '</div><div class="text">' + ab[k] + '</div>';
+  });
+  html += '</div></div>';
+
+  if (Object.keys(skills).length) {
+    html += '<div class="ov-section"><h3>Skills</h3><div class="ov-disp">';
+    for (var k in skills) {
+      html += '<div class="name">' + esc(k) + '</div><div class="text">' + (skills[k].mod != null ? '+' + skills[k].mod : esc(JSON.stringify(skills[k]))) + '</div>';
+    }
+    html += '</div></div>';
+  }
+
+  if (spells.length) {
+    html += '<div class="ov-section"><h3>Spells (' + spells.length + ')</h3><div style="font-size:12px;color:var(--text-dim);">';
+    html += spells.slice(0, 30).map(function(s) { return esc(s.name || s); }).join(', ');
+    html += '</div></div>';
+  }
+
+  if (inventory.length) {
+    html += '<div class="ov-section"><h3>Inventory</h3><div style="font-size:12px;color:var(--text-dim);">';
+    html += inventory.slice(0, 40).map(function(i) {
+      var n = i.name || i;
+      var eq = i.equipped ? ' [EQUIPPED]' : '';
+      return esc(n) + eq;
+    }).join(' · ');
+    html += '</div></div>';
+  }
+
+  if (ch.backstory || p.arcProfile) {
+    html += '<div class="ov-section"><h3>Backstory & Arc</h3><div style="font-size:12px;color:var(--text-dim);font-style:italic;">';
+    if (ch.backstory) html += esc(typeof ch.backstory === 'string' ? ch.backstory : JSON.stringify(ch.backstory)).slice(0, 800) + '<br><br>';
+    if (p.arcProfile && p.arcProfile.summary) html += esc(p.arcProfile.summary);
+    html += '</div></div>';
+  }
+
+  $('overlay-body').innerHTML = html;
+  $('overlay').classList.add('open');
+}
+
+function closeOverlay() {
+  $('overlay').classList.remove('open');
+  $('overlay-body').innerHTML = '';
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -496,9 +845,14 @@ function renderCombat() {
     meta.textContent = '';
     return;
   }
-  meta.textContent = combat.turnOrder.length + ' combatants';
+  // Filter out absent players from initiative tracker
+  var visible = combat.turnOrder.filter(function(c) {
+    var p = stateData.players[c.id];
+    return !(p && (p.absent || p.notYetArrived));
+  });
+  meta.textContent = visible.length + ' combatants';
   var html = '<div id="round-display">ROUND ' + (combat.round || 1) + '</div>';
-  html += combat.turnOrder.map(function(c, i) {
+  html += visible.map(function(c, i) {
     var isCurrent = i === combat.currentTurn;
     var conds = (c.conditions || []).join(', ');
     var hp = c.hp || {};
@@ -518,9 +872,7 @@ function renderCombat() {
   el.innerHTML = html;
 }
 
-function nextTurn() {
-  fetch('/api/combat/next', { method: 'POST' }).catch(function() {});
-}
+function nextTurn() { fetch('/api/combat/next', { method: 'POST' }).catch(function() {}); }
 
 // ═══════════════════════════════════════════════════════════════
 // NPC POSITIONS
@@ -533,10 +885,14 @@ function renderNpcPositions() {
     return;
   }
   el.innerHTML = npcs.map(function(n) {
-    var hidden = n.hidden;
-    return '<div class="npc-row' + (hidden ? ' hidden' : '') + '">' +
+    var emoTag = n.hidden ? 'hidden' : (n.emotion || 'watchful');
+    var emoCls = 'emo-' + emoTag;
+    var locText = n.location || '—';
+    if (n.hidden) locText += '  [HIDDEN]';
+    return '<div class="npc-row' + (n.hidden ? ' hidden' : '') + '" onclick="openNpcCard(\'' + n.id + '\')">' +
       '<span class="npc-name">' + esc(n.name) + '</span>' +
-      '<span class="npc-loc">' + esc(n.location || '—') + (hidden ? '  <span class="hidden-tag">[HIDDEN]</span>' : '') + '</span>' +
+      '<span class="npc-loc">' + esc(locText) + '</span>' +
+      '<span class="emo-tag ' + emoCls + '">' + esc(emoTag) + '</span>' +
       '</div>';
   }).join('');
 }
@@ -548,21 +904,105 @@ function collectAllNpcs() {
     var n = npcs[id];
     if (!n || !n.name) continue;
     var token = stateData.map && stateData.map.tokens && stateData.map.tokens[id];
+    var emotion = n.emotionalState || n.disposition || 'watchful';
+    if (typeof emotion !== 'string') emotion = 'watchful';
     result.push({
       id: id,
       name: n.name,
       location: n.location || (token && token.location) || '—',
-      hidden: (token && token.hidden) || (n.location && /cellar/i.test(n.location) && id === 'piotr')
+      hidden: (token && token.hidden) || (n.location && /cellar/i.test(n.location) && !stateData.world?.secrets?.cellar_contents?.revealed),
+      emotion: emotion.toLowerCase()
     });
   }
-  // Add patron NPCs from config root
   ['patron-farmer', 'patron-merchant', 'patron-pilgrim', 'patron-minstrel'].forEach(function(k) {
     var p = configData[k];
     if (p && p.name) {
-      result.push({ id: k, name: p.name, location: p.location || '—', hidden: false });
+      result.push({
+        id: k,
+        name: p.name,
+        location: p.location || '—',
+        hidden: false,
+        emotion: (p.disposition && typeof p.disposition === 'string') ? p.disposition.toLowerCase() : 'calm'
+      });
     }
   });
   return result;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NPC CARD OVERLAY
+// ═══════════════════════════════════════════════════════════════
+function openNpcCard(npcId) {
+  var n = stateData.npcs && stateData.npcs[npcId];
+  if (!n) n = configData[npcId];
+  if (!n) return;
+
+  var dialogueHistory = n.dialogueHistory || [];
+  var lastSaid = dialogueHistory.length ? dialogueHistory[dialogueHistory.length - 1] : '';
+  var threat = n.threatLevel || (n.cr ? Math.min(10, Math.round(parseFloat(n.cr) * 0.7)) : 1);
+  var threatPct = (threat / 10) * 100;
+  var threatLabel = threat >= 8 ? 'Extreme' : threat >= 6 ? 'High' : threat >= 4 ? 'Moderate' : threat >= 2 ? 'Low' : 'Minimal';
+
+  var voiceLabel = '';
+  if (n.voiceProfileDetails && n.voiceProfileDetails.fallbackEchoVoice) {
+    voiceLabel = (n.voiceCode || '?') + ' — ' + n.voiceProfileDetails.fallbackEchoVoice;
+  } else if (n.voiceProfile) {
+    voiceLabel = n.voiceProfile;
+  }
+
+  var html = '<div class="ov-title">' + esc(n.name) + (n.cr ? '  <span style="font-size:14px;color:var(--text-dim);">CR ' + n.cr + '</span>' : '') + '</div>' +
+    '<div class="ov-subtitle"><span>' + esc(n.trueIdentity || n.role || '') + '</span><span>' + esc(voiceLabel) + '</span></div>' +
+
+    '<div class="ov-section">' +
+    (n.role ? '<div class="ov-row"><span class="ov-label">Surface</span><span class="ov-val">' + esc(n.role) + '</span></div>' : '') +
+    (n.secret ? '<div class="ov-row"><span class="ov-label">Secret</span><span class="ov-val">' + esc(n.secret) + '</span></div>' : '') +
+    (n.tell ? '<div class="ov-row"><span class="ov-label">Tell</span><span class="ov-val">' + esc(n.tell) + '</span></div>' : '') +
+    (n.motivation ? '<div class="ov-row"><span class="ov-label">Motivation</span><span class="ov-val">' + esc(n.motivation) + '</span></div>' : '') +
+    '<div class="ov-row"><span class="ov-label">State</span><span class="ov-val">' + esc(n.emotionalState || n.disposition || 'unknown') + '</span></div>' +
+    '</div>' +
+
+    '<div class="ov-section">' +
+    '<div class="ov-row"><span class="ov-label">Threat</span><span class="ov-val"><div class="threat-bar"><div class="threat-bar-fill"><div style="width:' + threatPct + '%"></div></div><span>' + threatLabel + '</span></div></span></div>' +
+    (n.mirrorReflection ? '<div class="ov-row"><span class="ov-label">Mirror</span><span class="ov-val">' + esc(n.mirrorReflection === 'none' ? 'No reflection — absolute absence' : n.mirrorReflection === 'distorted' ? 'Distorted — wrong proportions' : 'Normal') + '</span></div>' : '') +
+    (voiceLabel ? '<div class="ov-row"><span class="ov-label">Voice</span><span class="ov-val">' + esc(voiceLabel) + '</span></div>' : '') +
+    (n.languages ? '<div class="ov-row"><span class="ov-label">Languages</span><span class="ov-val">' + esc(typeof n.languages === 'string' ? n.languages : (n.languages || []).join(', ')) + '</span></div>' : '') +
+    '</div>';
+
+  // Disposition toward each player
+  if (n.dispositions || n.disposition) {
+    var disp = n.dispositions || (typeof n.disposition === 'object' ? n.disposition : null);
+    if (disp && typeof disp === 'object') {
+      html += '<div class="ov-section"><h3>Disposition</h3><div class="ov-disp">';
+      for (var pid in disp) {
+        if (typeof disp[pid] === 'string') {
+          html += '<div class="name">' + esc(pid) + '</div><div class="text">' + esc(disp[pid]) + '</div>';
+        }
+      }
+      html += '</div></div>';
+    }
+  }
+
+  // Social combat momentum
+  if (n.letavecKnowledge && n.letavecKnowledge.socialCombatUnlocks) {
+    var current = (stateData.socialCombat && stateData.socialCombat[npcId] && stateData.socialCombat[npcId].momentum) || 0;
+    html += '<div class="ov-section"><h3>Social Combat Momentum <span class="momentum-current">Current: ' + current + '/10</span></h3><div class="momentum-list">';
+    n.letavecKnowledge.socialCombatUnlocks.forEach(function(u) {
+      html += '<div><b>m' + u.momentum + '</b> &nbsp; ' + esc(u.reveals) + '</div>';
+    });
+    html += '</div></div>';
+  }
+
+  if (lastSaid) {
+    html += '<div class="ov-section"><h3>Last Said</h3><div style="font-size:13px;color:var(--text-dim);font-style:italic;">"' + esc(lastSaid) + '"</div></div>';
+  }
+
+  if (n.knowledge) {
+    var knowledge = Array.isArray(n.knowledge) ? n.knowledge.slice(0, 6).join(' · ') : String(n.knowledge);
+    html += '<div class="ov-section"><h3>Knows</h3><div style="font-size:12px;color:var(--text-dim);">' + esc(knowledge) + '</div></div>';
+  }
+
+  $('overlay-body').innerHTML = html;
+  $('overlay').classList.add('open');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -598,7 +1038,6 @@ function addChat(from, text) {
   chatMessages.unshift({ from: from, text: text, time: fmtTime(new Date()), id: 'c-' + Date.now() });
   if (chatMessages.length > 20) chatMessages.pop();
   renderChat();
-  // Pulse latest
   setTimeout(function() {
     var first = document.querySelector('.chat-row');
     if (first) first.classList.remove('new');
@@ -660,7 +1099,6 @@ function handleMsg(msg) {
     var p = msg.data && msg.data.path;
     var v = msg.data && msg.data.value;
     if (!p) return;
-    // Set nested path
     var parts = p.split('.');
     var obj = stateData;
     for (var i = 0; i < parts.length - 1; i++) {
@@ -669,7 +1107,6 @@ function handleMsg(msg) {
     }
     obj[parts[parts.length - 1]] = v;
 
-    // Update specific renders based on path
     if (p.indexOf('players.') === 0) renderPlayers();
     if (p === 'combat' || p.indexOf('combat.') === 0) renderCombat();
     if (p.indexOf('npcs.') === 0 || p.indexOf('map.tokens.') === 0) renderNpcPositions();
@@ -677,14 +1114,12 @@ function handleMsg(msg) {
     return;
   }
 
-  // Combat events refresh tracker
   if (t.indexOf('combat:') === 0) {
     if (msg.data && msg.data.combat) stateData.combat = msg.data.combat;
     renderCombat();
     return;
   }
 
-  // Wounds update
   if (t === 'wounds:updated') {
     var d = msg.data || msg;
     if (d.playerId) {
@@ -695,7 +1130,6 @@ function handleMsg(msg) {
     return;
   }
 
-  // Stamina updated
   if (t === 'stamina:updated') {
     var sd = msg.data || msg;
     if (sd.playerId) {
@@ -706,7 +1140,6 @@ function handleMsg(msg) {
     return;
   }
 
-  // Horror update
   if (t === 'horror:updated' || t === 'dread:update') {
     var hd = msg.data || msg;
     if (hd.playerId) {
@@ -717,7 +1150,6 @@ function handleMsg(msg) {
     return;
   }
 
-  // Player chat
   if (t === 'chat:party' || t === 'player:chat') {
     var c = msg.data || msg;
     var name = c.fromName || c.from || c.playerId || 'Player';
@@ -725,7 +1157,6 @@ function handleMsg(msg) {
     return;
   }
 
-  // Clues / secrets
   if (t === 'clue:found' || t === 'secret:reveal' || t === 'observation:fired') {
     var ev = msg.data || msg;
     var text = ev.description || ev.text || ev.id || '';
@@ -733,15 +1164,23 @@ function handleMsg(msg) {
     return;
   }
 
-  // Story beats
   if (t === 'story:beat' && msg.data && msg.data.beatName) {
     addClue('Beat: ' + msg.data.beatName);
     return;
   }
 
-  // Player connected/disconnected — update player cards
   if (t === 'player:connected' || t === 'player:disconnected' || t === 'player:absent_changed') {
     setTimeout(loadConfig, 500);
+    return;
+  }
+
+  // NPC emotional state updates
+  if (t === 'npc:emotional_state') {
+    var ne = msg.data || msg;
+    if (ne.npcId && stateData.npcs[ne.npcId]) {
+      stateData.npcs[ne.npcId].emotionalState = ne.state;
+      renderNpcPositions();
+    }
     return;
   }
 }
@@ -756,6 +1195,12 @@ function renderAll() {
     $('game-time-display').textContent = fmtGameTime(stateData.world.gameTime);
   }
 }
+
+window.openPlayerSheet = openPlayerSheet;
+window.openNpcCard = openNpcCard;
+window.closeOverlay = closeOverlay;
+window.toggleAbsent = toggleAbsent;
+window.nextTurn = nextTurn;
 
 connect();
 </script>

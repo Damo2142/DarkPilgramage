@@ -624,6 +624,27 @@
     </div>
 
     <div class="tool-section">
+      <h3>Audio Devices</h3>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">Browser must request mic permission before output devices appear. Selections persist in localStorage on this browser.</div>
+      <div class="tool-row">
+        <label style="font-size:12px;color:var(--text);min-width:110px;">Room Speaker</label>
+        <select id="audio-room-select" style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px;border-radius:3px;font-size:12px;"></select>
+        <button class="tool-btn" onclick="AudioDevices.testRoom()">Test</button>
+      </div>
+      <div class="tool-row">
+        <label style="font-size:12px;color:var(--text);min-width:110px;">DM Earbud</label>
+        <select id="audio-earbud-select" style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px;border-radius:3px;font-size:12px;"></select>
+        <button class="tool-btn" onclick="AudioDevices.testEarbud()">Test</button>
+      </div>
+      <div class="tool-row" style="margin-top:8px;">
+        <button class="tool-btn primary" onclick="AudioDevices.save()">Save Audio Config</button>
+        <button class="tool-btn" onclick="AudioDevices.refresh()">↻ Refresh Devices</button>
+        <button class="tool-btn" onclick="AudioDevices.requestPermission()">Grant Mic Permission</button>
+      </div>
+      <div id="audio-devices-status" style="font-size:11px;color:var(--text-dim);margin-top:8px;"></div>
+    </div>
+
+    <div class="tool-section">
       <h3>System</h3>
       <div class="tool-row">
         <span class="pill" id="tool-gemini-pill"><span class="pill-dot"></span><span id="tool-gemini-label">Gemini ?</span></span>
@@ -1746,6 +1767,130 @@ var LangTools = {
   }
 };
 window.LangTools = LangTools;
+
+// ═══════════════════════════════════════════════════════════════
+// AudioDevices — Tools tab > Audio Devices section (FIX-B5)
+// ═══════════════════════════════════════════════════════════════
+var AudioDevices = {
+  STORAGE_KEY: 'codm.audioDevices.v1',
+  outputs: [],
+  selected: { roomSpeaker: '', earbud: '' },
+  init: function() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(AudioDevices.STORAGE_KEY) || '{}');
+      AudioDevices.selected.roomSpeaker = saved.roomSpeaker || '';
+      AudioDevices.selected.earbud = saved.earbud || '';
+    } catch (e) {}
+    AudioDevices.refresh();
+    if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+      navigator.mediaDevices.addEventListener('devicechange', function() { AudioDevices.refresh(); });
+    }
+  },
+  requestPermission: function() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      AudioDevices._setStatus('Browser does not support getUserMedia');
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
+      stream.getTracks().forEach(function(t) { t.stop(); });
+      AudioDevices._setStatus('Mic permission granted — refreshing devices...');
+      setTimeout(AudioDevices.refresh, 200);
+    }).catch(function(e) {
+      AudioDevices._setStatus('Mic permission denied: ' + e.message);
+    });
+  },
+  refresh: function() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+      AudioDevices._setStatus('enumerateDevices not supported');
+      return;
+    }
+    navigator.mediaDevices.enumerateDevices().then(function(devices) {
+      AudioDevices.outputs = devices.filter(function(d) { return d.kind === 'audiooutput'; });
+      var roomSel = $('audio-room-select');
+      var earbudSel = $('audio-earbud-select');
+      var html = '<option value="">— default —</option>';
+      AudioDevices.outputs.forEach(function(d) {
+        var name = d.label || ('Output ' + d.deviceId.slice(0, 8));
+        html += '<option value="' + esc(d.deviceId) + '">' + esc(name) + '</option>';
+      });
+      if (roomSel) {
+        roomSel.innerHTML = html;
+        roomSel.value = AudioDevices.selected.roomSpeaker || '';
+      }
+      if (earbudSel) {
+        earbudSel.innerHTML = html;
+        earbudSel.value = AudioDevices.selected.earbud || '';
+      }
+      var labeled = AudioDevices.outputs.filter(function(d) { return d.label; }).length;
+      if (labeled === 0 && AudioDevices.outputs.length > 0) {
+        AudioDevices._setStatus(AudioDevices.outputs.length + ' devices, none labeled — click "Grant Mic Permission" to see names');
+      } else {
+        AudioDevices._setStatus(AudioDevices.outputs.length + ' output devices available, ' + labeled + ' labeled');
+      }
+    }).catch(function(e) {
+      AudioDevices._setStatus('Failed to enumerate devices: ' + e.message);
+    });
+  },
+  save: function() {
+    var roomSel = $('audio-room-select');
+    var earbudSel = $('audio-earbud-select');
+    AudioDevices.selected.roomSpeaker = roomSel ? roomSel.value : '';
+    AudioDevices.selected.earbud = earbudSel ? earbudSel.value : '';
+    try {
+      localStorage.setItem(AudioDevices.STORAGE_KEY, JSON.stringify(AudioDevices.selected));
+      AudioDevices._setStatus('Audio config saved. Page reload required for some audio paths.');
+    } catch (e) {
+      AudioDevices._setStatus('Failed to save: ' + e.message);
+    }
+  },
+  testRoom: function() { AudioDevices._playTone(AudioDevices.selected.roomSpeaker, 440, 'Room speaker'); },
+  testEarbud: function() { AudioDevices._playTone(AudioDevices.selected.earbud, 660, 'DM earbud'); },
+  _playTone: function(deviceId, freq, label) {
+    var audio = new Audio();
+    // Generate a 0.6s sine WAV inline so we don't need an external asset
+    var sampleRate = 44100;
+    var dur = 0.6;
+    var nSamples = Math.floor(sampleRate * dur);
+    var buffer = new ArrayBuffer(44 + nSamples * 2);
+    var view = new DataView(buffer);
+    function wstr(off, s) { for (var i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); }
+    wstr(0, 'RIFF'); view.setUint32(4, 36 + nSamples * 2, true);
+    wstr(8, 'WAVE'); wstr(12, 'fmt '); view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+    wstr(36, 'data'); view.setUint32(40, nSamples * 2, true);
+    for (var i = 0; i < nSamples; i++) {
+      var t = i / sampleRate;
+      var fade = i < 1000 ? i / 1000 : (i > nSamples - 1000 ? (nSamples - i) / 1000 : 1);
+      var v = Math.sin(2 * Math.PI * freq * t) * 0.3 * fade;
+      view.setInt16(44 + i * 2, Math.max(-32767, Math.min(32767, v * 32767)), true);
+    }
+    var blob = new Blob([buffer], { type: 'audio/wav' });
+    audio.src = URL.createObjectURL(blob);
+    var play = function() {
+      audio.play().then(function() {
+        AudioDevices._setStatus('Playing test tone on ' + label);
+      }).catch(function(e) {
+        AudioDevices._setStatus(label + ' test failed: ' + e.message);
+      });
+    };
+    if (deviceId && audio.setSinkId) {
+      audio.setSinkId(deviceId).then(play).catch(function(e) {
+        AudioDevices._setStatus(label + ' setSinkId failed (' + e.message + '), playing on default');
+        play();
+      });
+    } else {
+      play();
+    }
+  },
+  _setStatus: function(text) {
+    var el = $('audio-devices-status');
+    if (el) el.textContent = text;
+  }
+};
+window.AudioDevices = AudioDevices;
+setTimeout(function() { AudioDevices.init(); }, 600);
 window.openPlayerSheet = openPlayerSheet;
 window.openNpcCard = openNpcCard;
 window.closeOverlay = closeOverlay;

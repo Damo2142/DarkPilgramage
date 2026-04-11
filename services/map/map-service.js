@@ -1154,6 +1154,33 @@ class MapService {
           previousZone: oldZone || null
         });
       }
+
+      // Auto-reveal-on-entry: if a player token enters a fogged zone, reveal it.
+      // Reveal is permanent for the session — moving back out does NOT re-fog.
+      const tokenObj = this.state.get(`map.tokens.${tokenId}`);
+      if (tokenObj && (tokenObj.type === 'pc' || tokenObj.isPC)) {
+        const zonesArr = this.state.get('map.zones') || [];
+        let zonesChanged = false;
+        for (const z of zonesArr) {
+          if (z.revealed) continue;
+          // Check if token position is inside this zone
+          let inside = false;
+          if (z.points && z.points.length >= 3) {
+            inside = this._pointInPolygon(snappedX, snappedY, z.points);
+          } else if (z.x != null && z.w != null) {
+            inside = snappedX >= z.x && snappedX <= z.x + z.w && snappedY >= z.y && snappedY <= z.y + z.h;
+          }
+          if (inside) {
+            z.revealed = true;
+            zonesChanged = true;
+            console.log(`[MapService] Auto-reveal: ${tokenObj.name || tokenId} entered ${z.name || z.id}`);
+            this.bus.dispatch('map:zone_revealed', { zoneId: z.id, revealed: true, byTokenEntry: tokenId });
+          }
+        }
+        if (zonesChanged) {
+          this.state.set('map.zones', zonesArr);
+        }
+      }
     }
 
     // Dynamic lighting replaces zone-based fog reveal — vision computed client-side

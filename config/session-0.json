@@ -1070,6 +1070,10 @@
       "roomPosition": "bar — Echo nearest kitchen or bar position",
       "mirrorReflection": "normal",
       "voiceCode": "F1",
+      "languages": ["common", "slovak"],
+      "primaryLanguage": "slovak",
+      "commonFluency": "conversational",
+      "languageNote": "Switches to Slovak when frightened or emotional. Her Common breaks down under stress.",
       "dispositions": {
         "zarina": "Cautious — strangers in her inn during a blizzard",
         "barry": "Cautious — strangers in her inn during a blizzard",
@@ -1143,6 +1147,10 @@
       "roomPosition": "near door — Echo nearest entrance",
       "mirrorReflection": "normal",
       "voiceCode": "M3",
+      "languages": ["slovak", "common"],
+      "primaryLanguage": "slovak",
+      "commonFluency": "basic",
+      "languageNote": "His Common is functional but simple. Complex questions confuse him. Tonight his answers are shorter than usual — he is distracted and frightened.",
       "dispositions": {
         "zarina": "Distracted — too consumed with his curse to notice her closely",
         "barry": "Wary — Barry's hunter equipment unsettles him",
@@ -1219,6 +1227,14 @@
       "roomPosition": "far corner — Echo in far corner of dining room",
       "mirrorReflection": "none",
       "voiceCode": "M2",
+      "languages": ["common", "latin", "slovak", "german", "french", "greek", "arabic", "old_church_slavonic", "old_russian", "magyar", "english", "polish"],
+      "primaryLanguage": "common",
+      "languageNote": "Speaks all European languages without accent — each perfectly calibrated to the era he learned it. Church Slavonic he learned from its creators in 863 AD. This is the tell no player will notice until they already know what he is.",
+      "specialLanguageRules": {
+        "elvish_americas": "He has heard something like it. Once. Long ago. He does not say where. Max whispers if Zarina uses it: 'Vladislav's eyes move to her. He has heard that language before. He does not say when or where.' — HIGH priority.",
+        "draconic": "Recognizes immediately. Expression shifts. Does not speak it but understands it. Max whispers: 'Vladislav recognized that. He is now more interested in Spurt.' — HIGH priority.",
+        "old_church_slavonic": "If Church Slavonic comes up, Max whispers: 'He speaks it like someone who was there when it was written. That language is 400 years old.' — NORMAL priority revelation."
+      },
       "dispositions": {
         "zarina": "Genuinely curious — her bloodline is unknown to him in 600 years",
         "barry": "Recognizes the Frascht name. Cautious. Respectful. Dangerous.",
@@ -1323,6 +1339,9 @@
       "roomPosition": "corner near door opposite Vladislav — appropriate Echo",
       "mirrorReflection": "normal",
       "voiceCode": "M1",
+      "languages": ["common"],
+      "primaryLanguage": "common",
+      "languageNote": "Common only. Educated man, well-spoken. His articulate speech makes the absence of his brother's name more noticeable — a man this careful with words should have mentioned where he was going.",
       "dispositions": {
         "zarina": "Gentle distraction — does not notice her bloodline",
         "barry": "Gentle distraction — does not register the hunter equipment",
@@ -1395,6 +1414,9 @@
       "roomPosition": "cellar — Echo nearest cellar (or down-direction routing if available)",
       "mirrorReflection": "distorted",
       "voiceCode": "M3",
+      "languages": ["slovak", "common"],
+      "primaryLanguage": "slovak",
+      "languageNote": "In the cellar. Chained. Whatever language he speaks now comes out wrong — flat affect, wrong cadence, pauses in wrong places. He is not the man who spoke these languages before.",
       "dispositions": {
         "zarina": "Sees prey if she descends. Does not yet know who she is.",
         "barry": "Senses Frascht blood — recognizes a hunter, becomes cautious.",
@@ -1486,6 +1508,10 @@
     "roomPosition": "hearth — Echo nearest fireplace position",
     "mirrorReflection": "normal",
     "voiceCode": "M1",
+    "languages": ["slovak"],
+    "primaryLanguage": "slovak",
+    "commonFluency": "none",
+    "languageNote": "Slovak only. No Common at all. Watches faces not words. Communicates through expression and gesture with non-Slovak speakers. Has things to say but no way to say them to most of the party.",
     "dispositions": {
       "zarina": "Sees a soldier in her bearing. Approves silently.",
       "barry": "Recognizes the Frascht name from old ballads. Watches him.",
@@ -1526,6 +1552,10 @@
     "roomPosition": "middle of room — main room speaker",
     "mirrorReflection": "normal",
     "voiceCode": "M3",
+    "languages": ["common", "german"],
+    "primaryLanguage": "german",
+    "commonFluency": "fluent",
+    "languageNote": "Comfortable in both. Defaults to German when nervous — which is often tonight.",
     "dispositions": {
       "zarina": "Tries not to stare at her bearing. Wonders what she costs to hire.",
       "barry": "Sees money — Frascht hunters are well-paid. Wants to do business.",
@@ -1582,6 +1612,10 @@
     "roomPosition": "wherever he is sitting — use nearest Echo to his current token position on map",
     "mirrorReflection": "normal",
     "voiceCode": "M2",
+    "languages": ["common", "english", "latin"],
+    "primaryLanguage": "english",
+    "commonFluency": "fluent",
+    "languageNote": "His Common is slightly accented — English native speaker. His Latin is formal and ecclesiastical. He is the party's best bridge to the church.",
     "dispositions": {
       "zarina": "Theologically troubled — Half-Elf from beyond the known world. Prays about it.",
       "barry": "Recognizes a man called to hunt. Approves quietly.",
@@ -1622,6 +1656,11 @@
     "roomPosition": "center room — main room speaker",
     "mirrorReflection": "normal",
     "voiceCode": "F2",
+    "languages": ["common", "slovak", "german", "french"],
+    "primaryLanguage": "common",
+    "frenchFluency": "songs and performance only",
+    "languageNote": "The most linguistically capable person in the room after Vladislav. She edits what she translates — her personality shapes every message she passes on. She makes herself more useful by being the only bridge.",
+    "translationStyle": "Katya softens confrontation, sharpens intrigue, and removes anything that makes the speaker sound foolish. She is not malicious — she is a professional who values her position as interpreter.",
     "dispositions": {
       "zarina": "Immediately fascinated — old songs about things beyond the western horizon",
       "barry": "Recognizes the Frascht name from a ballad her grandmother taught her",

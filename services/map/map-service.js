@@ -487,6 +487,18 @@ class MapService {
       res.json({ tokenId, visible: !!visible });
     });
 
+    // POST /api/map/token/reveal-to-players — toggle whether players see this NPC token on /table
+    // body: { tokenId, revealed }
+    app.post('/api/map/token/reveal-to-players', (req, res) => {
+      const { tokenId, revealed } = req.body || {};
+      if (!tokenId) return res.status(400).json({ error: 'tokenId required' });
+      const token = this.state.get(`map.tokens.${tokenId}`);
+      if (!token) return res.status(404).json({ error: 'Token not found' });
+      this.state.set(`map.tokens.${tokenId}.revealedToPlayers`, !!revealed);
+      this.bus.dispatch('map:token_reveal_changed', { tokenId, revealed: !!revealed });
+      res.json({ tokenId, revealedToPlayers: !!revealed });
+    });
+
     // POST /api/map/zone/reveal — reveal or hide a zone
     // body: { zoneId, revealed }
     app.post('/api/map/zone/reveal', (req, res) => {
@@ -1333,6 +1345,13 @@ class MapService {
       const { playerId } = env.data;
       if (!this.activeMapId) return;
 
+      // Skip absent / not yet arrived players — no token until present
+      const playerState = this.state.get(`players.${playerId}`) || {};
+      if (playerState.absent || playerState.notYetArrived) {
+        console.log(`[MapService] Skipping token creation for absent player: ${playerId}`);
+        return;
+      }
+
       // If player has no map assignment, assign them to the active map
       if (!this.playerMapAssignment[playerId]) {
         this.playerMapAssignment[playerId] = this.activeMapId;
@@ -1344,33 +1363,37 @@ class MapService {
       const existing = this.state.get(`map.tokens.${playerId}`);
       if (existing) return;
 
-      const mapDef = this.maps.get(this.activeMapId);
-      const tokens = this.state.get('map.tokens') || {};
-      const pcCount = Object.values(tokens).filter(t => t.type === 'pc').length;
-      const spawns = mapDef?.playerSpawns?.spread || [];
-      const spawn = spawns[pcCount] || mapDef?.playerSpawns?.default || { x: 280, y: 350 };
+      this._addPlayerToken(playerId);
+    }, 'map');
 
-      const charData = this.state.get(`players.${playerId}.character`) || {};
-      const token = {
-        id: playerId,
-        name: charData.name || playerId,
-        type: 'pc',
-        x: spawn.x,
-        y: spawn.y,
-        image: `${playerId}.webp`,
-        visible: true,
-        hp: charData.hp || { current: 20, max: 20 },
-        ac: charData.ac || 10
-      };
-
-      this.state.set(`map.tokens.${playerId}`, token);
-      this.bus.dispatch('map:token_added', { token });
-      console.log(`[MapService] Added token for player ${playerId} on ${this.activeMapId}`);
+    // When a player is marked present (returning from absent), add their token
+    this.bus.subscribe('player:absent_changed', (env) => {
+      const { playerId, absent } = env.data || {};
+      if (absent) {
+        // Mark as absent — remove existing token
+        const existing = this.state.get(`map.tokens.${playerId}`);
+        if (existing) {
+          const tokens = this.state.get('map.tokens') || {};
+          delete tokens[playerId];
+          this.state.set('map.tokens', tokens);
+          this.bus.dispatch('map:token_removed', { tokenId: playerId });
+          console.log(`[MapService] Removed token for absent player: ${playerId}`);
+        }
+      } else {
+        // Mark as present — add token if not already there
+        const playerState = this.state.get(`players.${playerId}`) || {};
+        if (playerState.notYetArrived) return; // still not arrived
+        const existing = this.state.get(`map.tokens.${playerId}`);
+        if (!existing && this.activeMapId) {
+          this._addPlayerToken(playerId);
+        }
+      }
     }, 'map');
 
     // Character assignment updates token name/HP
     this.bus.subscribe('characters:imported', () => this._syncPlayerTokens(), 'map');
     this.bus.subscribe('characters:reloaded', () => this._syncPlayerTokens(), 'map');
+    this.bus.subscribe('characters:loaded', () => this._syncPlayerTokens(), 'map');
 
     // Auto-perception: check zones when tokens enter them
     this.bus.subscribe('map:zone_enter', (env) => {
@@ -1414,6 +1437,17 @@ class MapService {
     if (!this.activeMapId) return;
     const players = this.state.get('players') || {};
     for (const [playerId, pData] of Object.entries(players)) {
+      // Remove tokens for absent / not-yet-arrived players
+      if (pData.absent || pData.notYetArrived) {
+        const existing = this.state.get(`map.tokens.${playerId}`);
+        if (existing) {
+          const tokens = this.state.get('map.tokens') || {};
+          delete tokens[playerId];
+          this.state.set('map.tokens', tokens);
+          this.bus.dispatch('map:token_removed', { tokenId: playerId });
+        }
+        continue;
+      }
       const token = this.state.get(`map.tokens.${playerId}`);
       if (!token || token.type !== 'pc') continue;
       if (pData.character?.name) {
@@ -1423,6 +1457,33 @@ class MapService {
         this.state.set(`map.tokens.${playerId}.hp`, pData.character.hp);
       }
     }
+  }
+
+  _addPlayerToken(playerId) {
+    if (!this.activeMapId) return;
+    const mapDef = this.maps.get(this.activeMapId);
+    const tokens = this.state.get('map.tokens') || {};
+    const pcCount = Object.values(tokens).filter(t => t.type === 'pc').length;
+    const spawns = mapDef?.playerSpawns?.spread || [];
+    const spawn = spawns[pcCount] || mapDef?.playerSpawns?.default || { x: 280, y: 350 };
+
+    const charData = this.state.get(`players.${playerId}.character`) || {};
+    const token = {
+      id: playerId,
+      name: charData.name || playerId,
+      type: 'pc',
+      x: spawn.x,
+      y: spawn.y,
+      image: `${playerId}.webp`,
+      visible: true,
+      hp: charData.hp || { current: 20, max: 20 },
+      ac: charData.ac || 10
+    };
+
+    this.state.set(`map.tokens.${playerId}`, token);
+    this.bus.dispatch('map:token_added', { token });
+    console.log(`[MapService] Added token for player ${playerId} on ${this.activeMapId}`);
+    return token;
   }
 
   // ═══════════════════════════════════════════════════════════════

@@ -279,6 +279,8 @@ class CharacterService {
   _loadAll() {
     const characters = this._readCharacterFiles();
     const assignments = this._readAssignments();
+    // Read backstories from session config so absent/notYetArrived flags propagate
+    const backstories = (this.config && this.config.backstories) || {};
     let count = 0;
     for (const [playerId, charId] of Object.entries(assignments)) {
       if (playerId.startsWith('_')) continue;
@@ -287,8 +289,19 @@ class CharacterService {
         console.warn('[Characters] Assignment: player \'' + playerId + '\' -> ID ' + charId + ' not found');
         continue;
       }
-      this.state.setPlayer(playerId, { name: playerId, character: char });
-      console.log('[Characters] -> ' + playerId + ': ' + char.name + ' (' + char.race + ' ' + char.class + ' ' + char.level + ')');
+      // Preserve existing absent/notYetArrived state if already set
+      const existing = this.state.get('players.' + playerId) || {};
+      const bs = backstories[playerId] || {};
+      const playerData = {
+        name: playerId,
+        character: char,
+        absent: existing.absent || !!bs.absent,
+        absentReason: existing.absentReason || bs.absentReason || null,
+        notYetArrived: existing.notYetArrived || !!bs.notYetArrived
+      };
+      this.state.setPlayer(playerId, playerData);
+      const flag = (playerData.absent || playerData.notYetArrived) ? ' [ABSENT]' : '';
+      console.log('[Characters] -> ' + playerId + ': ' + char.name + ' (' + char.race + ' ' + char.class + ' ' + char.level + ')' + flag);
       count++;
     }
     this.state.set('characters.available', characters);

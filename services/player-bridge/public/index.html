@@ -5111,5 +5111,184 @@ if (navigator.permissions) {
 })();
 </script>
 
+<!-- ─── FIX4 — PERSISTENT CHAT BAR ───────────────────────────────── -->
+<style>
+  body { padding-bottom: 56px !important; }
+  body.map-fullscreen { padding-bottom: 0 !important; }
+  #chat-stack {
+    position:fixed; left:0; right:0; bottom:52px;
+    z-index:150; pointer-events:none;
+    display:flex; flex-direction:column; gap:4px;
+    padding:8px 12px;
+  }
+  .chat-msg {
+    pointer-events:auto;
+    background:rgba(20,18,16,0.92); border:1px solid #3a3028;
+    border-radius:6px; padding:8px 12px; font-size:13px;
+    color:#e8d0a0; max-width:90%; align-self:flex-start;
+    animation: chat-msg-in 0.4s ease-out;
+  }
+  .chat-msg.max { color:#e8c060; border-color:#8a6a20; font-style:italic; }
+  .chat-msg.npc { border-color:#a07020; }
+  .chat-msg.npc .speaker { color:#e09030; font-weight:600; margin-right:6px; }
+  .chat-msg.narrator { color:#e8c060; border-color:#8a6a20; font-style:italic; }
+  .chat-msg.player { color:#c8b89a; }
+  .chat-msg.player .speaker { color:#7fa0c0; font-weight:600; margin-right:6px; }
+  .chat-msg.partial { color:#8a7060; font-style:italic; opacity:0.9; }
+  @keyframes chat-msg-in { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  #chat-bar {
+    position:fixed; left:0; right:0; bottom:0;
+    background:#1a1814; border-top:1px solid #3a3028;
+    display:flex; align-items:center; gap:8px; padding:6px 10px;
+    min-height:52px; z-index:160;
+  }
+  body.map-fullscreen #chat-bar { display:none; }
+  body.map-fullscreen #chat-bar-pull { display:flex; }
+  body.map-fullscreen.chat-bar-open #chat-bar { display:flex; bottom:0; }
+  body.map-fullscreen.chat-bar-open #chat-bar-pull { display:none; }
+  body.map-fullscreen #chat-stack { bottom:0; display:none; }
+  body.map-fullscreen.chat-bar-open #chat-stack { bottom:52px; display:flex; }
+  #chat-bar-pull {
+    display:none; position:fixed; left:50%; transform:translateX(-50%);
+    bottom:0; z-index:165; background:rgba(20,18,16,0.92);
+    color:#8a7060; font-size:11px; padding:4px 16px;
+    border:1px solid #3a3028; border-bottom:none;
+    border-radius:6px 6px 0 0; cursor:pointer;
+  }
+  #chat-input {
+    flex:1; background:#0e0c0a; color:#e8d0a0;
+    border:1px solid #3a3028; border-radius:6px;
+    padding:10px 12px; font-size:14px; min-height:36px;
+    font-family:inherit;
+  }
+  #chat-input:focus { outline:none; border-color:#e8c060; }
+  .chat-btn {
+    background:#2a2420; color:#e8c060; border:1px solid #3a3028;
+    border-radius:6px; padding:8px 14px; font-size:13px;
+    font-family:inherit; cursor:pointer; min-height:36px;
+    min-width:44px;
+  }
+  .chat-btn:hover { background:#3a3228; }
+  .chat-btn.mic.active { background:#aa2a1a; color:#fff; animation:mic-pulse 1s ease-in-out infinite; }
+  @keyframes mic-pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+</style>
+
+<div id="chat-bar-pull" onclick="ChatBar.expand()">▲ CHAT</div>
+<div id="chat-stack"></div>
+<div id="chat-bar">
+  <input id="chat-input" type="text" placeholder="Speak to Max, an NPC, or another player..." onkeydown="if(event.key==='Enter')ChatBar.sendText()">
+  <button class="chat-btn mic" id="chat-mic-btn" onclick="ChatBar.toggleMic()" title="Hold/tap to record">🎤</button>
+  <button class="chat-btn" onclick="ChatBar.sendText()">SEND</button>
+</div>
+
+<script>
+var ChatBar = {
+  recent: [],
+  init: function() {
+    // Subscribe to incoming WS chat-related events via the shared message handler
+    var origHandle = window.handleWsMessage;
+    // Defensive: just install our own listener via the existing ws (rebound below)
+  },
+  expand: function() {
+    document.body.classList.add('chat-bar-open');
+    var input = document.getElementById('chat-input');
+    if (input) input.focus();
+    setTimeout(function() {
+      // Auto-collapse after 8 seconds of no interaction
+      ChatBar._collapseTimer = setTimeout(function() {
+        document.body.classList.remove('chat-bar-open');
+      }, 8000);
+    }, 100);
+  },
+  sendText: function() {
+    var input = document.getElementById('chat-input');
+    if (!input) return;
+    var text = (input.value || '').trim();
+    if (!text) return;
+    input.value = '';
+    if (typeof send === 'function') {
+      send({ type: 'chat:message', channel: 'party', text: text, fromName: (window.char && char.name) || 'Player' });
+    }
+    ChatBar.appendMessage({ type: 'player', speaker: 'You', text: text });
+  },
+  toggleMic: function() {
+    var btn = document.getElementById('chat-mic-btn');
+    if (!btn) return;
+    if (window.PlayerMic && PlayerMic._active) {
+      PlayerMic.stop && PlayerMic.stop();
+      btn.classList.remove('active');
+      var inp = document.getElementById('chat-input');
+      if (inp) inp.placeholder = 'Speak to Max, an NPC, or another player...';
+    } else if (window.PlayerMic) {
+      PlayerMic.start();
+      btn.classList.add('active');
+      var inp2 = document.getElementById('chat-input');
+      if (inp2) inp2.placeholder = 'Listening...';
+    }
+  },
+  appendMessage: function(msg) {
+    // msg = { type: max|npc|narrator|player|partial, speaker?, text }
+    var stack = document.getElementById('chat-stack');
+    if (!stack) return;
+    var div = document.createElement('div');
+    div.className = 'chat-msg ' + (msg.type || 'player');
+    var html = '';
+    if (msg.speaker) html += '<span class="speaker">' + ChatBar._esc(msg.speaker) + '</span>';
+    html += ChatBar._esc(msg.text || '');
+    div.innerHTML = html;
+    stack.appendChild(div);
+    ChatBar.recent.push(div);
+    // Keep only last 3 visible
+    while (ChatBar.recent.length > 3) {
+      var old = ChatBar.recent.shift();
+      if (old && old.parentNode) old.parentNode.removeChild(old);
+    }
+    // Auto-fade after 12 seconds
+    setTimeout(function() {
+      if (div && div.parentNode) {
+        div.style.transition = 'opacity 1s';
+        div.style.opacity = '0';
+        setTimeout(function() { if (div.parentNode) div.parentNode.removeChild(div); }, 1100);
+      }
+    }, 12000);
+  },
+  _esc: function(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+};
+window.ChatBar = ChatBar;
+
+// Hook incoming WS events into ChatBar — patches handleWsMessage if defined
+(function() {
+  var checkInterval = setInterval(function() {
+    if (window.handleWsMessage || window.handleMsg) {
+      clearInterval(checkInterval);
+      var orig = window.handleWsMessage || window.handleMsg;
+      var wrapped = function(m) {
+        try {
+          var t = m && (m.type || m.event);
+          if (t === 'player:npc_speech' && m.data) {
+            var d = m.data;
+            var type = (d.tier === 'PARTIAL' || d.tier === 'KATYA_BRIDGE') ? 'partial' : 'npc';
+            ChatBar.appendMessage({ type: type, speaker: d.npcName || d.npcId, text: d.text || '' });
+          } else if (t === 'narrator:whisper_player' && m.data) {
+            ChatBar.appendMessage({ type: 'narrator', text: 'The narrator whispers... ' + (m.data.text || '') });
+          } else if (t === 'chat:party' && m.data) {
+            if (m.data.from === (window.PID || '')) return orig(m);
+            ChatBar.appendMessage({ type: 'player', speaker: m.data.fromName || m.data.from, text: m.data.text || '' });
+          } else if (t === 'player:p2p_message' && m.data) {
+            ChatBar.appendMessage({ type: 'player', speaker: m.data.fromName || m.data.fromPlayerId, text: m.data.text || '' });
+          } else if (t === 'max:say' && m.data) {
+            ChatBar.appendMessage({ type: 'max', speaker: 'MAX', text: m.data.text || '' });
+          }
+        } catch (e) {}
+        return orig(m);
+      };
+      if (window.handleWsMessage) window.handleWsMessage = wrapped;
+      if (window.handleMsg) window.handleMsg = wrapped;
+    }
+  }, 200);
+  setTimeout(function() { clearInterval(checkInterval); }, 5000);
+})();
+</script>
+
 </body>
 </html>

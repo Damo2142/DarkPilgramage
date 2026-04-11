@@ -869,6 +869,13 @@ class PlayerBridgeService {
   }
 
   _handlePlayerMessage(playerId, msg) {
+    // FIX-B6 — server-side WS dedup. Drop duplicate semantic events that
+    // arrive within 2 seconds of an identical one from the same player.
+    // Also honor an explicit msg.seq if the client supplies one.
+    if (this._isDuplicateWsMessage(playerId, msg)) {
+      console.log(`[PlayerBridge] DEDUPED ${playerId} ${msg.type} (duplicate within 2s)`);
+      return;
+    }
     console.log(`[PlayerBridge] Message from ${playerId}: ${msg.type}`);
     switch (msg.type) {
       case 'audio:start':
@@ -1083,6 +1090,44 @@ class PlayerBridgeService {
       default:
         console.log(`[PlayerBridge] Unknown message from ${playerId}: ${msg.type}`);
     }
+  }
+
+  // FIX-B6 — duplicate WS message detection.
+  // Skips audio:chunk and audio:start/stop (high-volume continuous events),
+  // and skips ping/pong. Everything else is fingerprinted by
+  // (type + key fields) and dropped if seen within 2 seconds. Honors an
+  // explicit msg.seq from the client to drop literal repeats of the same id.
+  _isDuplicateWsMessage(playerId, msg) {
+    if (!msg || !msg.type) return false;
+    // Skip dedup for streaming / housekeeping events
+    const SKIP = new Set(['audio:chunk', 'audio:start', 'audio:stop', 'ping', 'pong', 'camera:frame']);
+    if (SKIP.has(msg.type)) return false;
+    this._wsDedup = this._wsDedup || {};
+    const bucket = this._wsDedup[playerId] = this._wsDedup[playerId] || { recent: {}, seqSeen: {} };
+    const now = Date.now();
+    // Honor explicit client sequence id (drop literal repeats)
+    if (msg.seq != null) {
+      const key = msg.type + ':' + msg.seq;
+      if (bucket.seqSeen[key] && (now - bucket.seqSeen[key]) < 60 * 1000) return true;
+      bucket.seqSeen[key] = now;
+    }
+    // Content fingerprint dedup
+    let fp = msg.type;
+    if (msg.text) fp += '|' + String(msg.text).slice(0, 200);
+    if (msg.npcId) fp += '|' + msg.npcId;
+    if (msg.targetId) fp += '|' + msg.targetId;
+    if (msg.tokenId) fp += '|' + msg.tokenId;
+    if (msg.channel) fp += '|' + msg.channel;
+    const last = bucket.recent[fp];
+    if (last && (now - last) < 2000) return true;
+    bucket.recent[fp] = now;
+    // Sweep stale entries periodically
+    if (Object.keys(bucket.recent).length > 60) {
+      for (const [k, t] of Object.entries(bucket.recent)) {
+        if (now - t > 10 * 1000) delete bucket.recent[k];
+      }
+    }
+    return false;
   }
 
   _handleAudioChunk(playerId, audioData) {

@@ -197,11 +197,24 @@ class AudioService {
       const text = await this._geminiTranscribe(wavBuffer, durationMs);
       if (text && text.trim().length > 0) {
         const speaker = playerId === 'dm' ? 'dm' : playerId;
+        const trimmed = text.trim();
+
+        // FIX-B6 — dedupe identical transcriptions within 3 seconds.
+        // Whisper sometimes emits the same line twice across overlapping chunks.
+        this._lastTranscripts = this._lastTranscripts || {};
+        const last = this._lastTranscripts[speaker];
+        const now = Date.now();
+        if (last && last.text === trimmed && (now - last.at) < 3000) {
+          console.log(`[Audio/Gemini] [${speaker}] DEDUPED — same transcription within 3s: "${trimmed}"`);
+          return;
+        }
+        this._lastTranscripts[speaker] = { text: trimmed, at: now };
+
         console.log(`[Audio/Gemini] [${speaker}] (${Math.round(durationMs)}ms) ${text}`);
 
         this.bus.dispatch('transcript:segment', {
           speaker,
-          text: text.trim(),
+          text: trimmed,
           confidence: 0.95,
           language: 'en',
           processingMs: 0,
@@ -396,6 +409,16 @@ class AudioService {
 
       case 'result': {
         const speaker = msg.player === 'dm' ? 'dm' : msg.player;
+        // FIX-B6 — dedupe identical transcriptions within 3s
+        const trimmedW = (msg.text || '').trim();
+        this._lastTranscripts = this._lastTranscripts || {};
+        const lastW = this._lastTranscripts[speaker];
+        const nowW = Date.now();
+        if (trimmedW && lastW && lastW.text === trimmedW && (nowW - lastW.at) < 3000) {
+          console.log(`[Audio/Whisper] [${speaker}] DEDUPED — same transcription within 3s: "${trimmedW}"`);
+          break;
+        }
+        if (trimmedW) this._lastTranscripts[speaker] = { text: trimmedW, at: nowW };
         this.bus.dispatch('transcript:segment', {
           speaker,
           text: msg.text,

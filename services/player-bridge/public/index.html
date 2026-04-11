@@ -5215,14 +5215,26 @@ var ChatBar = {
       }, 8000);
     }, 100);
   },
+  // FIX-B6 — 2 second debounce + per-message sequence id
+  _lastSendAt: 0,
+  _seqCounter: 0,
   sendText: function() {
     var input = document.getElementById('chat-input');
     if (!input) return;
     var text = (input.value || '').trim();
     if (!text) return;
+    var now = Date.now();
+    if (now - ChatBar._lastSendAt < 2000) {
+      // Debounced — still display the message locally so the user gets feedback
+      input.value = '';
+      ChatBar.appendMessage({ type: 'system', text: '(slow down — wait 2s between messages)' });
+      return;
+    }
+    ChatBar._lastSendAt = now;
     input.value = '';
+    var seq = (++ChatBar._seqCounter) + ':' + now;
     if (typeof send === 'function') {
-      send({ type: 'chat:message', channel: 'party', text: text, fromName: (window.char && char.name) || 'Player' });
+      send({ type: 'chat:message', channel: 'party', text: text, seq: seq, fromName: (window.char && char.name) || 'Player' });
     }
     ChatBar.appendMessage({ type: 'player', speaker: 'You', text: text });
   },

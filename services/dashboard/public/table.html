@@ -53,7 +53,11 @@ var tokenOpacity = {};
 // Compute the list of revealed rectangles from either:
 //  1) explicit fogRevealed rects, or
 //  2) zones[].revealed === true (preferred — matches map system)
-//  3) fallback: entire map (so tokens render even without configured zones)
+// FIX7: NO fallback to entire map. Unrevealed = solid black. Players only
+// see rooms their token has physically entered (auto-reveal on entry runs
+// in map-service _moveToken). Common-room zone is revealed at session start
+// in the map definition. The DM can still manually reveal a zone via the
+// dm-map controls panel if they want to skip ahead.
 function getRevealedRects() {
   if (fogRevealed && fogRevealed.length) return fogRevealed;
   if (zones && zones.length) {
@@ -64,9 +68,6 @@ function getRevealedRects() {
       });
     }
   }
-  // No zones revealed and no rects — return full map so /table is not pitch black
-  // This is the default state before DM has configured anything
-  if (mapData) return [{ x: 0, y: 0, w: mapData.width, h: mapData.height }];
   return [];
 }
 

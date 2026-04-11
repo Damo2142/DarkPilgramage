@@ -426,26 +426,26 @@
       "name": "Common Room",
       "x": 0,
       "y": 0,
-      "w": 4900,
+      "w": 4340,
       "h": 2800,
       "revealed": true
     },
     {
-      "id": "cellar",
-      "name": "Cellar",
-      "x": 4400,
-      "y": 2400,
-      "w": 500,
-      "h": 400,
+      "id": "cellar-access",
+      "name": "Cellar Access",
+      "x": 1000,
+      "y": 600,
+      "w": 280,
+      "h": 420,
       "revealed": false
     },
     {
       "id": "kitchen",
       "name": "Kitchen",
-      "x": 5376,
-      "y": 2304,
-      "w": 1024,
-      "h": 768,
+      "x": 4340,
+      "y": 560,
+      "w": 560,
+      "h": 1700,
       "revealed": false,
       "checks": [
         {
@@ -460,21 +460,21 @@
       ]
     },
     {
-      "id": "storage-cellar",
-      "name": "Storage/Cellar",
-      "x": 6400,
-      "y": 2304,
-      "w": 512,
-      "h": 768,
+      "id": "storage-east",
+      "name": "Storage East",
+      "x": 4340,
+      "y": 2260,
+      "w": 560,
+      "h": 540,
       "revealed": false
     },
     {
-      "id": "storage",
-      "name": "Storage",
-      "x": 6400,
-      "y": 1280,
-      "w": 1024,
-      "h": 1024,
+      "id": "storage-west",
+      "name": "Storage West",
+      "x": 0,
+      "y": 2260,
+      "w": 560,
+      "h": 540,
       "revealed": false,
       "checks": [
         {

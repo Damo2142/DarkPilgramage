@@ -303,6 +303,173 @@ class CampaignService {
   }
 
   // ═══════════════════════════════════════════════════════════════
+  // SECTION 7 — DM SESSION REFERENCE PAGE
+  // ═══════════════════════════════════════════════════════════════
+  _generateSessionBrief() {
+    const config = this.config || {};
+    const npcs = this.state.get('npcs') || {};
+    const players = this.state.get('players') || {};
+    const sessionName = config.session?.name || 'Session 0 — The Pallid Hart';
+    const scene = config.scene || this.state.get('scene') || {};
+    const events = (config.world?.timedEvents || []).filter(e => e.gameTime).sort((a, b) =>
+      (a.gameTime || '').localeCompare(b.gameTime || '')
+    );
+
+    // Top-level patron NPCs at root level (gregor, henryk, aldric, katya)
+    const patronNpcs = ['patron-farmer', 'patron-merchant', 'patron-pilgrim', 'patron-minstrel'];
+    const allNpcs = { ...npcs };
+    for (const k of patronNpcs) {
+      const p = config[k] || this.state.get(k);
+      if (p) allNpcs[k] = p;
+    }
+
+    const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    let html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>${esc(sessionName)} — DM Brief</title>
+<style>
+  @media print {
+    body { background: #fff !important; color: #000 !important; }
+    .card, h1, h2, h3 { background: none !important; color: #000 !important; }
+    .no-print { display: none; }
+  }
+  body { background: #1a1612; color: #c8b89a; font-family: 'Source Sans 3', Georgia, serif; padding: 20px; max-width: 1200px; margin: 0 auto; line-height: 1.5; }
+  h1 { font-family: 'Cinzel', serif; color: #e8c060; border-bottom: 2px solid #4a3a28; padding-bottom: 8px; font-size: 28px; }
+  h2 { font-family: 'Cinzel', serif; color: #e8c060; border-bottom: 1px solid #4a3a28; padding-bottom: 4px; margin-top: 32px; font-size: 20px; }
+  h3 { font-family: 'Cinzel', serif; color: #c9a54e; margin-top: 16px; font-size: 15px; }
+  .card { background: #251f17; border: 1px solid #4a3a28; border-radius: 4px; padding: 12px; margin-bottom: 10px; }
+  .label { color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  .secret { color: #d4a017; font-style: italic; }
+  .stats { font-family: monospace; font-size: 11px; color: #aaa; }
+  .timeline-row { display: grid; grid-template-columns: 80px 1fr; gap: 12px; padding: 6px 0; border-bottom: 1px solid #2a2218; }
+  .time { font-family: monospace; color: #e8c060; font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+  td, th { padding: 6px 10px; text-align: left; border-bottom: 1px solid #2a2218; }
+  th { color: #c9a54e; font-family: 'Cinzel', serif; font-size: 11px; text-transform: uppercase; }
+  .absent { opacity: 0.4; font-style: italic; }
+  button.no-print { background: #4a3a28; color: #e8c060; border: 1px solid #c9a54e; padding: 8px 16px; font-family: inherit; cursor: pointer; }
+</style></head><body>
+<button class="no-print" onclick="window.print()">Print / Save PDF</button>
+<h1>${esc(sessionName)}</h1>
+<div class="label">Date: ${new Date().toISOString().slice(0, 10)} | Game Clock: 1274-10-15 17:30 | Weather: Blizzard | Location: ${esc(scene.name || 'The Pallid Hart')}</div>
+
+<h2>NPC Quick Reference</h2>
+`;
+
+    // NPC cards
+    const npcOrder = ['marta', 'patron-minstrel', 'patron-farmer', 'patron-pilgrim', 'patron-merchant', 'tomas', 'aldous-kern', 'hooded-stranger'];
+    for (const nid of npcOrder) {
+      const npc = allNpcs[nid];
+      if (!npc) continue;
+      const name = npc.name || nid;
+      const trueId = npc.trueIdentity ? ` <span class="secret">(${esc(npc.trueIdentity)})</span>` : '';
+      html += `<div class="card"><h3>${esc(name)}${trueId}</h3>`;
+      html += `<div class="label">${esc(npc.role || '')}</div>`;
+      html += `<div><span class="label">Disposition:</span> ${esc(npc.disposition || 'unknown')}</div>`;
+      if (npc.knowledge && npc.knowledge.length) {
+        html += `<div><span class="label">Knows:</span> ${esc(npc.knowledge.slice(0, 4).join(' · '))}</div>`;
+      }
+      if (npc.dialogueHints) {
+        const hints = Object.entries(npc.dialogueHints).slice(0, 3);
+        html += `<div><span class="label">Dialogue hooks:</span><br>`;
+        for (const [k, v] of hints) html += `&nbsp;&nbsp;<i>${esc(k)}:</i> ${esc(v).slice(0, 200)}<br>`;
+        html += `</div>`;
+      }
+      if (npc.voiceProfileDetails) {
+        html += `<div class="stats">Voice: ${esc(npc.voiceProfileDetails.character).slice(0, 120)}</div>`;
+      }
+      // Vladislav expanded card
+      if (nid === 'hooded-stranger' && npc.letavecKnowledge?.socialCombatUnlocks) {
+        html += `<div><span class="label">Social combat momentum unlocks:</span><ol>`;
+        for (const u of npc.letavecKnowledge.socialCombatUnlocks) {
+          html += `<li>m${u.momentum}: ${esc(u.reveals)}</li>`;
+        }
+        html += `</ol></div>`;
+      }
+      html += `</div>`;
+    }
+
+    // Timed events
+    html += `<h2>Timed Event Sequence</h2>`;
+    for (const evt of events) {
+      const time = (evt.gameTime || '').slice(11, 16);
+      const desc = evt.data?.description || evt.id;
+      const narr = evt.data?.staticNarration || evt.data?.text || '';
+      html += `<div class="timeline-row"><div class="time">${esc(time)}</div><div><b>${esc(desc)}</b><br><i>${esc(narr).slice(0, 300)}</i></div></div>`;
+    }
+
+    // Cellar contents
+    html += `<h2>Cellar Contents</h2>
+<div class="card">
+<b>Vladislav's coffin</b> — velvet lining, sealed letter to "Houska", dried blood<br>
+<b>Piotr Kowalski (vampire spawn)</b> — chained near the Gas Spore, calls it "the eye"<br>
+<b>Gas Spore</b> — center of cellar, looks like a Beholder, 20ft Death Burst on damage<br>
+<b>Bag of Holding (bagman flag)</b> — worn leather bag in the corner, future hook<br>
+<b>2 drained traveler bodies</b> — evidence of vampire feeding<br>
+</div>`;
+
+    // Creature quick stats
+    html += `<h2>Creature Quick Stats</h2>`;
+    const creatures = [
+      { n: 'Vladislav Dragan', cr: 13, hp: '144', ac: 16, key: 'Bite (charm + drain), mist form, legendary actions, Frascht awareness', weak: 'Sunlight, fire, holy water, holy symbol with faith', morale: 'Flees at 50% HP', want: 'Feed, then escape to Houska' },
+      { n: 'Tomas Birkov', cr: 3, hp: '58', ac: 11, key: 'Werewolf form: bite curse, multiattack, regen', weak: 'Silver, fire', morale: 'Berserk in beast form, no morale check', want: 'Lock himself in cellar before moonrise' },
+      { n: 'Piotr (vampire spawn)', cr: 3, hp: '82', ac: 15, key: 'Bite drain, claws, charm, regeneration', weak: 'Sunlight, stake to heart while incapacitated, Vladislav controls him', morale: 'Loyal to Vladislav', want: 'Whatever Vladislav commands' },
+      { n: 'Gas Spore', cr: 0.5, hp: 1, ac: 5, key: 'Death Burst 20ft 10d10 necrotic + spore infection (DC15 CON)', weak: 'Anything that hits it for 10+ damage', morale: 'Mindless', want: 'Nothing — fungal' },
+      { n: 'Kamenný', cr: 6, hp: '95', ac: 17, key: 'Stone hide, geological memory, places stones at chosen feet', weak: 'Magical bludgeoning, fire (slightly)', morale: 'Patient — rarely combats', want: 'Communicate, observe' },
+      { n: 'Corpse Candle', cr: 0, hp: '—', ac: '—', key: 'Floating death-omen, predicts death within 24h', weak: 'Cannot be harmed — fades when prediction averted', morale: 'No combat', want: 'Mark the doomed' }
+    ];
+    html += `<table><tr><th>Name</th><th>CR</th><th>HP</th><th>AC</th><th>Key</th><th>Weakness</th><th>Wants</th></tr>`;
+    for (const c of creatures) {
+      html += `<tr><td><b>${esc(c.n)}</b></td><td>${c.cr}</td><td>${esc(c.hp)}</td><td>${c.ac}</td><td>${esc(c.key)}</td><td>${esc(c.weak)}</td><td>${esc(c.want)}</td></tr>`;
+    }
+    html += `</table>`;
+
+    // Session seeds
+    html += `<h2>Session Seeds (must happen tonight)</h2>
+<ol>
+<li>Corpse Candle appears at midnight — DM decides whose death it predicts</li>
+<li>Tomas disappears before moonrise (22:30 — see timeline)</li>
+<li>Marta asks one player to get logs from shed</li>
+<li>Gregor and Marta have their Slovak conversation at 19:00</li>
+<li>Letavec circles — tracks in snow visible at dawn (window perception intercepts can fire earlier)</li>
+</ol>`;
+
+    // Player quick reference
+    html += `<h2>Player Quick Reference</h2><table><tr><th>Player</th><th>Character</th><th>Class</th><th>Lvl</th><th>PP</th><th>Languages</th><th>Status</th></tr>`;
+    for (const [pid, p] of Object.entries(players)) {
+      const ch = p.character || {};
+      const status = (p.absent || p.notYetArrived) ? `<span class="absent">${p.notYetArrived ? 'NOT YET ARRIVED' : 'ABSENT'}</span>` : 'present';
+      const langs = (ch.languages || []).slice(0, 4).join(', ');
+      html += `<tr><td>${esc(pid)}</td><td><b>${esc(ch.name || pid)}</b></td><td>${esc(ch.class || '')}</td><td>${ch.level || ''}</td><td>${ch.passivePerception || '?'}</td><td>${esc(langs)}</td><td>${status}</td></tr>`;
+    }
+    html += `</table>`;
+
+    // Language gates
+    html += `<h2>Language Gates</h2>
+<div class="card">
+<b>Marta:</b> Slovak (native), broken Latin (Common)<br>
+<b>Gregor:</b> Slovak only<br>
+<b>Vladislav:</b> All European languages — uses Common with the party<br>
+<b>Aldric:</b> Latin (fluent), Czech<br>
+<b>Katya:</b> Polyglot — Slovak, Czech, German, Common — translates selectively<br>
+<b>Henryk:</b> German native, Common, broken Slovak<br>
+<b>Tomas:</b> Slovak, Common<br>
+<b>Aldous Kern:</b> English, Common — speaks both fluently<br>
+<i>Without Katya, only Common-speaking party members can fully understand the Slovak conversations between Marta and Gregor.</i>
+</div>`;
+
+    html += `</body></html>`;
+
+    // Save to filesystem
+    const briefDir = path.join(__dirname, '..', '..', 'sessions');
+    try { fs.mkdirSync(briefDir, { recursive: true }); } catch (e) {}
+    const briefPath = path.join(briefDir, 'current-brief.html');
+    fs.writeFileSync(briefPath, html);
+    console.log(`[Campaign] Session brief written to ${briefPath}`);
+    return briefPath;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   // PRE-SESSION PLANNING
   // ═══════════════════════════════════════════════════════════════
 
@@ -1024,7 +1191,19 @@ Keep each event to 1-2 sentences. Format as JSON array: [{"title": "...", "descr
       });
       // Generate pre-session briefing for the DM
       const briefing = this._buildPreSessionBriefing();
+      // Section 7 — Generate DM session reference page (offline-capable)
+      try { this._generateSessionBrief(); } catch (e) { console.warn('[Campaign] brief gen failed:', e.message); }
       res.json({ ok: true, mode: this.sessionMode, briefing });
+    });
+
+    // Force regenerate brief
+    app.post('/api/dm/brief/regenerate', (req, res) => {
+      try {
+        this._generateSessionBrief();
+        res.json({ ok: true });
+      } catch (e) {
+        res.status(500).json({ error: e.message });
+      }
     });
 
     app.post('/api/session/stop', async (req, res) => {

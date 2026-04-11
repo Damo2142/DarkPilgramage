@@ -39,6 +39,29 @@ const ROLL_TYPES = {
   initiative: /\b(initiative|init)/i
 };
 
+// Lazy-loaded master language registry (config/languages.json)
+let _LANGUAGE_REGISTRY = null;
+function loadLanguageRegistry() {
+  if (_LANGUAGE_REGISTRY) return _LANGUAGE_REGISTRY;
+  try {
+    const path = require('path');
+    const fs = require('fs');
+    const p = path.join(__dirname, '..', '..', 'config', 'languages.json');
+    if (fs.existsSync(p)) {
+      const data = JSON.parse(fs.readFileSync(p, 'utf8'));
+      const map = {};
+      (data.languages || []).forEach(l => { map[l.id] = l; });
+      _LANGUAGE_REGISTRY = map;
+    } else {
+      _LANGUAGE_REGISTRY = {};
+    }
+  } catch (e) {
+    console.warn('[CommRouter] Could not load languages.json:', e.message);
+    _LANGUAGE_REGISTRY = {};
+  }
+  return _LANGUAGE_REGISTRY;
+}
+
 // Atmosphere noise level (feet of hearing reduction)
 const ATMOSPHERE_NOISE = {
   tavern_warm: 0,
@@ -191,9 +214,16 @@ class CommRouter {
     const { playerId, text } = data;
     if (!playerId || !text) return;
 
+    // Detect language switch in player utterance (e.g. "in Draconic", "in Elvish", "in Slovak")
+    const langId = this._detectLanguageHint(text);
+    if (langId) {
+      try { this.checkPlayerLanguageRecognition(playerId, langId); } catch (e) {}
+    }
+
     const detection = this.detectChannel(text);
     detection.fromPlayerId = playerId;
     detection.originalText = text;
+    detection.languageId = langId;
 
     switch (detection.channel) {
       case 'max-action':
@@ -374,22 +404,58 @@ class CommRouter {
     return PRIVATE_INTENT_KEYWORDS.some(k => lower.includes(k));
   }
 
+  /**
+   * Detect a language hint in player text. Recognises forms like
+   * "in Draconic", "in Elvish", "speaks Slovak", "switches to German".
+   * Returns language id from registry or null.
+   */
+  _detectLanguageHint(text) {
+    if (!text) return null;
+    const registry = loadLanguageRegistry();
+    const lower = text.toLowerCase();
+    // Patterns: "in <lang>", "speaks <lang>", "in <lang>:", "(in <lang>)"
+    const patterns = [
+      /\bin\s+([a-z][a-z\s]+?)(?:[:.,)\]]|$)/i,
+      /\bspeak(?:s|ing)?\s+([a-z][a-z\s]+?)(?:[:.,)\]]|$)/i,
+      /\bswitch(?:es|ing)?\s+to\s+([a-z][a-z\s]+?)(?:[:.,)\]]|$)/i,
+      /\b\(in\s+([a-z][a-z\s]+?)\)/i
+    ];
+    for (const re of patterns) {
+      const m = lower.match(re);
+      if (!m) continue;
+      const candidate = m[1].trim().split(/\s+/)[0]; // first word of the captured phrase
+      // Direct id match
+      if (registry[candidate]) return candidate;
+      // Match by language name
+      for (const [id, lang] of Object.entries(registry)) {
+        const lname = (lang.name || '').toLowerCase();
+        const dname = (lang.displayName || '').toLowerCase();
+        if (lname === candidate || dname === candidate || lname.startsWith(candidate)) return id;
+      }
+      // Special: "elvish" → elvish_americas (only Americas elvish exists in registry)
+      if (candidate === 'elvish' && registry['elvish_americas']) return 'elvish_americas';
+    }
+    return null;
+  }
+
   // ─── Channel 4/5 — NPC → players (proximity routing) ───────────
 
   routeNpcSpeech(npcDialogue) {
-    // npcDialogue: { npcId, npc, text, voiceProfile, _private, _sourcePlayerId }
+    // npcDialogue: { npcId, npc, text, voiceProfile, _private, _sourcePlayerId, languageId? }
     const npcId = npcDialogue.npcId;
     if (!npcId) return;
     const text = npcDialogue.text || '';
+    const languageId = npcDialogue.languageId || null; // optional override; otherwise resolver picks NPC's primary
 
-    // PRIVATE — only the source player hears
+    // PRIVATE — only the source player hears (still apply language barrier)
     if (npcDialogue._private && npcDialogue._sourcePlayerId) {
-      this._sendNpcAudioToPlayer(npcDialogue._sourcePlayerId, npcId, text, 'FULL');
+      const lr = this.resolveLanguage(npcId, npcDialogue._sourcePlayerId, { languageId });
+      const adjustedText = this._applyLanguageTier(text, lr);
+      this._sendNpcAudioToPlayer(npcDialogue._sourcePlayerId, npcId, adjustedText, 'FULL', lr);
       this.bus.dispatch('dm:whisper', {
-        text: `[NPC private] ${npcDialogue.npc || npcId} → ${this._charName(npcDialogue._sourcePlayerId)}: routed privately.`,
+        text: `[NPC private] ${npcDialogue.npc || npcId} → ${this._charName(npcDialogue._sourcePlayerId)}: ${lr.result}${lr.via ? ' via ' + lr.via : ''}`,
         priority: 3, category: 'npc', source: 'comm-router'
       });
-      // Check for adjacent eavesdroppers
       const adjacent = this._findAdjacentPlayers(npcDialogue._sourcePlayerId, npcId);
       if (adjacent.length) {
         this.bus.dispatch('dm:whisper', {
@@ -400,39 +466,59 @@ class CommRouter {
       return;
     }
 
-    // PUBLIC — proximity routing
+    // PUBLIC — proximity routing combined with language barrier
     const tiers = this._calculateHearingTiers(npcId);
     const fullPlayers = [];
     const partialPlayers = [];
+    const barrierPlayers = [];
+    const bridgePlayers = [];
     for (const [pid, tier] of Object.entries(tiers)) {
-      if (tier === 'FULL') {
-        this._sendNpcAudioToPlayer(pid, npcId, text, 'FULL');
-        fullPlayers.push(this._charName(pid));
-      } else if (tier === 'PARTIAL') {
-        this._sendNpcAudioToPlayer(pid, npcId, text, 'PARTIAL');
-        partialPlayers.push(this._charName(pid));
-      }
+      if (tier === 'NOTHING') continue;
+      const lr = this.resolveLanguage(npcId, pid, { languageId });
+      // Combine: if either proximity or language is partial, listener gets partial.
+      // Barrier always wins (player hears sound but cannot understand).
+      let finalTier = tier;
+      if (lr.result === 'BARRIER') finalTier = 'BARRIER';
+      else if (lr.result === 'KATYA_BRIDGE') finalTier = 'KATYA_BRIDGE';
+      else if (lr.result === 'PARTIAL' && tier === 'FULL') finalTier = 'PARTIAL';
+
+      const adjustedText = this._applyLanguageTier(text, lr);
+      this._sendNpcAudioToPlayer(pid, npcId, adjustedText, finalTier, lr);
+
+      const name = this._charName(pid);
+      if (finalTier === 'FULL') fullPlayers.push(name);
+      else if (finalTier === 'PARTIAL') partialPlayers.push(name);
+      else if (finalTier === 'BARRIER') barrierPlayers.push(name);
+      else if (finalTier === 'KATYA_BRIDGE') bridgePlayers.push(name);
     }
-    // Whisper routing summary to narrator
-    let summary = `[${npcDialogue.npc || npcId}] speaking. `;
+    // Whisper routing summary to narrator (always include the raw text + language)
+    const npcLangs = this._npcLanguages(npcId);
+    const spokenLang = languageId || npcLangs.primary || 'common';
+    let summary = `[${npcDialogue.npc || npcId}] speaking ${spokenLang}. `;
     if (fullPlayers.length) summary += `Full: ${fullPlayers.join(', ')}. `;
     if (partialPlayers.length) summary += `Partial: ${partialPlayers.join(', ')}. `;
+    if (bridgePlayers.length) summary += `Katya translates: ${bridgePlayers.join(', ')}. `;
+    if (barrierPlayers.length) summary += `BARRIER: ${barrierPlayers.join(', ')}. `;
     this.bus.dispatch('dm:whisper', {
-      text: summary, priority: 3, category: 'npc-routing', source: 'comm-router'
+      text: summary + `\n  RAW: "${text}"`,
+      priority: 3, category: 'npc-routing', source: 'comm-router'
     });
   }
 
-  _sendNpcAudioToPlayer(playerId, npcId, text, tier) {
+  _sendNpcAudioToPlayer(playerId, npcId, text, tier, langResult) {
     let displayText = text;
-    if (tier === 'PARTIAL') {
-      // Strip details — keep ~30% of words
+    // If language tier is already applied (text begins with [marker]), trust it.
+    // Otherwise apply proximity-based truncation as before.
+    if (tier === 'PARTIAL' && !/^\[/.test(text)) {
       const words = text.split(/\s+/);
       const kept = words.filter((_, i) => i % 3 === 0);
       displayText = '...' + kept.join(' ') + '...';
     }
     const npcName = this.state.get(`npcs.${npcId}.name`) || npcId;
     this.bus.dispatch('player:npc_speech', {
-      playerId, npcId, npcName, text: displayText, tier, fullText: text
+      playerId, npcId, npcName, text: displayText, tier, fullText: text,
+      language: langResult ? (langResult.spoken || langResult.sharedLang) : null,
+      languageResult: langResult || null
     });
   }
 
@@ -547,6 +633,188 @@ class CommRouter {
       if (d <= adjacentRangePx) result.push(pid);
     }
     return result;
+  }
+
+  // ─── Language barrier resolution ───────────────────────────────
+
+  /**
+   * Get the structured language list for a player.
+   * Returns array of { id, fluency, displayName? }
+   */
+  _playerLanguages(playerId) {
+    const ch = this.state.get(`players.${playerId}.character`) || {};
+    if (Array.isArray(ch.languageStructured) && ch.languageStructured.length) {
+      return ch.languageStructured;
+    }
+    if (Array.isArray(ch.languages)) {
+      return ch.languages.map(l => {
+        if (typeof l === 'string') {
+          return { id: l.toLowerCase().replace(/[^a-z_]/g, '_'), displayName: l, fluency: 'fluent' };
+        }
+        return l;
+      });
+    }
+    return [{ id: 'common', displayName: 'Common', fluency: 'fluent' }];
+  }
+
+  /**
+   * Get languages an NPC speaks. Returns { ids: [], primary: id, commonFluency }
+   */
+  _npcLanguages(npcId) {
+    // Try state first (active NPCs), then config patron NPCs
+    const npc = this.state.get(`npcs.${npcId}`) || (this.config && this.config[npcId]) || null;
+    if (!npc) return { ids: ['common'], primary: 'common', commonFluency: 'fluent' };
+    const ids = Array.isArray(npc.languages) && npc.languages.length ? npc.languages.slice() : ['common'];
+    const primary = npc.primaryLanguage || ids[0];
+    const commonFluency = npc.commonFluency || 'fluent';
+    return { ids, primary, commonFluency, specialLanguageRules: npc.specialLanguageRules || null };
+  }
+
+  /**
+   * Resolve a language barrier between an NPC speaking and a player listening.
+   *
+   * Inputs:
+   *   speakerLangId — the language being spoken (defaults to npc.primaryLanguage)
+   *   playerId      — the listener
+   *   npcId         — the speaker
+   *
+   * Returns one of:
+   *   { result: 'FULL', sharedLang }
+   *   { result: 'PARTIAL', sharedLang, partialOf, fluency }
+   *   { result: 'KATYA_BRIDGE', via: 'katya' }
+   *   { result: 'BARRIER', spoken, knownByPlayer: [...] }
+   */
+  resolveLanguage(npcId, playerId, options = {}) {
+    const registry = loadLanguageRegistry();
+    const npcLangs = this._npcLanguages(npcId);
+    const playerLangs = this._playerLanguages(playerId);
+    const spokenId = options.languageId || npcLangs.primary || 'common';
+
+    const playerLangIds = playerLangs.map(l => l.id);
+    const playerLangById = {};
+    playerLangs.forEach(l => { playerLangById[l.id] = l; });
+
+    // 1. Direct match — player speaks the language
+    if (playerLangById[spokenId]) {
+      const fluency = (playerLangById[spokenId].fluency || 'fluent').toLowerCase();
+      if (/fluent|native/.test(fluency)) return { result: 'FULL', sharedLang: spokenId, fluency };
+      if (/conversational/.test(fluency)) return { result: 'PARTIAL', sharedLang: spokenId, fluency };
+      if (/basic/.test(fluency)) return { result: 'PARTIAL', sharedLang: spokenId, fluency: 'basic' };
+      return { result: 'FULL', sharedLang: spokenId, fluency };
+    }
+
+    // 2. Mutually intelligible language
+    const spokenEntry = registry[spokenId] || {};
+    const mutual = spokenEntry.mutuallyIntelligibleWith || [];
+    for (const m of mutual) {
+      if (playerLangById[m]) {
+        return { result: 'FULL', sharedLang: m, via: 'mutual', spoken: spokenId };
+      }
+    }
+
+    // 3. Partially intelligible language
+    const partial = spokenEntry.partiallyIntelligibleWith || [];
+    for (const p of partial) {
+      if (playerLangById[p]) {
+        return { result: 'PARTIAL', sharedLang: p, partialOf: spokenId, via: 'partial' };
+      }
+    }
+
+    // 4. NPC can fall back to Common if speaker has any commonFluency and player has Common
+    if (playerLangById['common'] && (npcLangs.ids.includes('common') || npcLangs.commonFluency)) {
+      const cf = (npcLangs.commonFluency || 'fluent').toLowerCase();
+      if (/fluent/.test(cf)) return { result: 'FULL', sharedLang: 'common', via: 'fallback_common' };
+      if (/conversational/.test(cf)) return { result: 'PARTIAL', sharedLang: 'common', via: 'fallback_common', fluency: 'conversational' };
+      if (/basic/.test(cf)) return { result: 'PARTIAL', sharedLang: 'common', via: 'fallback_common', fluency: 'basic' };
+      if (/none/.test(cf)) {
+        // Falls through to Katya bridge / barrier
+      } else {
+        return { result: 'PARTIAL', sharedLang: 'common', via: 'fallback_common', fluency: cf };
+      }
+    }
+
+    // 5. Katya bridge — if Katya is present and speaks both
+    const katyaPresent = this._isKatyaInRange(npcId, playerId);
+    if (katyaPresent) {
+      const katyaCfg = (this.config && (this.config['patron-minstrel'] || this.config.katya)) || this.state.get('npcs.katya') || null;
+      const katyaLangs = (katyaCfg && katyaCfg.languages) || ['common', 'slovak', 'german', 'french'];
+      if (katyaLangs.includes(spokenId)) {
+        return { result: 'KATYA_BRIDGE', via: 'katya', spoken: spokenId };
+      }
+    }
+
+    // 6. Hard barrier
+    return { result: 'BARRIER', spoken: spokenId, knownByPlayer: playerLangIds };
+  }
+
+  _isKatyaInRange(npcId, playerId) {
+    const map = this.state.get('map') || {};
+    const gs = map.gridSize || 70;
+    const range = gs * 6; // ~30 ft
+    const npcTok = this.state.get(`map.tokens.${npcId}`);
+    const playerTok = this.state.get(`map.tokens.${playerId}`);
+    const katyaTok = this.state.get('map.tokens.katya') || this.state.get('map.tokens.patron-minstrel');
+    if (!katyaTok) return false;
+    if (!npcTok || !playerTok) return true; // No map context — assume Katya can bridge
+    const dn = Math.hypot(katyaTok.x - npcTok.x, katyaTok.y - npcTok.y);
+    const dp = Math.hypot(katyaTok.x - playerTok.x, katyaTok.y - playerTok.y);
+    return dn <= range && dp <= range;
+  }
+
+  /**
+   * Apply a language tier transformation to spoken text.
+   */
+  _applyLanguageTier(text, langResult) {
+    if (!langResult || langResult.result === 'FULL') return text;
+    if (langResult.result === 'PARTIAL') {
+      const words = text.split(/\s+/);
+      const kept = words.filter((_, i) => i % 2 === 0); // ~50% words
+      return '[' + (langResult.sharedLang || 'partial') + '] ...' + kept.join(' ') + '...';
+    }
+    if (langResult.result === 'KATYA_BRIDGE') {
+      return '[Katya translates from ' + langResult.spoken + '] ' + text;
+    }
+    if (langResult.result === 'BARRIER') {
+      // Player hears sound but no comprehension
+      return '[unintelligible — ' + (langResult.spoken || 'foreign tongue') + ']';
+    }
+    return text;
+  }
+
+  /**
+   * Fire special-rule whispers when a player speaks a flagged language
+   * near an NPC with specialLanguageRules.
+   */
+  checkPlayerLanguageRecognition(playerId, languageId) {
+    if (!languageId) return;
+    // Find any NPC with specialLanguageRules near the player
+    const npcs = this.state.get('npcs') || {};
+    const map = this.state.get('map') || {};
+    const gs = map.gridSize || 70;
+    const range = gs * 8; // generous — recognition does not require closeness
+    const playerTok = this.state.get(`map.tokens.${playerId}`);
+    const charName = this._charName(playerId);
+
+    for (const [npcId, npc] of Object.entries(npcs)) {
+      const cfg = npc || (this.config && this.config[npcId]) || null;
+      const rules = cfg && cfg.specialLanguageRules;
+      if (!rules || !rules[languageId]) continue;
+      // Proximity gate
+      const npcTok = this.state.get(`map.tokens.${npcId}`);
+      if (playerTok && npcTok) {
+        const d = Math.hypot(playerTok.x - npcTok.x, playerTok.y - npcTok.y);
+        if (d > range) continue;
+      }
+      const ruleText = rules[languageId];
+      // Determine priority — HIGH if rule mentions HIGH, else NORMAL
+      const isHigh = /HIGH/i.test(ruleText);
+      this.bus.dispatch('dm:whisper', {
+        text: `[LANGUAGE RECOGNITION] ${cfg.name || npcId} hears ${charName} speaking ${languageId}. ${ruleText}`,
+        priority: isHigh ? 1 : 3,
+        category: 'language-recognition',
+        source: 'comm-router'
+      });
+    }
   }
 
   // ─── Channel 6 — Player → player (P2P) ─────────────────────────

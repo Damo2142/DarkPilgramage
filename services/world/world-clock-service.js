@@ -575,8 +575,21 @@ class WorldClockService {
           themes: bs.themes || [],               // recurring themes: 'loss', 'redemption', etc.
           connections: bs.connections || [],      // NPC/location connections: { type, targetId, description }
           integrated: [],                        // hooks that have been woven into play: { hookId, beatId, gameTime }
-          summary: bs.summary || ''              // brief backstory summary for AI context
+          summary: bs.summary || '',             // brief backstory summary for AI context
+          absent: !!bs.absent,
+          absentReason: bs.absentReason || null,
+          notYetArrived: !!bs.notYetArrived
         });
+        // Mirror absent/notYetArrived into players state for dashboard
+        if (bs.absent || bs.notYetArrived) {
+          const existing = this.state.get('players.' + playerId) || {};
+          this.state.set('players.' + playerId, {
+            ...existing,
+            absent: !!bs.absent,
+            absentReason: bs.absentReason || null,
+            notYetArrived: !!bs.notYetArrived
+          });
+        }
       }
     }
 

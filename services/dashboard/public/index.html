@@ -3120,6 +3120,25 @@
 
       panel.innerHTML = playerIds.map(pid => {
         const name = players[pid]?.character?.name || pid;
+        const p = players[pid] || {};
+        const isNotYetArrived = !!p.notYetArrived || !!(state.backstories?.[pid]?.notYetArrived);
+        const isAbsent = !!p.absent;
+        const seatBtn = '<button class="seat-toggle-btn" title="Toggle absent" onclick="DmWounds.toggleAbsent(\'' + pid + '\')" style="background:none;border:1px solid var(--border);color:var(--text-dim);font-size:11px;padding:1px 5px;border-radius:3px;cursor:pointer;">' + (isAbsent ? '◊' : '◇') + '</button>';
+
+        if (isNotYetArrived) {
+          return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;opacity:0.4;">'
+            + '<span style="min-width:70px;color:#e8d0a0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(name) + '</span>'
+            + '<span style="font-size:9px;color:var(--text-dim);font-style:italic;letter-spacing:1px;">NOT YET ARRIVED</span>'
+            + '</div>';
+        }
+        if (isAbsent) {
+          return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;opacity:0.4;">'
+            + '<span style="min-width:70px;color:#e8d0a0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(name) + '</span>'
+            + '<span style="font-size:9px;color:var(--text-dim);font-style:italic;letter-spacing:1px;">ABSENT — OFF SCREEN</span>'
+            + seatBtn
+            + '</div>';
+        }
+
         const w = this._state[pid] || { head:0, torso:0, leftArm:0, rightArm:0, leftLeg:0, rightLeg:0 };
         const dots = WOUND_LIMBS.map(limb => {
           const s = w[limb] || 0;
@@ -3132,8 +3151,27 @@
         return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
           + '<span style="min-width:70px;color:#e8d0a0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(name) + '</span>'
           + '<span style="display:flex;gap:4px;align-items:center;">' + dots + torch + '</span>'
+          + seatBtn
           + '</div>';
       }).join('');
+    },
+
+    toggleAbsent(playerId) {
+      const players = state.players || {};
+      const isAbsent = !!players[playerId]?.absent;
+      const name = players[playerId]?.character?.name || playerId;
+      if (!confirm('Mark ' + name + (isAbsent ? ' as PRESENT?' : ' as absent for this session?'))) return;
+      fetch('/api/absent/' + playerId, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ absent: !isAbsent })
+      }).then(r => r.json()).then(d => {
+        if (d.ok) {
+          if (!state.players[playerId]) state.players[playerId] = {};
+          state.players[playerId].absent = d.absent;
+          this.render();
+        }
+      });
     },
 
     edit(playerId, limb, currentState, event) {

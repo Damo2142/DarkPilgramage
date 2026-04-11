@@ -135,6 +135,55 @@ class CharacterService {
         res.json(r);
       });
 
+      // ── Absent player toggle ──
+      app.get('/api/absent', (req, res) => {
+        const players = this.state.get('players') || {};
+        const result = {};
+        for (const [pid, p] of Object.entries(players)) {
+          result[pid] = {
+            name: p.character?.name || pid,
+            absent: !!p.absent,
+            absentReason: p.absentReason || null,
+            notYetArrived: !!p.notYetArrived
+          };
+        }
+        // Backstories may also flag absent (e.g. Barry's notYetArrived)
+        const backstories = this.state.get('backstories') || {};
+        for (const [pid, bs] of Object.entries(backstories)) {
+          if (bs.absent || bs.notYetArrived) {
+            if (!result[pid]) result[pid] = { name: pid };
+            result[pid].absent = !!bs.absent;
+            result[pid].absentReason = bs.absentReason || null;
+            result[pid].notYetArrived = !!bs.notYetArrived;
+          }
+        }
+        res.json(result);
+      });
+
+      app.post('/api/absent/:playerId', async (req, res) => {
+        const { playerId } = req.params;
+        const { absent, reason } = req.body || {};
+        this.state.set('players.' + playerId + '.absent', !!absent);
+        if (reason) this.state.set('players.' + playerId + '.absentReason', reason);
+        this.bus.dispatch('player:absent_changed', { playerId, absent: !!absent });
+
+        // If marking present (returning), generate Max return note
+        if (!absent) {
+          try {
+            const aiEngine = this.orchestrator.getService('ai-engine');
+            if (aiEngine?.gemini?.available) {
+              const charName = this.state.get('players.' + playerId + '.character.name') || playerId;
+              const scene = this.state.get('scene') || {};
+              const prompt = `The player ${playerId} playing ${charName} is returning after being absent. Current scene: ${scene.name || 'unknown'} — ${scene.description || ''}. Give the DM one sentence on how to reintroduce this character naturally. Under 15 words.`;
+              const note = await aiEngine.gemini.generate('You are Max, the DM session assistant. Be brief and direct.', prompt, { maxTokens: 50, temperature: 0.7 });
+              this.bus.dispatch('dm:whisper', { text: note || `${charName} returns to the table.`, priority: 2, category: 'story', source: 'max' });
+            }
+          } catch (e) {}
+        }
+
+        res.json({ ok: true, absent: !!absent });
+      });
+
       // ── Language validation ──
       app.get('/api/languages/validation', (req, res) => {
         const players = this.state.get('players') || {};

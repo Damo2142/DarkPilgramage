@@ -894,7 +894,10 @@
     "_note": "Fill in each PC's reason for being at the crossroads once character sheets are imported. Use appearance data from DDB for physical descriptions shown to other players.",
     "jerome": {
       "reasonAtCrossroads": "TODO — fill in once character background is finalized",
-      "whatOthersSee": "TODO — pull from character appearance data (age 40, 5'11\", messy brown hair, gray/hazel eyes, weathered skin, carries wooden stakes and holy water)"
+      "whatOthersSee": "TODO — pull from character appearance data (age 40, 5'11\", messy brown hair, gray/hazel eyes, weathered skin, carries wooden stakes and holy water)",
+      "absent": true,
+      "absentReason": "Barry Frascht has not yet arrived. He is expected at dawn.",
+      "notYetArrived": true
     }
   },
 

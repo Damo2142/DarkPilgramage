@@ -168,6 +168,13 @@ class CombatService {
       }
       const { tokenId, token } = resolved;
 
+      // Skip absent players — they cannot enter combat
+      const playerState = this.state.get('players.' + tokenId);
+      if (playerState?.absent || playerState?.notYetArrived) {
+        console.log(`[CombatService] Skipping absent/not-yet-arrived player: ${tokenId}`);
+        continue;
+      }
+
       const initMod = this._getInitMod({ ...token, id: tokenId });
       const roll = this._rollD20();
       const manualVal = manualInit[id] || manualInit[tokenId];

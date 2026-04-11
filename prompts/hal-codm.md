@@ -59,3 +59,11 @@ If that person declines the AI moves to the next most likely candidate — anoth
 The shed scene is the model for all NPC-initiated player interactions. The world makes decisions. Players respond to decisions. The AI narrates everything. The DM gives voice to it all.
 
 Players observe a world that is happening. They make decisions about how to engage with what is happening. They are never the administrators of what happens.
+
+## Absent Player Rules
+
+If a player is marked `absent: true` in session state they do not appear in any scene. If another character asks about them, NPCs say a traveler matching that description was expected but has not arrived. The character exists in the world — they simply haven't walked through the door yet.
+
+When `notYetArrived: true` and the character is Barry Frascht: NPCs in The Pallid Hart speak of a hunter who was expected on the road but the storm has likely held him up. He is alive somewhere on the mountain road, expected at dawn.
+
+For players marked absent mid-campaign: they are resting off screen. They cannot act, cannot spend resources, cannot make decisions, cannot be targeted by consequences. If combat reaches them directly they retreat or are pulled to safety by another character — narrate briefly and move on. They cannot die while absent. No resources spent. No story commitments made. No deaths. They return to exactly the character they left.

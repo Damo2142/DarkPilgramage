@@ -28,6 +28,13 @@ class CampaignService {
     this.creatures = new Map();  // id -> creature stat block from config/creatures/*.json
     this.arc = null;             // loaded from config/campaign/arc.json
     this.settlementReputation = {}; // settlement id -> { standing, known, events }
+
+    // Living world (Section 30)
+    this.sessionMode = 'pre-campaign'; // pre-campaign | between-session | live-session
+    this.worldHistory = [];          // narrative entries logged in real time
+    this.correspondence = [];        // letters between players and NPCs
+    this.snapshots = [];             // test mode snapshots
+    this.testMode = false;
   }
 
   async init(orchestrator) {
@@ -195,6 +202,86 @@ class CampaignService {
       creatures: this.creatures.size,
       arc: this.arc?.title || null
     };
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // LIVING WORLD — Section 30
+  // ═══════════════════════════════════════════════════════════════
+
+  addWorldHistoryEntry(opts) {
+    const entry = {
+      id: 'wh-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+      realTimestamp: new Date().toISOString(),
+      gameDateTime: this.state.get('world.gameTime') || null,
+      type: opts.type || 'world-event',
+      content: opts.content || '',
+      visibility: opts.visibility || 'dm-only',
+      relatedNPCs: opts.relatedNPCs || [],
+      relatedLocations: opts.relatedLocations || [],
+      relatedPlayer: opts.relatedPlayer || null,
+      testGenerated: this.testMode
+    };
+    this.worldHistory.push(entry);
+    if (this.worldHistory.length > 1000) this.worldHistory.shift();
+    this.bus.dispatch('world-history:entry', entry);
+    return entry;
+  }
+
+  _createSnapshot(name) {
+    const snap = {
+      id: 'snap-' + Date.now(),
+      name,
+      createdAt: new Date().toISOString(),
+      state: {
+        players: this.state.get('players'),
+        world: this.state.get('world'),
+        worldAnchor: this.state.get('worldAnchor'),
+        sessionMode: this.sessionMode,
+        timeline: [...this.timeline],
+        worldHistory: [...this.worldHistory],
+        correspondence: [...this.correspondence],
+        settlementReputation: { ...this.settlementReputation }
+      }
+    };
+    this.snapshots.push(snap);
+    if (this.snapshots.length > 50) this.snapshots.shift();
+    return snap;
+  }
+
+  _restoreSnapshot(id) {
+    const snap = this.snapshots.find(s => s.id === id);
+    if (!snap) return false;
+    if (snap.state.players) this.state.set('players', snap.state.players);
+    if (snap.state.world) this.state.set('world', snap.state.world);
+    if (snap.state.worldAnchor) this.state.set('worldAnchor', snap.state.worldAnchor);
+    this.sessionMode = snap.state.sessionMode || 'between-session';
+    this.timeline = [...snap.state.timeline];
+    this.worldHistory = [...snap.state.worldHistory];
+    this.correspondence = [...snap.state.correspondence];
+    this.settlementReputation = { ...snap.state.settlementReputation };
+    this.bus.dispatch('snapshot:restored', { id });
+    return true;
+  }
+
+  _autoSnapshot() {
+    const auto = this._createSnapshot('auto-' + new Date().toISOString().slice(0, 19));
+    // Keep only last 10 auto-snapshots
+    const autos = this.snapshots.filter(s => s.name.startsWith('auto-'));
+    if (autos.length > 10) {
+      const toRemove = autos.slice(0, autos.length - 10);
+      this.snapshots = this.snapshots.filter(s => !toRemove.includes(s));
+    }
+    return auto;
+  }
+
+  _unitToMs(amount, unit) {
+    const a = parseInt(amount) || 0;
+    const u = (unit || 'hours').toLowerCase();
+    if (u.startsWith('hour')) return a * 60 * 60 * 1000;
+    if (u.startsWith('day')) return a * 24 * 60 * 60 * 1000;
+    if (u.startsWith('week')) return a * 7 * 24 * 60 * 60 * 1000;
+    if (u.startsWith('min')) return a * 60 * 1000;
+    return a * 60 * 60 * 1000;
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -815,6 +902,162 @@ Keep each event to 1-2 sentences. Format as JSON array: [{"title": "...", "descr
 
     app.get('/api/campaign/lore/player/:playerId', (req, res) => {
       res.json(this.getPlayerLore(req.params.playerId));
+    });
+
+    // --- Session mode (3-button system) ---
+    app.get('/api/session-mode', (req, res) => {
+      res.json({ mode: this.sessionMode, testMode: this.testMode });
+    });
+
+    app.post('/api/session/start-campaign', async (req, res) => {
+      const { confirm } = req.body || {};
+      if (confirm !== 'RESET') return res.status(400).json({ error: 'Type RESET to confirm' });
+      this.sessionMode = 'between-session';
+      const anchor = {
+        realTimestamp: new Date().toISOString(),
+        gameDateTime: '1274-10-15T17:30:00',
+        ratio: '1:1'
+      };
+      this.state.set('worldAnchor', anchor);
+      this.addWorldHistoryEntry({
+        type: 'campaign-start',
+        content: 'The Dark Pilgrimage begins. The world clock is anchored. October 15 1274, 17:30.',
+        visibility: 'dm-only'
+      });
+      this.bus.dispatch('campaign:started', { anchor });
+      res.json({ ok: true, anchor, mode: this.sessionMode });
+    });
+
+    app.post('/api/session/start', async (req, res) => {
+      this.sessionMode = 'live-session';
+      // Auto-snapshot
+      this._autoSnapshot();
+      this.bus.dispatch('atmosphere:set', { profile: 'tavern_warm' });
+      this.bus.dispatch('audio:enable', { enabled: true });
+      this.bus.dispatch('voice:enable', { enabled: true });
+      this.bus.dispatch('combat:enable', { enabled: true });
+      this.bus.dispatch('session:started', { mode: 'live-session' });
+      this.addWorldHistoryEntry({
+        type: 'session-start',
+        content: 'A new session begins. The earbud channel opens. The room speaker comes alive.',
+        visibility: 'dm-only'
+      });
+      // Generate pre-session briefing for the DM
+      const briefing = this._buildPreSessionBriefing();
+      res.json({ ok: true, mode: this.sessionMode, briefing });
+    });
+
+    app.post('/api/session/stop', async (req, res) => {
+      this.sessionMode = 'between-session';
+      this.bus.dispatch('atmosphere:set', { profile: 'home_normal' });
+      this.bus.dispatch('audio:enable', { enabled: false });
+      this.bus.dispatch('voice:enable', { enabled: false });
+      this.bus.dispatch('combat:enable', { enabled: false });
+      this.bus.dispatch('session:ended', { mode: 'between-session' });
+      this.addWorldHistoryEntry({
+        type: 'session-end',
+        content: 'The session ends. The lights return to their ordinary warmth. The world continues without the table.',
+        visibility: 'dm-only'
+      });
+      res.json({ ok: true, mode: this.sessionMode });
+    });
+
+    // --- World history log ---
+    app.get('/api/world-history', (req, res) => {
+      const limit = parseInt(req.query.limit) || 50;
+      res.json(this.worldHistory.slice(-limit));
+    });
+
+    app.post('/api/world-history', (req, res) => {
+      const { type, content, visibility, relatedNPCs, relatedLocations, relatedPlayer } = req.body || {};
+      if (!content) return res.status(400).json({ error: 'content required' });
+      const entry = this.addWorldHistoryEntry({ type, content, visibility, relatedNPCs, relatedLocations, relatedPlayer });
+      res.json({ ok: true, entry });
+    });
+
+    // --- Correspondence ---
+    app.get('/api/correspondence', (req, res) => {
+      const playerId = req.query.playerId;
+      let list = this.correspondence;
+      if (playerId) list = list.filter(c => c.from === playerId || c.to === playerId);
+      res.json(list);
+    });
+
+    app.post('/api/correspondence', (req, res) => {
+      const { from, to, content, deliveryGameTime } = req.body || {};
+      if (!from || !to || !content) return res.status(400).json({ error: 'from, to, content required' });
+      const letter = {
+        id: 'letter-' + Date.now(),
+        from, to, content,
+        sentRealTime: new Date().toISOString(),
+        sentGameTime: this.state.get('world.gameTime') || null,
+        deliveryGameTime: deliveryGameTime || null,
+        delivered: false,
+        replied: false
+      };
+      this.correspondence.push(letter);
+      this.bus.dispatch('correspondence:sent', letter);
+      res.json({ ok: true, letter });
+    });
+
+    // --- Test Mode ---
+    app.post('/api/test-mode', (req, res) => {
+      const { enabled } = req.body || {};
+      if (this.sessionMode === 'live-session' && enabled) {
+        return res.status(400).json({ error: 'Cannot enable Test Mode during live session' });
+      }
+      this.testMode = !!enabled;
+      this.state.set('testMode', this.testMode);
+      this.bus.dispatch('test-mode:changed', { enabled: this.testMode });
+      res.json({ ok: true, testMode: this.testMode });
+    });
+
+    app.post('/api/test/snapshot', (req, res) => {
+      if (!this.testMode) return res.status(400).json({ error: 'Test Mode required' });
+      const { name } = req.body || {};
+      const snap = this._createSnapshot(name || 'manual-' + Date.now());
+      res.json({ ok: true, snapshot: snap });
+    });
+
+    app.get('/api/test/snapshots', (req, res) => {
+      res.json(this.snapshots.map(s => ({ id: s.id, name: s.name, createdAt: s.createdAt })));
+    });
+
+    app.post('/api/test/restore/:id', (req, res) => {
+      if (!this.testMode) return res.status(400).json({ error: 'Test Mode required' });
+      const result = this._restoreSnapshot(req.params.id);
+      res.json({ ok: result, restored: result });
+    });
+
+    app.post('/api/test/skip-time', (req, res) => {
+      if (!this.testMode) return res.status(400).json({ error: 'Test Mode required' });
+      const { amount, unit } = req.body || {};
+      const ms = this._unitToMs(amount, unit);
+      const wc = this.orchestrator.getService('world-clock');
+      if (wc?.gameTime) {
+        wc.gameTime = new Date(wc.gameTime.getTime() + ms);
+        this.state.set('world.gameTime', wc.gameTime.toISOString());
+      }
+      this.addWorldHistoryEntry({
+        type: 'test-skip-time',
+        content: `[TEST] Time skipped ${amount} ${unit}`,
+        visibility: 'dm-only'
+      });
+      res.json({ ok: true, newTime: wc?.gameTime?.toISOString() });
+    });
+
+    app.post('/api/test/reset-campaign', (req, res) => {
+      if (!this.testMode) return res.status(400).json({ error: 'Test Mode required' });
+      const { confirm } = req.body || {};
+      if (confirm !== 'RESET') return res.status(400).json({ error: 'Type RESET to confirm' });
+      this.sessionMode = 'pre-campaign';
+      this.worldHistory = [];
+      this.correspondence = [];
+      this.timeline = [];
+      this.snapshots = [];
+      this._savePersistentData();
+      this.bus.dispatch('campaign:reset', { test: true });
+      res.json({ ok: true });
     });
 
     // --- Pre-session planning ---

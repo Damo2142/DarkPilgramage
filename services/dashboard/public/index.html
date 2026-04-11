@@ -830,8 +830,14 @@
 
       <div class="panel-section" data-panel="session">
       <div class="section-header"><span class="drag-handle">⠿</span>Session</div>
+      <div id="session-mode-3btn" class="session-bar" style="border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:4px;">
+        <button class="primary" id="btn-start-campaign" onclick="SessionMode.startCampaign()" title="Initialize the campaign — one-time only">⛧ Start Campaign</button>
+        <button class="primary" id="btn-start-session" onclick="SessionMode.startSession()" style="display:none;">▶ Start Session</button>
+        <button class="danger" id="btn-stop-session" onclick="SessionMode.stopSession()" style="display:none;">⏹ Stop Session</button>
+      </div>
+      <div id="session-mode-status" style="font-size:9px;color:var(--text-dim);padding:0 8px 4px;"></div>
       <div class="session-bar">
-        <button class="primary" onclick="send('session:start')">▶ Start</button>
+        <button class="primary" onclick="send('session:start')">▶ Start (legacy)</button>
         <button onclick="send('session:pause')">⏸ Pause</button>
         <button onclick="send('session:resume')">▶ Resume</button>
         <button onclick="send('session:end')">⏹ End</button>
@@ -5376,6 +5382,59 @@
       addTranscript({ speaker: 'system', text: 'No pending downtime events' });
     }
   }
+  // ── Session Mode (3-button system) ──
+  var SessionMode = {
+    refresh: async function() {
+      try {
+        var resp = await fetch('/api/session-mode');
+        var data = await resp.json();
+        var startCamp = document.getElementById('btn-start-campaign');
+        var startSess = document.getElementById('btn-start-session');
+        var stopSess = document.getElementById('btn-stop-session');
+        var status = document.getElementById('session-mode-status');
+        if (data.mode === 'pre-campaign') {
+          startCamp.style.display = 'inline-block';
+          startSess.style.display = 'none';
+          stopSess.style.display = 'none';
+        } else if (data.mode === 'between-session') {
+          startCamp.style.display = 'none';
+          startSess.style.display = 'inline-block';
+          stopSess.style.display = 'none';
+        } else if (data.mode === 'live-session') {
+          startCamp.style.display = 'none';
+          startSess.style.display = 'none';
+          stopSess.style.display = 'inline-block';
+        }
+        status.textContent = 'Mode: ' + data.mode + (data.testMode ? ' (TEST MODE)' : '');
+      } catch (e) {}
+    },
+    startCampaign: async function() {
+      var confirmText = prompt('This will initialize The Dark Pilgrimage. The world clock will begin. This action cannot be undone. Type RESET to confirm:');
+      if (confirmText !== 'RESET') return;
+      var resp = await fetch('/api/session/start-campaign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: 'RESET' })
+      });
+      var data = await resp.json();
+      if (data.ok) { addTranscript({ speaker: 'system', text: 'Campaign started — world anchor set ' + data.anchor.gameDateTime }); SessionMode.refresh(); }
+      else alert('Failed: ' + (data.error || 'unknown'));
+    },
+    startSession: async function() {
+      var resp = await fetch('/api/session/start', { method: 'POST' });
+      var data = await resp.json();
+      if (data.ok) { addTranscript({ speaker: 'system', text: 'Session started — live mode active' }); SessionMode.refresh(); }
+    },
+    stopSession: async function() {
+      if (!confirm('End the session? Lights will return to home_normal over 30 seconds.')) return;
+      var resp = await fetch('/api/session/stop', { method: 'POST' });
+      var data = await resp.json();
+      if (data.ok) { addTranscript({ speaker: 'system', text: 'Session ended — between-session mode active' }); SessionMode.refresh(); }
+    }
+  };
+  // Refresh on page load
+  setTimeout(function() { SessionMode.refresh(); }, 500);
+
   // ── Pre-Session Planning ──
   var PreSession = {
     open: async function() {

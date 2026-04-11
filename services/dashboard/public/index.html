@@ -737,6 +737,10 @@
   <header>
     <h1>⛧ DARK PILGRIMAGE — CO-DM</h1>
     <div id="test-mode-banner" style="display:none;background:#a44;color:#fff;padding:2px 12px;border-radius:3px;font-weight:bold;font-size:11px;letter-spacing:2px;text-transform:uppercase;">TEST MODE ACTIVE</div>
+    <div id="api-status-indicator" style="display:flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid var(--border);border-radius:3px;font-size:10px;color:var(--text-dim);">
+      <span id="api-status-dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#666;"></span>
+      <span id="api-status-label">AI ?</span>
+    </div>
     <div class="header-status">
       <span><span class="dot" id="ws-dot"></span><span id="ws-label">—</span></span>
       <span><span class="dot green" id="earbud-indicator" title="Earbud TTS"></span>🎧</span>
@@ -858,6 +862,18 @@
           <label><input type="checkbox" checked onchange="Earbud.categories.npc=this.checked"> NPC dialogue</label>
         </div>
         <button onclick="Earbud.speak('Co-DM online, earbud ready', 3)" style="width:100%;margin-top:6px;font-size:10px;">🔊 Test Voice</button>
+      </div>
+      </div>
+
+      <div class="panel-section" data-panel="atmosphere-quick">
+      <div class="section-header"><span class="drag-handle">⠿</span>Atmosphere Quick-Triggers</div>
+      <div style="padding:6px 8px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;">
+        <button class="sm atmo-quick" data-profile="tavern_warm" onclick="AtmoQuick.fire('tavern_warm')" style="font-size:10px;padding:6px 4px;">SAFE</button>
+        <button class="sm atmo-quick" data-profile="tavern_tense" onclick="AtmoQuick.fire('tavern_tense')" style="font-size:10px;padding:6px 4px;">TENSION</button>
+        <button class="sm atmo-quick" data-profile="dread_rising" onclick="AtmoQuick.fire('dread_rising')" style="font-size:10px;padding:6px 4px;">DREAD</button>
+        <button class="sm atmo-quick" data-profile="revelation" onclick="AtmoQuick.fire('revelation')" style="font-size:10px;padding:6px 4px;">RITUAL</button>
+        <button class="sm atmo-quick" data-profile="terror_peak" onclick="AtmoQuick.fire('terror_peak')" style="font-size:10px;padding:6px 4px;">SUPERNATURAL</button>
+        <button class="sm atmo-quick" data-profile="combat" onclick="AtmoQuick.fire('combat')" style="font-size:10px;padding:6px 4px;">COMBAT</button>
       </div>
       </div>
 
@@ -5540,6 +5556,41 @@
       addTranscript({ speaker: 'system', text: 'No pending downtime events' });
     }
   }
+  // ── Atmosphere Quick-Triggers ──
+  var AtmoQuick = {
+    fire: async function(profile) {
+      // Highlight active button
+      document.querySelectorAll('.atmo-quick').forEach(function(b) {
+        b.style.background = b.dataset.profile === profile ? 'var(--accent)' : '';
+        b.style.color = b.dataset.profile === profile ? '#000' : '';
+      });
+      send({ type: 'atmo:change', profile: profile, source: 'quick-trigger' });
+      addTranscript({ speaker: 'system', text: 'Atmosphere → ' + profile });
+    }
+  };
+
+  // ── API Status Indicator (S6 hookup) ──
+  var ApiStatus = {
+    update: function(status) {
+      var dot = document.getElementById('api-status-dot');
+      var label = document.getElementById('api-status-label');
+      if (!dot || !label) return;
+      if (status === 'ONLINE') { dot.style.background = '#5a9'; label.textContent = 'AI ONLINE'; label.style.color = '#5a9'; }
+      else if (status === 'DEGRADED') { dot.style.background = '#d4a017'; label.textContent = 'AI SLOW'; label.style.color = '#d4a017'; }
+      else if (status === 'OFFLINE') { dot.style.background = '#a44'; label.textContent = 'AI OFFLINE'; label.style.color = '#a44'; }
+      else { dot.style.background = '#666'; label.textContent = 'AI ?'; label.style.color = 'var(--text-dim)'; }
+    },
+    refresh: async function() {
+      try {
+        var resp = await fetch('/api/ai/health');
+        var data = await resp.json();
+        ApiStatus.update(data.status || 'OFFLINE');
+      } catch (e) { ApiStatus.update('OFFLINE'); }
+    }
+  };
+  setInterval(function() { ApiStatus.refresh(); }, 60000);
+  setTimeout(function() { ApiStatus.refresh(); }, 1500);
+
   // ── Encounter Manager ──
   var EncounterMgr = {
     select: async function() {
@@ -7093,7 +7144,14 @@
 
   /* === PANEL LAYOUT MANAGER — drag, hide, collapse, cross-column === */
   const PanelLayout = {
-    STORAGE_KEY: 'dp_panel_layout_v2',
+    // Section 4 — per-route layout persistence
+    get STORAGE_KEY() {
+      var path = location.pathname;
+      if (path === '/dm') return 'dp_panel_layout_v2_dm_center';
+      if (path === '/dm/map') return 'dp_panel_layout_v2_dm_map';
+      if (path === '/dm/ref') return 'dp_panel_layout_v2_dm_ref';
+      return 'dp_panel_layout_v2';
+    },
     draggedPanel: null,
     clone: null,
     touchOffsetY: 0,

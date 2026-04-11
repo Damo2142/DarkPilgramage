@@ -313,17 +313,25 @@ function render() {
   var gs = mapData.gridSize || 64;
   var revealedRects = getRevealedRects();
 
-  // ── Layer 1: map image clipped to revealed rects ──
+  // ── Layer 1: map image — draw ONLY the parts inside revealed rects ──
+  // FIX-B2 — use per-rect source-region drawImage instead of canvas clip().
+  // Clip can leak in some browsers when the clip path covers a sub-rect of
+  // the image; per-rect drawImage(src..., dst...) is impossible to bypass.
+  // Each revealed rect crops a sub-region of the source image and draws it
+  // at the matching destination coordinates.
   if (revealedRects.length > 0 && mapImage) {
-    ctx.save();
-    ctx.beginPath();
     for (var fi = 0; fi < revealedRects.length; fi++) {
       var rect = revealedRects[fi];
-      ctx.rect(rect.x - mw/2, rect.y - mh/2, rect.w, rect.h);
+      // Clamp the rect to the map bounds in case zone coords go out of range
+      var sx = Math.max(0, rect.x);
+      var sy = Math.max(0, rect.y);
+      var sw = Math.min(mw - sx, rect.w);
+      var sh = Math.min(mh - sy, rect.h);
+      if (sw <= 0 || sh <= 0) continue;
+      var dx = sx - mw/2;
+      var dy = sy - mh/2;
+      ctx.drawImage(mapImage, sx, sy, sw, sh, dx, dy, sw, sh);
     }
-    ctx.clip();
-    ctx.drawImage(mapImage, -mw / 2, -mh / 2, mw, mh);
-    ctx.restore();
   }
 
   // ── Layer 2: tokens — only those inside a revealed area ──

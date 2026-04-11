@@ -1375,6 +1375,14 @@
       </div>
       </div>
 
+      <div class="panel-section" data-panel="pre-session-planning">
+      <div class="section-header"><span class="drag-handle">⠿</span>Pre-Session Planning</div>
+      <div style="padding:6px 8px;">
+        <button class="primary sm" onclick="PreSession.open()" style="width:100%;font-size:11px;margin-bottom:6px;">Open Pre-Session Planning</button>
+        <div id="presession-summary" style="font-size:9px;color:var(--text-dim);max-height:300px;overflow-y:auto;"></div>
+      </div>
+      </div>
+
       <div class="panel-section" data-panel="campaign-future-hooks">
       <div class="section-header"><span class="drag-handle">⠿</span>Campaign Future Hooks</div>
       <div style="padding:6px 8px;">
@@ -5368,6 +5376,45 @@
       addTranscript({ speaker: 'system', text: 'No pending downtime events' });
     }
   }
+  // ── Pre-Session Planning ──
+  var PreSession = {
+    open: async function() {
+      var el = document.getElementById('presession-summary');
+      el.innerHTML = '<i style="color:var(--accent);">Loading briefing...</i>';
+      try {
+        var resp = await fetch('/api/campaign/pre-session');
+        var data = await resp.json();
+        var html = '';
+        html += '<div style="border-bottom:1px solid var(--border);padding:4px 0;"><b style="color:var(--accent);">Panel 1 — World State</b><br>';
+        html += 'Active threats: ' + (data.panel1_worldState?.threats?.length || 0) + '<br>';
+        html += 'NPC decisions logged: ' + (data.panel1_worldState?.autonomousNpcDecisions?.length || 0) + '<br>';
+        html += 'AI world events: ' + (data.panel1_worldState?.aiWorldEvents?.length || 0) + '</div>';
+        html += '<div style="border-bottom:1px solid var(--border);padding:4px 0;"><b style="color:var(--accent);">Panel 2 — Player Activity</b><br>';
+        (data.panel2_playerActivity || []).forEach(function(p) {
+          html += '· ' + esc(p.character) + ' — sent ' + (p.correspondenceSent || []).length + ' / received ' + (p.correspondenceReceived || []).length + '<br>';
+        });
+        html += '</div>';
+        html += '<div style="border-bottom:1px solid var(--border);padding:4px 0;"><b style="color:var(--accent);">Panel 3 — Current Truth</b><br>';
+        html += 'Active threats: ' + (data.panel3_currentTruth?.activeThreats?.length || 0) + '<br>';
+        html += 'Significant NPCs tracked: ' + (data.panel3_currentTruth?.significantNpcs?.length || 0) + '</div>';
+        html += '<div style="padding:4px 0;"><b style="color:var(--accent);">Panel 4 — Session Plan</b><br>';
+        html += 'Queued events: ' + ((data.panel4_sessionPlan?.events || []).length) + '</div>';
+        html += '<button class="sm primary" style="font-size:9px;margin-top:6px;" onclick="PreSession.aiBriefing()">Generate AI Briefing</button>';
+        html += '<div id="presession-ai-briefing" style="margin-top:6px;font-size:9px;white-space:pre-wrap;"></div>';
+        el.innerHTML = html;
+      } catch (e) {
+        el.innerHTML = '<span style="color:#a44;">Error loading briefing</span>';
+      }
+    },
+    aiBriefing: async function() {
+      var el = document.getElementById('presession-ai-briefing');
+      el.innerHTML = '<i style="color:var(--accent);">Generating briefing...</i>';
+      var resp = await fetch('/api/campaign/pre-session/ai-briefing', { method: 'POST' });
+      var data = await resp.json();
+      el.innerHTML = data.briefing ? esc(data.briefing) : '<span style="color:#a44;">AI unavailable</span>';
+    }
+  };
+
   // ── Language Audio Routing ──
   var LangAudio = {
     update: function() {

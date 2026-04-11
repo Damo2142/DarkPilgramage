@@ -198,6 +198,84 @@ class CampaignService {
   }
 
   // ═══════════════════════════════════════════════════════════════
+  // PRE-SESSION PLANNING
+  // ═══════════════════════════════════════════════════════════════
+
+  _buildPreSessionBriefing() {
+    const players = this.state.get('players') || {};
+    const world = this.state.get('world') || {};
+    const journey = this.state.get('journey');
+    const lastRecap = this.sessionRecaps.slice(-1)[0] || null;
+
+    // Panel 1 — World State Summary
+    const worldStateSummary = {
+      threats: this.futureHooks.filter(h => h.status === 'seeded' || h.status === 'planned').map(h => ({
+        id: h.id, title: h.title, creature: h.creature, status: h.status,
+        currentState: h.description?.slice(0, 200)
+      })),
+      autonomousNpcDecisions: (this.worldHistory || []).filter(e => e.type === 'npc-decision').slice(-20),
+      aiWorldEvents: (this.worldHistory || []).filter(e => e.type === 'world-event').slice(-20),
+      consequenceQueueFired: (this.worldHistory || []).filter(e => e.type === 'consequence-fired').slice(-20)
+    };
+
+    // Panel 2 — Player Activity Report
+    const playerActivity = Object.entries(players).map(([id, p]) => ({
+      playerId: id,
+      character: p.character?.name || id,
+      downtimeDeclarations: (this.worldHistory || []).filter(e => e.relatedPlayer === id && e.type === 'downtime-declaration'),
+      correspondenceSent: (this.correspondence || []).filter(c => c.from === id),
+      correspondenceReceived: (this.correspondence || []).filter(c => c.to === id),
+      knownAtSessionEnd: p.knownClues || [],
+      trustChanges: (p.trustHistory || []).slice(-5)
+    }));
+
+    // Panel 3 — Current Truth
+    const currentTruth = {
+      activeThreats: this.futureHooks.filter(h => h.status === 'seeded' || h.status === 'planned'),
+      significantNpcs: Object.values(this.state.get('npcs') || {}).filter(n => n.location).map(n => ({
+        id: n.id || n.name, name: n.name, location: n.location, status: n.status, disposition: n.disposition
+      })),
+      plantedSeeds: this.futureHooks.map(h => ({ id: h.id, title: h.title, status: h.status }))
+    };
+
+    // Panel 4 — Session Plan Review
+    const sessionPlan = this._sessionPlan || this.state.get('campaign.sessionPlan') || { events: [] };
+
+    return {
+      panel1_worldState: worldStateSummary,
+      panel2_playerActivity: playerActivity,
+      panel3_currentTruth: currentTruth,
+      panel4_sessionPlan: sessionPlan,
+      lastRecap,
+      currentJourney: journey || null,
+      currentGameTime: world.gameTime || null,
+      generatedAt: new Date().toISOString()
+    };
+  }
+
+  async _generateAIBriefing() {
+    if (!this.gemini?.available) return null;
+    const briefing = this._buildPreSessionBriefing();
+    const prompt = `You are the Co-DM director for "The Dark Pilgrimage" gothic horror campaign.
+Generate a pre-session briefing for the DM covering:
+1. Most dramatically interesting version of tomorrow's session given current world state
+2. What has happened between sessions that deserves to become a session moment
+3. What players are likely walking in expecting vs what the world will actually give them
+4. NPC decisions the autonomous system made that create new dramatic possibilities
+5. Suggested adjustments to the session plan with reasoning
+
+Keep specific. Reference actual NPCs, threats, and seeds by name. The DM needs actionable insight.`;
+    const ctx = JSON.stringify(briefing).slice(0, 5000);
+    try {
+      const response = await this.gemini.generate(prompt, ctx, { maxTokens: 1500, temperature: 0.85 });
+      return response;
+    } catch (err) {
+      console.error('[Campaign] AI briefing failed:', err.message);
+      return null;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   // CONFIG & PERSISTENCE
   // ═══════════════════════════════════════════════════════════════
 
@@ -737,6 +815,24 @@ Keep each event to 1-2 sentences. Format as JSON array: [{"title": "...", "descr
 
     app.get('/api/campaign/lore/player/:playerId', (req, res) => {
       res.json(this.getPlayerLore(req.params.playerId));
+    });
+
+    // --- Pre-session planning ---
+    app.get('/api/campaign/pre-session', (req, res) => {
+      res.json(this._buildPreSessionBriefing());
+    });
+
+    app.post('/api/campaign/pre-session/save-plan', (req, res) => {
+      const plan = req.body || {};
+      this._sessionPlan = plan;
+      this.state.set('campaign.sessionPlan', plan);
+      res.json({ ok: true });
+    });
+
+    app.post('/api/campaign/pre-session/ai-briefing', async (req, res) => {
+      if (!this.gemini?.available) return res.json({ ok: false, error: 'AI not available' });
+      const briefing = await this._generateAIBriefing();
+      res.json({ ok: true, briefing });
     });
 
     // --- Future Hooks ---

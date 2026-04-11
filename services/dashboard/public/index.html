@@ -845,6 +845,16 @@
         <button class="danger" onclick="if(confirm('PANIC — Kill all effects?')) send('panic')" style="flex:2">🚨 PANIC</button>
         <button onclick="DmRecap.generate()" title="AI generates a recap of the last 10 minutes">Recap</button>
       </div>
+      <div style="padding:4px 8px;border-top:1px solid var(--border);">
+        <div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Language Audio Routing</div>
+        <label style="display:block;font-size:10px;cursor:pointer;"><input type="checkbox" id="lang-route-earbud-only" checked onchange="LangAudio.update()"> Route non-Common NPC speech to earbud only</label>
+        <label style="display:block;font-size:10px;cursor:pointer;"><input type="checkbox" id="lang-ambient-murmur" checked onchange="LangAudio.update()"> Play ambient murmur for non-Common conversations</label>
+        <div style="display:flex;align-items:center;gap:4px;margin-top:3px;">
+          <span style="font-size:9px;color:var(--text-dim);">Murmur volume:</span>
+          <input type="range" id="lang-murmur-volume" min="0" max="100" value="20" style="flex:1;" onchange="LangAudio.update()">
+          <span id="lang-murmur-volume-val" style="font-size:9px;color:var(--text);">20%</span>
+        </div>
+      </div>
       </div>
 
       <div class="panel-section" data-panel="transcript-input">
@@ -5358,6 +5368,21 @@
       addTranscript({ speaker: 'system', text: 'No pending downtime events' });
     }
   }
+  // ── Language Audio Routing ──
+  var LangAudio = {
+    update: function() {
+      var earbudOnly = document.getElementById('lang-route-earbud-only').checked;
+      var murmur = document.getElementById('lang-ambient-murmur').checked;
+      var vol = parseInt(document.getElementById('lang-murmur-volume').value);
+      document.getElementById('lang-murmur-volume-val').textContent = vol + '%';
+      fetch('/api/audio/language-routing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ earbudOnly: earbudOnly, ambientMurmur: murmur, murmurVolume: vol / 100 })
+      }).catch(function(){});
+    }
+  };
+
   // ── Campaign Future Hooks (loaded from config/future-hooks.json) ──
   async function refreshCampaignFutureHooks() {
     try {

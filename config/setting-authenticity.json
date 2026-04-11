@@ -1,0 +1,48 @@
+{
+  "setting": {
+    "year": 1274,
+    "region": "Central Europe — Carpathian Mountains, Bohemia, Moravia, Western Hungary",
+    "americasContact": "Unknown to Europeans — 218 years before first European contact"
+  },
+  "authenticityRules": {
+    "noAmericasReferences": "No character, creature, NPC, or cultural reference may originate from or reference the Americas as a known European concept",
+    "humansFromOldWorld": "European humans only know Europe, North Africa, Middle East, Central Asia, East Asia",
+    "nonHumansAreExtraordinary": "Non-human characters in 1274 Central Europe are rare and extraordinary. Their presence is noteworthy and every NPC reacts accordingly.",
+    "americasOriginForNonHumans": "Non-human characters in this campaign originate from the Americas. They arrived in Europe through extraordinary individual circumstances. Each requires a backstory."
+  },
+  "validRaces": {
+    "europeanHumans": [
+      "France", "England", "Germany", "Low Countries", "Italy", "Iberia",
+      "Slavic regions", "Hungary", "Byzantium", "North Africa", "Levant",
+      "Persia", "Central Asia"
+    ],
+    "europeanFolkloreFantasyRaces": [
+      "Half-Elves (vanishingly rare, extraordinary)",
+      "Tieflings (extraordinary, theologically troubling)",
+      "Halflings (small communities exist on the edges of European settlements)"
+    ],
+    "americasOriginRaces": [
+      "Elves",
+      "Dwarves (some Old World presence, but most are Americas)",
+      "Gnomes",
+      "Kobolds (Spurt — folkloric Germanic precedent + Americas origin)",
+      "Half-Elves with Americas elven heritage",
+      "Other non-human PCs require Americas origin backstory"
+    ]
+  },
+  "languageRules": {
+    "common": "Maps to Latin — auto-approved for all characters",
+    "humanLanguages": [
+      "French", "English", "German", "Czech", "Slovak", "Polish", "Hungarian",
+      "Italian", "Spanish", "Catalan", "Greek", "Old Church Slavonic",
+      "Arabic", "Persian", "Hebrew", "Aramaic"
+    ],
+    "draconic": "Universal dragon tongue. Auto-approved for Kobolds. Requires explicit dragon connection backstory for human characters.",
+    "americasLanguages": "FORBIDDEN for European humans. No European in 1274 has had contact with the Americas.",
+    "elvish": {
+      "europeanElvish": "Vanishingly rare — requires specific connection to a known elven enclave",
+      "americasElvish": "Mother tongue of Americas-origin elves. May not be mutually intelligible with European elvish."
+    }
+  },
+  "draconicNote": "Draconic is the universal dragon tongue adopted by Kobolds on both continents independently. It is not an Americas language. Spurt's Draconic is valid and functional everywhere dragons exist."
+}

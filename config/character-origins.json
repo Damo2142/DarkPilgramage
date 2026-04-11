@@ -1,0 +1,47 @@
+{
+  "_note": "Americas origin overlay merged into character state at load time. Character files (162472191.json, 164126673.json, 162702065.json) are owned by Docker root — overlay used to inject this data without requiring file permission changes.",
+  "americasOriginByDDBId": {
+    "162472191": {
+      "name": "Spurt the Sorcerer (Kobold)",
+      "americasOrigin": {
+        "confirmed": true,
+        "continent": "Americas",
+        "howArrivedInEurope": "Unknown even to Spurt — he deflects questions with Kobold evasiveness",
+        "europeanReaction": "Nobody in 1274 Europe has a category for a Kobold from beyond the western horizon. Church scholars are troubled. Common people react with superstition. Vladislav finds him genuinely novel — a novelty he has not encountered in centuries.",
+        "languagesFromAmericas": [],
+        "draconicNote": "Spurt's Draconic is valid and functional everywhere dragons exist — it is not an Americas language"
+      }
+    },
+    "164126673": {
+      "name": "Zarina Firethorn (Half-Elf)",
+      "americasOrigin": {
+        "confirmed": true,
+        "continent": "Her mother's people are elves of the Americas — western forests of a continent with no European name",
+        "fatherBackstory": "English sailor lost at sea, washed ashore in the Americas, taken in and nursed to health by elves, fell in love, married, stayed for many years. Zarina grew up hearing his stories of Europe — a place he idealized in memory the way people idealize homes they cannot return to. She decided to make the journey he never made back.",
+        "howArrivedInEurope": "Zarina made the crossing herself. It took longer than her father's stories suggested and was nothing like what he described.",
+        "europeanReaction": "Half-Elf is already strange in Central Europe. Half-Elf from somewhere no European has a name for is stranger still. Her magic is recognized as magical but its specific character is unfamiliar — calibrated for a different world.",
+        "vladislavReaction": "He cannot categorize what she is carrying in her blood. He has encountered many things in his centuries. This is not one of them. He finds this interesting in the specific way very old things find genuine novelty — with something close to delight, carefully suppressed.",
+        "kamennyReaction": "The Kamenný has geological memory. It remembers the shape of the continent she comes from. When communication is established it places a stone at her feet specifically — from the other side of the world, carried for longer than her mother's people have existed.",
+        "elvishNote": "Her Elvish is from her mother's people — elves of the Americas. It may not be mutually intelligible with any European elf dialect. Flag for DM review when she attempts Elvish with a European elf."
+      }
+    },
+    "162702065": {
+      "name": "Barry Goodfellow Frascht (Human Warlock)",
+      "americasOrigin": {
+        "confirmed": false,
+        "note": "Barry is a European human — Frascht family, hunter bloodline tied to Central European folkloric tradition (Van Helsing precedent). No Americas connection."
+      }
+    }
+  },
+  "npcReactionsToNonHumans": {
+    "_note": "How Session 0 NPCs react to Spurt and Zarina specifically — Americas origin is extraordinary in 1274 Central Europe",
+    "marta": "Has never seen a Kobold. Not sure Spurt is safe. Serves him because she serves everyone but watches him. After an hour decides he is odd but not threatening and relaxes into her normal warmth.",
+    "gregor": "Has heard travelers' tales of things beyond the western horizon. Looks at Spurt the way a man looks at something his grandfather's stories described but he never expected to see. Does not say this out loud.",
+    "vladislav": "Spurt is novel. Zarina is more than novel. He cannot place her bloodline and this is new for something his age. Watches her with interest he keeps carefully controlled.",
+    "aldric": "Theologically troubled. No framework for souls from beyond the known world. Prays about it quietly. Kind to both because his faith requires kindness even when his theology is confused.",
+    "katya": "Immediately fascinated. Has songs about things beyond the western horizon — old songs nobody takes seriously. She takes them seriously now. Wants to know everything.",
+    "henryk": "Tries not to stare. Is staring. Wonders if there is profit in being able to say he traveled with such people.",
+    "tomas": "Distracted by his own crisis. Notices but cannot care. The one person in the room whose reaction is muted by something larger than his curiosity.",
+    "aldous": "Looks at them with the same gentle distraction he looks at everyone. Says 'we have not met anyone like you on the road' and trails off."
+  }
+}

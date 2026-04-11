@@ -314,6 +314,9 @@ class ContextBuilder {
     // Vladislav special context — he is aware of False Hydra, Penitent, Letavec
     parts.push('AI behavioral guidance: Vladislav has hydraAwareness and penitentAversion flags. Never contradict his knowledge of the False Hydra (he knows, finds it useful) or his disturbance at the Penitent (he will not go near infected creatures). He knows about the Noční Letavec and trades information for leverage in social combat. Aldous Kern\'s journal references "W." consistently across every interaction. Henryk should mention boot wax casually at some point.');
 
+    // Setting authenticity — 1274 Central Europe, Americas unknown
+    parts.push('SETTING AUTHENTICITY (HARD RULES): The campaign is October 1274 Central Europe. The Americas are unknown to Europeans — 218 years before first contact. NO European human NPC may speak or understand any Americas language. NO European human NPC casually accepts non-human PCs as commonplace — Spurt the Kobold and Zarina the Half-Elf are EXTRAORDINARY. Every NPC reaction to them must reflect genuine unfamiliarity. Spurt\'s Draconic is universal dragon tongue (valid). Zarina\'s Elvish is from her mother\'s Americas elven people and may not be mutually intelligible with European elf dialects. The Co-DM never generates a European human NPC who speaks an Americas language without explicit DM override.');
+
     // Reputation
     const rep = world.reputation || {};
     const factions = Object.values(rep);

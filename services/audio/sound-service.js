@@ -413,6 +413,23 @@ class SoundService {
       await this._piSetVolume(this._piVolume);
       res.json({ ok: true, volume: this._piVolume });
     });
+
+    // POST /api/audio/language-routing — DM toggles for non-Common NPC speech routing
+    app.post('/api/audio/language-routing', (req, res) => {
+      const { earbudOnly, ambientMurmur, murmurVolume } = req.body || {};
+      this._languageRouting = {
+        earbudOnly: earbudOnly !== false,
+        ambientMurmur: ambientMurmur !== false,
+        murmurVolume: typeof murmurVolume === 'number' ? Math.max(0, Math.min(1, murmurVolume)) : 0.2
+      };
+      this.state.set('audio.languageRouting', this._languageRouting);
+      this.bus.dispatch('audio:language_routing_changed', this._languageRouting);
+      res.json({ ok: true, routing: this._languageRouting });
+    });
+
+    app.get('/api/audio/language-routing', (req, res) => {
+      res.json(this._languageRouting || { earbudOnly: true, ambientMurmur: true, murmurVolume: 0.2 });
+    });
   }
 
   // ── Pre-generation ────────────────────────────────────────────────

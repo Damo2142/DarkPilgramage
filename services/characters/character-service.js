@@ -179,11 +179,28 @@ class CharacterService {
   _readCharacterFiles() {
     const chars = {};
     if (!fs.existsSync(this.charactersDir)) return chars;
+
+    // Load americas-origin overlay (read-only — character files are owned by Docker root)
+    let originsOverlay = {};
+    try {
+      const overlayPath = path.join(__dirname, '..', '..', 'config', 'character-origins.json');
+      if (fs.existsSync(overlayPath)) {
+        const data = JSON.parse(fs.readFileSync(overlayPath, 'utf8'));
+        originsOverlay = data.americasOriginByDDBId || {};
+      }
+    } catch (err) {
+      console.warn('[Characters] Origins overlay parse failed: ' + err.message);
+    }
+
     for (const file of fs.readdirSync(this.charactersDir)) {
       if (!file.endsWith('.json')) continue;
       try {
         const data = JSON.parse(fs.readFileSync(path.join(this.charactersDir, file), 'utf8'));
         const id = data.foundryId || data.ddbId || path.basename(file, '.json');
+        // Merge americas origin from overlay (does NOT modify the read-only file)
+        if (originsOverlay[String(id)]?.americasOrigin) {
+          data.americasOrigin = originsOverlay[String(id)].americasOrigin;
+        }
         chars[String(id)] = data;
       } catch (err) {
         console.warn('[Characters] Failed to parse ' + file + ': ' + err.message);

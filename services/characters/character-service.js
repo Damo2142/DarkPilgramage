@@ -57,9 +57,9 @@ class CharacterService {
       console.log('[Characters] Auto-syncing ' + ddbConf.characterIds.length + ' character(s) from D&D Beyond...');
       this.ddbSyncAll().catch(e => console.warn('[Characters] Auto-sync failed:', e.message));
     }
-    // DDB cookie health check on startup + every 4 hours
-    setTimeout(() => this._checkDdbCookieHealth(), 5000);
-    setInterval(() => this._checkDdbCookieHealth(), 4 * 60 * 60 * 1000);
+    // DDB cookie health check on startup + every 4 hours (PHASE 8B — track handle)
+    this._cookieHealthTimeout = setTimeout(() => this._checkDdbCookieHealth(), 5000);
+    this._cookieHealthInterval = setInterval(() => this._checkDdbCookieHealth(), 4 * 60 * 60 * 1000);
     // Listen for player inventory/spell updates and persist to disk
     this.bus.subscribe('player:inventory_update', (env) => this._persistPlayerCharacter(env.data.playerId), 'characters');
     this.bus.subscribe('player:spells_update', (env) => this._persistPlayerCharacter(env.data.playerId), 'characters');
@@ -278,7 +278,10 @@ class CharacterService {
     this.bus.dispatch('wounds:updated', { playerId, wounds, tier, hpPct: pct });
   }
 
-  async stop() {}
+  async stop() {
+    if (this._cookieHealthTimeout) { clearTimeout(this._cookieHealthTimeout); this._cookieHealthTimeout = null; }
+    if (this._cookieHealthInterval) { clearInterval(this._cookieHealthInterval); this._cookieHealthInterval = null; }
+  }
 
   _loadAll() {
     const characters = this._readCharacterFiles();

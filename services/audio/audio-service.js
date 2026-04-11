@@ -101,6 +101,17 @@ class AudioService {
         this._flushPlayer(playerId);
       }
     }, 'audio');
+
+    // PHASE 8B — drop the buffer entirely on player disconnect to avoid
+    // accumulating empty entries for transient sessions.
+    this.bus.subscribe('player:disconnected', (env) => {
+      const pid = env.data && env.data.playerId;
+      if (pid && this._audioBuffers[pid]) {
+        delete this._audioBuffers[pid];
+        if (this._lastTranscripts) delete this._lastTranscripts[pid];
+        if (this._whisperDebugCounters) delete this._whisperDebugCounters[pid];
+      }
+    }, 'audio');
   }
 
   // ═══════════════════════════════════════════════════════════════

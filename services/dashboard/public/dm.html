@@ -245,6 +245,68 @@
     }
     #panic-btn:hover { background: #ff4040; }
 
+    /* SESSION CONTROL BUTTONS */
+    .session-btn {
+      background: var(--gold);
+      color: #000;
+      border: 2px solid #f0c840;
+      padding: 10px 22px;
+      font-family: 'Cinzel', serif;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.15em;
+      border-radius: 4px;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+    .session-btn:hover { background: #ffe060; }
+    .session-btn:disabled,
+    .session-btn.disabled {
+      background: #3a3028;
+      color: #706050;
+      border-color: #3a3028;
+      cursor: not-allowed;
+    }
+    .session-btn.large {
+      font-size: 14px;
+      padding: 12px 28px;
+    }
+    .session-btn.danger {
+      background: var(--red);
+      color: #fff;
+      border-color: #ff4040;
+    }
+    .session-btn.danger:hover { background: #ff4040; }
+    .session-btn.muted {
+      background: var(--surface);
+      color: var(--text);
+      border-color: var(--border);
+    }
+    .session-btn.muted:hover { background: var(--surface2); }
+    .testmode-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: monospace;
+      font-size: 11px;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 6px 10px;
+      border: 1px dashed var(--border);
+      border-radius: 3px;
+    }
+    .testmode-toggle.active {
+      color: var(--amber);
+      border-color: var(--amber);
+      border-style: solid;
+    }
+    .session-status-text {
+      font-family: monospace;
+      font-size: 11px;
+      color: var(--text-dimmer);
+      letter-spacing: 0.05em;
+    }
+
     /* MAX INPUT — collapsed by default */
     #max-input-bar {
       flex: 0 0 auto;
@@ -451,6 +513,19 @@
   </div>
 
   <div id="event-strip"><span id="event-strip-text">Next: — --:--:--</span></div>
+
+  <div id="session-controls" style="flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:12px 24px;background:var(--surface);border-bottom:1px solid var(--border);">
+    <button id="btn-start-campaign" class="session-btn large" onclick="SessionMode.startCampaign()" style="display:none;" title="Initialize the campaign — one-time only">★ START CAMPAIGN</button>
+    <button id="btn-start-session" class="session-btn large" onclick="SessionMode.startSession()" style="display:none;">▶ START SESSION</button>
+    <button id="btn-resume-save" class="session-btn muted" onclick="SessionMode.resumeSave()" style="display:none;">↻ Resume Save</button>
+    <button id="btn-pause-session" class="session-btn muted" onclick="SessionMode.pauseSession()" style="display:none;">‖ PAUSE</button>
+    <button id="btn-stop-session" class="session-btn danger" onclick="SessionMode.stopSession()" style="display:none;">■ STOP SESSION</button>
+    <span id="session-mode-status" class="session-status-text">Loading…</span>
+    <span class="spacer" style="flex:1;"></span>
+    <label class="testmode-toggle" id="testmode-label">
+      <input type="checkbox" id="testmode-checkbox" onchange="SessionMode.toggleTest(this.checked)"> TEST MODE
+    </label>
+  </div>
 
   <div id="status-bar">
     <div class="status-pill" id="pill-clock">
@@ -753,11 +828,21 @@ function toggleMaxInput() {
   if (area.classList.contains('open')) $('max-input').focus();
 }
 
+var _maxLastFireAt = 0;
+var _maxFiring = false;
 function sendMax() {
   var input = $('max-input');
+  var btn = $('max-send');
+  var now = Date.now();
+  // Debounce — ignore submits within 2 seconds of the last fire, and ignore re-entry while a query is in flight
+  if (_maxFiring) return;
+  if (now - _maxLastFireAt < 2000) return;
   var query = input.value.trim();
   if (!query) return;
+  _maxFiring = true;
+  _maxLastFireAt = now;
   input.value = '';
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
   $('max-input-area').classList.remove('open');
   fetch('/api/max/query', {
     method: 'POST',
@@ -766,8 +851,116 @@ function sendMax() {
   }).then(function(r) { return r.json(); }).then(function(d) {
     if (d && d.text) addWhisper({ tag: 'MAX', text: d.text });
     else if (d && d.response) addWhisper({ tag: 'MAX', text: d.response });
-  }).catch(function() {});
+  }).catch(function() {}).then(function() {
+    setTimeout(function() {
+      _maxFiring = false;
+      if (btn) { btn.disabled = false; btn.textContent = 'SEND'; }
+    }, 2000);
+  });
 }
+
+// ═══════════════════════════════════════════════════════════════
+// SESSION MODE — Start Campaign / Start Session / Stop / Pause
+// ═══════════════════════════════════════════════════════════════
+var SessionMode = {
+  mode: null,
+  testMode: false,
+  refresh: function() {
+    return fetch('/api/session-mode').then(function(r) { return r.json(); }).then(function(d) {
+      SessionMode.mode = d.mode;
+      SessionMode.testMode = !!d.testMode;
+      var startCamp = $('btn-start-campaign');
+      var startSess = $('btn-start-session');
+      var resumeSv = $('btn-resume-save');
+      var pauseSe  = $('btn-pause-session');
+      var stopSe   = $('btn-stop-session');
+      var status   = $('session-mode-status');
+      var tmCb     = $('testmode-checkbox');
+      var tmLabel  = $('testmode-label');
+      [startCamp, startSess, resumeSv, pauseSe, stopSe].forEach(function(b) { if (b) b.style.display = 'none'; });
+      if (d.mode === 'pre-campaign') {
+        if (startCamp) {
+          startCamp.style.display = 'inline-block';
+          if (!d.testMode) {
+            startCamp.classList.add('disabled');
+            startCamp.title = 'Enable Test Mode to practice — or accept the live campaign start';
+          } else {
+            startCamp.classList.remove('disabled');
+            startCamp.title = 'Initialize the campaign';
+          }
+        }
+      } else if (d.mode === 'between-session') {
+        if (startSess) startSess.style.display = 'inline-block';
+        if (resumeSv) {
+          fetch('/api/session/saves').then(function(r) { return r.json(); }).then(function(saves) {
+            if (saves && (saves.saves || saves).length) resumeSv.style.display = 'inline-block';
+          }).catch(function() {});
+        }
+      } else if (d.mode === 'live-session') {
+        if (pauseSe) pauseSe.style.display = 'inline-block';
+        if (stopSe) stopSe.style.display = 'inline-block';
+      }
+      if (status) status.textContent = 'Mode: ' + d.mode + (d.testMode ? ' [TEST]' : '');
+      if (tmCb) tmCb.checked = !!d.testMode;
+      if (tmLabel) tmLabel.classList.toggle('active', !!d.testMode);
+    }).catch(function() {});
+  },
+  startCampaign: function() {
+    if ($('btn-start-campaign').classList.contains('disabled') && !SessionMode.testMode) {
+      if (!confirm('Test Mode is OFF. This will START THE LIVE CAMPAIGN. Continue?')) return;
+    }
+    var typed = prompt('This will initialize The Dark Pilgrimage. The world clock will begin. This action cannot be undone. Type RESET to confirm:');
+    if (typed !== 'RESET') return;
+    fetch('/api/session/start-campaign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirm: 'RESET' })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.ok) addWhisper({ tag: 'SYSTEM', text: 'Campaign started — anchor ' + (d.anchor && d.anchor.gameDateTime || '?') });
+      else alert('Failed: ' + (d.error || 'unknown'));
+      SessionMode.refresh();
+    });
+  },
+  startSession: function() {
+    fetch('/api/session/start', { method: 'POST' }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.ok) addWhisper({ tag: 'SYSTEM', text: 'Session started — live mode active' });
+      else alert('Failed: ' + (d.error || 'unknown'));
+      SessionMode.refresh();
+    });
+  },
+  resumeSave: function() {
+    fetch('/api/session/resume', { method: 'POST' }).then(function(r) { return r.json(); }).then(function(d) {
+      addWhisper({ tag: 'SYSTEM', text: 'Resumed save' });
+      SessionMode.refresh();
+    });
+  },
+  pauseSession: function() {
+    fetch('/api/session/pause', { method: 'POST' }).then(function(r) { return r.json(); }).then(function(d) {
+      addWhisper({ tag: 'SYSTEM', text: 'Session paused — clock frozen' });
+      SessionMode.refresh();
+    });
+  },
+  stopSession: function() {
+    if (!confirm('End the session? Lights will return to home_normal over 30 seconds.')) return;
+    fetch('/api/session/stop', { method: 'POST' }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.ok) addWhisper({ tag: 'SYSTEM', text: 'Session ended' });
+      SessionMode.refresh();
+    });
+  },
+  toggleTest: function(enabled) {
+    fetch('/api/test-mode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: !!enabled })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.error) alert(d.error);
+      SessionMode.refresh();
+    });
+  }
+};
+window.SessionMode = SessionMode;
+setTimeout(function() { SessionMode.refresh(); }, 500);
+setInterval(function() { SessionMode.refresh(); }, 15000);
 
 // Section 6 — Narrator whisper to specific player
 function toggleWhisper() {

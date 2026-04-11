@@ -1086,6 +1086,14 @@ class PlayerBridgeService {
   }
 
   _handleAudioChunk(playerId, audioData) {
+    // FIX5 — sampled debug log so we can see mic audio reaching the bus
+    // without flooding logs. One log line per 50 chunks per player.
+    this._micDebugCounters = this._micDebugCounters || {};
+    this._micDebugCounters[playerId] = (this._micDebugCounters[playerId] || 0) + 1;
+    if (this._micDebugCounters[playerId] % 50 === 1) {
+      const sz = audioData && (audioData.byteLength || audioData.length || 0);
+      console.log('[MIC-AUDIO]', playerId, 'chunk #' + this._micDebugCounters[playerId], sz + ' bytes');
+    }
     this.bus.dispatch('audio:chunk', {
       playerId,
       audio: audioData,

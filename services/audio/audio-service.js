@@ -98,10 +98,24 @@ class AudioService {
   // ═══════════════════════════════════════════════════════════════
 
   _handleAudioChunk(data) {
-    if (!this._sttReady && !this.whisperReady) return;
-
+    // FIX5 — sampled debug log + readiness check telemetry
+    this._whisperDebugCounters = this._whisperDebugCounters || {};
     const { playerId, audio } = data;
     if (!playerId || !audio) return;
+    this._whisperDebugCounters[playerId] = (this._whisperDebugCounters[playerId] || 0) + 1;
+    if (this._whisperDebugCounters[playerId] % 50 === 1) {
+      const sz = audio && (audio.byteLength || audio.length || 0);
+      const ready = this._sttReady || this.whisperReady ? 'READY' : 'NOT-READY';
+      console.log('[WHISPER-IN]', playerId, 'chunk #' + this._whisperDebugCounters[playerId], sz + ' bytes', ready, this._useGemini ? '(gemini)' : '(whisper)');
+    }
+    if (!this._sttReady && !this.whisperReady) {
+      // First time we drop a chunk, log it
+      if (!this._sttDropWarned) {
+        this._sttDropWarned = true;
+        console.warn('[WHISPER-IN] STT not ready — dropping chunks. Gemini=' + !!this._useGemini + ' sttReady=' + !!this._sttReady + ' whisperReady=' + !!this.whisperReady);
+      }
+      return;
+    }
 
     if (this._useGemini) {
       this._bufferForGemini(playerId, audio);

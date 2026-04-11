@@ -119,6 +119,34 @@ class Orchestrator {
   getService(name) {
     return this.services.get(name) || null;
   }
+
+  // CR-5 — restart a single service in place. Calls stop() then init()
+  // and start() again. Used by /api/services/:name/restart so the DM
+  // can recover a misbehaving service mid-session without restarting
+  // the whole server.
+  async restartService(name) {
+    const service = this.services.get(name);
+    if (!service) return { ok: false, error: 'service not found: ' + name };
+    const startedAt = Date.now();
+    try {
+      if (service.stop) {
+        try { await service.stop(); } catch (e) { console.warn('[Orchestrator] ' + name + ' stop error:', e.message); }
+      }
+      if (service.init) await service.init(this);
+      if (service.start) await service.start();
+      const ms = Date.now() - startedAt;
+      console.log('[Orchestrator] Restarted service ' + name + ' in ' + ms + 'ms');
+      this.bus.dispatch('service:restarted', { name, ms });
+      return { ok: true, name, ms };
+    } catch (err) {
+      console.error('[Orchestrator] Restart failed for ' + name + ':', err.message);
+      return { ok: false, name, error: err.message };
+    }
+  }
+
+  listServices() {
+    return Array.from(this.services.keys());
+  }
 }
 
 module.exports = Orchestrator;

@@ -197,6 +197,25 @@ class DashboardService {
       res.json(this.config || {});
     });
 
+    // ─── Service restart API (CR-5) ─────────────────────────────
+    this.app.get('/api/services', (req, res) => {
+      try {
+        const list = this.orchestrator.listServices ? this.orchestrator.listServices() : [];
+        res.json({ services: list });
+      } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
+    this.app.post('/api/services/:name/restart', async (req, res) => {
+      try {
+        const name = req.params.name;
+        if (!this.orchestrator.restartService) {
+          return res.status(503).json({ error: 'orchestrator does not support restart' });
+        }
+        const result = await this.orchestrator.restartService(name);
+        res.json(result);
+      } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
     // ─── Max pause / volume API (FIX-C2) ────────────────────────
     this.app.post('/api/max/pause', (req, res) => {
       try {

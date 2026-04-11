@@ -624,6 +624,12 @@
     </div>
 
     <div class="tool-section">
+      <h3>Service Restart (CR-5)</h3>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">Click to restart a single misbehaving service without restarting the whole server.</div>
+      <div id="service-restart-list" class="tool-list" style="max-height:240px;overflow:auto;"></div>
+    </div>
+
+    <div class="tool-section">
       <h3>Audio Devices</h3>
       <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">Browser must request mic permission before output devices appear. Selections persist in localStorage on this browser.</div>
       <div class="tool-row">
@@ -1891,6 +1897,32 @@ var AudioDevices = {
 };
 window.AudioDevices = AudioDevices;
 setTimeout(function() { AudioDevices.init(); }, 600);
+
+// CR-5 — service restart UI
+var ServiceRestart = {
+  load: function() {
+    fetch('/api/services').then(function(r) { return r.json(); }).then(function(d) {
+      var list = $('service-restart-list');
+      if (!list) return;
+      var services = (d && d.services) || [];
+      list.innerHTML = services.map(function(name) {
+        return '<div class="tool-list-item">' +
+          '<span class="ti-name">' + esc(name) + '</span>' +
+          '<button class="tool-btn" onclick="ServiceRestart.restart(\'' + name + '\')">↻ Restart</button>' +
+          '</div>';
+      }).join('');
+    }).catch(function(){});
+  },
+  restart: function(name) {
+    if (!confirm('Restart service: ' + name + '?')) return;
+    fetch('/api/services/' + encodeURIComponent(name) + '/restart', { method: 'POST' }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.ok) alert('Restarted ' + name + ' in ' + d.ms + 'ms');
+      else alert('Restart failed: ' + (d.error || 'unknown'));
+    });
+  }
+};
+window.ServiceRestart = ServiceRestart;
+setTimeout(function() { ServiceRestart.load(); }, 700);
 window.openPlayerSheet = openPlayerSheet;
 window.openNpcCard = openNpcCard;
 window.closeOverlay = closeOverlay;

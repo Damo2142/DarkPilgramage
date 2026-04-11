@@ -340,3 +340,117 @@ ElevenLabs API key in `.env` returns 401 — needs rotation. The code is correct
 ### Push status
 9 commits on `feature/phase-r-complete`. Push still requires interactive credential setup (no PAT in env, no credential helper).
 
+## Critical Issues Round (April 11 evening — 9 fixes + 1 carry-over) — 2026-04-11
+
+| Fix | Subject | Commit |
+|-----|---------|--------|
+| FIX-B1 | /dm/classic route + CLASSIC nav link on all 3 displays | b699ddb |
+| FIX-B2 | /table kitchen leak fixed via per-rect drawImage | 1b95e4d |
+| FIX-B3 | NPC tokens not auto-placed; Place button spawns at default | 947d96b |
+| FIX-B4 | ElevenLabs health uses real TTS endpoint, 5-min refresh | bdd351c |
+| FIX-B5 | Audio Devices section in /dm/ref Tools tab | df7b364 |
+| FIX-B6 | Duplicate response debounce — chat 2s + STT 3s + WS server-side | b27a82c |
+| FIX-B7 | Chat persistence (already shipped 2fafbb1) | — |
+| FIX-B8 | Player MAP tab first + full screen (already shipped 27013a8) | — |
+| FIX-B9 | Watchdog + /health endpoint | bdd351c (co-dm) + c26620c (parent) |
+
+### Live verification (after rebuild + restart)
+
+```
+GET  /health                       → 200 ok
+GET  /dm/classic                   → 200 (serves index.html)
+GET  /api/voice/health             → status: ONLINE  ← was INVALID_KEY!
+GET  /api/map/npc-defaults         → 8 NPCs, all placed=false
+POST /api/map/npc/place-default {"actorSlug":"marta"}
+                                   → tokenId marta-mmmq6srj1 at (3990,1330)
+                                     nameRevealedToPlayers=false ✓
+GET  /api/state map.tokens         → only kim + spurt-ai-pc as PCs (no auto-NPCs)
+```
+
+**ElevenLabs is ONLINE.** The key was always valid — the previous health
+check used `/v1/user/subscription` which returns 401 for some keys even
+when the same key works for `/v1/text-to-speech`. Switching to a
+minimal TTS test call (the same code path Max actually uses) resolved it.
+
+### Decisions
+
+**FIX-B1.** /dm/classic is a literal alias of /classic — same line,
+different URL. Both serve `services/dashboard/public/index.html`
+unchanged. The CLASSIC nav link uses `target="_blank"` so the original
+dashboard opens in a new browser tab without disrupting whichever new
+display the DM is currently using. This is purely a fallback path; no
+features were lifted from the classic dashboard yet.
+
+**FIX-B2.** The bug had two layers:
+1. The common-room zone in pallidhearfloor1.json was 4900x2800 (whole
+   map). Already shrunk to 4340x2800 in the previous round.
+2. Even with the correct zone, `ctx.clip()` can leak in some browsers
+   when the clip path covers a sub-rect of an image. Switched to
+   per-rect `drawImage(src..., dst...)` which crops the source image
+   directly. There is no path that could leak content outside the
+   revealed rect — the unrevealed area is simply never drawn.
+
+**FIX-B3.** _activateMap no longer auto-places NPC tokens. Player tokens
+still spawn as before. NPCs from the map JSON become "available
+defaults" stored in `this._npcDefaults` keyed by actorSlug. The dm-map
+NPC TOKENS panel reads them via the new `/api/map/npc-defaults`
+endpoint. Clicking Place fires `/api/map/npc/place-default` which
+creates the token at the recorded default position in one click. This
+gives the DM an empty map at session start with a checklist of NPCs
+to place — exactly the spec.
+
+**FIX-B4.** The previous health check used `/v1/user/subscription` which
+turned out to return 401 for some valid keys (different permission
+scope). The new check POSTs to `/v1/text-to-speech/{MAX_VOICE_ID}/stream`
+with a single character payload — same endpoint Max uses for actual
+TTS. If THIS call returns 200, Max will work; if it fails, the user
+sees the actual error code Max would hit. 422 'unprocessable' is also
+treated as ONLINE (means key + voiceId valid; just complaining about
+the request shape — Max would still work). Internal throttle 1/min,
+auto-refresh 5 min (was hourly). Manual refresh forces bypass.
+
+**FIX-B5.** AudioDevices is purely client-side — selections persist in
+`localStorage.codm.audioDevices.v1` rather than going through the
+server because Web Audio output device selection happens entirely in
+the browser via `HTMLAudioElement.setSinkId()`. The DM dashboard runs
+on one machine with one browser; storing per-browser is correct. Test
+tones are generated inline as 0.6s sine WAV blobs (no asset files).
+Chrome hides device labels until mic permission is granted, hence
+the explicit "Grant Mic Permission" button.
+
+**FIX-B6.** Three independent layers of dedup, because the duplicate-response
+bug had three causes:
+1. Client-side double-fire (button + Enter, ghost touches) → ChatBar
+   `_lastSendAt` 2-second debounce + per-page `_seqCounter`.
+2. STT emitting the same line twice from overlapping audio buffers →
+   audio-service `_lastTranscripts` 3-second per-speaker dedup on
+   both Gemini and Whisper paths.
+3. WS message replay from any source → player-bridge
+   `_isDuplicateWsMessage` runs at the entry point of
+   `_handlePlayerMessage`. Skips streaming events (audio:chunk,
+   camera:frame, ping). For everything else, builds a fingerprint
+   from `(type + text + npcId + targetId + tokenId + channel)` and
+   drops repeats within 2s. Honors explicit `msg.seq` (drops literal
+   repeats for 60s).
+
+**FIX-B9.** Watchdog uses simple HTTP probing rather than Docker
+healthcheck integration so it works for both the Docker container path
+and the bare-metal `node server.js` path. After 3 consecutive failed
+probes (~30s downtime) it tries `docker compose restart` first, then
+falls back to `pkill node && start.sh`. Logs to
+`~/dark-pilgrimage/watchdog.log` with timestamps.
+
+### Important diagnostic
+During verification, two stale `node server.js` processes were
+discovered: a host process started at 21:22 (before today's rebuilds)
+and the Docker container process. The host process was holding port
+3200 with old code. **The Docker container path is the canonical
+runtime** — the host node process should not be running. Killed PID
+1808797 manually; container restart immediately picked up all new
+routes (/health, /dm/classic, /api/map/npc-defaults). The watchdog
+will catch this kind of state mismatch on the next 30s probe window.
+
+### Push status
+14 commits ready on `feature/phase-r-complete`. Push still requires
+interactive credentials.
+

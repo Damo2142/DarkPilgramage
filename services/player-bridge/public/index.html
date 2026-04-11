@@ -564,7 +564,8 @@
 
   <!-- TAB BAR -->
   <div id="tab-bar">
-    <button class="tab-btn active" data-tab="condition" onclick="switchTab('condition')">Condition</button>
+    <button class="tab-btn active" data-tab="map" onclick="switchTab('map')">Map</button>
+    <button class="tab-btn" data-tab="condition" onclick="switchTab('condition')">Condition</button>
     <button class="tab-btn" data-tab="arms" onclick="switchTab('arms')">Arms &amp; Armor</button>
     <button class="tab-btn" data-tab="magic" onclick="switchTab('magic')">Gifts &amp; Magic</button>
     <button class="tab-btn" data-tab="soul" onclick="switchTab('soul')">Soul</button>
@@ -573,8 +574,19 @@
 
   <!-- GRIMOIRE CONTENT — scrollable, fills remaining -->
   <div id="grimoire-content">
+    <!-- TAB: MAP -->
+    <div class="gtab active" id="gtab-map" style="padding:0;height:calc(100vh - 100px);">
+      <div class="panel" id="panel-map" style="padding:0;position:relative;overflow:hidden;height:100%;">
+        <canvas id="player-map-canvas" style="display:block;width:100%;height:100%;touch-action:none;"></canvas>
+        <div id="zone-banner" style="display:none;position:absolute;top:0;left:0;right:0;background:rgba(15,15,20,0.9);border-bottom:2px solid #8a6a20;padding:10px 14px;text-align:center;z-index:10;">
+          <div style="font-family:Georgia,serif;color:#e8c060;font-size:14px;" id="zone-banner-text"></div>
+        </div>
+        <button id="rotate-btn-tab" onclick="PlayerMap._toggleRotateMode()" style="position:absolute;bottom:8px;right:8px;z-index:10;background:rgba(30,30,40,0.85);color:#aaa;border:1px solid #555;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;">Rotate</button>
+      </div>
+    </div>
+
     <!-- TAB: CONDITION -->
-    <div class="gtab active" id="gtab-condition">
+    <div class="gtab" id="gtab-condition">
     <div class="gsection-label" style="display:none;">Condition</div>
     <div id="grimoire-condition"></div>
 
@@ -785,14 +797,8 @@
     <div class="vbox"><div class="vl">Prof</div><div class="vv">-</div></div>
     <div class="vbox" onclick="editVital('inspiration')"><div class="vl">Inspire</div><div class="vv">-</div></div>
   </div>
-  <!-- Map -->
-  <div class="panel" id="panel-map" style="padding:0;position:relative;overflow:hidden;">
-    <canvas id="player-map-canvas" style="display:block;width:100%;touch-action:none;"></canvas>
-    <div id="zone-banner" style="display:none;position:absolute;top:0;left:0;right:0;background:rgba(15,15,20,0.9);border-bottom:2px solid #8a6a20;padding:10px 14px;text-align:center;z-index:10;">
-      <div style="font-family:Georgia,serif;color:#e8c060;font-size:14px;" id="zone-banner-text"></div>
-    </div>
-    <button id="rotate-btn" onclick="PlayerMap._toggleRotateMode()" style="position:absolute;bottom:8px;right:8px;z-index:10;background:rgba(30,30,40,0.85);color:#aaa;border:1px solid #555;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;">Rotate</button>
-  </div>
+  <!-- Map panel — relocated into Map tab above -->
+  <div id="rotate-btn" style="display:none;"></div>
   <!-- Dice -->
   <div class="panel" id="panel-dice">
     <div style="display:none;">
@@ -1079,6 +1085,10 @@ function switchTab(tabName) {
   if (tab) tab.classList.add('active');
   const btn = document.querySelector('.tab-btn[data-tab="' + tabName + '"]');
   if (btn) btn.classList.add('active');
+  // When switching to MAP tab, force resize and render so canvas picks up panel size
+  if (tabName === 'map' && window.PlayerMap) {
+    setTimeout(() => { try { PlayerMap.resize(); PlayerMap.render(); } catch (e) {} }, 50);
+  }
 }
 // ── Player Mic Capture ──────────────────────────────────────
 const PlayerMic = {
@@ -1176,6 +1186,9 @@ function handle(m){
     case 'horror:clear': clearHorror(); break;
     case 'perception:flash': showPerceptionFlash(m.description); break;
     case 'npc:dialogue': showToast(m.npc||'NPC',m.text,8000); break;
+    case 'npc:speech': handleNpcSpeech(m); break;
+    case 'chat:p2p': handleP2P(m); break;
+    case 'narrator:whisper': handleNarratorWhisper(m); break;
     case 'dm:private_message':
       if (m.style === 'observation') { showObservation(m.text, m.durationMs || 45000); }
       else { showToast('DM', m.text, m.durationMs || 8000); }
@@ -2826,6 +2839,34 @@ function showToast(who,text,dur){
   addChat(who,text,who==='DM Whisper'?'#c9a54e':'var(--purple)');
 }
 
+// Section 6 — NPC speech routed by proximity tier
+function handleNpcSpeech(m) {
+  var name = m.npcName || m.npcId || 'NPC';
+  var text = m.text || '';
+  var tier = m.tier || 'FULL';
+  // Display in chat with style based on tier
+  var chatColor = tier === 'PARTIAL' ? '#888' : '#c9a54e';
+  var prefix = tier === 'PARTIAL' ? '(faint) ' : '';
+  if (typeof addChat === 'function') addChat(name, prefix + text, chatColor);
+  // Toast
+  if (typeof showToast === 'function') showToast(name, prefix + text, 8000);
+}
+
+function handleP2P(m) {
+  var name = m.fromName || m.from || 'Player';
+  if (typeof addChat === 'function') addChat(name + ' (whisper)', m.text || '', '#9a8aaa');
+  if (typeof showToast === 'function') showToast(name, m.text || '', 6000);
+}
+
+function handleNarratorWhisper(m) {
+  var text = m.text || '';
+  // Styled gold italic in chat
+  if (typeof addChat === 'function') addChat('Narrator', '*' + text + '*', '#f0c840');
+  // Persistent observation card style if available
+  if (typeof showObservation === 'function') showObservation('The narrator whispers to you... ' + text, 12000);
+  else if (typeof showToast === 'function') showToast('Narrator', text, 10000);
+}
+
 // Section 3 — Window perception flash. No sound, no notification, no journal entry.
 function showPerceptionFlash(text) {
   var f = document.createElement('div');
@@ -3405,9 +3446,13 @@ const PlayerMap = {
 
   resize() {
     if (!this.canvas) return;
+    // Check if MAP tab is active (panel-map is inside gtab-map)
+    const gtab = document.getElementById('gtab-map');
+    if (!gtab || !gtab.classList.contains('active')) return;
     const panel = $('panel-map');
-    if (!panel || !panel.classList.contains('active')) return;
+    if (!panel) return;
     const rect = panel.getBoundingClientRect();
+    if (rect.width < 50 || rect.height < 50) return;
     this.canvas.width = rect.width;
     this.canvas.height = rect.height;
     this.render();

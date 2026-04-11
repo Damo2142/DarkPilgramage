@@ -1065,9 +1065,16 @@
       "role": "Innkeeper of The Pallid Hart",
       "status": "alive",
       "disposition": "nervous",
+      "emotionalState": "nervous",
       "location": "behind the bar",
       "roomPosition": "bar — Echo nearest kitchen or bar position",
       "mirrorReflection": "normal",
+      "voiceCode": "F1",
+      "dispositions": {
+        "zarina": "Cautious — strangers in her inn during a blizzard",
+        "barry": "Cautious — strangers in her inn during a blizzard",
+        "spurt": "Bewildered — has never seen a Kobold, watches him carefully"
+      },
       "prices": {
         "room_common": { "cp": 2, "description": "A straw pallet in the common room shared with whoever else is there" },
         "room_private": { "sp": 1, "description": "A small private room with a bolt on the door" },
@@ -1131,9 +1138,16 @@
       "role": "Nervous trapper sitting near the door",
       "status": "alive",
       "disposition": "agitated",
+      "emotionalState": "desperate",
       "location": "near the entry door",
       "roomPosition": "near door — Echo nearest entrance",
       "mirrorReflection": "normal",
+      "voiceCode": "M3",
+      "dispositions": {
+        "zarina": "Distracted — too consumed with his curse to notice her closely",
+        "barry": "Wary — Barry's hunter equipment unsettles him",
+        "spurt": "Confused — too distracted to react meaningfully"
+      },
       "voiceProfileDetails": {
         "character": "rough, clipped, words that cost him something, voice that strains at the edges",
         "rate": "fast when nervous which is most of the time, slower when trying to hold himself still",
@@ -1190,14 +1204,26 @@
       "dialogueHistory": []
     },
     "hooded-stranger": {
-      "name": "The Stranger",
-      "trueIdentity": "Vladislav Dragan (Vampire)",
-      "role": "Mysterious hooded guest",
+      "name": "Vladislav Dragan",
+      "publicName": "The Stranger",
+      "trueIdentity": "Vladislav Dragan (Vampire — 600+ years)",
+      "role": "Cultured traveler, uninterested in conversation",
       "status": "alive",
       "disposition": "watchful",
+      "emotionalState": "watchful",
+      "secret": "Vampire, 600+ years old, feeding on travelers, network gathering at Houska",
+      "tell": "Has not touched his food. Does not blink normally. Sits in unnatural stillness.",
+      "motivation": "Assess the party. Identify threats. Feed tonight.",
+      "threatLevel": 9,
       "location": "corner table, deep shadows",
       "roomPosition": "far corner — Echo in far corner of dining room",
       "mirrorReflection": "none",
+      "voiceCode": "M2",
+      "dispositions": {
+        "zarina": "Genuinely curious — her bloodline is unknown to him in 600 years",
+        "barry": "Recognizes the Frascht name. Cautious. Respectful. Dangerous.",
+        "spurt": "Mildly amused. Kobolds from beyond the western horizon are a novelty."
+      },
       "voiceProfileDetails": {
         "character": "measured, unhurried, long pauses before significant words, never loud, the voice of something that has all the time in the world",
         "rate": "slower than comfortable",
@@ -1286,12 +1312,22 @@
       "id": "aldous-kern",
       "name": "Aldous Kern",
       "trueIdentity": "Traveler — False Hydra future victim",
-      "role": "background",
+      "role": "Pilgrim heading to Houska",
       "status": "alive",
       "disposition": "distracted",
+      "emotionalState": "watchful",
+      "tell": "Refers to 'we' then catches himself confused. Ordered two drinks.",
+      "motivation": "Reach Houska. Cannot quite remember why.",
+      "threatLevel": 0,
       "location": "corner table near door",
       "roomPosition": "corner near door opposite Vladislav — appropriate Echo",
       "mirrorReflection": "normal",
+      "voiceCode": "M1",
+      "dispositions": {
+        "zarina": "Gentle distraction — does not notice her bloodline",
+        "barry": "Gentle distraction — does not register the hunter equipment",
+        "spurt": "Gentle distraction — looks at Spurt the way he looks at everyone"
+      },
       "voiceProfileDetails": {
         "character": "soft, slightly confused, sentences that trail off, a man who keeps losing his place",
         "rate": "starts normal then slows when he loses the thread",
@@ -1350,9 +1386,20 @@
       "role": "Vampire spawn chained in the cellar",
       "status": "undead",
       "disposition": "wrong",
+      "emotionalState": "hostile",
+      "secret": "Was Marta's husband. Vladislav turned him three weeks ago. Calls Gas Spore 'the eye'.",
+      "tell": "Cadence is wrong. Says her name without warmth. Watches without blinking.",
+      "motivation": "Whatever Vladislav commands. Right now: stay chained, do not be discovered.",
+      "threatLevel": 4,
       "location": "cellar",
       "roomPosition": "cellar — Echo nearest cellar (or down-direction routing if available)",
       "mirrorReflection": "distorted",
+      "voiceCode": "M3",
+      "dispositions": {
+        "zarina": "Sees prey if she descends. Does not yet know who she is.",
+        "barry": "Senses Frascht blood — recognizes a hunter, becomes cautious.",
+        "spurt": "Curiosity beneath the wrongness — has never seen a Kobold."
+      },
       "voiceProfileDetails": {
         "character": "wrong. The warmth is gone. The cadence is slightly off. Accurate but missing something. It sounds like Piotr the way a recording of Piotr sounds like Piotr.",
         "rate": "too even, slightly too measured for a man in his situation",
@@ -1431,9 +1478,19 @@
     "role": "Elderly farmer, fatalistic and resigned",
     "status": "alive",
     "disposition": "grim",
+    "emotionalState": "watchful",
+    "tell": "Stares at the fire. Has not eaten his bowl of stew.",
+    "motivation": "Survive the night. Tell what he knows if asked the right way.",
+    "threatLevel": 0,
     "location": "table near the hearth",
     "roomPosition": "hearth — Echo nearest fireplace position",
     "mirrorReflection": "normal",
+    "voiceCode": "M1",
+    "dispositions": {
+      "zarina": "Sees a soldier in her bearing. Approves silently.",
+      "barry": "Recognizes the Frascht name from old ballads. Watches him.",
+      "spurt": "Sees a creature his grandmother's stories described. Does not look directly."
+    },
     "voiceProfileDetails": {
       "character": "slow, certain, the voice of someone who has said true things for a long time and stopped worrying about whether people listened",
       "rate": "very slow, unhurried because he is old not because he is patient",
@@ -1461,9 +1518,19 @@
     "role": "Traveling merchant, nervous and self-interested",
     "status": "alive",
     "disposition": "anxious",
+    "emotionalState": "nervous",
+    "tell": "Mentions boot wax casually — packed it but keeps forgetting to use it.",
+    "motivation": "Survive the night, keep his goods safe, get paid.",
+    "threatLevel": 0,
     "location": "table with his goods",
     "roomPosition": "middle of room — main room speaker",
     "mirrorReflection": "normal",
+    "voiceCode": "M3",
+    "dispositions": {
+      "zarina": "Tries not to stare at her bearing. Wonders what she costs to hire.",
+      "barry": "Sees money — Frascht hunters are well-paid. Wants to do business.",
+      "spurt": "Tries not to stare. Is staring. Wonders if there is profit in it."
+    },
     "voiceProfileDetails": {
       "character": "slightly too eager, merchant's voice, talks to fill silence",
       "rate": "faster than needed",
@@ -1507,9 +1574,19 @@
     "role": "Pilgrim priest, devout and frightened",
     "status": "alive",
     "disposition": "prayerful",
+    "emotionalState": "watchful",
+    "tell": "Holy symbol clutched. Eyes drift to the corner where Vladislav sits.",
+    "motivation": "Pray. Sense evil. Act if called.",
+    "threatLevel": 1,
     "location": "corner table with candle",
     "roomPosition": "wherever he is sitting — use nearest Echo to his current token position on map",
     "mirrorReflection": "normal",
+    "voiceCode": "M2",
+    "dispositions": {
+      "zarina": "Theologically troubled — Half-Elf from beyond the known world. Prays about it.",
+      "barry": "Recognizes a man called to hunt. Approves quietly.",
+      "spurt": "Theologically troubled — has no framework for souls from beyond the western horizon. Kind anyway."
+    },
     "voiceProfileDetails": {
       "character": "steady, warm, slightly formal, genuine faith not performance",
       "rate": "measured and deliberate",
@@ -1537,9 +1614,19 @@
     "role": "Traveling minstrel, observant and clever",
     "status": "alive",
     "disposition": "watchful",
+    "emotionalState": "watchful",
+    "tell": "Watches everyone the way a hawk watches a field. Stops mid-song when she notices.",
+    "motivation": "Collect stories. Survive. Translate selectively.",
+    "threatLevel": 1,
     "location": "by the hearth with lute",
     "roomPosition": "center room — main room speaker",
     "mirrorReflection": "normal",
+    "voiceCode": "F2",
+    "dispositions": {
+      "zarina": "Immediately fascinated — old songs about things beyond the western horizon",
+      "barry": "Recognizes the Frascht name from a ballad her grandmother taught her",
+      "spurt": "Wants to know everything. Will not stop watching him."
+    },
     "voiceProfileDetails": {
       "character": "a performer's voice, changes register more than the others, different when singing versus speaking",
       "rate": "conversational, shifts naturally",

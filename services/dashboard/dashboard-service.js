@@ -184,6 +184,84 @@ class DashboardService {
       res.json(this.config || {});
     });
 
+    // ─── Language management API (Tools tab) ───────────────────
+    this.app.get('/api/languages', (req, res) => {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const p = path.join(__dirname, '..', '..', 'config', 'languages.json');
+        if (!fs.existsSync(p)) return res.json({ languages: [] });
+        const data = JSON.parse(fs.readFileSync(p, 'utf8'));
+        res.json(data);
+      } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
+    this.app.get('/api/languages/npcs', (req, res) => {
+      try {
+        const result = [];
+        const seen = {};
+        const collect = (id, n) => {
+          if (!n || seen[id]) return;
+          seen[id] = true;
+          if (!n.languages && !n.primaryLanguage) return;
+          result.push({
+            id,
+            name: n.name || id,
+            languages: n.languages || [],
+            primaryLanguage: n.primaryLanguage || null,
+            commonFluency: n.commonFluency || null,
+            languageNote: n.languageNote || null,
+            specialLanguageRules: n.specialLanguageRules || null
+          });
+        };
+        const npcs = (this.state && this.state.get('npcs')) || {};
+        for (const [id, n] of Object.entries(npcs)) collect(id, n);
+        const cfg = this.config || {};
+        for (const k of Object.keys(cfg)) {
+          if (k === 'npcs') {
+            const cn = cfg.npcs || {};
+            for (const [id, n] of Object.entries(cn)) collect(id, n);
+          } else if (k.startsWith('patron-') || ['marta', 'tomas', 'vladislav', 'piotr', 'aldous', 'katya'].includes(k)) {
+            collect(k, cfg[k]);
+          }
+        }
+        res.json({ npcs: result });
+      } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
+    this.app.get('/api/languages/players', (req, res) => {
+      try {
+        const players = (this.state && this.state.get('players')) || {};
+        const result = [];
+        for (const [pid, p] of Object.entries(players)) {
+          const ch = p && p.character;
+          if (!ch) continue;
+          const langs = ch.languageStructured || (ch.languages || []).map(l => typeof l === 'string' ? { id: l.toLowerCase(), displayName: l, fluency: 'fluent' } : l);
+          result.push({
+            id: pid,
+            characterName: ch.name || pid,
+            languages: langs,
+            languageNote: ch.languageNote || null
+          });
+        }
+        res.json({ players: result });
+      } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
+    this.app.post('/api/languages/preview', (req, res) => {
+      try {
+        const { npcId, playerId, languageId } = req.body || {};
+        if (!npcId || !playerId) return res.status(400).json({ error: 'npcId and playerId required' });
+        const aiEngine = this.orchestrator && this.orchestrator.getService && this.orchestrator.getService('ai-engine');
+        const commRouter = aiEngine && aiEngine.commRouter;
+        if (!commRouter || typeof commRouter.resolveLanguage !== 'function') {
+          return res.status(503).json({ error: 'comm-router not available' });
+        }
+        const result = commRouter.resolveLanguage(npcId, playerId, { languageId: languageId || null });
+        res.json({ npcId, playerId, languageId: languageId || '(npc primary)', result });
+      } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
     this.app.post('/api/session/start', (req, res) => {
       const sessionId = this.state.startSession();
       res.json({ sessionId });

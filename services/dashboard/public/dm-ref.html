@@ -607,6 +607,22 @@
     </div>
 
     <div class="tool-section">
+      <h3>Languages</h3>
+      <div id="lang-summary" style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">Loading…</div>
+      <div class="tool-row">
+        <button class="tool-btn" onclick="LangTools.refreshAll()">↻ Refresh</button>
+        <button class="tool-btn" onclick="LangTools.previewBarrier()">Preview Barrier</button>
+        <button class="tool-btn" onclick="LangTools.openRegistry()">Master Registry</button>
+      </div>
+      <div id="lang-registry-list" class="tool-list" style="margin-top:8px;max-height:160px;overflow:auto;"></div>
+      <h4 style="margin-top:14px;color:var(--text-dim);font-size:12px;">NPC Languages</h4>
+      <div id="lang-npc-list" class="tool-list" style="max-height:200px;overflow:auto;"></div>
+      <h4 style="margin-top:14px;color:var(--text-dim);font-size:12px;">Player Characters</h4>
+      <div id="lang-player-list" class="tool-list" style="max-height:160px;overflow:auto;"></div>
+      <div id="lang-preview-output" class="tool-output" style="display:none;margin-top:8px;"></div>
+    </div>
+
+    <div class="tool-section">
       <h3>System</h3>
       <div class="tool-row">
         <span class="pill" id="tool-gemini-pill"><span class="pill-dot"></span><span id="tool-gemini-label">Gemini ?</span></span>
@@ -1347,6 +1363,7 @@ var Tools = {
     Tools.loadMapList();
     Tools.loadEvents();
     Tools.loadSystem();
+    if (window.LangTools) LangTools.refreshAll();
   },
   output: function(panel, text) {
     var el = $(panel);
@@ -1612,6 +1629,104 @@ var Tools = {
 };
 
 window.Tools = Tools;
+
+// ═══════════════════════════════════════════════════════════════
+// LangTools — Languages section of Tools tab
+// ═══════════════════════════════════════════════════════════════
+var LangTools = {
+  registry: null,
+  refreshAll: function() {
+    LangTools.loadRegistry();
+    LangTools.loadNpcs();
+    LangTools.loadPlayers();
+  },
+  loadRegistry: function() {
+    fetch('/api/languages').then(function(r) { return r.json(); }).then(function(data) {
+      LangTools.registry = data && data.languages ? data.languages : [];
+      var summary = $('lang-summary');
+      if (summary) summary.textContent = LangTools.registry.length + ' languages in registry. ' +
+        'Mutual intelligibility, partial intelligibility, and Katya bridging applied automatically by the comm router.';
+      var list = $('lang-registry-list');
+      if (!list) return;
+      list.innerHTML = LangTools.registry.map(function(l) {
+        var rare = l.id === 'elvish_americas' ? ' <span style="color:#cc3020;">⚠</span>' : '';
+        var universal = l.id === 'draconic' ? ' <span style="color:#f0c840;">✦</span>' : '';
+        var mutual = (l.mutuallyIntelligibleWith || []).join(', ') || '—';
+        var partial = (l.partiallyIntelligibleWith || []).join(', ') || '—';
+        return '<div class="tool-list-item" title="' + esc(l.notes || '') + '">' +
+          '<span class="ti-name">' + esc(l.displayName || l.name) + rare + universal + '</span>' +
+          '<span class="ti-meta">' + esc(l.family || '') + ' · mutual: ' + esc(mutual) + ' · partial: ' + esc(partial) + '</span>' +
+          '</div>';
+      }).join('');
+    }).catch(function(e) {
+      var summary = $('lang-summary');
+      if (summary) summary.textContent = 'Failed to load language registry: ' + e.message;
+    });
+  },
+  loadNpcs: function() {
+    fetch('/api/languages/npcs').then(function(r) { return r.json(); }).then(function(data) {
+      var list = $('lang-npc-list');
+      if (!list) return;
+      var npcs = (data && data.npcs) || [];
+      if (!npcs.length) {
+        list.innerHTML = '<div style="font-size:11px;color:var(--text-dimmer);font-style:italic;">No NPC languages configured</div>';
+        return;
+      }
+      list.innerHTML = npcs.map(function(n) {
+        var langs = (n.languages || []).join(', ');
+        var primary = n.primaryLanguage ? ' · primary: ' + n.primaryLanguage : '';
+        var cf = n.commonFluency ? ' · common: ' + n.commonFluency : '';
+        var note = n.languageNote ? '<div style="font-size:10px;color:var(--text-dimmer);font-style:italic;padding-left:6px;">' + esc(n.languageNote) + '</div>' : '';
+        return '<div class="tool-list-item">' +
+          '<span class="ti-name">' + esc(n.name || n.id) + '</span>' +
+          '<span class="ti-meta">' + esc(langs) + esc(primary) + esc(cf) + '</span>' +
+          '</div>' + note;
+      }).join('');
+    }).catch(function() {});
+  },
+  loadPlayers: function() {
+    fetch('/api/languages/players').then(function(r) { return r.json(); }).then(function(data) {
+      var list = $('lang-player-list');
+      if (!list) return;
+      var players = (data && data.players) || [];
+      if (!players.length) {
+        list.innerHTML = '<div style="font-size:11px;color:var(--text-dimmer);font-style:italic;">No player languages</div>';
+        return;
+      }
+      list.innerHTML = players.map(function(p) {
+        var langs = (p.languages || []).map(function(l) {
+          var name = l.displayName || l.name || l.id || l;
+          var f = l.fluency ? ' (' + l.fluency + ')' : '';
+          return name + f;
+        }).join(', ');
+        return '<div class="tool-list-item">' +
+          '<span class="ti-name">' + esc(p.characterName || p.id) + '</span>' +
+          '<span class="ti-meta">' + esc(langs) + '</span>' +
+          '</div>';
+      }).join('');
+    }).catch(function() {});
+  },
+  previewBarrier: function() {
+    var npcId = prompt('NPC id (e.g. marta, vladislav, patron-farmer):');
+    if (!npcId) return;
+    var playerId = prompt('Player id (e.g. kim, jerome, ed):');
+    if (!playerId) return;
+    var langId = prompt('Language id (blank = NPC primary):') || '';
+    fetch('/api/languages/preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ npcId: npcId, playerId: playerId, languageId: langId })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      Tools.output('lang-preview-output', JSON.stringify(d, null, 2));
+    }).catch(function(e) {
+      Tools.output('lang-preview-output', 'Preview failed: ' + e.message);
+    });
+  },
+  openRegistry: function() {
+    window.open('/api/languages', '_blank');
+  }
+};
+window.LangTools = LangTools;
 window.openPlayerSheet = openPlayerSheet;
 window.openNpcCard = openNpcCard;
 window.closeOverlay = closeOverlay;

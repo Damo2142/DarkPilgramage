@@ -250,6 +250,27 @@
         }
       },
       {
+        "id": "gregor_marta_slovak_19",
+        "gameTime": "1274-10-15T19:02:00",
+        "event": "npc:scripted_speech",
+        "data": {
+          "npcId": "patron-farmer",
+          "npc": "Old Gregor",
+          "languageId": "slovak",
+          "text": "Marta, ten cudzinec sa nedotkol jedla. Ani vína. A jeho oči — niečo nie je v poriadku.",
+          "narratorTranslation": "Marta, that stranger hasn't touched the food. Or the wine. And his eyes — something is wrong.",
+          "followUp": {
+            "delaySeconds": 8,
+            "npcId": "marta",
+            "npc": "Marta",
+            "languageId": "slovak",
+            "text": "Tichšie, Gregor. Možno rozumie viac, ako vyzerá.",
+            "narratorTranslation": "Quieter, Gregor. He may understand more than he looks."
+          },
+          "languageNote": "Old Gregor speaks no Common — this is the only way he can warn Marta. Players who don't speak Slovak hear murmured Slavic conversation. Katya, if present, can translate (with her usual editorial filter). Vladislav understands every word and registers no reaction."
+        }
+      },
+      {
         "id": "midnight_approaches",
         "gameTime": "1274-10-15T23:30:00",
         "event": "world:midnight_warning",

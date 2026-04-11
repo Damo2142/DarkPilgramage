@@ -125,6 +125,30 @@ class CommRouter {
       try { this.routeNpcSpeech(env.data || {}); } catch (e) {}
     }, 'comm-router');
 
+    // Scripted NPC speech (timed events, scene scripts) — explicit language
+    this.bus.subscribe('npc:scripted_speech', (env) => {
+      try {
+        const d = env.data || {};
+        this.routeNpcSpeech(d);
+        // If a followUp is attached, dispatch it after the configured delay.
+        if (d.followUp && typeof d.followUp === 'object') {
+          const delayMs = (d.followUp.delaySeconds || 5) * 1000;
+          setTimeout(() => {
+            try { this.routeNpcSpeech({ ...d.followUp }); } catch (e) {}
+          }, delayMs);
+        }
+      } catch (e) {}
+    }, 'comm-router');
+
+    // DM narration of NPC dialogue — parse "Marta says in Slovak: ..." patterns
+    this.bus.subscribe('transcript:segment', (env) => {
+      try {
+        const seg = env.data || {};
+        if (seg.speaker !== 'dm' || !seg.text) return;
+        this._parseDmScriptedSpeech(seg.text);
+      } catch (e) {}
+    }, 'comm-router');
+
     console.log('[CommRouter] 6-channel communication routing active');
   }
 
@@ -436,6 +460,70 @@ class CommRouter {
       if (candidate === 'elvish' && registry['elvish_americas']) return 'elvish_americas';
     }
     return null;
+  }
+
+  /**
+   * Parse a DM narration line for scripted NPC speech with a language tag.
+   * Patterns recognised:
+   *   "Marta says in Slovak: ..."
+   *   "Gregor (Slovak): ..."
+   *   "Vladislav speaks Latin: ..."
+   *   "[Slovak] Marta: ..."
+   * On match, dispatches npc:scripted_speech with { npcId, text, languageId }.
+   */
+  _parseDmScriptedSpeech(text) {
+    if (!text) return;
+
+    // Pattern A: "<Name> (says|whispers|speaks)? in <lang>: <body>"
+    const pA = text.match(/^([A-Z][a-zA-Z]+)\s+(?:says|whispers|speaks|murmurs|replies)?\s*in\s+([A-Za-z][a-zA-Z\s]+?)[:\-—]\s*(.+)$/);
+    // Pattern B: "<Name> \(<lang>\): <body>"
+    const pB = text.match(/^([A-Z][a-zA-Z]+)\s*\(([A-Za-z][a-zA-Z\s]+?)\)[:\-—]\s*(.+)$/);
+    // Pattern C: "[<lang>] <Name>: <body>"
+    const pC = text.match(/^\[([A-Za-z][a-zA-Z\s]+?)\]\s*([A-Z][a-zA-Z]+)[:\-—]\s*(.+)$/);
+
+    let npcFirst = null, langWord = null, body = null;
+    if (pA) { npcFirst = pA[1]; langWord = pA[2]; body = pA[3]; }
+    else if (pB) { npcFirst = pB[1]; langWord = pB[2]; body = pB[3]; }
+    else if (pC) { langWord = pC[1]; npcFirst = pC[2]; body = pC[3]; }
+    else return;
+
+    const npcId = this._npcNameMap[npcFirst.toLowerCase()];
+    if (!npcId) return;
+
+    // Resolve language word to id
+    const registry = loadLanguageRegistry();
+    const langKey = langWord.trim().toLowerCase().split(/\s+/)[0];
+    let languageId = registry[langKey] ? langKey : null;
+    if (!languageId) {
+      for (const [id, l] of Object.entries(registry)) {
+        const ln = (l.name || '').toLowerCase();
+        if (ln === langKey || ln.startsWith(langKey)) { languageId = id; break; }
+      }
+    }
+    if (!languageId) return;
+
+    this.bus.dispatch('dm:whisper', {
+      text: `[SCRIPTED] ${npcFirst} speaking ${languageId}: "${body}"`,
+      priority: 4, category: 'language', source: 'comm-router'
+    });
+    this.bus.dispatch('npc:scripted_speech', {
+      npcId,
+      npc: this.state.get(`npcs.${npcId}.name`) || npcFirst,
+      text: body,
+      languageId
+    });
+  }
+
+  /**
+   * Compute a Katya editorial translation of a foreign-language line.
+   * Returns the edited (player-facing) version. The narrator earbud
+   * always sees the raw original via the routing summary.
+   */
+  katyaTranslate(rawText, fromLanguageId, listenerName) {
+    // For the live game, Katya's translation is generated lazily by the AI
+    // engine using a small prompt. Here we emit the raw text marked with the
+    // bridge tag so the player UI can render it as Katya's voice.
+    return `[Katya, translating from ${fromLanguageId}] "${rawText}"`;
   }
 
   // ─── Channel 4/5 — NPC → players (proximity routing) ───────────

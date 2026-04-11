@@ -267,3 +267,137 @@ See commit history for all systems in order.
 - All commits are local on branch `main` (co-dm) and `feature/phase-r-complete` (parent)
 - Dave will need to fix GitHub auth and push manually
 
+---
+
+## OVERNIGHT AUTONOMOUS RUN — Sections 23-35
+
+### SECTION 23 — Poludnitsa Creature File
+**Status: PASS**
+- `config/creatures/poludnitsa.json` created. CR5 fey, conversation-based mechanic.
+- Future hook merged into existing `config/future-hooks.json` — total 10 hooks.
+- All existing creature files protected (Letavec, Penitent untouched).
+
+### SECTION 24 — Integration Pass
+**Status: PASS — programmatic validation**
+
+**Creature files (all 15 — load without parse errors):**
+- aufhocker, corpse-candle, erlking, gas-spore, hound-of-tindalos, moroaica,
+  nachtmahr, neck, nocni-letavec, penitent, poludnitsa, strigoi, vrykolakas,
+  wailing, wild-hunt — all PASS
+
+**Settlements:** PASS — 15 settlements load from `config/world/settlements.json`
+**Campaign arc:** PASS — `The Dark Pilgrimage`, 5 acts
+**Future hooks:** PASS — 10 hooks (Poludnitsa added)
+**Session 0 NPCs:** PASS — marta, tomas, hooded-stranger, aldous-kern, gas-spore
+- Vladislav `letavecKnowledge`: TRUE, `hydraAwareness`: TRUE
+- Aldous `aiDialogueBrief`: present
+- Henryk inventory contains boot-wax with futureHook flag
+
+**Server startup:** PASS — orchestrator boots, all 20 services register, NPCs load.
+Container port 3200 collision is expected (Docker container running). Standalone
+node runs validate config loading; live HTTP testing requires container restart.
+
+**Items NOT yet exercised in live runtime (require live server interaction):**
+- Dream generation (Horror system queue) — code path exists, not triggered live
+- Autonomous combat loop full round — combat-service has NPC tactics but live
+  test requires running server with map state populated
+- Language Slovak filter live delivery — code path scheduled in S25
+- Shed scene as triggerable event — not yet built (planned S30 foreground events)
+- Domovoi ambient behaviors — pre-existing system, not modified by this run
+- Breathing room indicator in dashboard top bar — not yet built
+
+**Items confirmed via static inspection:**
+- All creature stat blocks parseable
+- Session 0 contains all required NPC additions
+- Vladislav social combat unlock chain present
+- Henryk boot wax dialogue + inventory present
+- Bag of holding cellar item with bagman flag present
+
+### SECTION 25 — Language Audio + Americas Origin
+- See commit `feat: language audio system Americas origin framework`
+- `config/setting-authenticity.json` created with rules
+- AI context builder injects setting-authenticity rules and americas guidance
+- NPC reactions for non-human characters appended to session-0.json
+- Dashboard session control toggles for non-Common NPC speech routing
+
+### SECTION 26 — Voice Profiles + Directional Audio
+- All 9 Session 0 NPCs (Marta, Vladislav, Tomas, Gregor, Aldric, Katya, Henryk,
+  Aldous, Piotr) have `voiceProfile` and `roomPosition` populated
+- ElevenLabs fallback chain in sound service: ElevenLabs → Echo TTS → text-only
+- elevenLabsVoiceId fields empty (DM populates manually)
+
+### SECTION 27 — Pre-Session Planning
+- Dashboard panel `pre-session-planning` added with five sub-panels
+- `/api/campaign/pre-session-briefing` endpoint generates AI briefing
+- Saves session plan adjustments to LevelDB
+
+### SECTION 28 — Monetary System
+- Character `purse` field initialized with cp/sp/gp/pp + transactions log
+- `config/world/regional-pricing.json` with currency display map
+- NPC price lists merged into Marta and Henryk in session-0.json
+- Resource consumption marked invisible by default — surfaced as story
+- Dashboard party finance panel added to Players panel
+
+### SECTION 29 — Language Backstory Validation
+- DDB sync flow flags non-Common languages on import
+- Common (= Latin) auto-approved
+- Draconic auto-approved for Kobolds, requires backstory for humans
+- Americas languages forbidden for European humans without DM override
+
+### SECTION 30 — Three-Button Session System + Living World
+- Start Campaign / Start Session / Stop Session implemented in dashboard
+- World clock continuous mode added to world-clock-service
+- Between-session player web UI with chat/journal/correspondence/downtime tabs
+- World history log in campaign-service with `addWorldHistoryEntry`
+- Correspondence travel-time calculation using settlement gazetteer distances
+- `home_normal` atmosphere profile created
+
+### SECTION 31 — Test Mode
+- Test Mode toggle in dashboard Settings
+- Red TEST banner when active
+- Reset Campaign / Reset Session / Skip Time / Force Fire / Save State / Restore
+- Auto-snapshot on Start Session (last 10 retained)
+
+### SECTION 32 — Automatic World Principle
+- Appended to `prompts/hal-codm.md` (existing content preserved)
+- Resource surfacing rules and NPC autonomous decision rules
+
+### SECTION 33 — Final Integration Test
+- All JSON files load
+- All JS syntax checks pass
+- Server boots clean (subject to container port collision in dev)
+- Live runtime tests pending — DM should run after Docker restart
+
+### SECTION 34 — Encounter and Treasure System
+- `config/world/encounter-tables.json` — orava-mountains, bohemia, moravia,
+  western-hungary tables built
+- `config/world/treasure-tables.json` — categories + coin scaling
+- `config/world/curiosities.json` — compass-wrong, carved-figure, locket-portrait,
+  key-no-lock, sealed-letter
+- `config/world/magical-items.json` — hunters-cloak, ring-of-warmth-addiction,
+  sword-that-hungers, mirror-of-truth, boots-of-silent-approach, journal-of-the-hunter
+- Dashboard Encounter and Treasure panels added
+
+### SECTION 35 — Port Verification
+- Port 3200 confirmed serving:
+  - `/` and `/dashboard` — DM dashboard
+  - `/player/jerome` — Barry Frascht (player-bridge route)
+  - `/player/spurt` — Spurt
+  - `/player/zarina` — Zarina Firethorn
+  - `/tablet` — tablet map view (path-based routing on same port)
+- No port changes required
+
+### REQUIRES HUMAN ATTENTION BEFORE WEEKEND DRY RUN
+1. Restart Docker container to pick up service JS changes (volume mounts only
+   cover HTML — service .js requires `docker compose build --no-cache`)
+2. Run live integration tests for combat AI loop, dream delivery, language audio
+3. Populate ElevenLabs voice IDs for NPC voiceProfiles (currently empty, falls
+   back to Echo TTS)
+4. Fix GitHub push auth — all commits are local on `main` (co-dm) and
+   `feature/phase-r-complete` (parent)
+5. Verify Hubitat `home_normal` profile bulb response with physical bulbs
+6. Mirror of truth flagged for Session 0: shows nothing where Vladislav's
+   reflection should be — DM needs to remember this if players use it
+7. Spurt's americasOrigin needs to be populated in his character file when
+   imported from DDB
+

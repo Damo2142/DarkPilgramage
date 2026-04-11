@@ -1100,6 +1100,58 @@ setTimeout(MaxControls.init, 600);
 setInterval(function() { MaxControls._updateButton(); }, 1000);
 setInterval(function() { MaxControls.refresh(); }, 15000);
 
+// ═══════════════════════════════════════════════════════════════
+// ROOM AUDIO — NPC public dialogue + ambient on the room speaker (FIX-D)
+// ═══════════════════════════════════════════════════════════════
+var RoomAudio = {
+  _roomSinkId: null,
+  _volume: 0.85,
+  _audio: null,
+  init: function() {
+    try {
+      var saved = JSON.parse(localStorage.getItem('codm.audioDevices.v1') || '{}');
+      RoomAudio._roomSinkId = saved.roomSpeaker || localStorage.getItem('dp_sfx_output') || null;
+    } catch (e) {}
+    try {
+      var v = parseFloat(localStorage.getItem('codm.roomVolume'));
+      if (v >= 0 && v <= 1) RoomAudio._volume = v;
+    } catch (e) {}
+  },
+  setVolume: function(v) {
+    RoomAudio._volume = Math.max(0, Math.min(1, parseFloat(v)));
+    try { localStorage.setItem('codm.roomVolume', String(RoomAudio._volume)); } catch (e) {}
+    if (RoomAudio._audio) RoomAudio._audio.volume = RoomAudio._volume;
+  },
+  // FIX-D — handle npc:audio events and play on the configured room sink
+  handleNpcAudio: function(d) {
+    if (!d || !d.url) return;
+    var audio = new Audio(d.url);
+    audio.volume = RoomAudio._volume;
+    var play = function() {
+      audio.play().catch(function(e) {
+        console.warn('[RoomAudio] play failed:', e.message);
+      });
+    };
+    if (RoomAudio._roomSinkId && audio.setSinkId) {
+      audio.setSinkId(RoomAudio._roomSinkId).then(play).catch(function(e) {
+        console.warn('[RoomAudio] setSinkId failed:', e.message);
+        play();
+      });
+    } else {
+      play();
+    }
+    RoomAudio._audio = audio;
+    addWhisper({ tag: 'NPC', text: '[' + (d.npc || 'NPC') + '] ' + (d.text || '').slice(0, 80) });
+  },
+  // FIX-D — silent text-only fallback when ElevenLabs is unavailable
+  handleNpcFallback: function(d) {
+    if (!d || !d.text) return;
+    addWhisper({ tag: 'NPC', text: '[' + (d.npc || 'NPC') + ' silent] ' + d.text });
+  }
+};
+window.RoomAudio = RoomAudio;
+setTimeout(RoomAudio.init, 600);
+
 // Section 6 — Narrator whisper to specific player
 function toggleWhisper() {
   var area = $('whisper-area');
@@ -1228,6 +1280,15 @@ function handleMsg(msg) {
   }
   if (t === 'max:audio:speak') {
     if (window.MaxControls) MaxControls.handleMaxFallback(msg.data || {});
+    return;
+  }
+  // FIX-D — NPC public dialogue plays on the room speaker sink
+  if (t === 'npc:audio') {
+    if (window.RoomAudio) RoomAudio.handleNpcAudio(msg.data || {});
+    return;
+  }
+  if (t === 'npc:audio:speak') {
+    if (window.RoomAudio) RoomAudio.handleNpcFallback(msg.data || {});
     return;
   }
   if (t === 'max:pause_state') {

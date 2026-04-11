@@ -1263,6 +1263,7 @@ function handle(m){
     case 'perception:flash': showPerceptionFlash(m.description); break;
     case 'npc:dialogue': showToast(m.npc||'NPC',m.text,8000); break;
     case 'npc:speech': handleNpcSpeech(m); break;
+    case 'npc:audio': handlePrivateNpcAudio(m); break;
     case 'chat:p2p': handleP2P(m); break;
     case 'narrator:whisper': handleNarratorWhisper(m); break;
     case 'dm:private_message':
@@ -2932,6 +2933,25 @@ function handleP2P(m) {
   var name = m.fromName || m.from || 'Player';
   if (typeof addChat === 'function') addChat(name + ' (whisper)', m.text || '', '#9a8aaa');
   if (typeof showToast === 'function') showToast(name, m.text || '', 6000);
+}
+
+// FIX-D — private NPC audio for this player only. Plays the ElevenLabs MP3
+// on this Chromebook's default audio output (no setSinkId — Chromebook has
+// only one speaker).
+function handlePrivateNpcAudio(m) {
+  var name = m.npc || 'NPC';
+  var text = m.text || '';
+  if (m.url) {
+    try {
+      var audio = new Audio(m.url);
+      audio.volume = 0.95;
+      audio.play().catch(function(e) { console.warn('[npc:audio] play failed:', e.message); });
+    } catch (e) {}
+  }
+  if (typeof addChat === 'function') addChat(name + ' (to you)', text, '#c9a54e');
+  if (window.ChatBar && ChatBar.appendMessage) {
+    ChatBar.appendMessage({ type: 'npc', speaker: name + ' (to you)', text: text });
+  }
 }
 
 function handleNarratorWhisper(m) {

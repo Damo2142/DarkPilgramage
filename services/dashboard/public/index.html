@@ -1073,19 +1073,8 @@
         </div>
         <div id="directional-status" style="font-size:9px;color:var(--text-dim);margin-bottom:3px;"></div>
 
-        <details style="font-size:9px;color:var(--text-dim);margin-bottom:4px;">
-          <summary style="cursor:pointer;color:var(--accent);">Echo Cookie Refresh Guide</summary>
-          <div style="padding:4px;background:var(--surface3);border-radius:3px;margin-top:3px;line-height:1.5;">
-            <b>When Echo voice stops working (cookie expired):</b><br>
-            1. Open <b>alexa.amazon.com</b> in Chrome, log in<br>
-            2. Press F12 &rarr; Network tab &rarr; refresh page<br>
-            3. Click any request &rarr; copy the <b>Cookie:</b> header value<br>
-            4. In Console: <code>document.cookie.match(/csrf=([^;]+)/)?.[1]</code><br>
-            5. SSH in, edit <code>~/dark-pilgrimage/co-dm/.env</code><br>
-            6. Update ALEXA_COOKIE and ALEXA_CSRF<br>
-            7. <code>docker compose build --no-cache && docker compose up -d</code><br>
-          </div>
-        </details>
+        <!-- Echo cookie refresh guide removed (FIX-D) — Echo/Alexa is gone.
+             All audio now plays via Web Audio API on the configured PC sinks. -->
 
         <!-- NPC Voice (Echo TTS) -->
         <div style="font-size:9px;color:var(--text-dim);margin-bottom:3px;">Speak as NPC (Echo TTS)</div>

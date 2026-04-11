@@ -361,6 +361,19 @@ class PlayerBridgeService {
       });
     }, 'player-bridge');
 
+    // FIX-D — private NPC audio (ElevenLabs MP3) routed to one player only
+    this.bus.subscribe('npc:audio:player', (env) => {
+      const d = env.data || {};
+      if (!d.playerId) return;
+      this._sendToPlayer(d.playerId, {
+        type: 'npc:audio',
+        npc: d.npc || 'NPC',
+        text: d.text || '',
+        url: d.url || null,
+        fallback: !!d.fallback
+      });
+    }, 'player-bridge');
+
     // Section 6 — Player to player private message
     this.bus.subscribe('player:p2p_message', (env) => {
       const d = env.data || {};

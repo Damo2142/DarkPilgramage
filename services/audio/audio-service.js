@@ -50,14 +50,24 @@ class AudioService {
       // Use Gemini STT
       this._useGemini = true;
       this._sttReady = true;
-      console.log('[Audio] Using Gemini STT (Google AI)');
+      console.log('[Audio] ┌──────────────────────────────────────');
+      console.log('[Audio] │ STT backend : Gemini 2.0 Flash');
+      console.log('[Audio] │ Model       : ' + (process.env.GEMINI_MODEL || 'gemini-2.5-flash'));
+      console.log('[Audio] │ Buffer      : ' + this._bufferDurationMs + 'ms @ ' + this._sampleRate + 'Hz');
+      console.log('[Audio] │ Status      : READY — transcription active');
+      console.log('[Audio] └──────────────────────────────────────');
 
       // Flush timer — check for buffered audio every 500ms
       this._flushInterval = setInterval(() => this._checkFlush(), 500);
 
     } else {
       // Fall back to local Whisper
-      console.log('[Audio] Using local Whisper STT');
+      console.log('[Audio] ┌──────────────────────────────────────');
+      console.log('[Audio] │ STT backend : faster-whisper (local)');
+      console.log('[Audio] │ Model       : ' + (process.env.WHISPER_MODEL || 'base.en'));
+      console.log('[Audio] │ Threads     : ' + (process.env.WHISPER_THREADS || '4'));
+      console.log('[Audio] │ Status      : initializing...');
+      console.log('[Audio] └──────────────────────────────────────');
       await this._startWhisper();
     }
 

@@ -454,3 +454,103 @@ will catch this kind of state mismatch on the next 30s probe window.
 14 commits ready on `feature/phase-r-complete`. Push still requires
 interactive credentials.
 
+## Critical: Audio Routing + Max Throttling + Dedup (April 11 night) — 2026-04-11
+
+| Fix | Subject | Commit |
+|-----|---------|--------|
+| FIX-C1 | Audio routing separation — Max → earbud, NPC public → speaker, NPC private → player | da24a04 |
+| FIX-C2 | Max throttling 45s active / 20s quiet, URGENT bypass, PAUSE button + volume slider | da24a04 |
+| FIX-C3 | Server-side event UUID dedup + 3s client debounce | 5563bca |
+
+### Live verification (after rebuild + restart)
+
+```
+GET  /api/max/status              → {paused:false, volume:0.7, throttleMs:45000, queueLength:0}
+POST /api/max/pause {durationSec:300}
+                                  → ok, until: now+5min
+                                  → status: paused:true
+POST /api/max/volume {volume:0.85}
+                                  → status: volume:0.85
+POST /api/max/resume              → ok
+                                  → status: paused:false
+
+GET  /api/health → eventBus       → totalEvents:166, dedupDrops:19,
+                                    dedupTrackedEntries:5
+```
+
+**The bus is already catching real duplicates in the wild** — 19 drops
+in the first 10 seconds of runtime. Sample drops from the first session:
+characters:loaded (×2), stamina:updated (×2), player:connected, light:updated.
+These were exactly the repeat events causing the Max overwhelm.
+
+### Decisions
+
+**FIX-C1.** The previous design routed Max audio through `sound:play`
+which the dashboard browser never actually handled — Max audio either
+fell back silently or leaked into Echo TTS on the room speaker. Two
+problems both solved with a dedicated `max:audio` event:
+
+1. New event channel `max:audio` carries the URL of the generated MP3.
+   Dashboard browser handles it via `MaxControls.handleMaxAudio` which
+   creates an HTMLAudioElement, calls `setSinkId(savedEarbudId)`, and
+   plays. The earbud sink id comes from `codm.audioDevices.v1` (FIX-B5)
+   or the legacy `dp_earbud_output` localStorage key.
+
+2. ElevenLabs failure dispatches `max:audio:speak` (browser TTS via
+   Web Speech API on the same earbud sink). The previous Echo TTS
+   fallback that leaked Max audio into the living room speaker is
+   removed entirely.
+
+NPC public dialogue: `_onNpcDialogue` now passes `this.primaryDevice`
+(room speaker) explicitly. Cannot be overridden by callers. NPC private
+dialogue (`data._private`) is dropped from the room speaker entirely —
+comm-router's existing `player:npc_speech` handler delivers it to the
+specific player Chromebook.
+
+**FIX-C2.** The Max overwhelm had three causes, all addressed:
+
+1. **No throttle.** max-director was previously delivering as fast as
+   the silence detector allowed (HIGH at 8s, NORMAL at 120s). Added
+   strict `lastDeliveredAt` gate: 45s minimum between deliveries during
+   active narration, 20s during quiet (no transcript for 30s+). URGENT
+   bypasses both.
+
+2. **Queue pile-up.** Multiple NORMAL/LOW items would queue behind a
+   slow HIGH and all fire in sequence once the HIGH cleared. New rule:
+   the queue retains only the highest-priority pending entry. Lower-
+   priority items are dropped at enqueue time unless they're URGENT.
+
+3. **Unstoppable.** No way to silence Max during a key scene. Added
+   `setPaused(durationMs)` that drops everything except URGENT for the
+   duration. Auto-resume when the timer expires. The /dm `PAUSE MAX`
+   button toggles this; countdown shows live remaining seconds.
+
+Volume control persists in localStorage and applies to the audio element
+on each playback. Server volume endpoint exists for symmetry (server
+might want to know the current volume for log context) but the actual
+volume is enforced client-side.
+
+**FIX-C3.** Server-side dedup at the EventBus layer is the right place
+because:
+
+- It catches duplicates from EVERY service without requiring per-service
+  changes. The 19 drops on first boot proved this — they came from
+  characters, stamina, player-bridge, lighting, all without my touching
+  those services.
+- It's content-aware. The fingerprint includes event name + key fields
+  (text, message, npcId, playerId, tokenId, targetId, channel, priority,
+  category, profile, zoneId). Two events with the same fingerprint
+  within 5 seconds are dropped.
+- High-volume continuous streams are explicitly skipped (audio:chunk,
+  player_stream_*, transcript:silence, camera:frame, world:time_update,
+  state:change, map:token_moved, token:move) so they're never throttled.
+- Every dispatch gets a `crypto.randomUUID()` which appears in the
+  envelope alongside the existing sequential `id`.
+
+Three-layer dedup stack: client 3s debounce → WS server-side 3s dedup
+→ bus dedup 5s. A literal duplicate must slip past all three within
+five seconds.
+
+### Push status
+17 commits ready on `feature/phase-r-complete`.
+

@@ -34,6 +34,54 @@
       overflow: hidden;
     }
 
+    /* ─── NAVIGATION STRIP ─── */
+    #nav-strip {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 16px;
+      background: #0e0c0a;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      height: 32px;
+    }
+    #nav-strip .nav-link {
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dimmer);
+      text-decoration: none;
+      padding: 4px 12px;
+      border: 1px solid transparent;
+      border-radius: 3px;
+    }
+    #nav-strip .nav-link:hover { color: var(--text-dim); }
+    #nav-strip .nav-link.active {
+      color: var(--gold);
+      border-color: var(--border);
+      background: var(--surface);
+    }
+    #nav-strip .spacer { flex: 1; }
+    #nav-strip .nav-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: monospace;
+      color: var(--text-dim);
+      font-size: 11px;
+    }
+    #nav-strip .nav-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-dimmer);
+    }
+    #nav-strip .nav-dot.online { background: var(--green); }
+    #nav-strip .nav-dot.offline { background: var(--red); }
+    #nav-strip .nav-clock { color: var(--gold); font-weight: 600; }
+
     /* ─── LAYOUT ─── */
     #screen {
       display: flex;
@@ -378,6 +426,22 @@
 
 <div id="screen">
 
+  <div id="nav-strip">
+    <a href="/dm" class="nav-link active">CENTER</a>
+    <a href="/dm/map" class="nav-link">MAP</a>
+    <a href="/dm/ref" class="nav-link">REF</a>
+    <span class="spacer"></span>
+    <span class="nav-status">
+      <span class="nav-dot" id="nav-ai-dot"></span>
+      <span id="nav-ai-text">AI ?</span>
+    </span>
+    <span class="nav-status">
+      <span class="nav-clock" id="nav-clock-strip">17:30</span>
+      <span id="nav-tod">EVENING</span>
+      <span id="nav-weather">BLIZZARD</span>
+    </span>
+  </div>
+
   <div id="whisper-section">
     <div id="whisper-header">
       <span>Max Whisper Log</span>
@@ -609,6 +673,19 @@ function eventFired(eventId, name) {
 function updateStatusBar() {
   $('clock-text').textContent = gameTime + ' — ' + timeOfDayLabel('1274-10-15T' + gameTime + ':00') + ' — ' + (weather || 'Clear').toUpperCase();
   $('atmo-text').textContent = currentAtmo;
+
+  // Nav strip update
+  var navClock = $('nav-clock-strip');
+  if (navClock) {
+    navClock.textContent = gameTime;
+    $('nav-tod').textContent = timeOfDayLabel('1274-10-15T' + gameTime + ':00').toUpperCase();
+    $('nav-weather').textContent = (weather || 'CLEAR').toUpperCase();
+    var dot = $('nav-ai-dot'), label = $('nav-ai-text');
+    if (dot) {
+      dot.className = 'nav-dot ' + (apiHealth.status === 'ONLINE' ? 'online' : 'offline');
+      label.textContent = 'AI ' + (apiHealth.status || '?');
+    }
+  }
 
   var atmoClasses = ['warm', 'tense', 'dread'];
   var pill = $('pill-atmo');

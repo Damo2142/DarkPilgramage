@@ -127,17 +127,27 @@ class MapService {
 
     // Place only players assigned to THIS map at spawn points
     // If no assignments exist yet (first load), assign all players to this map
+    // Absent or not-yet-arrived players get NO token until marked present.
     const players = this.state.get('players') || {};
     const hasAnyAssignment = Object.keys(this.playerMapAssignment).length > 0;
     const spawns = map.playerSpawns?.spread || [];
     let spawnIdx = 0;
     for (const playerId of Object.keys(players)) {
+      const pData = players[playerId] || {};
+      // Skip absent / not-yet-arrived players entirely
+      if (pData.absent || pData.notYetArrived) {
+        // Also remove any existing token if it was loaded from saved state
+        if (tokenState[playerId]) {
+          delete tokenState[playerId];
+        }
+        continue;
+      }
       // Only add player token if they're assigned to this map (or no assignments yet)
       const assignedMap = this.playerMapAssignment[playerId];
       if (!hasAnyAssignment || assignedMap === mapId) {
         if (!tokenState[playerId]) {
           const spawn = spawns[spawnIdx] || map.playerSpawns?.default || { x: 280, y: 350 };
-          const charData = players[playerId]?.character || {};
+          const charData = pData.character || {};
           tokenState[playerId] = {
             id: playerId,
             name: charData.name || playerId,
@@ -497,6 +507,30 @@ class MapService {
       this.state.set(`map.tokens.${tokenId}.revealedToPlayers`, !!revealed);
       this.bus.dispatch('map:token_reveal_changed', { tokenId, revealed: !!revealed });
       res.json({ tokenId, revealedToPlayers: !!revealed });
+    });
+
+    // POST /api/map/token/reveal-name — toggle name label visibility on /table
+    // body: { tokenId, revealed }
+    app.post('/api/map/token/reveal-name', (req, res) => {
+      const { tokenId, revealed } = req.body || {};
+      if (!tokenId) return res.status(400).json({ error: 'tokenId required' });
+      const token = this.state.get(`map.tokens.${tokenId}`);
+      if (!token) return res.status(404).json({ error: 'Token not found' });
+      this.state.set(`map.tokens.${tokenId}.nameRevealedToPlayers`, !!revealed);
+      this.bus.dispatch('map:token_name_reveal_changed', { tokenId, revealed: !!revealed });
+      res.json({ tokenId, nameRevealedToPlayers: !!revealed });
+    });
+
+    // POST /api/map/token/public-name — set the name players see for an NPC token
+    // body: { tokenId, publicName }
+    app.post('/api/map/token/public-name', (req, res) => {
+      const { tokenId, publicName } = req.body || {};
+      if (!tokenId) return res.status(400).json({ error: 'tokenId required' });
+      const token = this.state.get(`map.tokens.${tokenId}`);
+      if (!token) return res.status(404).json({ error: 'Token not found' });
+      this.state.set(`map.tokens.${tokenId}.publicName`, publicName || '');
+      this.bus.dispatch('map:token_public_name_changed', { tokenId, publicName: publicName || '' });
+      res.json({ tokenId, publicName: publicName || '' });
     });
 
     // POST /api/map/zone/reveal — reveal or hide a zone

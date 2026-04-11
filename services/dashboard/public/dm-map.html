@@ -16,9 +16,59 @@
       color: #c8b89a;
     }
 
+    /* Nav strip — top of all DM displays */
+    #nav-strip {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 16px;
+      background: #0e0c0a;
+      border-bottom: 1px solid #3a3028;
+      font-size: 12px;
+      height: 32px;
+    }
+    #nav-strip .nav-link {
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #706050;
+      text-decoration: none;
+      padding: 4px 12px;
+      border: 1px solid transparent;
+      border-radius: 3px;
+    }
+    #nav-strip .nav-link:hover { color: #b09070; }
+    #nav-strip .nav-link.active {
+      color: #f0c840;
+      border-color: #3a3028;
+      background: #242018;
+    }
+    #nav-strip .spacer { flex: 1; }
+    #nav-strip .nav-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: monospace;
+      color: #b09070;
+      font-size: 11px;
+    }
+    #nav-strip .nav-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #706050;
+    }
+    #nav-strip .nav-dot.online { background: #6aaa6a; }
+    #nav-strip .nav-dot.offline { background: #cc3020; }
+    #nav-strip .nav-clock { color: #f0c840; font-weight: 600; }
+
     #map-wrap {
       position: fixed;
-      top: 0;
+      top: 32px;
       left: 0;
       bottom: 0;
       right: 0;
@@ -198,9 +248,59 @@
       letter-spacing: 1px;
     }
     .placement-mode-banner.active { display: block; }
+
+    /* Right-click context menu */
+    #ctx-menu {
+      position: fixed;
+      z-index: 300;
+      background: #141210;
+      border: 1px solid #4a3a28;
+      border-radius: 4px;
+      padding: 4px;
+      font-size: 12px;
+      display: none;
+      min-width: 200px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+    }
+    #ctx-menu.open { display: block; }
+    #ctx-menu .ctx-item {
+      padding: 8px 12px;
+      color: #c8b89a;
+      cursor: pointer;
+      border-radius: 3px;
+      font-family: 'Source Sans 3', sans-serif;
+    }
+    #ctx-menu .ctx-item:hover { background: #4a3a28; color: #f0c840; }
+    #ctx-menu .ctx-divider { height: 1px; background: #3a3028; margin: 4px 0; }
+    #ctx-menu .ctx-header {
+      padding: 6px 12px;
+      color: #f0c840;
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border-bottom: 1px solid #3a3028;
+      margin-bottom: 4px;
+    }
   </style>
 </head>
 <body>
+
+<div id="nav-strip">
+  <a href="/dm" class="nav-link">CENTER</a>
+  <a href="/dm/map" class="nav-link active">MAP</a>
+  <a href="/dm/ref" class="nav-link">REF</a>
+  <span class="spacer"></span>
+  <span class="nav-status">
+    <span class="nav-dot" id="nav-ai-dot"></span>
+    <span id="nav-ai-text">AI ?</span>
+  </span>
+  <span class="nav-status">
+    <span class="nav-clock" id="nav-clock">17:30</span>
+    <span id="nav-tod">EVENING</span>
+    <span id="nav-weather">BLIZZARD</span>
+  </span>
+</div>
 
 <div id="map-wrap">
   <canvas id="map"></canvas>
@@ -248,6 +348,8 @@
 <div class="placement-mode-banner" id="placement-banner">
   Click the map to place <span id="placement-name"></span>
 </div>
+
+<div id="ctx-menu"></div>
 
 <script>
 // ═══════════════════════════════════════════════════════════════
@@ -748,7 +850,50 @@ var DmMap = (function() {
     panStart = null;
   });
 
-  canvas.addEventListener('contextmenu', function(ev) { ev.preventDefault(); });
+  canvas.addEventListener('contextmenu', function(ev) {
+    ev.preventDefault();
+    var rect = canvas.getBoundingClientRect();
+    var sx = ev.clientX - rect.left;
+    var sy = ev.clientY - rect.top;
+    var hit = findTokenAt(sx, sy);
+    if (hit) {
+      showContextMenu(ev.clientX, ev.clientY, hit.id, hit.token);
+    } else {
+      hideContextMenu();
+    }
+  });
+
+  function showContextMenu(x, y, tokenId, tok) {
+    var menu = document.getElementById('ctx-menu');
+    var isPlayer = tok.type === 'pc' || tok.isPC;
+    var nameRevealed = !!tok.nameRevealedToPlayers;
+    var tokenRevealed = !!tok.revealedToPlayers || isPlayer;
+    var publicName = tok.publicName || (isPlayer ? tok.name : '');
+
+    var html = '<div class="ctx-header">' + (tok.name || tokenId) + '</div>';
+    if (!isPlayer) {
+      html += '<div class="ctx-item" onclick="DmMap.ctxRevealToken(\'' + tokenId + '\',' + !tokenRevealed + ')">' +
+        (tokenRevealed ? '✓ Hide Token from Players' : '○ Reveal Token to Players') + '</div>';
+    }
+    html += '<div class="ctx-item" onclick="DmMap.ctxRevealName(\'' + tokenId + '\',' + !nameRevealed + ')">' +
+      (nameRevealed ? '✓ Hide Name from Players' : '○ Reveal Name to Players') + '</div>';
+    if (!isPlayer) {
+      html += '<div class="ctx-item" onclick="DmMap.ctxSetPublicName(\'' + tokenId + '\')">' +
+        '✎ Set Public Name' + (publicName ? ' (' + publicName + ')' : '') + '</div>';
+    }
+    html += '<div class="ctx-divider"></div>';
+    html += '<div class="ctx-item" onclick="DmMap.ctxClose()">Cancel</div>';
+    menu.innerHTML = html;
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+    menu.classList.add('open');
+  }
+
+  function hideContextMenu() {
+    var menu = document.getElementById('ctx-menu');
+    if (menu) menu.classList.remove('open');
+  }
+  document.addEventListener('click', hideContextMenu);
 
   canvas.addEventListener('wheel', function(ev) {
     ev.preventDefault();
@@ -997,13 +1142,76 @@ var DmMap = (function() {
     startPlace: startPlace,
     toggleNpcVisibility: toggleNpcVisibility,
     toggleRevealToPlayers: toggleRevealToPlayers,
+    ctxRevealToken: function(tokenId, revealed) {
+      fetch('/api/map/token/reveal-to-players', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tokenId: tokenId, revealed: revealed })
+      });
+      if (tokens[tokenId]) tokens[tokenId].revealedToPlayers = revealed;
+      hideContextMenu();
+      render();
+    },
+    ctxRevealName: function(tokenId, revealed) {
+      fetch('/api/map/token/reveal-name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tokenId: tokenId, revealed: revealed })
+      });
+      if (tokens[tokenId]) tokens[tokenId].nameRevealedToPlayers = revealed;
+      hideContextMenu();
+      render();
+    },
+    ctxSetPublicName: function(tokenId) {
+      var current = (tokens[tokenId] && tokens[tokenId].publicName) || '';
+      var name = prompt('Public name (what players see — never the true identity):', current);
+      if (name == null) return;
+      fetch('/api/map/token/public-name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tokenId: tokenId, publicName: name })
+      });
+      if (tokens[tokenId]) tokens[tokenId].publicName = name;
+      hideContextMenu();
+    },
+    ctxClose: function() { hideContextMenu(); },
     init: function() {
       window.addEventListener('resize', resize);
       resize();
       connect();
       showToolbar();
+      // Nav strip — game time + AI status polling
+      updateNavStrip();
+      setInterval(updateNavStrip, 30000);
     }
   };
+
+  function updateNavStrip() {
+    fetch('/api/state').then(function(r) { return r.json(); }).then(function(s) {
+      var iso = s && s.world && s.world.gameTime;
+      var clockEl = document.getElementById('nav-clock');
+      var todEl = document.getElementById('nav-tod');
+      var wEl = document.getElementById('nav-weather');
+      if (clockEl && iso) {
+        var d = new Date(iso);
+        clockEl.textContent = String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0');
+      }
+      if (todEl && iso) {
+        var h = new Date(iso).getUTCHours();
+        var t = h < 5 ? 'NIGHT' : h < 8 ? 'DAWN' : h < 12 ? 'MORNING' : h < 17 ? 'AFTERNOON' : h < 20 ? 'EVENING' : 'NIGHT';
+        todEl.textContent = t;
+      }
+      if (wEl) wEl.textContent = String((s && s.world && s.world.weather && s.world.weather.type) || 'CLEAR').toUpperCase();
+    }).catch(function() {});
+    fetch('/api/ai/health').then(function(r) { return r.json(); }).then(function(d) {
+      var dot = document.getElementById('nav-ai-dot');
+      var lab = document.getElementById('nav-ai-text');
+      if (dot) {
+        dot.className = 'nav-dot ' + (d.status === 'ONLINE' ? 'online' : 'offline');
+        lab.textContent = 'AI ' + (d.status || '?');
+      }
+    }).catch(function() {});
+  }
 })();
 
 DmMap.init();

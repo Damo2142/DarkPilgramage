@@ -43,11 +43,32 @@ var mapData = null;
 var mapImage = null;
 var tokens = {};
 var fogRevealed = [];
+var zones = [];
 var players = {};
 // Per-token visibility transition: id -> { from, to, startTime, duration }
 var visibilityTransitions = {};
 // Per-token current opacity (0..1)
 var tokenOpacity = {};
+
+// Compute the list of revealed rectangles from either:
+//  1) explicit fogRevealed rects, or
+//  2) zones[].revealed === true (preferred — matches map system)
+//  3) fallback: entire map (so tokens render even without configured zones)
+function getRevealedRects() {
+  if (fogRevealed && fogRevealed.length) return fogRevealed;
+  if (zones && zones.length) {
+    var revealed = zones.filter(function(z) { return z && z.revealed === true; });
+    if (revealed.length) {
+      return revealed.map(function(z) {
+        return { x: z.x || 0, y: z.y || 0, w: z.w || z.width || 0, h: z.h || z.height || 0 };
+      });
+    }
+  }
+  // No zones revealed and no rects — return full map so /table is not pitch black
+  // This is the default state before DM has configured anything
+  if (mapData) return [{ x: 0, y: 0, w: mapData.width, h: mapData.height }];
+  return [];
+}
 
 var cam = { x: 0, y: 0, zoom: 1 };
 var canvas = document.getElementById('map');
@@ -81,6 +102,7 @@ function handleMsg(msg) {
         mapData = s.map;
         tokens = s.map.tokens || {};
         fogRevealed = s.map.fogRevealed || [];
+        zones = s.map.zones || [];
         loadMapImage();
       }
       if (s.players) players = s.players;
@@ -112,6 +134,12 @@ function handleMsg(msg) {
         render();
       }
       if (p === 'map.fogRevealed') { fogRevealed = v || []; render(); }
+      if (p === 'map.zones') { zones = v || []; render(); }
+      if (p && p.indexOf('map.zones.') === 0) {
+        // Re-fetch zones from state
+        zones = (stateData && stateData.map && stateData.map.zones) || zones;
+        render();
+      }
       if (p && p.indexOf('players.') === 0) {
         var pidParts = p.split('.');
         var pid = pidParts[1];
@@ -128,9 +156,26 @@ function handleMsg(msg) {
         mapData = msg.data.map;
         tokens = msg.data.tokens || msg.data.map.tokens || {};
         fogRevealed = msg.data.map.fogRevealed || [];
+        zones = msg.data.map.zones || [];
         loadMapImage();
       }
       for (var id3 in tokens) initTokenOpacity(id3, tokens[id3]);
+      render();
+      break;
+    }
+    case 'map:zone_revealed':
+    case 'map:zones_all_revealed': {
+      // Refresh zones from message
+      if (msg.data && msg.data.zoneId !== undefined) {
+        for (var zi = 0; zi < zones.length; zi++) {
+          if (zones[zi].id === msg.data.zoneId) {
+            zones[zi].revealed = !!msg.data.revealed;
+            break;
+          }
+        }
+      } else {
+        zones.forEach(function(z) { z.revealed = msg.data && msg.data.revealed !== false; });
+      }
       render();
       break;
     }
@@ -200,6 +245,17 @@ function isVisible(id, tok) {
   return !!tok.revealedToPlayers;
 }
 
+// Name visibility — strict default OFF for everyone.
+// Player tokens: name shown only if tok.nameRevealedToPlayers === true
+// NPC tokens: shown only if tok.nameRevealedToPlayers === true AND tok.publicName is set
+// Default: anonymous circles, no labels.
+function getDisplayName(id, tok) {
+  if (!tok || !tok.nameRevealedToPlayers) return null;
+  if (tok.type === 'pc' || tok.isPC) return tok.name || null;
+  // NPC: use publicName only, never trueIdentity / true name
+  return tok.publicName || null;
+}
+
 function initTokenOpacity(id, tok) {
   tokenOpacity[id] = isVisible(id, tok) ? 1 : 0;
 }
@@ -235,6 +291,11 @@ function animLoop(now) {
 
 // ═══════════════════════════════════════════════════════════════
 // RENDER
+// Layer order:
+//   1. Solid black background (covers everything outside map)
+//   2. Map image — but only INSIDE revealed rects (clip)
+//   3. Tokens — only those inside a revealed rect
+//   4. (No black overlay needed — outside revealed = never drawn = black)
 // ═══════════════════════════════════════════════════════════════
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -248,83 +309,74 @@ function render() {
 
   var mw = mapData.width;
   var mh = mapData.height;
+  var gs = mapData.gridSize || 64;
+  var revealedRects = getRevealedRects();
 
-  // ── Strict black fog ──
-  // Default: entire map blacked out. Only DM-revealed zones show the image.
-  if (fogRevealed.length === 0) {
-    // No reveal data — entire map is hidden. Players see solid black.
-    ctx.restore();
-    return;
-  }
-
-  // Clip to revealed regions, then draw map image inside the clip
-  ctx.save();
-  ctx.beginPath();
-  for (var fi = 0; fi < fogRevealed.length; fi++) {
-    var rect = fogRevealed[fi];
-    ctx.rect(rect.x - mw/2, rect.y - mh/2, rect.w, rect.h);
-  }
-  ctx.clip();
-
-  if (mapImage) {
-    ctx.drawImage(mapImage, -mw / 2, -mh / 2, mw, mh);
-  }
-  ctx.restore();
-
-  // Tokens — strict visibility
-  for (var id in tokens) {
-    var tok = tokens[id];
-    var op = tokenOpacity[id];
-    if (op === undefined) {
-      tokenOpacity[id] = isVisible(id, tok) ? 1 : 0;
-      op = tokenOpacity[id];
-    }
-    if (op <= 0.001) continue;
-
-    // Token must also be inside a revealed area to render
-    var inRevealed = false;
-    for (var ri = 0; ri < fogRevealed.length; ri++) {
-      var rr = fogRevealed[ri];
-      if (tok.x >= rr.x && tok.x <= rr.x + rr.w && tok.y >= rr.y && tok.y <= rr.y + rr.h) {
-        inRevealed = true;
-        break;
-      }
-    }
-    if (!inRevealed) continue;
-
-    var tx = tok.x - mw / 2;
-    var ty = tok.y - mh / 2;
-    var gs = mapData.gridSize || 64;
-    var r = (gs * 0.4) * 1.4; // 40% larger than dashboard
-
+  // ── Layer 1: map image clipped to revealed rects ──
+  if (revealedRects.length > 0 && mapImage) {
     ctx.save();
-    ctx.globalAlpha = op;
-
-    var isPlayer = tok.type === 'pc' || tok.isPC;
-    ctx.fillStyle = tok.color || (isPlayer ? '#5a9ad9' : '#a44');
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(tx, ty, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    // Label — character name (player) or public name only (NPC)
-    var label;
-    if (isPlayer) {
-      label = (tok.name || id).toUpperCase();
-    } else {
-      // NPCs: use public-facing name only, never trueIdentity
-      label = (tok.publicName || tok.name || id).toUpperCase();
+    for (var fi = 0; fi < revealedRects.length; fi++) {
+      var rect = revealedRects[fi];
+      ctx.rect(rect.x - mw/2, rect.y - mh/2, rect.w, rect.h);
     }
-    ctx.font = 'bold 14px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#000';
-    ctx.fillText(label, tx + 1, ty + r + 19);
-    ctx.fillStyle = '#e8d0a0';
-    ctx.fillText(label, tx, ty + r + 18);
-
+    ctx.clip();
+    ctx.drawImage(mapImage, -mw / 2, -mh / 2, mw, mh);
     ctx.restore();
+  }
+
+  // ── Layer 2: tokens — only those inside a revealed area ──
+  if (revealedRects.length > 0) {
+    for (var id in tokens) {
+      var tok = tokens[id];
+      if (!tok) continue;
+      var op = tokenOpacity[id];
+      if (op === undefined) {
+        tokenOpacity[id] = isVisible(id, tok) ? 1 : 0;
+        op = tokenOpacity[id];
+      }
+      if (op <= 0.001) continue;
+
+      // Token must be inside a revealed area
+      var inRevealed = false;
+      for (var ri = 0; ri < revealedRects.length; ri++) {
+        var rr = revealedRects[ri];
+        if (tok.x >= rr.x && tok.x <= rr.x + rr.w && tok.y >= rr.y && tok.y <= rr.y + rr.h) {
+          inRevealed = true;
+          break;
+        }
+      }
+      if (!inRevealed) continue;
+
+      var tx = tok.x - mw / 2;
+      var ty = tok.y - mh / 2;
+      var r = (gs * 0.4) * 1.4; // 40% larger than dashboard
+
+      ctx.save();
+      ctx.globalAlpha = op;
+
+      var isPlayer = tok.type === 'pc' || tok.isPC;
+      ctx.fillStyle = tok.color || (isPlayer ? '#5a9ad9' : '#a44');
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(tx, ty, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Label — strict: only if name is explicitly revealed
+      var label = getDisplayName(id, tok);
+      if (label) {
+        ctx.font = 'bold 14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#000';
+        ctx.fillText(label.toUpperCase(), tx + 1, ty + r + 19);
+        ctx.fillStyle = '#e8d0a0';
+        ctx.fillText(label.toUpperCase(), tx, ty + r + 18);
+      }
+
+      ctx.restore();
+    }
   }
 
   ctx.restore();

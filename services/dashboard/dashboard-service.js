@@ -170,6 +170,12 @@ class DashboardService {
       res.json({ ok: true });
     });
 
+    // FIX-B9 — minimal /health endpoint for watchdog. Returns 200 OK as long
+    // as the express server is responding. Used by ~/dark-pilgrimage/watchdog.sh
+    this.app.get('/health', (req, res) => {
+      res.status(200).type('text/plain').send('ok');
+    });
+
     this.app.get('/api/health', (req, res) => {
       res.json({
         status: 'ok',
@@ -209,7 +215,7 @@ class DashboardService {
         if (!voiceSvc || typeof voiceSvc.checkElevenLabsHealth !== 'function') {
           return res.status(503).json({ error: 'voice service unavailable' });
         }
-        const h = await voiceSvc.checkElevenLabsHealth();
+        const h = await voiceSvc.checkElevenLabsHealth(true);
         res.json({ ok: true, elevenLabs: h, palette: voiceSvc.voicePaletteStatus() });
       } catch (e) { res.status(500).json({ error: e.message }); }
     });

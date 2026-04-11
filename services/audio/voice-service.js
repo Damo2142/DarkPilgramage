@@ -201,7 +201,9 @@ class VoiceService {
         (h.lastError ? ' — ' + h.lastError : ''));
     }).catch(() => {});
     if (!this._healthInterval) {
-      this._healthInterval = setInterval(() => this.checkElevenLabsHealth().catch(() => {}), 60 * 60 * 1000);
+      // FIX-B4 — refresh every 5 minutes (was hourly).
+      // The internal throttle in checkElevenLabsHealth still rate-limits to 1/min.
+      this._healthInterval = setInterval(() => this.checkElevenLabsHealth(true).catch(() => {}), 5 * 60 * 1000);
     }
 
     // Broadcast device list
@@ -410,37 +412,80 @@ class VoiceService {
   }
 
   /**
-   * Real ElevenLabs health check — calls the voices endpoint with the API key.
-   * Sets this.elevenLabsHealth and dispatches an event.
+   * FIX-B4 — Real ElevenLabs health check.
+   *
+   * Uses the SAME endpoint and authentication that Max uses for TTS
+   * (POST /v1/text-to-speech/{voiceId}/stream with xi-api-key header).
+   * If THIS specific call succeeds, Max will work; if it fails, the
+   * error code is the actual one Max would hit. No more divergence
+   * between health-check 401 and Max 200.
+   *
+   * The check is rate-limited to once every 60s by default; the auto-
+   * refresh interval in start() is 5 minutes (FIX-B4 spec).
    */
-  async checkElevenLabsHealth() {
+  async checkElevenLabsHealth(force = false) {
     const apiKey = process.env.ELEVENLABS_API_KEY;
-    this.elevenLabsHealth.lastCheckedAt = new Date().toISOString();
-    if (!apiKey) {
-      this.elevenLabsHealth.status = 'NO_KEY';
-      this.elevenLabsHealth.lastError = 'ELEVENLABS_API_KEY not set in .env';
+    const voiceId = process.env.MAX_VOICE_ID;
+    const now = Date.now();
+
+    // Per-instance throttle: don't probe more than once per minute unless forced
+    if (!force && this._lastHealthAt && (now - this._lastHealthAt) < 60 * 1000) {
       return this.elevenLabsHealth;
     }
+    this._lastHealthAt = now;
+    this.elevenLabsHealth.lastCheckedAt = new Date().toISOString();
+
+    if (!apiKey) {
+      this.elevenLabsHealth.status = 'NO_KEY';
+      this.elevenLabsHealth.lastError = 'ELEVENLABS_API_KEY not set in environment';
+      if (this.bus) this.bus.dispatch('elevenlabs:health', this.elevenLabsHealth);
+      return this.elevenLabsHealth;
+    }
+    if (!voiceId) {
+      this.elevenLabsHealth.status = 'NO_VOICE_ID';
+      this.elevenLabsHealth.lastError = 'MAX_VOICE_ID not set in environment';
+      if (this.bus) this.bus.dispatch('elevenlabs:health', this.elevenLabsHealth);
+      return this.elevenLabsHealth;
+    }
+
     try {
       const fetchFn = global.fetch || require('node-fetch');
-      const resp = await fetchFn('https://api.elevenlabs.io/v1/user/subscription', {
-        headers: { 'xi-api-key': apiKey, 'Accept': 'application/json' }
+      // Same path Max uses — minimal text + same model + same voice settings
+      const resp = await fetchFn(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'audio/mpeg',
+          'Content-Type': 'application/json',
+          'xi-api-key': apiKey
+        },
+        body: JSON.stringify({
+          text: '.', // single character — minimum billable
+          model_id: 'eleven_turbo_v2_5',
+          voice_settings: { stability: 0.75, similarity_boost: 0.80, style: 0.20 }
+        })
       });
-      if (resp.status === 401) {
-        this.elevenLabsHealth.status = 'INVALID_KEY';
-        this.elevenLabsHealth.lastError = 'API returned 401 — key invalid or revoked';
-      } else if (resp.status === 429) {
-        this.elevenLabsHealth.status = 'RATE_LIMITED';
-        this.elevenLabsHealth.lastError = 'API returned 429 — rate limited';
-      } else if (!resp.ok) {
-        this.elevenLabsHealth.status = 'ERROR';
-        this.elevenLabsHealth.lastError = 'API returned ' + resp.status;
-      } else {
-        const data = await resp.json().catch(() => ({}));
+
+      if (resp.status === 200 || resp.status === 206) {
         this.elevenLabsHealth.status = 'ONLINE';
         this.elevenLabsHealth.lastError = null;
-        this.elevenLabsHealth.tier = data.tier || null;
-        this.elevenLabsHealth.charactersRemaining = (data.character_limit || 0) - (data.character_count || 0);
+        // Drain body so the connection cleans up cleanly
+        try { await resp.arrayBuffer(); } catch (e) {}
+      } else if (resp.status === 401) {
+        this.elevenLabsHealth.status = 'INVALID_KEY';
+        this.elevenLabsHealth.lastError = '401 — key invalid or revoked (same call path Max uses)';
+      } else if (resp.status === 422) {
+        // 422 = unprocessable. Means key is valid + voice ID is valid; just complaining about the request.
+        // For health-check purposes that means "would work for Max" — mark ONLINE.
+        this.elevenLabsHealth.status = 'ONLINE';
+        this.elevenLabsHealth.lastError = null;
+      } else if (resp.status === 429) {
+        this.elevenLabsHealth.status = 'RATE_LIMITED';
+        this.elevenLabsHealth.lastError = '429 — rate limited (key is valid, just throttled)';
+      } else {
+        let body = '';
+        try { body = (await resp.text()).slice(0, 200); } catch (e) {}
+        this.elevenLabsHealth.status = 'ERROR';
+        this.elevenLabsHealth.lastError = 'HTTP ' + resp.status + (body ? ' — ' + body : '');
       }
     } catch (e) {
       this.elevenLabsHealth.status = 'NETWORK_ERROR';

@@ -1148,6 +1148,22 @@ class CombatService {
       res.json(combat);
     });
 
+    // PHASE 6 — POST /api/combat/start-scene — one-click combat start with
+    // every visible token currently on the active map. NPC initiative is
+    // rolled by combat-service; player initiative is left blank for the
+    // DM to fill in (Max prompts the DM to collect physical d20 results).
+    app.post('/api/combat/start-scene', (req, res) => {
+      const tokens = this.state.get('map.tokens') || {};
+      const ids = [];
+      for (const [tid, t] of Object.entries(tokens)) {
+        if (!t || t.hidden) continue;
+        ids.push(tid);
+      }
+      if (!ids.length) return res.status(400).json({ error: 'no tokens on map' });
+      const combat = this.startCombat(ids, {});
+      res.json({ ok: true, combat, combatantIds: ids });
+    });
+
     // POST /api/combat/end — end combat
     app.post('/api/combat/end', (req, res) => {
       const combat = this.endCombat();

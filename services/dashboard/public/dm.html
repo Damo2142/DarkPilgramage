@@ -532,6 +532,10 @@
   <div id="max-controls" style="flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:10px 24px;background:#1e1a14;border-bottom:1px solid var(--border);">
     <button id="btn-max-pause" class="session-btn danger large" onclick="MaxControls.togglePause()" style="min-width:160px;">⏸ PAUSE MAX (5m)</button>
     <span id="max-pause-countdown" style="font-family:monospace;font-size:12px;color:var(--text-dim);min-width:90px;"></span>
+    <!-- PHASE 6 — combat start button -->
+    <button id="btn-combat" class="session-btn" onclick="CombatControls.toggle()" title="Start combat with every visible token on the active map">⚔ START COMBAT</button>
+    <button id="btn-combat-next" class="session-btn muted" onclick="CombatControls.next()" style="display:none;">→ NEXT TURN</button>
+    <span id="combat-status" style="font-family:monospace;font-size:12px;color:var(--text-dim);"></span>
     <span class="spacer" style="flex:1;"></span>
     <label style="display:flex;align-items:center;gap:8px;font-family:'Cinzel',serif;font-size:12px;letter-spacing:0.1em;color:var(--text-dim);">
       MAX VOLUME
@@ -1151,6 +1155,56 @@ var RoomAudio = {
 };
 window.RoomAudio = RoomAudio;
 setTimeout(RoomAudio.init, 600);
+
+// ═══════════════════════════════════════════════════════════════
+// COMBAT CONTROLS — PHASE 6
+// ═══════════════════════════════════════════════════════════════
+var CombatControls = {
+  active: false,
+  refresh: function() {
+    fetch('/api/combat').then(function(r) { return r.json(); }).then(function(d) {
+      CombatControls.active = !!(d && d.active);
+      var btn = $('btn-combat');
+      var nextBtn = $('btn-combat-next');
+      var status = $('combat-status');
+      if (CombatControls.active) {
+        if (btn) { btn.textContent = '■ END COMBAT'; btn.classList.add('danger'); }
+        if (nextBtn) nextBtn.style.display = 'inline-block';
+        if (status) {
+          var cur = (d.combatants || [])[d.currentTurn || 0];
+          status.textContent = 'Round ' + (d.round || 1) + ' · ' + (cur ? (cur.name || cur.id) : '—');
+        }
+      } else {
+        if (btn) { btn.textContent = '⚔ START COMBAT'; btn.classList.remove('danger'); }
+        if (nextBtn) nextBtn.style.display = 'none';
+        if (status) status.textContent = '';
+      }
+    }).catch(function() {});
+  },
+  toggle: function() {
+    if (CombatControls.active) {
+      if (!confirm('End combat?')) return;
+      fetch('/api/combat/end', { method: 'POST' }).then(function() {
+        addWhisper({ tag: 'COMBAT', text: 'Combat ended' });
+        setTimeout(CombatControls.refresh, 200);
+      });
+    } else {
+      fetch('/api/combat/start-scene', { method: 'POST' }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d && d.ok) addWhisper({ tag: 'COMBAT', text: 'Combat started — ' + (d.combatantIds || []).length + ' combatants. Players, roll initiative.' });
+        else if (d && d.error) addWhisper({ tag: 'COMBAT', text: 'Combat start failed: ' + d.error });
+        setTimeout(CombatControls.refresh, 200);
+      });
+    }
+  },
+  next: function() {
+    fetch('/api/combat/next', { method: 'POST' }).then(function() {
+      setTimeout(CombatControls.refresh, 200);
+    });
+  }
+};
+window.CombatControls = CombatControls;
+setTimeout(CombatControls.refresh, 800);
+setInterval(CombatControls.refresh, 5000);
 
 // Section 6 — Narrator whisper to specific player
 function toggleWhisper() {

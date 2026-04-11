@@ -1163,7 +1163,7 @@ var CombatControls = {
   active: false,
   refresh: function() {
     fetch('/api/combat').then(function(r) { return r.json(); }).then(function(d) {
-      CombatControls.active = !!(d && d.active);
+      CombatControls.active = !!(d && (d.active || d.combatActive));
       var btn = $('btn-combat');
       var nextBtn = $('btn-combat-next');
       var status = $('combat-status');
@@ -1171,8 +1171,10 @@ var CombatControls = {
         if (btn) { btn.textContent = '■ END COMBAT'; btn.classList.add('danger'); }
         if (nextBtn) nextBtn.style.display = 'inline-block';
         if (status) {
-          var cur = (d.combatants || [])[d.currentTurn || 0];
-          status.textContent = 'Round ' + (d.round || 1) + ' · ' + (cur ? (cur.name || cur.id) : '—');
+          var combatants = d.combatants || d.turnOrder || [];
+          var curIdx = d.currentTurn || d.currentTurnIndex || 0;
+          var cur = combatants[curIdx];
+          status.textContent = 'Round ' + (d.round || 1) + ' · ' + (cur ? (cur.name || cur.id || '—') : '—');
         }
       } else {
         if (btn) { btn.textContent = '⚔ START COMBAT'; btn.classList.remove('danger'); }

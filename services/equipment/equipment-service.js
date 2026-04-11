@@ -121,50 +121,37 @@ class EquipmentService {
   }
 
   _initSpellComponents(equipment, char) {
-    const hasPouch = (char.inventory || []).some(i =>
-      i.name && (i.name.toLowerCase().includes('component pouch') || i.name.toLowerCase().includes('arcane focus'))
-    );
+    // Section 2 — Spell components are narrative only.
+    // Pre-populate nothing. Components are added manually via flagHighValueComponent().
+    // Arcane focus and component pouches bypass non-costly components silently.
+    // Costly components are surfaced via Max whisper when used (see _setupEventListeners).
+  }
 
-    for (const spell of char.spells) {
-      const srdSpell = this._findSrdSpell(spell.name);
-      if (!srdSpell) continue;
-
-      const parsed = this._parseMaterialComponent(srdSpell.components);
-      if (!parsed) continue;
-
-      if (parsed.costly) {
-        // Costly components: tracked individually, consumed on cast
-        const key = parsed.material;
-        if (!equipment.components[key]) {
-          equipment.components[key] = {
-            count: 1,
-            costly: true,
-            goldValue: parsed.goldValue,
-            consumed: parsed.consumed,
-            spells: [spell.name]
-          };
-        } else {
-          if (!equipment.components[key].spells.includes(spell.name)) {
-            equipment.components[key].spells.push(spell.name);
-          }
-        }
-      } else if (hasPouch) {
-        // Non-costly: tracked per pouch, 10 uses before restocking
-        const key = parsed.material;
-        if (!equipment.components[key]) {
-          equipment.components[key] = {
-            count: 10,
-            maxUses: 10,
-            costly: false,
-            spells: [spell.name]
-          };
-        } else {
-          if (!equipment.components[key].spells.includes(spell.name)) {
-            equipment.components[key].spells.push(spell.name);
-          }
-        }
-      }
+  /**
+   * flagHighValueComponent — narrative-only spell component tracking.
+   * Adds an item to a character's inventory as a story item with a gold value.
+   * Never deducts automatically — DM confirms via Max input panel when used.
+   */
+  flagHighValueComponent(itemName, gpValue, characterId) {
+    const char = this.state.get('players.' + characterId + '.character');
+    if (!char) return null;
+    char.inventory = char.inventory || [];
+    const exists = char.inventory.find(i => i.name === itemName);
+    if (exists) {
+      exists.narrativeOnly = true;
+      exists.goldValue = gpValue;
+    } else {
+      char.inventory.push({
+        name: itemName,
+        type: 'component',
+        narrativeOnly: true,
+        goldValue: gpValue,
+        equipped: false
+      });
     }
+    this.state.set('players.' + characterId + '.character', char);
+    this.bus.dispatch('equipment:component_flagged', { characterId, itemName, gpValue });
+    return { itemName, gpValue, characterId };
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -516,6 +503,17 @@ class EquipmentService {
   _setupRoutes() {
     const app = this.orchestrator.getService('dashboard')?.app;
     if (!app) return;
+
+    // POST narrative-only spell component flag
+    app.post('/api/equipment/component/flag', (req, res) => {
+      const { itemName, gpValue, characterId } = req.body || {};
+      if (!itemName || !gpValue || !characterId) {
+        return res.status(400).json({ error: 'itemName, gpValue, characterId required' });
+      }
+      const result = this.flagHighValueComponent(itemName, gpValue, characterId);
+      if (!result) return res.status(404).json({ error: 'character not found' });
+      res.json({ ok: true, ...result });
+    });
 
     // GET full equipment state for a player
     app.get('/api/equipment/:playerId', (req, res) => {

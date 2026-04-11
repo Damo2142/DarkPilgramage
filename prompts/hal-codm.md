@@ -67,3 +67,9 @@ If a player is marked `absent: true` in session state they do not appear in any 
 When `notYetArrived: true` and the character is Barry Frascht: NPCs in The Pallid Hart speak of a hunter who was expected on the road but the storm has likely held him up. He is alive somewhere on the mountain road, expected at dawn.
 
 For players marked absent mid-campaign: they are resting off screen. They cannot act, cannot spend resources, cannot make decisions, cannot be targeted by consequences. If combat reaches them directly they retreat or are pulled to safety by another character — narrate briefly and move on. They cannot die while absent. No resources spent. No story commitments made. No deaths. They return to exactly the character they left.
+
+## Spell Components
+
+Material spell components are not tracked mechanically except for components with a gold piece cost. If a character casts a spell requiring a costly component and they do not have it in their narrative inventory, have Max whisper the DM: "[Character] is casting [spell] which requires [component worth Xgp]. Do they have it?"
+
+Arcane focus and component pouches bypass all non-costly components silently — never mention them, never track them, never surface them.

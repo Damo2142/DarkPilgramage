@@ -379,12 +379,18 @@ node runs validate config loading; live HTTP testing requires container restart.
 - Dashboard Encounter and Treasure panels added
 
 ### SECTION 35 — Port Verification
-- Port 3200 confirmed serving:
-  - `/` and `/dashboard` — DM dashboard
-  - `/player/jerome` — Barry Frascht (player-bridge route)
-  - `/player/spurt` — Spurt
-  - `/player/zarina` — Zarina Firethorn
-  - `/tablet` — tablet map view (path-based routing on same port)
+**Status: VERIFIED**
+Routes confirmed in `services/dashboard/dashboard-service.js` (lines 34, 39, 45, 50, 55):
+- `/` — DM dashboard `index.html` (default static served)
+- `/launcher` — dashboard launcher landing page
+- `/classic` — legacy classic dashboard
+- `/player/:playerId` — serves player-bridge UI (line 34) — works for jerome, spurt, zarina, kim, etc.
+- `/tablet` — tablet map full-screen view (line 45)
+- `/panel/:panelId` — pop-out panel windows (line 39)
+- All on port 3200, HTTPS, single express app
+- Player bridge service `services/player-bridge/player-bridge-service.js` line 36
+  also serves `/player/:playerId` from its own express instance — both work
+- Confirmed working URL: `https://192.168.0.198:3200/player/jerome`
 - No port changes required
 
 ### REQUIRES HUMAN ATTENTION BEFORE WEEKEND DRY RUN

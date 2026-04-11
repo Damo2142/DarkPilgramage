@@ -886,6 +886,11 @@ var DmMap = (function() {
         '✎ Set Public Name' + (publicName ? ' (' + publicName + ')' : '') + '</div>';
     }
     html += '<div class="ctx-divider"></div>';
+    // PHASE 7E — token rotation
+    html += '<div class="ctx-item" onclick="DmMap.ctxRotate(\'' + tokenId + '\', -0.7853981633974483)">↺ Rotate CCW (45°)</div>';
+    html += '<div class="ctx-item" onclick="DmMap.ctxRotate(\'' + tokenId + '\',  0.7853981633974483)">↻ Rotate CW (45°)</div>';
+    html += '<div class="ctx-item" onclick="DmMap.ctxRotate(\'' + tokenId + '\', null)">⊙ Reset Rotation</div>';
+    html += '<div class="ctx-divider"></div>';
     html += '<div class="ctx-item" onclick="DmMap.ctxClose()">Cancel</div>';
     menu.innerHTML = html;
     menu.style.left = x + 'px';
@@ -1240,6 +1245,21 @@ var DmMap = (function() {
       });
       if (tokens[tokenId]) tokens[tokenId].publicName = name;
       hideContextMenu();
+    },
+    // PHASE 7E — token rotation. delta is radians (or null to reset)
+    ctxRotate: function(tokenId, delta) {
+      var tok = tokens[tokenId];
+      if (!tok) { hideContextMenu(); return; }
+      var current = (typeof tok.facing === 'number') ? tok.facing : 0;
+      var next = (delta == null) ? 0 : (current + delta);
+      tok.facing = next;
+      fetch('/api/map/token/facing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tokenId: tokenId, facing: next })
+      }).catch(function() {});
+      hideContextMenu();
+      render();
     },
     ctxClose: function() { hideContextMenu(); },
     init: function() {

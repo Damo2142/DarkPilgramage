@@ -605,6 +605,18 @@ class MapService {
       res.json({ tokenId, token });
     });
 
+    // POST /api/map/token/facing — set token rotation in radians (PHASE 7E)
+    app.post('/api/map/token/facing', (req, res) => {
+      const { tokenId, facing } = req.body || {};
+      if (!tokenId) return res.status(400).json({ error: 'tokenId required' });
+      const token = this.state.get(`map.tokens.${tokenId}`);
+      if (!token) return res.status(404).json({ error: 'Token not found' });
+      const f = (facing == null || isNaN(parseFloat(facing))) ? 0 : parseFloat(facing);
+      this.state.set(`map.tokens.${tokenId}.facing`, f);
+      this.bus.dispatch('map:token_facing_changed', { tokenId, facing: f });
+      res.json({ tokenId, facing: f });
+    });
+
     // POST /api/map/tokens/anonymize-all — set nameRevealedToPlayers=false on every token.
     // Used at session start so the table starts strictly anonymous regardless of saved state.
     app.post('/api/map/tokens/anonymize-all', (req, res) => {

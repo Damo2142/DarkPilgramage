@@ -1,4 +1,14 @@
 const EventEmitter = require('events');
+const crypto = require('crypto');
+
+// FIX-C3 — events that must NEVER be deduped (high-volume continuous streams,
+// or per-frame ticks where every dispatch is a fresh value).
+const DEDUP_SKIP_EVENTS = new Set([
+  'audio:chunk', 'audio:dm_chunk', 'audio:player_stream_start', 'audio:player_stream_stop',
+  'transcript:silence', 'player:camera_frame', 'world:time_update',
+  'state:change', 'map:token_moved', 'token:move',
+  'system:error', '*'
+]);
 
 class EventBus extends EventEmitter {
   constructor(logger) {
@@ -6,21 +16,85 @@ class EventBus extends EventEmitter {
     this.setMaxListeners(50);
     this.logger = logger;
     this._eventCount = 0;
+
+    // FIX-C3 — server-side dedup. Last 50 event UUIDs with 5 second TTL.
+    // Drops content-identical repeats within 5 seconds.
+    this._dedupTtlMs = 5000;
+    this._dedupMaxEntries = 50;
+    this._dedupSeen = []; // [{ uuid, fingerprint, expiresAt }]
+    this._dedupDrops = 0;
+  }
+
+  _fingerprint(event, data) {
+    // Build a stable fingerprint from the event name + a few key fields.
+    // We deliberately keep this short — full JSON.stringify of large objects
+    // is expensive and large objects are rarely literal duplicates anyway.
+    if (!data || typeof data !== 'object') return event;
+    const parts = [event];
+    if (data.text != null)         parts.push('t=' + String(data.text).slice(0, 200));
+    if (data.message != null)      parts.push('m=' + String(data.message).slice(0, 200));
+    if (data.npcId != null)        parts.push('n=' + data.npcId);
+    if (data.npc != null)          parts.push('N=' + data.npc);
+    if (data.playerId != null)     parts.push('p=' + data.playerId);
+    if (data.tokenId != null)      parts.push('tk=' + data.tokenId);
+    if (data.targetId != null)     parts.push('tg=' + data.targetId);
+    if (data.channel != null)      parts.push('c=' + data.channel);
+    if (data.priority != null)     parts.push('pr=' + data.priority);
+    if (data.category != null)     parts.push('cat=' + data.category);
+    if (data.profile != null)      parts.push('pf=' + data.profile);
+    if (data.zoneId != null)       parts.push('z=' + data.zoneId);
+    return parts.join('|');
+  }
+
+  _isDuplicate(event, data) {
+    if (DEDUP_SKIP_EVENTS.has(event)) return false;
+    const now = Date.now();
+    // Sweep expired entries
+    if (this._dedupSeen.length > 0 && this._dedupSeen[0].expiresAt < now) {
+      this._dedupSeen = this._dedupSeen.filter(e => e.expiresAt > now);
+    }
+    const fp = this._fingerprint(event, data);
+    for (let i = this._dedupSeen.length - 1; i >= 0; i--) {
+      if (this._dedupSeen[i].fingerprint === fp) return true;
+    }
+    return false;
+  }
+
+  _recordDispatch(event, data, uuid) {
+    if (DEDUP_SKIP_EVENTS.has(event)) return;
+    const fp = this._fingerprint(event, data);
+    this._dedupSeen.push({ uuid, fingerprint: fp, expiresAt: Date.now() + this._dedupTtlMs });
+    if (this._dedupSeen.length > this._dedupMaxEntries) {
+      this._dedupSeen.splice(0, this._dedupSeen.length - this._dedupMaxEntries);
+    }
   }
 
   /**
-   * Emit an event with automatic logging
-   * @param {string} event - Event name (e.g., 'transcript:segment', 'ai:npc_dialogue')
+   * Emit an event with automatic logging.
+   * FIX-C3 — assigns a UUID and drops content-identical repeats within 5s.
+   * @param {string} event - Event name
    * @param {object} data - Event payload
    */
   dispatch(event, data = {}) {
+    if (this._isDuplicate(event, data)) {
+      this._dedupDrops++;
+      // Quiet log so we can still see the dedup activity
+      if (this._dedupDrops <= 5 || this._dedupDrops % 25 === 0) {
+        console.log(`[EventBus] DEDUP dropped "${event}" (total drops: ${this._dedupDrops})`);
+      }
+      return null;
+    }
     this._eventCount++;
+    const uuid = crypto.randomUUID ? crypto.randomUUID() : String(this._eventCount) + '-' + Date.now();
     const envelope = {
       id: this._eventCount,
+      uuid,
       event,
       timestamp: Date.now(),
       data
     };
+
+    this._recordDispatch(event, data, uuid);
 
     if (this.logger) {
       this.logger.logEvent(envelope);
@@ -55,7 +129,9 @@ class EventBus extends EventEmitter {
     return {
       totalEvents: this._eventCount,
       listenerCount: this.eventNames().reduce((sum, e) => sum + this.listenerCount(e), 0),
-      eventTypes: this.eventNames().filter(e => e !== '*')
+      eventTypes: this.eventNames().filter(e => e !== '*'),
+      dedupDrops: this._dedupDrops,
+      dedupTrackedEntries: this._dedupSeen.length
     };
   }
 }

@@ -5215,7 +5215,7 @@ var ChatBar = {
       }, 8000);
     }, 100);
   },
-  // FIX-B6 — 2 second debounce + per-message sequence id
+  // FIX-C3 — 3 second client debounce + per-message sequence id
   _lastSendAt: 0,
   _seqCounter: 0,
   sendText: function() {
@@ -5224,10 +5224,9 @@ var ChatBar = {
     var text = (input.value || '').trim();
     if (!text) return;
     var now = Date.now();
-    if (now - ChatBar._lastSendAt < 2000) {
-      // Debounced — still display the message locally so the user gets feedback
+    if (now - ChatBar._lastSendAt < 3000) {
       input.value = '';
-      ChatBar.appendMessage({ type: 'system', text: '(slow down — wait 2s between messages)' });
+      ChatBar.appendMessage({ type: 'system', text: '(slow down — wait 3s between messages)' });
       return;
     }
     ChatBar._lastSendAt = now;

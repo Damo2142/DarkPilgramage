@@ -1092,10 +1092,10 @@ class PlayerBridgeService {
     }
   }
 
-  // FIX-B6 — duplicate WS message detection.
+  // FIX-B6/C3 — duplicate WS message detection.
   // Skips audio:chunk and audio:start/stop (high-volume continuous events),
   // and skips ping/pong. Everything else is fingerprinted by
-  // (type + key fields) and dropped if seen within 2 seconds. Honors an
+  // (type + key fields) and dropped if seen within 3 seconds. Honors an
   // explicit msg.seq from the client to drop literal repeats of the same id.
   _isDuplicateWsMessage(playerId, msg) {
     if (!msg || !msg.type) return false;
@@ -1119,7 +1119,7 @@ class PlayerBridgeService {
     if (msg.tokenId) fp += '|' + msg.tokenId;
     if (msg.channel) fp += '|' + msg.channel;
     const last = bucket.recent[fp];
-    if (last && (now - last) < 2000) return true;
+    if (last && (now - last) < 3000) return true;
     bucket.recent[fp] = now;
     // Sweep stale entries periodically
     if (Object.keys(bucket.recent).length > 60) {

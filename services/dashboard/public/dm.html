@@ -835,9 +835,9 @@ function sendMax() {
   var input = $('max-input');
   var btn = $('max-send');
   var now = Date.now();
-  // Debounce — ignore submits within 2 seconds of the last fire, and ignore re-entry while a query is in flight
+  // FIX-C3 — 3 second debounce + re-entry guard
   if (_maxFiring) return;
-  if (now - _maxLastFireAt < 2000) return;
+  if (now - _maxLastFireAt < 3000) return;
   var query = input.value.trim();
   if (!query) return;
   _maxFiring = true;
@@ -856,7 +856,7 @@ function sendMax() {
     setTimeout(function() {
       _maxFiring = false;
       if (btn) { btn.disabled = false; btn.textContent = 'SEND'; }
-    }, 2000);
+    }, 3000);
   });
 }
 

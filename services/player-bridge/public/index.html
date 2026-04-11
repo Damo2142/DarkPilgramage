@@ -4742,6 +4742,9 @@ if (navigator.permissions) {
       html += '</div>';
       html += '<div class="limb-desc" id="limb-desc-' + limb + '">' + (WOUND_DESC[limb] ? WOUND_DESC[limb][state] : '') + '</div>';
     }
+    // ── LANGUAGES section ──
+    html += '<div class="st" style="margin-top:14px;">Languages</div>';
+    html += renderLanguagesBlock();
     el.innerHTML = html;
     // Bind tap-to-expand
     el.querySelectorAll('.limb-row').forEach(function(row) {
@@ -4751,6 +4754,39 @@ if (navigator.permissions) {
         if (desc) desc.classList.toggle('visible');
       });
     });
+  }
+
+  function renderLanguagesBlock() {
+    var langs = (char && (char.languageStructured || (char.languages || []).map(function(l) {
+      return typeof l === 'string' ? { id: l.toLowerCase(), displayName: l, fluency: 'fluent' } : l;
+    }))) || [];
+    if (!langs.length) return '<div style="font-size:11px;color:#6a5a48;font-style:italic;">No languages on file</div>';
+    var fluencyDot = function(f) {
+      var color = '#6aaa6a';
+      if (/conversational/i.test(f)) color = '#e09030';
+      else if (/basic/i.test(f)) color = '#cc6030';
+      return '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + color + ';margin-right:6px;"></span>';
+    };
+    var html = '<div style="border-top:1px solid #3a3028;padding-top:6px;">';
+    langs.forEach(function(l) {
+      var name = l.displayName || l.name || l.id || 'Unknown';
+      var fluency = l.fluency || 'fluent';
+      var note = l.note || '';
+      var rare = l.id === 'elvish_americas' || (note && /unknown to/i.test(note));
+      var universal = l.id === 'draconic' || /universal/i.test(note);
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:13px;">';
+      html += '<span style="color:#e8d0a0;">' + esc(name) + '</span>';
+      html += '<span style="font-size:11px;color:#a09080;">' + fluencyDot(fluency) + esc(fluency);
+      if (rare) html += '  <span title="Unknown to Europeans" style="color:#cc3020;">⚠</span>';
+      if (universal) html += '  <span title="Universal" style="color:#f0c840;">✦</span>';
+      html += '</span></div>';
+      if (note) html += '<div style="font-size:10px;color:#8a7060;font-style:italic;padding-left:14px;margin-bottom:6px;">' + esc(note) + '</div>';
+    });
+    if (char && char.languageNote) {
+      html += '<details style="margin-top:8px;font-size:10px;color:#6a5a48;"><summary style="cursor:pointer;color:#8a7060;">Language rules in 1274</summary><div style="padding:6px 0;font-style:italic;">' + esc(char.languageNote) + '</div></details>';
+    }
+    html += '</div>';
+    return html;
   }
 
   // ── Body Narrative ──

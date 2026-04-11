@@ -1014,25 +1014,26 @@ var DmMap = (function() {
   }
 
   function loadNpcsList() {
-    // Pull NPCs from state first, then merge any patron-* keys from session-config
-    // (session-config endpoint exposes the raw session-0.json so root-level patrons
-    // are visible even before the loadSession merge has run).
+    // Pull NPCs from state, session-config, AND map npc-defaults so the panel
+    // shows EVERY NPC defined for the active map plus any from session-0.
     Promise.all([
       fetch('/api/state').then(function(r) { return r.json(); }),
-      fetch('/api/session-config').then(function(r) { return r.json(); }).catch(function() { return {}; })
+      fetch('/api/session-config').then(function(r) { return r.json(); }).catch(function() { return {}; }),
+      fetch('/api/map/npc-defaults').then(function(r) { return r.json(); }).catch(function() { return { defaults: [] }; })
     ]).then(function(results) {
       var data = results[0];
       var cfg = results[1] || {};
+      var npcDefaults = (results[2] && results[2].defaults) || [];
       var npcs = (data.state && data.state.npcs) || data.npcs || {};
       var seen = {};
       npcsList = [];
+      // Merge in this order: state.npcs → patron-* config → map npc-defaults
       for (var k in npcs) {
         if (npcs[k] && npcs[k].name) {
           npcsList.push({ id: k, name: npcs[k].name, hidden: !!npcs[k].hidden });
           seen[k] = true;
         }
       }
-      // Merge any patron-* / root NPC keys from session config that aren't in state
       for (var ck in cfg) {
         if (!ck.startsWith('patron-')) continue;
         if (seen[ck]) continue;
@@ -1041,6 +1042,15 @@ var DmMap = (function() {
           npcsList.push({ id: ck, name: p.name, hidden: false });
           seen[ck] = true;
         }
+      }
+      // FIX-B3 — also include any NPC default that doesn't already have an
+      // entry in state.npcs / config. Index by actorSlug.
+      for (var di = 0; di < npcDefaults.length; di++) {
+        var d = npcDefaults[di];
+        var slug = d.actorSlug || d.tokenId;
+        if (seen[slug]) continue;
+        npcsList.push({ id: slug, name: d.name || slug, hidden: false });
+        seen[slug] = true;
       }
       renderNpcList();
     }).catch(function(){});
@@ -1094,10 +1104,38 @@ var DmMap = (function() {
   }
 
   function startPlace(npcId) {
-    placementNpcId = npcId;
-    var npc = npcsList.find(function(n) { return n.id === npcId; });
-    document.getElementById('placement-name').textContent = npc ? npc.name : npcId;
-    document.getElementById('placement-banner').classList.add('active');
+    // FIX-B3 — first try one-click placement at the NPC's default starting
+    // position. Falls back to manual placement (click on map) if no default
+    // is registered for this NPC, or if the NPC is already placed (Move).
+    var existingTok = _findTokenForNpc(npcId);
+    if (existingTok) {
+      // Already on map — fall through to manual move flow
+      placementNpcId = npcId;
+      var npcM = npcsList.find(function(n) { return n.id === npcId; });
+      document.getElementById('placement-name').textContent = npcM ? npcM.name : npcId;
+      document.getElementById('placement-banner').classList.add('active');
+      return;
+    }
+    fetch('/api/map/npc/place-default', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actorSlug: npcId })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d && (d.tokenId || d.alreadyPlaced)) {
+        setTimeout(loadNpcsList, 200);
+        return;
+      }
+      // No default position — fall back to manual placement
+      placementNpcId = npcId;
+      var npc = npcsList.find(function(n) { return n.id === npcId; });
+      document.getElementById('placement-name').textContent = npc ? npc.name : npcId;
+      document.getElementById('placement-banner').classList.add('active');
+    }).catch(function() {
+      placementNpcId = npcId;
+      var npc2 = npcsList.find(function(n) { return n.id === npcId; });
+      document.getElementById('placement-name').textContent = npc2 ? npc2.name : npcId;
+      document.getElementById('placement-banner').classList.add('active');
+    });
   }
 
   function placeNpcOnMap(npcId, x, y) {

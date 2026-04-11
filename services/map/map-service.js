@@ -117,11 +117,33 @@ class MapService {
 
     this.activeMapId = mapId;
 
-    // Initialize token state from map definition
+    // FIX-B3 — NPC tokens are NOT auto-placed. Only player tokens are spawned
+    // at session start. NPCs from the map definition become "available defaults"
+    // that the DM places by clicking Place in the NPC TOKENS panel.
+    // Their default positions are kept in this._npcDefaults keyed by actorSlug.
     const tokenState = {};
+    this._npcDefaults = {};
     if (map.tokens) {
       for (const [tokenId, token] of Object.entries(map.tokens)) {
-        tokenState[tokenId] = { ...token, id: tokenId };
+        // Player tokens (type === 'pc') are kept as before — added below
+        if (token.type === 'pc' || token.isPC) {
+          tokenState[tokenId] = { ...token, id: tokenId };
+          continue;
+        }
+        // NPC token — record its default position keyed by actorSlug, do NOT place
+        const slug = token.actorSlug || tokenId;
+        this._npcDefaults[slug] = {
+          tokenId,
+          actorSlug: slug,
+          name: token.name,
+          type: token.type || 'npc',
+          x: token.x,
+          y: token.y,
+          image: token.image,
+          hp: token.hp,
+          ac: token.ac,
+          visible: token.visible !== false
+        };
       }
     }
 
@@ -534,6 +556,53 @@ class MapService {
       this.state.set(`map.tokens.${tokenId}.publicName`, publicName || '');
       this.bus.dispatch('map:token_public_name_changed', { tokenId, publicName: publicName || '' });
       res.json({ tokenId, publicName: publicName || '' });
+    });
+
+    // FIX-B3 — list NPC default starting positions (NPCs that exist in the
+    // active map definition but aren't currently placed on the map).
+    app.get('/api/map/npc-defaults', (req, res) => {
+      const defaults = this._npcDefaults || {};
+      const tokens = this.state.get('map.tokens') || {};
+      // Mark which defaults are currently placed (any token with matching slug)
+      const placed = {};
+      for (const t of Object.values(tokens)) {
+        if (t && t.actorSlug) placed[t.actorSlug] = true;
+      }
+      res.json({
+        mapId: this.activeMapId,
+        defaults: Object.values(defaults).map(d => ({ ...d, placed: !!placed[d.actorSlug] }))
+      });
+    });
+
+    // FIX-B3 — one-click Place: spawn an NPC at its default position.
+    // body: { actorSlug }  — actorSlug must exist in this._npcDefaults
+    app.post('/api/map/npc/place-default', (req, res) => {
+      const { actorSlug } = req.body || {};
+      if (!actorSlug) return res.status(400).json({ error: 'actorSlug required' });
+      const def = this._npcDefaults && this._npcDefaults[actorSlug];
+      if (!def) return res.status(404).json({ error: 'No default position for ' + actorSlug });
+      const tokenId = def.tokenId || actorSlug;
+      const existing = this.state.get(`map.tokens.${tokenId}`);
+      if (existing) return res.json({ tokenId, alreadyPlaced: true, x: existing.x, y: existing.y });
+      const token = {
+        id: tokenId,
+        actorSlug: def.actorSlug,
+        name: def.name || actorSlug,
+        type: def.type || 'npc',
+        x: def.x,
+        y: def.y,
+        image: def.image || `${actorSlug}.png`,
+        visible: def.visible !== false,
+        hidden: false,
+        hp: def.hp || { current: 10, max: 10 },
+        ac: def.ac || 10,
+        nameRevealedToPlayers: false,
+        publicName: ''
+      };
+      this.state.set(`map.tokens.${tokenId}`, token);
+      this.bus.dispatch('map:token_added', { tokenId, token });
+      console.log(`[MapService] Placed ${actorSlug} at default position (${def.x}, ${def.y})`);
+      res.json({ tokenId, token });
     });
 
     // POST /api/map/tokens/anonymize-all — set nameRevealedToPlayers=false on every token.

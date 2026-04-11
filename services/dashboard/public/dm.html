@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DM — Center</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #141210;
+      color: #c8b89a;
+      font-family: sans-serif;
+    }
+    #loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      color: #e8c060;
+      font-family: serif;
+    }
+  </style>
+</head>
+<body>
+<div id="loading">Loading DM Center…</div>
+<script>
+// ═══════════════════════════════════════════════════════════════
+// /dm — DM Center Display
+// Loads index.html, removes the map column (#col-transcript) and
+// the players column (#col-players), expands controls column to
+// full width. Map canvas element is REMOVED from DOM (not hidden)
+// so map render code can't bind to it.
+// ═══════════════════════════════════════════════════════════════
+fetch('/classic-source', { cache: 'no-store' }).then(function(r) { return r.text(); }).then(function(html) {
+  var doc = new DOMParser().parseFromString(html, 'text/html');
+
+  // Remove the entire LEFT column (map + transcript)
+  var transcriptCol = doc.getElementById('col-transcript');
+  if (transcriptCol) transcriptCol.parentNode.removeChild(transcriptCol);
+
+  // Remove the resizer between map column and controls column
+  var resizer1 = doc.getElementById('resizer-1');
+  if (resizer1) resizer1.parentNode.removeChild(resizer1);
+
+  // Remove the entire RIGHT column (players + reference panels) — center is controls only
+  var playersCol = doc.getElementById('col-players');
+  if (playersCol) playersCol.parentNode.removeChild(playersCol);
+
+  // Remove the resizer between controls and players
+  var resizer2 = doc.getElementById('resizer-2');
+  if (resizer2) resizer2.parentNode.removeChild(resizer2);
+
+  // Remove map canvas explicitly even if it lives outside #col-transcript
+  var mapCanvas = doc.getElementById('map-canvas');
+  if (mapCanvas) mapCanvas.parentNode.removeChild(mapCanvas);
+
+  // Expand the controls column to full width
+  var controlsCol = doc.getElementById('col-controls');
+  if (controlsCol) {
+    controlsCol.style.cssText = 'flex: 1 1 100%; max-width: 100%; width: 100%; min-width: 100%;';
+  }
+
+  // Mark body so any conditional CSS or JS can detect this view
+  doc.body.classList.add('view-dm-center');
+  doc.body.dataset.dmView = 'center';
+
+  // Inject a script that runs early to set window.__DM_VIEW
+  var marker = doc.createElement('script');
+  marker.textContent = 'window.__DM_VIEW="center";';
+  doc.body.insertBefore(marker, doc.body.firstChild);
+
+  // Replace this document with the modified one. Scripts in the new HTML execute.
+  var serialized = '<!DOCTYPE html>' + doc.documentElement.outerHTML;
+  document.open();
+  document.write(serialized);
+  document.close();
+}).catch(function(err) {
+  document.getElementById('loading').innerHTML = '<div style="color:#a44;">Failed to load: ' + err.message + '</div>';
+});
+</script>
+</body>
+</html>

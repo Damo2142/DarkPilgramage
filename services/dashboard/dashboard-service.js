@@ -58,15 +58,23 @@ class DashboardService {
       res.sendFile(path.join(__dirname, 'public', 'table.html'));
     });
 
-    // /dm — three-display DM interface center (laptop)
-    this.app.get('/dm', (req, res) => {
+    // /classic-source — raw index.html for dm.html / dm-ref.html to fetch
+    this.app.get('/classic-source', (req, res) => {
+      res.set('Cache-Control', 'no-store');
       res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    });
+
+    // /dm — three-display DM interface center (laptop)
+    // Each route serves its OWN physical HTML file. Map element is removed
+    // from the DOM in dm.html and dm-ref.html — not just CSS-hidden.
+    this.app.get('/dm', (req, res) => {
+      res.sendFile(path.join(__dirname, 'public', 'dm.html'));
     });
     this.app.get('/dm/map', (req, res) => {
-      res.sendFile(path.join(__dirname, 'public', 'index.html'));
+      res.sendFile(path.join(__dirname, 'public', 'dm-map.html'));
     });
     this.app.get('/dm/ref', (req, res) => {
-      res.sendFile(path.join(__dirname, 'public', 'index.html'));
+      res.sendFile(path.join(__dirname, 'public', 'dm-ref.html'));
     });
     // /dm/brief — DM session reference page (built in S7)
     this.app.get('/dm/brief', (req, res) => {

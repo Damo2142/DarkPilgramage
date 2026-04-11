@@ -245,6 +245,68 @@
       cursor: pointer;
     }
 
+    /* REST panel — collapsed by default */
+    #rest-bar {
+      flex: 0 0 auto;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+    #rest-toggle {
+      width: 100%;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-family: 'Cinzel', serif;
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      padding: 8px;
+      cursor: pointer;
+    }
+    #rest-toggle:hover { color: var(--gold); }
+    #rest-area {
+      display: none;
+      padding: 12px 24px 16px;
+    }
+    #rest-area.open { display: block; }
+    .rest-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1.5fr;
+      gap: 16px;
+      align-items: start;
+    }
+    .rest-section { display: flex; flex-direction: column; gap: 4px; }
+    .rest-label {
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 4px;
+    }
+    .rest-section label {
+      font-size: 13px;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 0;
+    }
+    .rest-section label input { accent-color: var(--gold); }
+    .rest-section button {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'Cinzel', serif;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      padding: 10px 12px;
+      cursor: pointer;
+      border-radius: 4px;
+      margin-top: 2px;
+    }
+    .rest-section button:hover { background: var(--border); border-color: var(--gold); color: var(--gold); }
+
     /* ATMOSPHERE OVERRIDE — modal */
     #atmo-trigger {
       position: fixed;
@@ -351,6 +413,28 @@
     <div id="max-input-area">
       <input type="text" id="max-input" placeholder="Type a question for Max..." onkeydown="if(event.key==='Enter')sendMax()">
       <button id="max-send" onclick="sendMax()">SEND</button>
+    </div>
+  </div>
+
+  <div id="rest-bar">
+    <button id="rest-toggle" onclick="toggleRest()">▲ REST</button>
+    <div id="rest-area">
+      <div class="rest-row">
+        <div class="rest-section">
+          <div class="rest-label">Players</div>
+          <div id="rest-players"></div>
+        </div>
+        <div class="rest-section">
+          <div class="rest-label">Environment</div>
+          <label class="rest-env"><input type="radio" name="rest-env" value="safe" checked> Safe</label>
+          <label class="rest-env"><input type="radio" name="rest-env" value="tense"> Tense</label>
+        </div>
+        <div class="rest-section">
+          <div class="rest-label">Type</div>
+          <button id="rest-short" onclick="confirmRest('short')">Short Rest (1h)</button>
+          <button id="rest-long" onclick="confirmRest('long')">Long Rest (8h)</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -614,6 +698,48 @@ window.addEventListener('keydown', function(e) {
     toggleMaxInput();
   }
 });
+
+// ═══════════════════════════════════════════════════════════════
+// REST PANEL — Rule 5
+// ═══════════════════════════════════════════════════════════════
+function toggleRest() {
+  var area = $('rest-area');
+  area.classList.toggle('open');
+  if (area.classList.contains('open')) loadRestPlayers();
+}
+
+function loadRestPlayers() {
+  fetch('/api/state').then(function(r) { return r.json(); }).then(function(s) {
+    var players = (s && s.players) || {};
+    var html = '';
+    for (var pid in players) {
+      var p = players[pid];
+      if (!p || p.absent || p.notYetArrived) continue;
+      var name = (p.character && p.character.name) || pid;
+      html += '<label><input type="checkbox" class="rest-pid" value="' + esc(pid) + '" checked> ' + esc(name) + '</label>';
+    }
+    if (!html) html = '<div style="font-size:11px;color:var(--text-dimmer);font-style:italic;">No present players</div>';
+    $('rest-players').innerHTML = html;
+  }).catch(function() {});
+}
+
+function confirmRest(type) {
+  var pids = Array.from(document.querySelectorAll('.rest-pid:checked')).map(function(cb) { return cb.value; });
+  if (!pids.length) { alert('Select at least one player'); return; }
+  var tense = document.querySelector('input[name="rest-env"]:checked').value === 'tense';
+  var label = type === 'long' ? 'long rest (8h)' : 'short rest (1h)' + (tense ? ' [TENSE]' : '');
+  if (!confirm('Apply ' + label + ' to ' + pids.length + ' player(s)?')) return;
+  var url = type === 'long' ? '/api/stamina/party/long-rest' : '/api/stamina/party/short-rest';
+  var body = type === 'long' ? { playerIds: pids } : { playerIds: pids, tense: tense };
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    addWhisper({ tag: 'EVENT', text: (type === 'long' ? 'Long' : 'Short') + ' rest applied to ' + (d.count || pids.length) + ' player(s)' });
+    $('rest-area').classList.remove('open');
+  }).catch(function() {});
+}
 
 // ═══════════════════════════════════════════════════════════════
 // WEBSOCKET

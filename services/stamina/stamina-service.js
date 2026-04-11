@@ -70,7 +70,9 @@ class StaminaService {
     }, 2000);
   }
 
-  async stop() {}
+  async stop() {
+    if (this._trickleInterval) clearInterval(this._trickleInterval);
+  }
 
   getStatus() {
     const players = this.state.get('players') || {};
@@ -218,17 +220,46 @@ class StaminaService {
   }
 
   /**
-   * Short rest: CON mod × 5 per hour
+   * Short rest (Rule 3): 1 hour. Stamina to 100% in safe environments,
+   * 75% in tense environments. Hit dice available for wounds. Warlock
+   * recovers one slot.
    */
-  shortRest(playerId, hours = 1) {
+  shortRest(playerId, opts = {}) {
     const stam = this.state.get(`players.${playerId}.stamina`);
     if (!stam) return null;
-    const amount = Math.max(5, stam.conMod * 5) * hours;
-    return this.recover(playerId, amount, 'short_rest');
+    const tense = !!opts.tense;
+    const targetPct = tense ? 0.75 : 1.0;
+    const target = Math.floor(stam.max * targetPct);
+    if (stam.current < target) stam.current = target;
+    stam.state = this._calcState(stam.current, stam.max);
+    this.state.set(`players.${playerId}.stamina`, stam);
+    this.bus.dispatch('stamina:updated', {
+      playerId, current: stam.current, max: stam.max, state: stam.state, reason: 'short_rest'
+    });
+
+    // Warlock slot recovery — restore one spell slot if Warlock class
+    try {
+      const ch = this.state.get(`players.${playerId}.character`);
+      if (ch && ((ch.class || '').toLowerCase().includes('warlock'))) {
+        const slots = ch.spellSlots || {};
+        for (let lvl = 9; lvl >= 1; lvl--) {
+          const slot = slots[lvl] || slots['level' + lvl];
+          if (slot && slot.max && slot.current < slot.max) {
+            slot.current = Math.min(slot.max, (slot.current || 0) + 1);
+            this.state.set(`players.${playerId}.character.spellSlots`, slots);
+            this.bus.dispatch('spell-slots:updated', { playerId, level: lvl, recovered: 1 });
+            break;
+          }
+        }
+      }
+    } catch (e) {}
+
+    return stam;
   }
 
   /**
-   * Long rest: full recovery
+   * Long rest (Rule 4): 8 hours. Full stamina, all spell slots, wounds
+   * improve one step. Horror does NOT recover.
    */
   longRest(playerId) {
     const stam = this.state.get(`players.${playerId}.stamina`);
@@ -239,7 +270,125 @@ class StaminaService {
     this.bus.dispatch('stamina:updated', {
       playerId, current: stam.current, max: stam.max, state: stam.state, reason: 'long_rest'
     });
+
+    // Restore all spell slots
+    try {
+      const ch = this.state.get(`players.${playerId}.character`);
+      if (ch && ch.spellSlots) {
+        for (const lvl in ch.spellSlots) {
+          const slot = ch.spellSlots[lvl];
+          if (slot && slot.max) slot.current = slot.max;
+        }
+        this.state.set(`players.${playerId}.character.spellSlots`, ch.spellSlots);
+        this.bus.dispatch('spell-slots:updated', { playerId, allRestored: true });
+      }
+    } catch (e) {}
+
+    // Improve wounds one step
+    try {
+      const wounds = this.state.get(`players.${playerId}.wounds`);
+      if (wounds) {
+        const limbs = ['head', 'torso', 'leftArm', 'rightArm', 'leftLeg', 'rightLeg'];
+        let changed = false;
+        for (const limb of limbs) {
+          if ((wounds[limb] || 0) > 0) {
+            wounds[limb] = Math.max(0, wounds[limb] - 1);
+            changed = true;
+          }
+        }
+        if (changed) {
+          this.state.set(`players.${playerId}.wounds`, wounds);
+          this.bus.dispatch('wounds:updated', { playerId, wounds });
+        }
+      }
+    } catch (e) {}
+
+    // Horror is explicitly NOT recovered
+
     return stam;
+  }
+
+  /**
+   * Party rest helpers — used by /api/stamina/party/*-rest endpoints.
+   * Apply short or long rest to all listed players.
+   */
+  partyShortRest(playerIds, opts = {}) {
+    const results = [];
+    for (const pid of playerIds) {
+      const r = this.shortRest(pid, opts);
+      if (r) results.push({ playerId: pid, stamina: r });
+    }
+    const charNames = results.map(r => this.state.get(`players.${r.playerId}.character.name`) || r.playerId).join(', ');
+    const tense = !!opts.tense;
+    this.bus.dispatch('dm:whisper', {
+      text: `Short rest complete. ${charNames} at ${tense ? '75%' : 'full'} stamina.`,
+      priority: 2,
+      category: 'rest',
+      source: 'max'
+    });
+    this.bus.dispatch('stamina:rest_complete', { type: 'short', tense, players: results.map(r => r.playerId) });
+    return results;
+  }
+
+  partyLongRest(playerIds) {
+    const results = [];
+    for (const pid of playerIds) {
+      const r = this.longRest(pid);
+      if (r) results.push({ playerId: pid, stamina: r });
+    }
+    const charNames = results.map(r => this.state.get(`players.${r.playerId}.character.name`) || r.playerId).join(', ');
+    this.bus.dispatch('dm:whisper', {
+      text: `Long rest complete. ${charNames} fully recovered. Wounds improved. Horror unchanged.`,
+      priority: 2,
+      category: 'rest',
+      source: 'max'
+    });
+    this.bus.dispatch('stamina:rest_complete', { type: 'long', players: results.map(r => r.playerId) });
+    return results;
+  }
+
+  /**
+   * Idle trickle tick — Rule 2.
+   * 5% of max per 10 minutes (0.5%/minute) in safe environments,
+   * 3% per 10 minutes (0.3%/minute) in tense environments,
+   * 0% during active horror or combat or movement or tension event.
+   * Silent — no notification.
+   */
+  _idleTrickleTick() {
+    if (!this._tickleState) return;
+    if (this._tickleState.combatActive) return;
+    const now = Date.now();
+    if (this._tickleState.horrorSuppressUntil && now < this._tickleState.horrorSuppressUntil) return;
+    if (this._tickleState.tensionSuppressUntil && now < this._tickleState.tensionSuppressUntil) return;
+
+    // Detect tense environment from atmosphere profile
+    const atmo = this.state.get('atmosphere.currentProfile') || '';
+    const safeProfiles = ['tavern_warm', 'dawn', 'home_normal'];
+    const isTense = !safeProfiles.includes(atmo);
+    // Per-minute trickle rate
+    const tickRate = isTense ? 0.003 : 0.005;
+
+    const players = this.state.get('players') || {};
+    for (const pid in players) {
+      const p = players[pid];
+      if (!p || p.absent || p.notYetArrived) continue;
+      // Skip if recently moved (within 60s)
+      const lastMoved = this._tickleState['movedAt_' + pid];
+      if (lastMoved && (now - lastMoved) < 60000) continue;
+      const stam = this.state.get(`players.${pid}.stamina`);
+      if (!stam) continue;
+      if (stam.current >= stam.max) continue;
+      const restore = Math.max(1, Math.floor(stam.max * tickRate));
+      const newCurrent = Math.min(stam.max, stam.current + restore);
+      if (newCurrent !== stam.current) {
+        stam.current = newCurrent;
+        stam.state = this._calcState(stam.current, stam.max);
+        this.state.set(`players.${pid}.stamina`, stam);
+        this.bus.dispatch('stamina:updated', {
+          playerId: pid, current: stam.current, max: stam.max, state: stam.state, reason: 'trickle', silent: true
+        });
+      }
+    }
   }
 
   /**
@@ -388,11 +537,58 @@ class StaminaService {
     this.bus.subscribe('characters:ddb_synced', () => this._initAllPlayers(), 'stamina');
     this.bus.subscribe('characters:imported', () => this._initAllPlayers(), 'stamina');
 
-    // HP changes may indicate a new character or updated stats
+    // HP changes — Rule 1: every healing event restores equal stamina up to max
+    // Track previous HP per player to compute delta on each update
+    this._lastHp = this._lastHp || {};
     this.bus.subscribe('hp:update', (env) => {
       const playerId = env.data?.playerId;
-      if (playerId) this._initStamina(playerId);
+      if (!playerId) return;
+      this._initStamina(playerId);
+
+      const newCurrent = env.data?.current;
+      if (typeof newCurrent !== 'number') return;
+      const prev = this._lastHp[playerId];
+      this._lastHp[playerId] = newCurrent;
+      if (prev == null) return; // first observation, no delta
+
+      const delta = newCurrent - prev;
+      if (delta <= 0) return; // damage or no change — not a heal
+      // Heal event: restore equal stamina up to max
+      const stam = this.getStamina(playerId);
+      if (!stam) return;
+      const wasCritical = stam.current / stam.max < 0.25;
+      this.recover(playerId, delta, 'healing_dual');
+      if (wasCritical) {
+        const charName = this.state.get(`players.${playerId}.character.name`) || playerId;
+        this.bus.dispatch('dm:whisper', {
+          text: `${charName} needed that. Stamina restored.`,
+          priority: 2,
+          category: 'stamina',
+          source: 'max'
+        });
+      }
     }, 'stamina');
+
+    // Rule 2: Idle trickle — track combat/horror/movement state
+    this._tickleState = this._tickleState || { lastTick: Date.now() };
+    this.bus.subscribe('combat:started', () => { this._tickleState.combatActive = true; }, 'stamina');
+    this.bus.subscribe('combat:ended', () => { this._tickleState.combatActive = false; }, 'stamina');
+    // Movement / horror spike / tension event suppression
+    this.bus.subscribe('map:token_moved', (env) => {
+      if (env.data?.tokenId) this._tickleState['movedAt_' + env.data.tokenId] = Date.now();
+    }, 'stamina');
+    this.bus.subscribe('horror:updated', (env) => {
+      const d = env.data || {};
+      if (d.delta && Math.abs(d.delta) > 5) this._tickleState.horrorSuppressUntil = Date.now() + 60000;
+    }, 'stamina');
+    this.bus.subscribe('world:timed_event', () => {
+      // Tension event firing — pause trickle for 60s
+      this._tickleState.tensionSuppressUntil = Date.now() + 60000;
+    }, 'stamina');
+
+    // Tick every 60 seconds for the trickle
+    if (this._trickleInterval) clearInterval(this._trickleInterval);
+    this._trickleInterval = setInterval(() => this._idleTrickleTick(), 60000);
 
     // Combat turn end → drain stamina for the combatant who just acted
     this.bus.subscribe('combat:next_turn', (env) => {
@@ -488,6 +684,32 @@ class StaminaService {
       res.status(400).json({ error: 'delta, action, or targetState required' });
     });
 
+    // Party-wide rest endpoints — MUST be registered before /:playerId routes
+    // so Express doesn't match "party" as a playerId.
+    app.post('/api/stamina/party/short-rest', (req, res) => {
+      const { playerIds, tense } = req.body || {};
+      const ids = (playerIds && playerIds.length)
+        ? playerIds.map(id => this._resolvePlayerId(id))
+        : Object.keys(this.state.get('players') || {}).filter(pid => {
+            const p = this.state.get(`players.${pid}`);
+            return p && !p.absent && !p.notYetArrived;
+          });
+      const results = this.partyShortRest(ids, { tense: !!tense });
+      res.json({ ok: true, count: results.length, results });
+    });
+
+    app.post('/api/stamina/party/long-rest', (req, res) => {
+      const { playerIds } = req.body || {};
+      const ids = (playerIds && playerIds.length)
+        ? playerIds.map(id => this._resolvePlayerId(id))
+        : Object.keys(this.state.get('players') || {}).filter(pid => {
+            const p = this.state.get(`players.${pid}`);
+            return p && !p.absent && !p.notYetArrived;
+          });
+      const results = this.partyLongRest(ids);
+      res.json({ ok: true, count: results.length, results });
+    });
+
     app.post('/api/stamina/:playerId/catch-breath', (req, res) => {
       const id = this._resolvePlayerId(req.params.playerId);
       const result = this.catchBreath(id);
@@ -496,8 +718,8 @@ class StaminaService {
 
     app.post('/api/stamina/:playerId/short-rest', (req, res) => {
       const id = this._resolvePlayerId(req.params.playerId);
-      const hours = req.body.hours || 1;
-      const result = this.shortRest(id, hours);
+      const tense = !!req.body?.tense;
+      const result = this.shortRest(id, { tense });
       res.json({ ok: !!result, stamina: result });
     });
 

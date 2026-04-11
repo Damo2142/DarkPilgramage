@@ -233,3 +233,48 @@ Why: ai-engine already manages Gemini client; centralizing here avoids duplicati
 Decision: If MAX_VOICE_ID env var is empty, fall back immediately to Echo TTS without attempting ElevenLabs. Prevents 3+ second delays from failed API calls.
 Why: Latency budget is 3 seconds; failed ElevenLabs request can exceed that alone.
 
+## Complete Language System (8 parts) — 2026-04-11
+
+| Part | Status | Commit |
+|------|--------|--------|
+| P1. Master language registry (17 languages) | PASS | f35c7e4 |
+| P2. NPC language assignments (Session 0 NPCs) | PASS | 4964a09 |
+| P3. Character language overrides (Zarina/Barry/Spurt) | PASS | 8df4d32 |
+| P4. Player Chromebook LANGUAGES section | PASS | 080360b |
+| P5. Language barrier resolver + Vladislav recognition | PASS | e0e5abb |
+| P6+P7. Scripted speech routing + 19:00 Slovak scene | PASS | 363abec |
+| P8. /dm/ref Tools tab Languages section | PASS | d788d04 |
+| Override pipeline fix | PASS | 336b045 |
+
+### Live test results
+
+```
+POST /api/languages/preview {"npcId":"vladislav","playerId":"kim","languageId":"elvish_americas"}
+→ {"result":"FULL","sharedLang":"elvish_americas","fluency":"fluent"}
+
+POST /api/languages/preview {"npcId":"marta","playerId":"kim","languageId":"slovak"}
+→ {"result":"PARTIAL","sharedLang":"common","via":"fallback_common","fluency":"conversational"}
+
+POST /api/languages/preview {"npcId":"patron-farmer","playerId":"jerome","languageId":"slovak"}
+→ {"result":"BARRIER","spoken":"slovak","knownByPlayer":["common"]}
+
+POST /api/languages/preview {"npcId":"vladislav","playerId":"ed","languageId":"draconic"}
+→ {"result":"FULL","sharedLang":"draconic","fluency":"fluent — native"}
+```
+
+All resolutions correct. Vladislav speaks every European language so falls back to Common with everyone; Spurt's Draconic is matched directly via override-file fallback (no character assignment in state); Old Gregor (commonFluency: none) hits hard BARRIER for non-Slavic players.
+
+### Decisions
+
+**P3-fix.** `getCharacter()` was bypassing language overrides because it directly read the JSON file via `_readCharacterFiles()`. Fixed by applying the override inside `getCharacter()` itself — any caller (player-bridge `_lookupCharacter`, REST endpoints, future services) gets the corrected version automatically. Without this, kim's state was overwritten with raw DDB language data on every player reconnect.
+
+**P5-fluency.** When the player's listed fluency is "conversational" or "basic", the resolver downgrades from FULL to PARTIAL. This applies to both direct matches and `commonFluency` fallback, so Marta speaking Common to Kim returns PARTIAL ("Marta's Common breaks down under stress" → conversational fluency) — exactly the dramatic effect intended.
+
+**P5-katya.** Katya bridge requires both NPC and player tokens within ~30 ft of Katya's token. If no map context (tokens missing), assume Katya can hear from anywhere — better to over-translate than to miss a moment.
+
+**P6-narration.** DM-narrated NPC dialogue with a language tag ("Marta says in Slovak: ...") is parsed at the comm router and dispatched as `npc:scripted_speech`. Three patterns supported: `Name in Lang:`, `Name (Lang):`, `[Lang] Name:`. This means the DM can use natural narration and the system automatically applies language barriers to every listener.
+
+**P7-followUp.** Two-NPC scripted exchanges (Gregor-then-Marta) use a single timed event with a `followUp { delaySeconds, npcId, text, languageId }` field. The router schedules the second line via `setTimeout`. Cleaner than two separate timed events.
+
+**P8-comm-router-access.** Comm router is owned by ai-engine, not the orchestrator service registry. Dashboard endpoints reach it via `orchestrator.getService('ai-engine').commRouter`. Documented so future services know where to look.
+

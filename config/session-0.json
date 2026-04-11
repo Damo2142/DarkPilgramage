@@ -980,6 +980,14 @@
       "status": "alive",
       "disposition": "nervous",
       "location": "behind the bar",
+      "roomPosition": "bar — Echo nearest kitchen or bar position",
+      "voiceProfileDetails": {
+        "character": "warm, slightly breathless, sentences that start strong and get quieter as she pulls back from what she almost says",
+        "rate": "slightly faster than normal — keeping busy to stay calm",
+        "pitch": "normal to slightly higher when frightened",
+        "elevenLabsVoiceId": "",
+        "fallbackEchoVoice": "Joanna"
+      },
       "voiceProfile": "innkeeper_marta",
       "knowledge": [
         "Her husband Piotr disappeared three weeks ago",
@@ -1024,6 +1032,14 @@
       "status": "alive",
       "disposition": "agitated",
       "location": "near the entry door",
+      "roomPosition": "near door — Echo nearest entrance",
+      "voiceProfileDetails": {
+        "character": "rough, clipped, words that cost him something, voice that strains at the edges",
+        "rate": "fast when nervous which is most of the time, slower when trying to hold himself still",
+        "pitch": "normal to strained",
+        "elevenLabsVoiceId": "",
+        "fallbackEchoVoice": "Brian"
+      },
       "voiceProfile": "trapper_tomas",
       "knowledge": [
         "He is a werewolf, cursed two years ago",
@@ -1079,6 +1095,14 @@
       "status": "alive",
       "disposition": "watchful",
       "location": "corner table, deep shadows",
+      "roomPosition": "far corner — Echo in far corner of dining room",
+      "voiceProfileDetails": {
+        "character": "measured, unhurried, long pauses before significant words, never loud, the voice of something that has all the time in the world",
+        "rate": "slower than comfortable",
+        "pitch": "slightly lower than expected",
+        "elevenLabsVoiceId": "",
+        "fallbackEchoVoice": "Matthew"
+      },
       "voiceProfile": "stranger_hooded",
       "knowledge": [
         "He is the vampire responsible for the disappearances",
@@ -1164,6 +1188,14 @@
       "status": "alive",
       "disposition": "distracted",
       "location": "corner table near door",
+      "roomPosition": "corner near door opposite Vladislav — appropriate Echo",
+      "voiceProfileDetails": {
+        "character": "soft, slightly confused, sentences that trail off, a man who keeps losing his place",
+        "rate": "starts normal then slows when he loses the thread",
+        "pitch": "normal, unremarkable, the voice of someone you would not remember if you had not noticed the other things",
+        "elevenLabsVoiceId": "",
+        "fallbackEchoVoice": "Kevin"
+      },
       "voiceProfile": "pilgrim_aldous",
       "description": "A thin man in a pilgrim's coat, mid-forties, travelling alone. He has the look of someone who has been walking for a long time. He sits with his hands around a cup he has not drunk from.",
       "personality": "Distracted, gentle, loses his train of thought mid-sentence. He is not unwell exactly. Something is already wrong with him that he cannot name.",
@@ -1207,6 +1239,24 @@
         "location": "corner-table-door",
         "moveable": false
       },
+      "dialogueHistory": []
+    },
+    "piotr": {
+      "name": "Piotr Kowalski",
+      "trueIdentity": "Vampire spawn — Marta's husband",
+      "role": "Vampire spawn chained in the cellar",
+      "status": "undead",
+      "disposition": "wrong",
+      "location": "cellar",
+      "roomPosition": "cellar — Echo nearest cellar (or down-direction routing if available)",
+      "voiceProfileDetails": {
+        "character": "wrong. The warmth is gone. The cadence is slightly off. Accurate but missing something. It sounds like Piotr the way a recording of Piotr sounds like Piotr.",
+        "rate": "too even, slightly too measured for a man in his situation",
+        "pitch": "slightly lower than it should be",
+        "elevenLabsVoiceId": "",
+        "fallbackEchoVoice": "Brian"
+      },
+      "voiceProfile": "spawn_piotr",
       "dialogueHistory": []
     },
     "gas-spore": {
@@ -1278,6 +1328,14 @@
     "status": "alive",
     "disposition": "grim",
     "location": "table near the hearth",
+    "roomPosition": "hearth — Echo nearest fireplace position",
+    "voiceProfileDetails": {
+      "character": "slow, certain, the voice of someone who has said true things for a long time and stopped worrying about whether people listened",
+      "rate": "very slow, unhurried because he is old not because he is patient",
+      "pitch": "lower, roughened by age",
+      "elevenLabsVoiceId": "",
+      "fallbackEchoVoice": "Russell"
+    },
     "knowledge": [
       "Has lived in these mountains his whole life",
       "Knows the old legends — vampires, werewolves, the white stag",
@@ -1299,6 +1357,14 @@
     "status": "alive",
     "disposition": "anxious",
     "location": "table with his goods",
+    "roomPosition": "middle of room — main room speaker",
+    "voiceProfileDetails": {
+      "character": "slightly too eager, merchant's voice, talks to fill silence",
+      "rate": "faster than needed",
+      "pitch": "normal to slightly higher when anxious",
+      "elevenLabsVoiceId": "",
+      "fallbackEchoVoice": "Justin"
+    },
     "knowledge": [
       "Travels this road regularly — knows it's dangerous",
       "Has heard rumors of disappearances but dismissed them",
@@ -1327,6 +1393,14 @@
     "status": "alive",
     "disposition": "prayerful",
     "location": "corner table with candle",
+    "roomPosition": "wherever he is sitting — use nearest Echo to his current token position on map",
+    "voiceProfileDetails": {
+      "character": "steady, warm, slightly formal, genuine faith not performance",
+      "rate": "measured and deliberate",
+      "pitch": "normal, middle register",
+      "elevenLabsVoiceId": "",
+      "fallbackEchoVoice": "Joey"
+    },
     "knowledge": [
       "Traveling to a monastery in the south",
       "His faith is genuine — he can sense evil nearby",
@@ -1348,6 +1422,14 @@
     "status": "alive",
     "disposition": "watchful",
     "location": "by the hearth with lute",
+    "roomPosition": "center room — main room speaker",
+    "voiceProfileDetails": {
+      "character": "a performer's voice, changes register more than the others, different when singing versus speaking",
+      "rate": "conversational, shifts naturally",
+      "pitch": "flexible, the most range of any NPC",
+      "elevenLabsVoiceId": "",
+      "fallbackEchoVoice": "Ivy"
+    },
     "knowledge": [
       "Travels widely and collects stories",
       "Has sharp eyes — notices details others miss",

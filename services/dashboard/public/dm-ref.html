@@ -5,77 +5,759 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DM — Reference</title>
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      background: #141210;
-      color: #c8b89a;
-      font-family: sans-serif;
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Source+Sans+3:wght@300;400;500;600&display=swap');
+
+    :root {
+      --bg: #161412;
+      --surface: #242018;
+      --surface2: #2e2820;
+      --text: #f0e0c0;
+      --text-dim: #b09070;
+      --text-dimmer: #706050;
+      --gold: #f0c840;
+      --green: #6aaa6a;
+      --amber: #e09030;
+      --red: #cc3020;
+      --purple: #8a7aaa;
+      --blue: #4a8aaa;
+      --border: #3a3028;
     }
-    #loading {
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      width: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 15px;
+      overflow: hidden;
+    }
+
+    #screen {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      height: 100vh;
+      width: 100vw;
+      background: var(--border);
+    }
+
+    .col {
+      background: var(--bg);
+      overflow-y: auto;
+      padding: 16px;
+    }
+    .col::-webkit-scrollbar { width: 8px; }
+    .col::-webkit-scrollbar-track { background: var(--bg); }
+    .col::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    h2 {
+      font-family: 'Cinzel', serif;
+      font-size: 13px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gold);
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    h2 .h2-meta { font-size: 11px; color: var(--text-dimmer); letter-spacing: 0; font-family: monospace; font-weight: normal; text-transform: none; }
+    h2:not(:first-child) { margin-top: 24px; }
+
+    /* ─── PLAYER CARDS ─── */
+    .player-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      position: relative;
+    }
+    .player-card.absent { opacity: 0.4; }
+    .player-card .name-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 10px;
+    }
+    .player-card .pname {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: 0.02em;
+    }
+    .player-card .pclass {
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+    .player-card .seat {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-dimmer);
+      font-size: 12px;
+      padding: 1px 6px;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    .player-card .seat:hover { color: var(--gold); border-color: var(--gold); }
+    .player-card .row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+    .player-card .row .label {
+      width: 70px;
+      flex-shrink: 0;
+      color: var(--text-dimmer);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .player-card .row .value { color: var(--text); }
+    .player-card .row .value.right { margin-left: auto; }
+    .bar {
+      flex: 1;
+      height: 10px;
+      background: var(--bg);
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+    .stamina .bar-fill { background: var(--green); }
+    .stamina.warn .bar-fill { background: var(--amber); }
+    .stamina.crit .bar-fill { background: var(--red); }
+    .horror .bar-fill { background: var(--text-dimmer); }
+    .horror.warn .bar-fill { background: var(--amber); }
+    .horror.crit .bar-fill { background: var(--red); }
+    .wound-dots { display: flex; gap: 6px; }
+    .wound-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 1px solid var(--text-dimmer);
+      background: transparent;
+    }
+    .wound-dot.w1 { background: #d4a017; border-color: #d4a017; }
+    .wound-dot.w2 { background: #d47017; border-color: #d47017; }
+    .wound-dot.w3 { background: var(--red); border-color: var(--red); }
+    .wound-dot.w4 { background: #800000; border-color: #800000; }
+    .arc-line {
+      font-size: 12px;
+      color: var(--text-dim);
+      font-style: italic;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+    .conditions-line {
+      font-size: 12px;
+      color: var(--amber);
+      margin-top: 4px;
+    }
+    .absent-overlay {
+      position: absolute;
+      inset: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 100vh;
-      color: #e8c060;
-      font-family: serif;
+      font-family: 'Cinzel', serif;
+      font-size: 14px;
+      letter-spacing: 0.15em;
+      color: var(--text-dim);
+      pointer-events: none;
+    }
+
+    /* ─── COMBAT TRACKER ─── */
+    #combat-tracker { margin-top: 16px; }
+    #combat-empty {
+      padding: 24px;
+      text-align: center;
+      color: var(--text-dimmer);
+      font-style: italic;
+      font-size: 13px;
+    }
+    #round-display {
+      font-family: 'Cinzel', serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--gold);
+      letter-spacing: 0.1em;
+      text-align: center;
+      padding: 12px;
+      background: var(--surface);
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+    .init-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: var(--surface);
+      border-left: 3px solid transparent;
+      margin-bottom: 4px;
+      font-size: 15px;
+      border-radius: 0 3px 3px 0;
+    }
+    .init-row.current {
+      background: #3a2010;
+      border-left-color: var(--gold);
+    }
+    .init-row .turn-arrow {
+      width: 14px;
+      color: var(--gold);
+      font-size: 14px;
+    }
+    .init-row .iname { flex: 1; color: var(--text); font-weight: 500; }
+    .init-row .iconds { font-size: 11px; color: var(--amber); }
+    .init-row .iinit {
+      font-family: monospace;
+      font-size: 14px;
+      color: var(--text-dim);
+      width: 32px;
+      text-align: right;
+    }
+    #next-turn-btn {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      font-family: 'Cinzel', serif;
+      font-size: 13px;
+      letter-spacing: 0.1em;
+      padding: 12px;
+      cursor: pointer;
+      margin-top: 8px;
+      border-radius: 4px;
+    }
+    #next-turn-btn:hover { background: #3a2010; }
+
+    /* ─── NPC POSITIONS ─── */
+    #npc-positions {
+      font-family: monospace;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+    .npc-row {
+      display: flex;
+      gap: 12px;
+      padding: 4px 0;
+    }
+    .npc-row .npc-name {
+      width: 200px;
+      flex-shrink: 0;
+      color: var(--text);
+    }
+    .npc-row .npc-loc {
+      flex: 1;
+      color: var(--text-dim);
+    }
+    .npc-row.hidden .npc-name { color: var(--text-dimmer); }
+    .npc-row.hidden .npc-loc { color: var(--text-dimmer); }
+    .npc-row .hidden-tag {
+      color: var(--red);
+      font-size: 11px;
+      letter-spacing: 0.05em;
+    }
+
+    /* ─── DISCOVERED ─── */
+    #clues-list {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .clue-row {
+      display: flex;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .clue-row:last-child { border: none; }
+    .clue-row .clue-time {
+      font-family: monospace;
+      color: var(--text-dimmer);
+      flex-shrink: 0;
+      width: 50px;
+    }
+    .clue-row .clue-text { color: var(--text); flex: 1; }
+
+    /* ─── PLAYER CHAT ─── */
+    #chat-list { max-height: 200px; overflow-y: auto; }
+    .chat-row {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      transition: background 1s ease;
+    }
+    .chat-row:last-child { border: none; }
+    .chat-row.new { background: rgba(240, 200, 64, 0.1); }
+    .chat-row .chat-from {
+      color: var(--gold);
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: 0.05em;
+    }
+    .chat-row .chat-time {
+      color: var(--text-dimmer);
+      font-family: monospace;
+      font-size: 10px;
+      margin-left: 8px;
+    }
+    .chat-row .chat-text {
+      color: var(--text);
+      margin-top: 2px;
+      line-height: 1.4;
     }
   </style>
 </head>
 <body>
-<div id="loading">Loading DM Reference…</div>
+
+<div id="screen">
+
+  <!-- LEFT COLUMN — Player & Combat -->
+  <div class="col">
+    <h2>Players</h2>
+    <div id="player-cards"></div>
+
+    <h2>Combat <span class="h2-meta" id="combat-meta"></span></h2>
+    <div id="combat-tracker">
+      <div id="combat-empty">No active combat</div>
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN — World & NPCs -->
+  <div class="col">
+    <h2>NPC Positions <span class="h2-meta" id="game-time-display">17:30</span></h2>
+    <div id="npc-positions"></div>
+
+    <h2>Discovered This Session <span class="h2-meta" id="clues-meta"></span></h2>
+    <div id="clues-list"></div>
+
+    <h2>Player Chat</h2>
+    <div id="chat-list"></div>
+  </div>
+
+</div>
+
 <script>
 // ═══════════════════════════════════════════════════════════════
-// /dm/ref — DM Reference Display
-// Loads index.html, removes the map column (#col-transcript) and
-// the controls column (#col-controls), expands the players column
-// to full width. The players column already contains the reference
-// panels (DDB sync, players, NPC dialogue, NPC actions, NPC manual,
-// secrets, pacing, horror, beats, campaign, etc.)
-// Map canvas element is REMOVED from DOM.
+// /dm/ref — Status board
+// Read-only. Player cards, combat tracker, NPC positions, clues, chat.
 // ═══════════════════════════════════════════════════════════════
-fetch('/classic-source', { cache: 'no-store' }).then(function(r) { return r.text(); }).then(function(html) {
-  var doc = new DOMParser().parseFromString(html, 'text/html');
+var ws = null;
+var stateData = { players: {}, npcs: {}, combat: null, world: {}, story: {} };
+var configData = {};
+var clues = [];
+var chatMessages = [];
+var sessionConfig = null;
 
-  // Remove the entire LEFT column (map + transcript)
-  var transcriptCol = doc.getElementById('col-transcript');
-  if (transcriptCol) transcriptCol.parentNode.removeChild(transcriptCol);
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function pad(n) { return String(n).padStart(2, '0'); }
 
-  var resizer1 = doc.getElementById('resizer-1');
-  if (resizer1) resizer1.parentNode.removeChild(resizer1);
+function fmtTime(d) {
+  var date = (d instanceof Date) ? d : new Date(d);
+  return pad(date.getHours()) + ':' + pad(date.getMinutes());
+}
+function fmtGameTime(iso) {
+  if (!iso) return '17:30';
+  var d = new Date(iso);
+  return pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes());
+}
 
-  // Remove the MIDDLE column (controls — Max input, atmosphere, session etc.)
-  var controlsCol = doc.getElementById('col-controls');
-  if (controlsCol) controlsCol.parentNode.removeChild(controlsCol);
+// ═══════════════════════════════════════════════════════════════
+// PLAYER CARDS
+// ═══════════════════════════════════════════════════════════════
+function renderPlayers() {
+  var el = $('player-cards');
+  var players = stateData.players || {};
+  var pids = Object.keys(players).filter(function(pid) { return players[pid] && (players[pid].character || players[pid].notYetArrived || players[pid].absent); });
+  if (!pids.length) {
+    el.innerHTML = '<div style="color:var(--text-dimmer);text-align:center;padding:20px;font-style:italic;">No players loaded</div>';
+    return;
+  }
+  el.innerHTML = pids.map(function(pid) {
+    return renderPlayerCard(pid, players[pid]);
+  }).join('');
+}
 
-  var resizer2 = doc.getElementById('resizer-2');
-  if (resizer2) resizer2.parentNode.removeChild(resizer2);
+function renderPlayerCard(pid, p) {
+  var ch = p.character || {};
+  var name = ch.name || pid;
+  var className = ch.class || '';
+  var level = ch.level || '';
+  var pp = ch.passivePerception || ch.passive_perception || 10;
+  var isAbsent = !!p.absent;
+  var notYetArrived = !!p.notYetArrived;
 
-  // Remove map canvas explicitly
-  var mapCanvas = doc.getElementById('map-canvas');
-  if (mapCanvas) mapCanvas.parentNode.removeChild(mapCanvas);
+  // Stamina
+  var stamina = p.stamina || {};
+  var staminaCur = stamina.current || 0;
+  var staminaMax = stamina.max || 1;
+  var staminaPct = Math.max(0, Math.min(100, (staminaCur / staminaMax) * 100));
+  var staminaCls = staminaPct > 50 ? '' : staminaPct > 25 ? 'warn' : 'crit';
 
-  // Expand players column to full width and use two-column flex inside
-  var playersCol = doc.getElementById('col-players');
-  if (playersCol) {
-    playersCol.style.cssText = 'flex: 1 1 100%; max-width: 100%; width: 100%; min-width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px; align-items: start;';
+  // Wounds — display as 6 dots
+  var wounds = p.wounds || {};
+  var limbOrder = ['head', 'torso', 'leftArm', 'rightArm', 'leftLeg', 'rightLeg'];
+  var woundDots = limbOrder.map(function(limb) {
+    var s = wounds[limb] || 0;
+    return '<span class="wound-dot' + (s > 0 ? ' w' + s : '') + '" title="' + limb + ': ' + s + '"></span>';
+  }).join('');
+
+  // Horror
+  var horror = (p.horror && (p.horror.score || p.horror.value)) || 0;
+  var horrorPct = Math.max(0, Math.min(100, horror));
+  var horrorCls = horror > 75 ? 'crit' : horror > 50 ? 'warn' : '';
+
+  // Conditions
+  var conds = (p.conditions || []).filter(Boolean);
+  var dread = (p.dread && p.dread.score) || 0;
+
+  // Arc beat
+  var arcBeat = (p.arcBeat || (p.arcProfile && p.arcProfile.currentBeat) || ch.background || '');
+
+  if (notYetArrived) {
+    return '<div class="player-card absent" style="position:relative;">' +
+      '<div class="name-row"><div class="pname">' + esc(name) + '</div></div>' +
+      '<div class="absent-overlay">NOT YET ARRIVED</div>' +
+      '<div style="height:80px;"></div>' +
+      '</div>';
+  }
+  if (isAbsent) {
+    return '<div class="player-card absent" style="position:relative;">' +
+      '<button class="seat" onclick="toggleAbsent(\'' + pid + '\')">⌧</button>' +
+      '<div class="name-row"><div class="pname">' + esc(name) + '</div></div>' +
+      '<div class="absent-overlay">ABSENT — OFF SCREEN</div>' +
+      '<div style="height:80px;"></div>' +
+      '</div>';
   }
 
-  doc.body.classList.add('view-dm-ref');
-  doc.body.dataset.dmView = 'ref';
+  return '<div class="player-card">' +
+    '<button class="seat" onclick="toggleAbsent(\'' + pid + '\')">◇</button>' +
+    '<div class="name-row">' +
+      '<div class="pname">' + esc(name) + '</div>' +
+      '<div class="pclass">' + esc(className) + ' ' + esc(level) + '</div>' +
+    '</div>' +
+    '<div class="row stamina ' + staminaCls + '">' +
+      '<span class="label">Stamina</span>' +
+      '<div class="bar"><div class="bar-fill" style="width:' + staminaPct + '%"></div></div>' +
+      '<span class="value right">PP ' + pp + '</span>' +
+    '</div>' +
+    '<div class="row">' +
+      '<span class="label">Wounds</span>' +
+      '<div class="wound-dots">' + woundDots + '</div>' +
+    '</div>' +
+    '<div class="row horror ' + horrorCls + '">' +
+      '<span class="label">Horror</span>' +
+      '<div class="bar"><div class="bar-fill" style="width:' + horrorPct + '%"></div></div>' +
+    '</div>' +
+    (conds.length ? '<div class="conditions-line">Conditions: ' + esc(conds.join(', ')) + '</div>' : '') +
+    (arcBeat ? '<div class="arc-line">' + esc(String(arcBeat).slice(0, 100)) + '</div>' : '') +
+    '</div>';
+}
 
-  var marker = doc.createElement('script');
-  marker.textContent = 'window.__DM_VIEW="ref";';
-  doc.body.insertBefore(marker, doc.body.firstChild);
+function toggleAbsent(pid) {
+  var p = stateData.players[pid] || {};
+  var isAbsent = !!p.absent;
+  if (!confirm('Mark ' + (p.character?.name || pid) + (isAbsent ? ' as PRESENT?' : ' as absent for this session?'))) return;
+  fetch('/api/absent/' + pid, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ absent: !isAbsent })
+  }).then(function(r) { return r.json(); }).then(function() {
+    if (!stateData.players[pid]) stateData.players[pid] = {};
+    stateData.players[pid].absent = !isAbsent;
+    renderPlayers();
+  });
+}
 
-  var serialized = '<!DOCTYPE html>' + doc.documentElement.outerHTML;
-  document.open();
-  document.write(serialized);
-  document.close();
-}).catch(function(err) {
-  document.getElementById('loading').innerHTML = '<div style="color:#a44;">Failed to load: ' + err.message + '</div>';
-});
+// ═══════════════════════════════════════════════════════════════
+// COMBAT TRACKER
+// ═══════════════════════════════════════════════════════════════
+function renderCombat() {
+  var el = $('combat-tracker');
+  var meta = $('combat-meta');
+  var combat = stateData.combat;
+  if (!combat || !combat.active || !combat.turnOrder || !combat.turnOrder.length) {
+    el.innerHTML = '<div id="combat-empty">No active combat</div>';
+    meta.textContent = '';
+    return;
+  }
+  meta.textContent = combat.turnOrder.length + ' combatants';
+  var html = '<div id="round-display">ROUND ' + (combat.round || 1) + '</div>';
+  html += combat.turnOrder.map(function(c, i) {
+    var isCurrent = i === combat.currentTurn;
+    var conds = (c.conditions || []).join(', ');
+    var hp = c.hp || {};
+    var hpPct = hp.max ? Math.round((hp.current / hp.max) * 100) : 0;
+    var woundLabel = hpPct === 0 ? 'unconscious' : hpPct < 25 ? 'bloodied' : hpPct < 50 ? 'wounded' : '';
+    var tags = [];
+    if (woundLabel) tags.push(woundLabel);
+    if (conds) tags.push(conds);
+    return '<div class="init-row' + (isCurrent ? ' current' : '') + '">' +
+      '<div class="turn-arrow">' + (isCurrent ? '▶' : '') + '</div>' +
+      '<div class="iname">' + esc(c.name || c.id) + '</div>' +
+      (tags.length ? '<div class="iconds">[' + esc(tags.join(', ')) + ']</div>' : '') +
+      '<div class="iinit">' + (c.initiative != null ? c.initiative : '?') + '</div>' +
+      '</div>';
+  }).join('');
+  html += '<button id="next-turn-btn" onclick="nextTurn()">▶ NEXT TURN</button>';
+  el.innerHTML = html;
+}
+
+function nextTurn() {
+  fetch('/api/combat/next', { method: 'POST' }).catch(function() {});
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NPC POSITIONS
+// ═══════════════════════════════════════════════════════════════
+function renderNpcPositions() {
+  var el = $('npc-positions');
+  var npcs = collectAllNpcs();
+  if (!npcs.length) {
+    el.innerHTML = '<div style="color:var(--text-dimmer);font-style:italic;">No NPCs in scene</div>';
+    return;
+  }
+  el.innerHTML = npcs.map(function(n) {
+    var hidden = n.hidden;
+    return '<div class="npc-row' + (hidden ? ' hidden' : '') + '">' +
+      '<span class="npc-name">' + esc(n.name) + '</span>' +
+      '<span class="npc-loc">' + esc(n.location || '—') + (hidden ? '  <span class="hidden-tag">[HIDDEN]</span>' : '') + '</span>' +
+      '</div>';
+  }).join('');
+}
+
+function collectAllNpcs() {
+  var result = [];
+  var npcs = stateData.npcs || {};
+  for (var id in npcs) {
+    var n = npcs[id];
+    if (!n || !n.name) continue;
+    var token = stateData.map && stateData.map.tokens && stateData.map.tokens[id];
+    result.push({
+      id: id,
+      name: n.name,
+      location: n.location || (token && token.location) || '—',
+      hidden: (token && token.hidden) || (n.location && /cellar/i.test(n.location) && id === 'piotr')
+    });
+  }
+  // Add patron NPCs from config root
+  ['patron-farmer', 'patron-merchant', 'patron-pilgrim', 'patron-minstrel'].forEach(function(k) {
+    var p = configData[k];
+    if (p && p.name) {
+      result.push({ id: k, name: p.name, location: p.location || '—', hidden: false });
+    }
+  });
+  return result;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CLUES
+// ═══════════════════════════════════════════════════════════════
+function addClue(text, time) {
+  var t = time || fmtGameTime(stateData.world && stateData.world.gameTime);
+  clues.unshift({ time: t, text: text });
+  if (clues.length > 30) clues.pop();
+  renderClues();
+}
+
+function renderClues() {
+  var el = $('clues-list');
+  $('clues-meta').textContent = clues.length + ' total';
+  if (!clues.length) {
+    el.innerHTML = '<div style="color:var(--text-dimmer);font-style:italic;font-size:12px;padding:8px 0;">Nothing yet</div>';
+    return;
+  }
+  var visible = clues.slice(0, 8);
+  el.innerHTML = visible.map(function(c) {
+    return '<div class="clue-row">' +
+      '<div class="clue-time">' + esc(c.time) + '</div>' +
+      '<div class="clue-text">' + esc(c.text) + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHAT
+// ═══════════════════════════════════════════════════════════════
+function addChat(from, text) {
+  chatMessages.unshift({ from: from, text: text, time: fmtTime(new Date()), id: 'c-' + Date.now() });
+  if (chatMessages.length > 20) chatMessages.pop();
+  renderChat();
+  // Pulse latest
+  setTimeout(function() {
+    var first = document.querySelector('.chat-row');
+    if (first) first.classList.remove('new');
+  }, 1000);
+}
+
+function renderChat() {
+  var el = $('chat-list');
+  if (!chatMessages.length) {
+    el.innerHTML = '<div style="color:var(--text-dimmer);font-style:italic;font-size:12px;padding:8px 0;">No messages</div>';
+    return;
+  }
+  var visible = chatMessages.slice(0, 5);
+  el.innerHTML = visible.map(function(m, i) {
+    return '<div class="chat-row' + (i === 0 ? ' new' : '') + '">' +
+      '<span class="chat-from">' + esc(m.from) + '</span>' +
+      '<span class="chat-time">' + esc(m.time) + '</span>' +
+      '<div class="chat-text">' + esc(m.text) + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WEBSOCKET
+// ═══════════════════════════════════════════════════════════════
+function connect() {
+  var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(proto + '//' + location.host);
+  ws.onopen = function() { loadConfig(); };
+  ws.onmessage = function(ev) {
+    try { handleMsg(JSON.parse(ev.data)); } catch (err) { console.error(err); }
+  };
+  ws.onclose = function() { setTimeout(connect, 3000); };
+}
+
+function loadConfig() {
+  fetch('/api/state').then(function(r) { return r.json(); }).then(function(data) {
+    if (data) Object.assign(stateData, data);
+    renderAll();
+  }).catch(function() {});
+  fetch('/api/session-config').then(function(r) { return r.json(); }).then(function(cfg) {
+    configData = cfg || {};
+    renderNpcPositions();
+  }).catch(function() {});
+}
+
+function handleMsg(msg) {
+  var t = msg.type || msg.event;
+  if (!t) return;
+
+  if (t === 'init') {
+    var s = msg.state || {};
+    Object.assign(stateData, s);
+    renderAll();
+    return;
+  }
+
+  if (t === 'state:change') {
+    var p = msg.data && msg.data.path;
+    var v = msg.data && msg.data.value;
+    if (!p) return;
+    // Set nested path
+    var parts = p.split('.');
+    var obj = stateData;
+    for (var i = 0; i < parts.length - 1; i++) {
+      if (!obj[parts[i]]) obj[parts[i]] = {};
+      obj = obj[parts[i]];
+    }
+    obj[parts[parts.length - 1]] = v;
+
+    // Update specific renders based on path
+    if (p.indexOf('players.') === 0) renderPlayers();
+    if (p === 'combat' || p.indexOf('combat.') === 0) renderCombat();
+    if (p.indexOf('npcs.') === 0 || p.indexOf('map.tokens.') === 0) renderNpcPositions();
+    if (p === 'world.gameTime') $('game-time-display').textContent = fmtGameTime(v);
+    return;
+  }
+
+  // Combat events refresh tracker
+  if (t.indexOf('combat:') === 0) {
+    if (msg.data && msg.data.combat) stateData.combat = msg.data.combat;
+    renderCombat();
+    return;
+  }
+
+  // Wounds update
+  if (t === 'wounds:updated') {
+    var d = msg.data || msg;
+    if (d.playerId) {
+      if (!stateData.players[d.playerId]) stateData.players[d.playerId] = {};
+      stateData.players[d.playerId].wounds = d.wounds;
+      renderPlayers();
+    }
+    return;
+  }
+
+  // Stamina updated
+  if (t === 'stamina:updated') {
+    var sd = msg.data || msg;
+    if (sd.playerId) {
+      if (!stateData.players[sd.playerId]) stateData.players[sd.playerId] = {};
+      stateData.players[sd.playerId].stamina = sd.stamina || sd;
+      renderPlayers();
+    }
+    return;
+  }
+
+  // Horror update
+  if (t === 'horror:updated' || t === 'dread:update') {
+    var hd = msg.data || msg;
+    if (hd.playerId) {
+      if (!stateData.players[hd.playerId]) stateData.players[hd.playerId] = {};
+      stateData.players[hd.playerId].horror = { score: hd.score || hd.horror };
+      renderPlayers();
+    }
+    return;
+  }
+
+  // Player chat
+  if (t === 'chat:party' || t === 'player:chat') {
+    var c = msg.data || msg;
+    var name = c.fromName || c.from || c.playerId || 'Player';
+    addChat(name, c.text || '');
+    return;
+  }
+
+  // Clues / secrets
+  if (t === 'clue:found' || t === 'secret:reveal' || t === 'observation:fired') {
+    var ev = msg.data || msg;
+    var text = ev.description || ev.text || ev.id || '';
+    addClue(text);
+    return;
+  }
+
+  // Story beats
+  if (t === 'story:beat' && msg.data && msg.data.beatName) {
+    addClue('Beat: ' + msg.data.beatName);
+    return;
+  }
+
+  // Player connected/disconnected — update player cards
+  if (t === 'player:connected' || t === 'player:disconnected' || t === 'player:absent_changed') {
+    setTimeout(loadConfig, 500);
+    return;
+  }
+}
+
+function renderAll() {
+  renderPlayers();
+  renderCombat();
+  renderNpcPositions();
+  renderClues();
+  renderChat();
+  if (stateData.world && stateData.world.gameTime) {
+    $('game-time-display').textContent = fmtGameTime(stateData.world.gameTime);
+  }
+}
+
+connect();
 </script>
 </body>
 </html>

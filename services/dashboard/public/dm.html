@@ -5,80 +5,749 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DM — Center</title>
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      background: #141210;
-      color: #c8b89a;
-      font-family: sans-serif;
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Source+Sans+3:wght@300;400;500;600&display=swap');
+
+    :root {
+      --bg: #161412;
+      --surface: #242018;
+      --surface2: #2e2820;
+      --text: #f0e0c0;
+      --text-dim: #b09070;
+      --text-dimmer: #706050;
+      --gold: #f0c840;
+      --green: #6aaa6a;
+      --amber: #e09030;
+      --red: #cc3020;
+      --purple: #8a7aaa;
+      --blue: #4a8aaa;
+      --border: #3a3028;
     }
-    #loading {
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      width: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 15px;
+      overflow: hidden;
+    }
+
+    /* ─── LAYOUT ─── */
+    #screen {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* WHISPER LOG — top 50% */
+    #whisper-section {
+      flex: 1 1 50%;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      border-bottom: 1px solid var(--border);
+    }
+    #whisper-header {
+      padding: 12px 24px 8px;
+      font-family: 'Cinzel', serif;
+      font-size: 13px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gold);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    #whisper-count { font-size: 11px; color: var(--text-dimmer); letter-spacing: 0; }
+    #whisper-log {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 24px 16px;
+      scroll-behavior: smooth;
+    }
+    #whisper-log::-webkit-scrollbar { width: 8px; }
+    #whisper-log::-webkit-scrollbar-track { background: var(--bg); }
+    #whisper-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .whisper-entry {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 14px 16px;
+      margin-bottom: 8px;
+      background: var(--surface);
+      border-radius: 4px;
+      border-left: 3px solid transparent;
+      font-size: 18px;
+      line-height: 1.35;
+      transition: border-left-color 10s ease 1s;
+    }
+    .whisper-entry.unread {
+      border-left-color: var(--gold);
+      transition: border-left-color 10s ease 1s;
+    }
+    .whisper-time {
+      flex-shrink: 0;
+      font-family: monospace;
+      font-size: 13px;
+      color: var(--text-dimmer);
+      width: 56px;
+      padding-top: 3px;
+    }
+    .whisper-tag {
+      flex-shrink: 0;
+      font-family: 'Cinzel', serif;
+      font-size: 13px;
+      letter-spacing: 0.1em;
+      font-weight: 600;
+      width: 110px;
+      padding-top: 3px;
+      text-align: right;
+    }
+    .whisper-tag.max { color: var(--gold); }
+    .whisper-tag.event { color: var(--green); }
+    .whisper-tag.combat { color: var(--red); }
+    .whisper-tag.npc { color: var(--purple); }
+    .whisper-tag.perception { color: var(--blue); }
+    .whisper-tag.system { color: var(--text-dimmer); }
+    .whisper-text {
+      flex: 1;
+      color: var(--text);
+    }
+
+    /* CURRENT EVENT — middle strip */
+    #event-strip {
+      flex: 0 0 auto;
+      padding: 18px 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+      font-size: 22px;
+      font-family: 'Cinzel', serif;
+      letter-spacing: 0.05em;
+      color: var(--text);
+    }
+    #event-strip.warning { color: var(--amber); }
+    #event-strip.urgent { color: var(--red); }
+    #event-strip.firing {
+      color: var(--gold);
+      animation: pulse-gold 1s ease-in-out infinite;
+    }
+    @keyframes pulse-gold {
+      0%, 100% { background: var(--surface); }
+      50% { background: #3e3220; }
+    }
+    #event-countdown {
+      font-family: monospace;
+      font-size: 24px;
+      font-weight: 600;
+      margin-left: 12px;
+    }
+
+    /* SESSION STATUS BAR */
+    #status-bar {
+      flex: 0 0 auto;
       display: flex;
       align-items: center;
+      gap: 16px;
+      padding: 14px 24px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 14px;
+      font-family: monospace;
+      color: var(--text);
+      letter-spacing: 0.05em;
+    }
+    .status-pill .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--text-dimmer);
+      flex-shrink: 0;
+    }
+    .status-pill.online .dot { background: var(--green); }
+    .status-pill.offline .dot { background: var(--red); }
+    .status-pill.warm .dot { background: var(--gold); }
+    .status-pill.tense .dot { background: var(--amber); }
+    .status-pill.dread .dot { background: var(--red); }
+    #panic-btn {
+      margin-left: auto;
+      background: var(--red);
+      color: #fff;
+      border: 2px solid #ff4040;
+      padding: 10px 24px;
+      font-family: 'Cinzel', serif;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.15em;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #panic-btn:hover { background: #ff4040; }
+
+    /* MAX INPUT — collapsed by default */
+    #max-input-bar {
+      flex: 0 0 auto;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+    #max-input-toggle {
+      width: 100%;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-family: 'Cinzel', serif;
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      padding: 8px;
+      cursor: pointer;
+    }
+    #max-input-toggle:hover { color: var(--gold); }
+    #max-input-area {
+      display: none;
+      padding: 12px 24px 16px;
+      gap: 8px;
+    }
+    #max-input-area.open { display: flex; }
+    #max-input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 16px;
+      padding: 10px 14px;
+      border-radius: 4px;
+    }
+    #max-input:focus { outline: none; border-color: var(--gold); }
+    #max-send {
+      background: var(--gold);
+      color: #000;
+      border: none;
+      font-family: 'Cinzel', serif;
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: 0.1em;
+      padding: 0 24px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    /* ATMOSPHERE OVERRIDE — modal */
+    #atmo-trigger {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      padding: 8px 14px;
+      border-radius: 3px;
+      cursor: pointer;
+      z-index: 50;
+    }
+    #atmo-trigger:hover { color: var(--gold); border-color: var(--gold); }
+    #atmo-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      align-items: center;
       justify-content: center;
-      height: 100vh;
-      color: #e8c060;
-      font-family: serif;
+      z-index: 1000;
+    }
+    #atmo-modal.open { display: flex; }
+    #atmo-modal-content {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      min-width: 480px;
+    }
+    #atmo-modal h3 {
+      grid-column: 1 / -1;
+      font-family: 'Cinzel', serif;
+      font-size: 14px;
+      letter-spacing: 0.12em;
+      color: var(--gold);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      text-align: center;
+    }
+    #atmo-modal button {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 16px 12px;
+      font-family: 'Cinzel', serif;
+      font-size: 13px;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    #atmo-modal button:hover { background: var(--border); border-color: var(--gold); color: var(--gold); }
+    #atmo-modal button.cancel {
+      grid-column: 1 / -1;
+      color: var(--text-dim);
+      font-size: 11px;
+      padding: 6px;
     }
   </style>
 </head>
 <body>
-<div id="loading">Loading DM Center…</div>
+
+<div id="screen">
+
+  <div id="whisper-section">
+    <div id="whisper-header">
+      <span>Max Whisper Log</span>
+      <span id="whisper-count">0 entries</span>
+    </div>
+    <div id="whisper-log"></div>
+  </div>
+
+  <div id="event-strip"><span id="event-strip-text">Next: — --:--:--</span></div>
+
+  <div id="status-bar">
+    <div class="status-pill" id="pill-clock">
+      <span class="dot"></span>
+      <span id="clock-text">17:30 — Evening — Blizzard</span>
+    </div>
+    <div class="status-pill warm" id="pill-atmo">
+      <span class="dot"></span>
+      <span id="atmo-text">tavern_warm</span>
+    </div>
+    <div class="status-pill" id="pill-ai">
+      <span class="dot"></span>
+      <span id="ai-text">MAX —</span>
+    </div>
+    <div class="status-pill" id="pill-timer">
+      <span class="dot"></span>
+      <span id="timer-text">00:00:00</span>
+    </div>
+    <button id="panic-btn" onclick="panic()">⚠ PANIC</button>
+  </div>
+
+  <div id="max-input-bar">
+    <button id="max-input-toggle" onclick="toggleMaxInput()">▲ ASK MAX</button>
+    <div id="max-input-area">
+      <input type="text" id="max-input" placeholder="Type a question for Max..." onkeydown="if(event.key==='Enter')sendMax()">
+      <button id="max-send" onclick="sendMax()">SEND</button>
+    </div>
+  </div>
+
+</div>
+
+<button id="atmo-trigger" onclick="document.getElementById('atmo-modal').classList.add('open')">OVERRIDE</button>
+<div id="atmo-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div id="atmo-modal-content">
+    <h3>Atmosphere Override</h3>
+    <button onclick="setAtmo('tavern_warm')">SAFE</button>
+    <button onclick="setAtmo('tavern_tense')">TENSION</button>
+    <button onclick="setAtmo('dread_rising')">DREAD</button>
+    <button onclick="setAtmo('revelation')">RITUAL</button>
+    <button onclick="setAtmo('terror_peak')">SUPERNATURAL</button>
+    <button onclick="setAtmo('combat')">COMBAT</button>
+    <button class="cancel" onclick="document.getElementById('atmo-modal').classList.remove('open')">Cancel</button>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════════════════════
-// /dm — DM Center Display
-// Loads index.html, removes the map column (#col-transcript) and
-// the players column (#col-players), expands controls column to
-// full width. Map canvas element is REMOVED from DOM (not hidden)
-// so map render code can't bind to it.
+// /dm — Center display: narrator status board
+// Read-only during play. The DM glances, the AI directs.
 // ═══════════════════════════════════════════════════════════════
-fetch('/classic-source', { cache: 'no-store' }).then(function(r) { return r.text(); }).then(function(html) {
-  var doc = new DOMParser().parseFromString(html, 'text/html');
 
-  // Remove the entire LEFT column (map + transcript)
-  var transcriptCol = doc.getElementById('col-transcript');
-  if (transcriptCol) transcriptCol.parentNode.removeChild(transcriptCol);
+var ws = null;
+var whispers = [];
+var timedEvents = [];
+var sessionStartedAt = null;
+var apiHealth = { status: 'OFFLINE', latency: null };
+var gameTime = '17:30';
+var weather = 'blizzard';
+var currentAtmo = 'tavern_warm';
 
-  // Remove the resizer between map column and controls column
-  var resizer1 = doc.getElementById('resizer-1');
-  if (resizer1) resizer1.parentNode.removeChild(resizer1);
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function pad(n) { return String(n).padStart(2, '0'); }
 
-  // Remove the entire RIGHT column (players + reference panels) — center is controls only
-  var playersCol = doc.getElementById('col-players');
-  if (playersCol) playersCol.parentNode.removeChild(playersCol);
+function fmtTime(d) {
+  var date = (d instanceof Date) ? d : new Date(d);
+  return pad(date.getHours()) + ':' + pad(date.getMinutes());
+}
 
-  // Remove the resizer between controls and players
-  var resizer2 = doc.getElementById('resizer-2');
-  if (resizer2) resizer2.parentNode.removeChild(resizer2);
+function fmtGameTime(iso) {
+  if (!iso) return '17:30';
+  var d = new Date(iso);
+  return pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes());
+}
 
-  // Remove map canvas explicitly even if it lives outside #col-transcript
-  var mapCanvas = doc.getElementById('map-canvas');
-  if (mapCanvas) mapCanvas.parentNode.removeChild(mapCanvas);
+function fmtElapsed(ms) {
+  var s = Math.max(0, Math.floor(ms / 1000));
+  var h = Math.floor(s / 3600);
+  var m = Math.floor((s % 3600) / 60);
+  var sec = s % 60;
+  return pad(h) + ':' + pad(m) + ':' + pad(sec);
+}
 
-  // Expand the controls column to full width
-  var controlsCol = doc.getElementById('col-controls');
-  if (controlsCol) {
-    controlsCol.style.cssText = 'flex: 1 1 100%; max-width: 100%; width: 100%; min-width: 100%;';
+function timeOfDayLabel(iso) {
+  if (!iso) return 'Evening';
+  var h = new Date(iso).getUTCHours();
+  if (h < 5) return 'Night';
+  if (h < 8) return 'Dawn';
+  if (h < 12) return 'Morning';
+  if (h < 17) return 'Afternoon';
+  if (h < 20) return 'Evening';
+  return 'Night';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WHISPER LOG
+// ═══════════════════════════════════════════════════════════════
+var TAG_MAP = {
+  'max': 'MAX', 'hal': 'MAX', 'event': 'EVENT', 'story': 'EVENT',
+  'combat': 'COMBAT', 'npc': 'NPC', 'mirror': 'MAX',
+  'perception': 'PERCEPTION', 'system': 'SYSTEM',
+  'atmosphere': 'EVENT', 'recap': 'MAX'
+};
+var TAG_CLASS = {
+  'MAX': 'max', 'EVENT': 'event', 'COMBAT': 'combat',
+  'NPC': 'npc', 'PERCEPTION': 'perception', 'SYSTEM': 'system'
+};
+
+function addWhisper(opts) {
+  var entry = {
+    time: opts.time || new Date(),
+    tag: opts.tag || 'MAX',
+    text: opts.text || '',
+    id: 'w-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6)
+  };
+  whispers.unshift(entry);
+  if (whispers.length > 200) whispers.pop();
+  renderWhispers(true);
+}
+
+function renderWhispers(animate) {
+  var log = $('whisper-log');
+  $('whisper-count').textContent = whispers.length + ' entries';
+  log.innerHTML = whispers.map(function(w) {
+    var cls = TAG_CLASS[w.tag] || 'system';
+    return '<div class="whisper-entry' + (animate && w === whispers[0] ? ' unread' : '') + '" id="' + w.id + '">' +
+      '<div class="whisper-time">' + fmtTime(w.time) + '</div>' +
+      '<div class="whisper-tag ' + cls + '">[' + esc(w.tag) + ']</div>' +
+      '<div class="whisper-text">' + esc(w.text) + '</div>' +
+      '</div>';
+  }).join('');
+  log.scrollTop = 0;
+  // Fade unread highlight after 10s
+  if (animate && whispers.length) {
+    var newest = whispers[0].id;
+    setTimeout(function() {
+      var el = document.getElementById(newest);
+      if (el) el.classList.remove('unread');
+    }, 10000);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CURRENT EVENT COUNTDOWN
+// ═══════════════════════════════════════════════════════════════
+var firingTimeout = null;
+
+function refreshTimedEvents() {
+  fetch('/api/world').then(function(r) { return r.json(); }).then(function(data) {
+    timedEvents = ((data && data.timedEvents) || []).filter(function(e) {
+      return e.gameTime && !e.fired;
+    }).sort(function(a, b) { return new Date(a.gameTime) - new Date(b.gameTime); });
+    updateEventStrip();
+  }).catch(function() {});
+}
+
+function updateEventStrip() {
+  if (firingTimeout) return; // hold "NOW FIRING" message
+  var strip = $('event-strip');
+  var textEl = $('event-strip-text');
+  if (!timedEvents.length) {
+    textEl.textContent = 'No upcoming events';
+    strip.className = '';
+    return;
+  }
+  var next = timedEvents[0];
+  var nowGame = gameTime ? new Date('1274-10-15T' + gameTime + ':00Z') : new Date();
+  var nextTime = new Date(next.gameTime);
+  var deltaMs = nextTime - nowGame;
+  if (deltaMs < 0) deltaMs = 0;
+
+  var name = (next.description || next.id);
+  textEl.textContent = 'Next: ' + name + '   ' + fmtElapsed(deltaMs);
+
+  var minutes = deltaMs / 60000;
+  strip.classList.remove('warning', 'urgent', 'firing');
+  if (minutes <= 5) strip.classList.add('urgent');
+  else if (minutes <= 30) strip.classList.add('warning');
+}
+
+function eventFired(eventId, name) {
+  var strip = $('event-strip');
+  var textEl = $('event-strip-text');
+  strip.classList.remove('warning', 'urgent');
+  strip.classList.add('firing');
+  textEl.textContent = 'NOW FIRING: ' + (name || eventId);
+  if (firingTimeout) clearTimeout(firingTimeout);
+  firingTimeout = setTimeout(function() {
+    firingTimeout = null;
+    timedEvents = timedEvents.filter(function(e) { return e.id !== eventId; });
+    refreshTimedEvents();
+  }, 10000);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATUS BAR
+// ═══════════════════════════════════════════════════════════════
+function updateStatusBar() {
+  $('clock-text').textContent = gameTime + ' — ' + timeOfDayLabel('1274-10-15T' + gameTime + ':00') + ' — ' + (weather || 'Clear').toUpperCase();
+  $('atmo-text').textContent = currentAtmo;
+
+  var atmoClasses = ['warm', 'tense', 'dread'];
+  var pill = $('pill-atmo');
+  pill.className = 'status-pill';
+  if (currentAtmo === 'tavern_warm' || currentAtmo === 'dawn') pill.classList.add('warm');
+  else if (currentAtmo === 'tavern_tense' || currentAtmo === 'investigation') pill.classList.add('tense');
+  else if (currentAtmo === 'dread_rising' || currentAtmo === 'terror_peak' || currentAtmo === 'combat' || currentAtmo === 'tavern_dark') pill.classList.add('dread');
+
+  var ai = $('pill-ai');
+  ai.className = 'status-pill';
+  if (apiHealth.status === 'ONLINE') ai.classList.add('online');
+  else if (apiHealth.status === 'OFFLINE') ai.classList.add('offline');
+  $('ai-text').textContent = 'MAX ' + apiHealth.status + (apiHealth.latency ? ' ' + apiHealth.latency + 'ms' : '');
+
+  var timerPill = $('pill-timer');
+  timerPill.className = 'status-pill';
+  if (sessionStartedAt) {
+    timerPill.classList.add('online');
+    $('timer-text').textContent = fmtElapsed(Date.now() - sessionStartedAt);
+  } else {
+    $('timer-text').textContent = '--:--:--';
+  }
+}
+
+// Tick every second
+setInterval(function() {
+  updateStatusBar();
+  updateEventStrip();
+}, 1000);
+
+// AI health polling
+function pollHealth() {
+  fetch('/api/ai/health').then(function(r) { return r.json(); }).then(function(d) {
+    apiHealth.status = d.status || 'OFFLINE';
+    apiHealth.latency = d.lastResponseMs || null;
+  }).catch(function() {
+    apiHealth.status = 'OFFLINE';
+  });
+}
+setInterval(pollHealth, 60000);
+setTimeout(pollHealth, 1000);
+
+// ═══════════════════════════════════════════════════════════════
+// PANIC + MAX INPUT + ATMOSPHERE
+// ═══════════════════════════════════════════════════════════════
+function panic() {
+  if (!confirm('PANIC — kill all effects, lights, audio?')) return;
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'panic' }));
+  fetch('/api/panic', { method: 'POST' }).catch(function() {});
+  addWhisper({ tag: 'SYSTEM', text: 'PANIC button pressed — all effects killed' });
+}
+
+function toggleMaxInput() {
+  var area = $('max-input-area');
+  area.classList.toggle('open');
+  if (area.classList.contains('open')) $('max-input').focus();
+}
+
+function sendMax() {
+  var input = $('max-input');
+  var query = input.value.trim();
+  if (!query) return;
+  input.value = '';
+  $('max-input-area').classList.remove('open');
+  fetch('/api/max/query', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query: query })
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d && d.text) addWhisper({ tag: 'MAX', text: d.text });
+    else if (d && d.response) addWhisper({ tag: 'MAX', text: d.response });
+  }).catch(function() {});
+}
+
+function setAtmo(profile) {
+  fetch('/api/atmosphere/' + encodeURIComponent(profile), { method: 'POST' }).catch(function() {});
+  currentAtmo = profile;
+  updateStatusBar();
+  document.getElementById('atmo-modal').classList.remove('open');
+  addWhisper({ tag: 'EVENT', text: 'Atmosphere override → ' + profile });
+}
+
+// Hotkey: ` to toggle Max input
+window.addEventListener('keydown', function(e) {
+  if (e.key === '`' || e.key === '~') {
+    e.preventDefault();
+    toggleMaxInput();
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// WEBSOCKET
+// ═══════════════════════════════════════════════════════════════
+function connect() {
+  var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(proto + '//' + location.host);
+  ws.onopen = function() {
+    addWhisper({ tag: 'SYSTEM', text: 'Connected to session' });
+    refreshTimedEvents();
+  };
+  ws.onmessage = function(ev) {
+    try { handleMsg(JSON.parse(ev.data)); } catch (err) { console.error(err); }
+  };
+  ws.onclose = function() {
+    addWhisper({ tag: 'SYSTEM', text: 'Disconnected — reconnecting...' });
+    setTimeout(connect, 3000);
+  };
+}
+
+function handleMsg(msg) {
+  var t = msg.type || msg.event;
+  if (!t) return;
+
+  // Init payload
+  if (t === 'init') {
+    var s = (msg.state) || {};
+    if (s.world && s.world.gameTime) gameTime = fmtGameTime(s.world.gameTime);
+    if (s.world && s.world.weather && s.world.weather.type) weather = s.world.weather.type;
+    if (s.atmosphere && s.atmosphere.currentProfile) currentAtmo = s.atmosphere.currentProfile;
+    if (s.session && s.session.startedAt) sessionStartedAt = new Date(s.session.startedAt).getTime();
+    updateStatusBar();
+    return;
   }
 
-  // Mark body so any conditional CSS or JS can detect this view
-  doc.body.classList.add('view-dm-center');
-  doc.body.dataset.dmView = 'center';
+  // Game state changes
+  if (t === 'state:change') {
+    var p = msg.data && msg.data.path;
+    var v = msg.data && msg.data.value;
+    if (p === 'world.gameTime') gameTime = fmtGameTime(v);
+    if (p === 'world.weather' && v && v.type) weather = v.type;
+    if (p === 'atmosphere.currentProfile') currentAtmo = v;
+    if (p === 'session.startedAt') sessionStartedAt = v ? new Date(v).getTime() : null;
+    if (p === 'session.status') {
+      if (v === 'active' && !sessionStartedAt) sessionStartedAt = Date.now();
+      if (v !== 'active') sessionStartedAt = null;
+    }
+    return;
+  }
 
-  // Inject a script that runs early to set window.__DM_VIEW
-  var marker = doc.createElement('script');
-  marker.textContent = 'window.__DM_VIEW="center";';
-  doc.body.insertBefore(marker, doc.body.firstChild);
+  // DM whisper — primary feed
+  if (t === 'dm:whisper') {
+    var d = msg.data || msg;
+    var category = (d.category || d.source || 'max').toLowerCase();
+    var tag = TAG_MAP[category] || 'MAX';
+    addWhisper({ tag: tag, text: d.text || '' });
+    return;
+  }
 
-  // Replace this document with the modified one. Scripts in the new HTML execute.
-  var serialized = '<!DOCTYPE html>' + doc.documentElement.outerHTML;
-  document.open();
-  document.write(serialized);
-  document.close();
-}).catch(function(err) {
-  document.getElementById('loading').innerHTML = '<div style="color:#a44;">Failed to load: ' + err.message + '</div>';
-});
+  // Max/HAL responses
+  if (t === 'hal:response' || t === 'max:response') {
+    var r = msg.data || msg;
+    if (r && r.response) addWhisper({ tag: 'MAX', text: r.response });
+    return;
+  }
+
+  // NPC dialogue
+  if (t === 'npc:approved' || t === 'ai:npc_dialogue') {
+    var n = msg.data || msg;
+    if (n && n.text) addWhisper({ tag: 'NPC', text: (n.npc || 'NPC') + ': ' + n.text });
+    return;
+  }
+
+  // Timed event firing
+  if (t === 'world:timed_event') {
+    var ev = msg.data || msg;
+    var name = (ev.data && ev.data.description) || ev.event || ev.id;
+    addWhisper({ tag: 'EVENT', text: name });
+    eventFired(ev.id, name);
+    return;
+  }
+
+  // Combat events
+  if (t.indexOf('combat:') === 0) {
+    if (t === 'combat:started') addWhisper({ tag: 'COMBAT', text: 'Combat begins' });
+    else if (t === 'combat:ended') addWhisper({ tag: 'COMBAT', text: 'Combat ends' });
+    else if (t === 'combat:next_turn') {
+      var c = msg.data || msg;
+      var name2 = c.combatant && c.combatant.name;
+      if (name2) addWhisper({ tag: 'COMBAT', text: name2 + "'s turn" });
+    }
+    return;
+  }
+
+  // Perception flash
+  if (t === 'player:perception_flash') {
+    var pf = msg.data || msg;
+    addWhisper({ tag: 'PERCEPTION', text: (pf.playerId || '?') + ' perceived: ' + (pf.description || '') });
+    return;
+  }
+
+  // Atmosphere changes
+  if (t === 'atmo:profile_active' || t === 'atmo:change') {
+    var a = msg.data || msg;
+    if (a.profile) {
+      currentAtmo = a.profile;
+      addWhisper({ tag: 'EVENT', text: 'Atmosphere → ' + a.profile });
+    }
+    return;
+  }
+
+  // AI health
+  if (t === 'ai:health') {
+    apiHealth.status = msg.data ? msg.data.status : msg.status;
+    apiHealth.latency = msg.data ? msg.data.lastResponseMs : msg.lastResponseMs;
+    return;
+  }
+
+  // Session lifecycle
+  if (t === 'session:started') {
+    sessionStartedAt = Date.now();
+    addWhisper({ tag: 'SYSTEM', text: 'Session started' });
+    refreshTimedEvents();
+    return;
+  }
+  if (t === 'session:ended') {
+    sessionStartedAt = null;
+    addWhisper({ tag: 'SYSTEM', text: 'Session ended' });
+    return;
+  }
+}
+
+connect();
+updateStatusBar();
 </script>
 </body>
 </html>

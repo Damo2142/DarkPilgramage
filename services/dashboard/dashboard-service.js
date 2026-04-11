@@ -177,6 +177,13 @@ class DashboardService {
       res.json(this.state.snapshot());
     });
 
+    // Returns raw session config (session-0.json + future expansion configs).
+    // dm-ref.html uses this to pick up patron NPCs which live at config root,
+    // not under config.npcs (and therefore aren't loaded into state.npcs).
+    this.app.get('/api/session-config', (req, res) => {
+      res.json(this.config || {});
+    });
+
     this.app.post('/api/session/start', (req, res) => {
       const sessionId = this.state.startSession();
       res.json({ sessionId });

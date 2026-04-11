@@ -137,6 +137,29 @@ Wrong: Marta flinches, her eyes darting to the door`;
 
     console.log(`[NpcHandler] Cleaned dialogue for ${npc.name}: "${dialogue}"`);
 
+    // CR-4 — anachronism + AI-tell quality check. Reject and (best-effort)
+    // regenerate once if the response contains modern tells. Plain words
+    // are fine in 1274 — we only flag the obvious AI escapes.
+    const ANACHRONISMS = [
+      /\bas an AI\b/i,
+      /\bI cannot\b/i,
+      /\bI'?m sorry\b/i,
+      /\bI am unable\b/i,
+      /\bcertainly!/i,
+      /\bindeed I shall\b/i,
+      /\blanguage model\b/i,
+      /\bChatGPT\b/i
+    ];
+    const flagged = ANACHRONISMS.find(re => re.test(dialogue));
+    if (flagged) {
+      console.warn(`[NpcHandler] CR-4 anachronism flagged for ${npc.name}: "${dialogue.slice(0, 120)}" (matched ${flagged})`);
+      // Strip the offending fragment so the rest of the line survives.
+      // We don't regenerate inline (would double the latency); the DM can
+      // reject via the approval queue.
+      dialogue = dialogue.replace(flagged, '').replace(/\s{2,}/g, ' ').trim();
+      if (!dialogue || dialogue.length < 4) return null;
+    }
+
     const id = `npc-${++this._dialogueId}`;
     const suggestion = {
       id,

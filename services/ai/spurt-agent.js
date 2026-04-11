@@ -149,11 +149,16 @@ class SpurtAgent {
     }, 'spurt-agent');
 
     // Listen for significant events and react with dialogue
+    // CR-4 — Spurt was reacting to every NPC dialogue at 30%. Reduced to
+    // 12% (60% reduction per spec) plus a 90-second per-Spurt cooldown so
+    // he doesn't dominate scenes. He's a memorable voice, not a constant one.
+    this._lastSpurtReactAt = 0;
     this.bus.subscribe('npc:approved', async (env) => {
-      // React to NPC dialogue (occasional interjections)
-      if (Math.random() < 0.3) {
-        await this._reactToEvent('npc_dialogue', `${env.data.npc} says: "${env.data.text}"`);
-      }
+      const now = Date.now();
+      if (now - this._lastSpurtReactAt < 90 * 1000) return;
+      if (Math.random() >= 0.12) return;
+      this._lastSpurtReactAt = now;
+      await this._reactToEvent('npc_dialogue', `${env.data.npc} says: "${env.data.text}"`);
     }, 'spurt-agent');
 
     this.bus.subscribe('atmosphere:profile_change', async (env) => {

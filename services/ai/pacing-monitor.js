@@ -320,8 +320,10 @@ class PacingMonitor {
 
     this.bus.dispatch('dm:whisper', {
       text: `Secret revealed: ${progress.revealed}/${progress.total} (${percent}%). ${progress.remaining} secrets remain hidden.`,
-      priority: 3,
-      category: 'story'
+      priority: 4,
+      category: 'pacing-log',
+      _maxRouted: true,         // CR-4 — log-only, never spoken
+      logOnly: true
     });
 
     // Check for revelation speed
@@ -352,7 +354,9 @@ class PacingMonitor {
         this.bus.dispatch('dm:whisper', {
           text: `Discovery chain "${chain.id}": step ${chain.currentStep}/${chain.steps} (${chain.percent}%)`,
           priority: 4,
-          category: 'story'
+          category: 'pacing-log',
+          _maxRouted: true,    // CR-4 — log-only, never spoken
+          logOnly: true
         });
       }
     }
@@ -380,13 +384,18 @@ class PacingMonitor {
     this._pacingAlerts.push(alert);
     if (this._pacingAlerts.length > 50) this._pacingAlerts.shift();
 
-    // Whisper to DM
+    // CR-4 — pacing alerts ([TENSION] / [REVELATION] / [PACING]) are
+    // log-only. They go to the DM dashboard panel via pacing:alert and
+    // dm:whisper, but the dm:whisper is tagged _maxRouted so the
+    // max-director never enqueues them and they NEVER reach the earbud.
+    // The DM reads pacing in the whisper log; Max never speaks them aloud.
     const prefix = type === 'revelation' ? '📊' : type === 'pacing' ? '⏱' : '📈';
-    const urgency = data.confidence >= 0.85 ? 'warning' : 'nudge';
     this.bus.dispatch('dm:whisper', {
       text: `${prefix} [${type.toUpperCase()}] ${data.message}${data.suggestion ? ' Suggestion: ' + data.suggestion : ''}`,
-      priority: urgency === 'warning' ? 2 : 3,
-      category: 'story'
+      priority: 4,            // LOW — only matters if explicitly fetched
+      category: 'pacing-log',
+      _maxRouted: true,       // bypass max-director enqueue + voice
+      logOnly: true
     });
 
     // Dispatch for dashboard panel

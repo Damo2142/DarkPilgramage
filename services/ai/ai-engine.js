@@ -793,20 +793,21 @@ Stay strictly within what ${npcName} knows. 1-3 sentences of dialogue typical.`;
       this._halHistory.push(entry);
       if (this._halHistory.length > 20) this._halHistory.shift();
 
-      // Whisper to DM earbud — tagged max so voice service can route to ElevenLabs
+      // CR-2 / "double audio" bugfix — halQuery is a direct DM→Max query.
+      // The DM explicitly typed it; do NOT enqueue through max-director
+      // (which would fire voice:speak a SECOND time). Mark the whisper
+      // _maxRouted so max-director's dm:whisper handler skips it, and
+      // dispatch voice:speak directly as the single audio source.
       this.bus.dispatch('dm:whisper', {
         text: entry.response,
         priority: 2,
         category: 'max',
         source: 'max',
-        useElevenLabs: true
+        _maxRouted: true
       });
-
-      // Voice synthesis — fire to voice service for ElevenLabs Max voice
       this.bus.dispatch('voice:speak', {
         text: entry.response,
         profile: 'max',
-        device: 'earbud',
         useElevenLabs: true
       });
 

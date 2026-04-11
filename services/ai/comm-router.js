@@ -238,30 +238,68 @@ class CommRouter {
     const { playerId, text } = data;
     if (!playerId || !text) return;
 
+    // CR-7 — sanitize player input before it reaches Gemini.
+    // Strip HTML/script tags, cap length, log injection attempts.
+    const safeText = this._sanitizePlayerInput(text, playerId);
+    if (!safeText) return;
+    data = { ...data, text: safeText };
+
     // Detect language switch in player utterance (e.g. "in Draconic", "in Elvish", "in Slovak")
-    const langId = this._detectLanguageHint(text);
+    const langId = this._detectLanguageHint(safeText);
     if (langId) {
       try { this.checkPlayerLanguageRecognition(playerId, langId); } catch (e) {}
     }
 
-    const detection = this.detectChannel(text);
+    const detection = this.detectChannel(safeText);
     detection.fromPlayerId = playerId;
-    detection.originalText = text;
+    detection.originalText = safeText;
     detection.languageId = langId;
 
     switch (detection.channel) {
       case 'max-action':
-        return this._routeMaxAction(playerId, detection.text || text);
+        return this._routeMaxAction(playerId, detection.text || safeText);
       case 'max-dice':
-        return this._routeMaxDice(playerId, detection.text || text);
+        return this._routeMaxDice(playerId, detection.text || safeText);
       case 'npc-direct':
-        return this._routeNpcDirect(playerId, detection.npcId, detection.text, text);
+        return this._routeNpcDirect(playerId, detection.npcId, detection.text, safeText);
       case 'p2p':
-        return this._routeP2P(playerId, detection.toPlayerId, detection.text || text);
+        return this._routeP2P(playerId, detection.toPlayerId, detection.text || safeText);
       case 'ambient':
         // System ignores — table talk
         return;
     }
+  }
+
+  // CR-7 — input sanitization. Strip HTML, cap length, detect prompt
+  // injection attempts. Returns null if the input is invalid (caller drops it).
+  _sanitizePlayerInput(rawText, playerId) {
+    if (typeof rawText !== 'string') return null;
+    let s = rawText;
+    // Strip HTML/script tags
+    s = s.replace(/<[^>]*>/g, '');
+    // Cap at 500 characters
+    if (s.length > 500) s = s.slice(0, 500);
+    // Trim whitespace
+    s = s.trim();
+    if (!s) return null;
+    // Prompt injection patterns — log + still pass through (drop the
+    // dangerous fragment so the game continues but the AI never sees it).
+    const INJECTION = [
+      /ignore\s+(all\s+)?(previous|prior)\s+instructions/i,
+      /you\s+are\s+now\s+(?:a\s+)?(?:different|new)/i,
+      /new\s+system\s+prompt/i,
+      /system\s*[:=]\s*['"]/i,
+      /<\|.*?\|>/,                       // common chat-template tokens
+      /\bAS\s+AN\s+AI\b/i
+    ];
+    for (const re of INJECTION) {
+      if (re.test(s)) {
+        console.warn('[CommRouter] CR-7 prompt injection attempt from ' + playerId + ': "' + s.slice(0, 120) + '"');
+        // Strip the matched fragment so the rest of the message survives
+        s = s.replace(re, '[redacted]');
+      }
+    }
+    return s;
   }
 
   // ─── Channel 1 — Player → Max (action) ─────────────────────────

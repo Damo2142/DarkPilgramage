@@ -5,3 +5,9 @@ co-dm/sessions/
 co-dm/cert.pem
 co-dm/key.pem
 *.tar.gz
+# Secrets — never commit
+start.sh
+watchdog.sh
+*.env
+server.log
+watchdog.log

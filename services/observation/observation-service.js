@@ -365,6 +365,44 @@ class ObservationService {
       }
       res.json(tells);
     });
+
+    // POST /api/debug/perception-flash — direct perception flash for testing
+    // body: { playerId, description?, margin? }
+    app.post('/api/debug/perception-flash', (req, res) => {
+      const { playerId, description, margin } = req.body || {};
+      if (!playerId) return res.status(400).json({ error: 'playerId required' });
+      this.bus.dispatch('player:perception_flash', {
+        playerId,
+        description: description || 'Something large passed by. You are sure of it.',
+        margin: typeof margin === 'number' ? margin : 5,
+        waypoint: 'debug'
+      });
+      res.json({ ok: true, playerId });
+    });
+
+    // POST /api/debug/npc-speak — dispatch literal NPC dialogue for testing
+    // Fires npc:approved → voice-service → ElevenLabs → room speaker
+    // body: { npcId, text, private?: boolean, toPlayerId?: string }
+    app.post('/api/debug/npc-speak', (req, res) => {
+      const { npcId, text, private: isPrivate, toPlayerId } = req.body || {};
+      if (!npcId || !text) return res.status(400).json({ error: 'npcId and text required' });
+      const npcState = this.state.get(`npcs.${npcId}`) || {};
+      const patron = this.config && this.config[npcId];
+      const npcName = npcState.name || (patron && patron.name) || npcId;
+      const voiceCode = npcState.voiceCode || (patron && patron.voiceCode);
+      this.bus.dispatch('npc:approved', {
+        id: 'debug-' + Date.now(),
+        npc: npcName,
+        npcId,
+        text,
+        voiceCode,
+        voiceProfile: npcState.voiceProfile || null,
+        autoApproved: true,
+        _private: !!isPrivate,
+        _sourcePlayerId: toPlayerId || null
+      });
+      res.json({ ok: true, npcId, npc: npcName, text, routed: isPrivate ? ('player:' + (toPlayerId || 'unspecified')) : 'room-speaker' });
+    });
   }
 }
 

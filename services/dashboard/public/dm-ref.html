@@ -498,6 +498,21 @@
   <!-- COMBAT TAB -->
   <div class="tab-pane" id="pane-combat">
     <h2>Combat <span class="h2-meta" id="combat-meta"></span></h2>
+
+    <!-- Encounter Proposal Panel — shows when ambient-life-service proposes an encounter -->
+    <div id="encounter-panel" style="display:none;margin:12px 0;padding:14px;background:#2a1e14;border:2px solid #8a1a1a;border-radius:6px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+        <span style="font-size:18px;color:#e8c060;">⚡ ENCOUNTER PROPOSAL</span>
+        <span id="encounter-tokens" style="font-family:monospace;font-size:12px;color:var(--text-dim);"></span>
+      </div>
+      <div id="encounter-details" style="font-size:13px;line-height:1.5;margin-bottom:12px;"></div>
+      <div style="display:flex;gap:10px;">
+        <button class="tool-btn primary" style="background:#4a6a3a;" onclick="Encounter.approve()">✓ APPROVE</button>
+        <button class="tool-btn" onclick="Encounter.skip()">✗ SKIP</button>
+        <button class="tool-btn muted" onclick="Encounter.refresh()" style="margin-left:auto;">↻ Refresh</button>
+      </div>
+    </div>
+
     <div id="combat-tracker">
       <div id="combat-empty">No active combat</div>
     </div>
@@ -1199,6 +1214,58 @@ function closeOverlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// ENCOUNTER PROPOSAL — ambient-life-service
+// ═══════════════════════════════════════════════════════════════
+var Encounter = {
+  _pending: null,
+  refresh: function() {
+    fetch('/api/encounter/pending')
+      .then(function(r) { return r.json(); })
+      .then(function(d) { Encounter._render(d); })
+      .catch(function() {});
+  },
+  approve: function() {
+    fetch('/api/encounter/approve', { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function() { Encounter._pending = null; Encounter._hide(); })
+      .catch(function() {});
+  },
+  skip: function() {
+    fetch('/api/encounter/skip', { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function() { Encounter._pending = null; Encounter._hide(); })
+      .catch(function() {});
+  },
+  _render: function(data) {
+    var panel = document.getElementById('encounter-panel');
+    if (!panel) return;
+    var proposal = data && data.proposal;
+    if (!proposal) { panel.style.display = 'none'; Encounter._pending = null; return; }
+    Encounter._pending = proposal;
+    panel.style.display = 'block';
+    var tokEl = document.getElementById('encounter-tokens');
+    if (tokEl) tokEl.textContent = '[' + (proposal.cost || 1) + ' token' + (proposal.cost > 1 ? 's' : '') + '] · ' + (data.tokensRemaining != null ? data.tokensRemaining + ' remaining' : '');
+    var detEl = document.getElementById('encounter-details');
+    if (detEl) {
+      var esc = function(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+      detEl.innerHTML =
+        '<div><b>Creature:</b> ' + esc(proposal.creature) + ' @ ' + esc(proposal.location) + '</div>' +
+        '<div style="margin-top:4px;"><b>Why:</b> ' + esc(proposal.reason) + '</div>' +
+        '<div style="margin-top:4px;font-style:italic;color:#c9a54e;">Players see: "' + esc(proposal.narrative) + '"</div>' +
+        '<div style="margin-top:4px;color:var(--text-dim);"><b>DM note:</b> ' + esc(proposal.dmNote) + '</div>';
+    }
+  },
+  _hide: function() {
+    var panel = document.getElementById('encounter-panel');
+    if (panel) panel.style.display = 'none';
+  }
+};
+// Poll every 6 seconds for new proposals
+setInterval(Encounter.refresh, 6000);
+// Initial load
+setTimeout(Encounter.refresh, 1500);
+
+// ═══════════════════════════════════════════════════════════════
 // COMBAT TRACKER
 // ═══════════════════════════════════════════════════════════════
 function renderCombat() {
@@ -1537,7 +1604,7 @@ var Tools = {
     }).catch(function() {});
   },
   sessionResume: function() {
-    fetch('/api/session/resume', { method: 'POST' }).then(function() { Tools.loadSession(); });
+    fetch('/api/session/resume-save', { method: 'POST' }).then(function() { Tools.loadSession(); });
   },
   sessionReset: function() {
     if (!confirm('Reset session to start? All progress will be lost.')) return;

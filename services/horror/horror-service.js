@@ -128,7 +128,7 @@ class HorrorService {
 
     // Death save failure
     this.bus.subscribe('combat:death_save', (env) => {
-      if (!env.data.success) {
+      if (env.data.result === 'failure' || env.data.result === 'crit_failure') {
         this._addHorror(env.data.playerId, this.HORROR_TRIGGERS['death_save_fail'], 'failed death save');
       }
     }, 'horror');

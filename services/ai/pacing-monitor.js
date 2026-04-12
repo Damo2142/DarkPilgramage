@@ -185,7 +185,7 @@ class PacingMonitor {
         secrets: []
       };
       for (const [sid, s] of Object.entries(secrets)) {
-        if (s.discoveredBy && s.discoveredBy.includes(playerId)) {
+        if (s.discoveredBy && s.discoveredBy[playerId]) {
           perPlayer[playerId].secretsKnown++;
           perPlayer[playerId].secrets.push(sid);
         }

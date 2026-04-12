@@ -505,7 +505,7 @@ class DashboardService {
       res.json({ status: 'reset' });
     });
 
-    this.app.post('/api/session/resume', (req, res) => {
+    this.app.post('/api/session/resume-save', (req, res) => {
       const { savePath } = req.body || {};
       const logDir = this.config?.session?.logDir || './sessions';
       const path = require('path');

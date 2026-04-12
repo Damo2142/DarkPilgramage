@@ -1499,12 +1499,56 @@ class MapService {
     return count;
   }
 
+  /**
+   * Auto-place every NPC from _npcDefaults at their saved starting position.
+   * Called on campaign:started so Dave never has to place NPCs manually.
+   * Skips any NPC whose token is already present (idempotent).
+   */
+  _autoPlaceAllNpcDefaults() {
+    if (!this._npcDefaults) return 0;
+    const tokens = this.state.get('map.tokens') || {};
+    let placed = 0;
+    for (const [actorSlug, def] of Object.entries(this._npcDefaults)) {
+      const tokenId = def.tokenId || actorSlug;
+      if (tokens[tokenId]) continue; // already placed
+      const token = {
+        id: tokenId,
+        actorSlug: def.actorSlug,
+        name: def.name || actorSlug,
+        type: def.type || 'npc',
+        x: def.x,
+        y: def.y,
+        image: def.image || `${actorSlug}.png`,
+        visible: def.visible !== false,
+        hidden: false,
+        hp: def.hp || { current: 10, max: 10 },
+        ac: def.ac || 10,
+        nameRevealedToPlayers: false,
+        publicName: ''
+      };
+      this.state.set(`map.tokens.${tokenId}`, token);
+      this.bus.dispatch('map:token_added', { tokenId, token });
+      placed++;
+    }
+    if (placed > 0) {
+      console.log(`[MapService] Auto-placed ${placed} NPC(s) on campaign start`);
+      this.bus.dispatch('dm:whisper', {
+        text: `Campaign started — ${placed} NPC${placed === 1 ? '' : 's'} auto-placed at starting positions.`,
+        priority: 3, category: 'system'
+      });
+    }
+    return placed;
+  }
+
   _setupEventListeners() {
     // FIX8 — strict anonymity at session start.
     // Whenever a session begins or the state is reset, every token's name is
     // hidden from /table by default. DM must explicitly reveal each one.
     this.bus.subscribe('session:started', () => { try { this._anonymizeAllTokens(); } catch (e) {} }, 'map');
-    this.bus.subscribe('campaign:started', () => { try { this._anonymizeAllTokens(); } catch (e) {} }, 'map');
+    this.bus.subscribe('campaign:started', () => {
+      try { this._anonymizeAllTokens(); } catch (e) {}
+      try { this._autoPlaceAllNpcDefaults(); } catch (e) { console.warn('[MapService] Auto-place on campaign:started failed:', e.message); }
+    }, 'map');
     this.bus.subscribe('state:session_reset', () => { try { this._anonymizeAllTokens(); } catch (e) {} }, 'map');
     this.bus.subscribe('map:activated', () => { try { this._anonymizeAllTokens(); } catch (e) {} }, 'map');
 

@@ -98,11 +98,13 @@ class SessionLogger {
   readTranscript(dateStr) {
     const filePath = path.join(this.logDir, dateStr, 'transcript.jsonl');
     if (!fs.existsSync(filePath)) return [];
-    return fs.readFileSync(filePath, 'utf-8')
-      .trim()
-      .split('\n')
-      .filter(Boolean)
-      .map(line => JSON.parse(line));
+    const out = [];
+    for (const line of fs.readFileSync(filePath, 'utf-8').trim().split('\n')) {
+      if (!line) continue;
+      try { out.push(JSON.parse(line)); }
+      catch (e) { console.warn('[SessionLogger] Skipping malformed transcript line: ' + e.message); }
+    }
+    return out;
   }
 
   /**
@@ -111,11 +113,13 @@ class SessionLogger {
   readEvents(dateStr) {
     const filePath = path.join(this.logDir, dateStr, 'events.jsonl');
     if (!fs.existsSync(filePath)) return [];
-    return fs.readFileSync(filePath, 'utf-8')
-      .trim()
-      .split('\n')
-      .filter(Boolean)
-      .map(line => JSON.parse(line));
+    const out = [];
+    for (const line of fs.readFileSync(filePath, 'utf-8').trim().split('\n')) {
+      if (!line) continue;
+      try { out.push(JSON.parse(line)); }
+      catch (e) { console.warn('[SessionLogger] Skipping malformed event line: ' + e.message); }
+    }
+    return out;
   }
 }
 

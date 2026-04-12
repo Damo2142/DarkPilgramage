@@ -57,8 +57,8 @@ class CampaignService {
     // Inject future hooks into AI context builder so the Co-DM is aware
     try {
       const ai = this.orchestrator.getService('ai-engine');
-      if (ai?.contextBuilder?.setCampaignFutureHooks) {
-        ai.contextBuilder.setCampaignFutureHooks(this.futureHooks);
+      if (ai?.context?.setCampaignFutureHooks) {
+        ai.context.setCampaignFutureHooks(this.futureHooks);
         console.log(`[Campaign] Injected ${this.futureHooks.length} future hooks into AI context`);
       }
     } catch (e) {

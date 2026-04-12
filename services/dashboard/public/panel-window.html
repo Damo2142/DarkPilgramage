@@ -400,7 +400,7 @@
               <button onclick="DashWS.send('session:end')">&#9209; End</button>
             </div>
             <div class="flex-row" style="flex-wrap:wrap;">
-              <button onclick="fetch('/api/session/resume',{method:'POST'})">Resume Save</button>
+              <button onclick="fetch('/api/session/resume-save',{method:'POST'})">Resume Save</button>
               <button class="danger" onclick="if(confirm('Reset?'))fetch('/api/session/reset',{method:'POST'})">Reset</button>
             </div>
             <button class="danger" onclick="if(confirm('PANIC?'))DashWS.send('panic')" style="margin-top:8px;">PANIC</button>

@@ -76,7 +76,9 @@ class PerceptionIntercepts {
     const reportLines = [];
     for (const [pid, p] of Object.entries(players)) {
       if (p.absent || p.notYetArrived) continue;
-      const pp = p.character?.passivePerception || p.character?.passivePerception || 10;
+      const char = p.character || {};
+      const pp = char.passivePerception
+        || (10 + (char.abilities?.wis?.modifier || 0) + (char.skills?.perception?.proficiency === 'proficiency' ? (char.proficiencyBonus || 2) : 0));
       if (pp >= dc) {
         const margin = pp - dc;
         const description = this._descriptionByMargin(margin, token);

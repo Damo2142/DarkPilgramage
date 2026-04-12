@@ -952,7 +952,11 @@
       <select id="chat-ch-player" onchange="setChatChannel(this.value)" style="flex:1;padding:6px;font-size:11px;"><option value="">Whisper to...</option></select>
     </div>
     <div id="chatlog"></div>
-    <div id="chatr"><input id="chatin" type="text" placeholder="Say something..." onkeydown="if(event.key==='Enter')sndChat()"><button class="sendbtn" onclick="sndChat()">Send</button></div>
+    <div id="chatr">
+      <button class="hbtn" id="chat-ooc-toggle" onclick="toggleOOC()" title="Toggle out-of-character" style="padding:6px 10px;font-size:11px;background:#3a5a3a;color:#d8e8d8;">IC</button>
+      <input id="chatin" type="text" placeholder="Say something..." onkeydown="if(event.key==='Enter')sndChat()">
+      <button class="sendbtn" onclick="sndChat()">Send</button>
+    </div>
   </div>
   <!-- NPC Chat -->
   <div class="panel" id="panel-npcchat">
@@ -2684,10 +2688,21 @@ function setChatChannel(ch){
   $('chatin').placeholder='Message '+label+'...';
 }
 
+var oocMode=false;
+function toggleOOC(){
+  oocMode=!oocMode;
+  const btn=$('chat-ooc-toggle');
+  if(btn){
+    btn.textContent=oocMode?'OOC':'IC';
+    btn.style.background=oocMode?'#5a3a3a':'#3a5a3a';
+    btn.style.color=oocMode?'#e8d8d8':'#d8e8d8';
+  }
+}
 function sndChat(){
-  const i=$('chatin'),t=i.value.trim();
-  if(!t)return;
+  const i=$('chatin'),raw=i.value.trim();
+  if(!raw)return;
   i.value='';
+  const t=oocMode?('OOC: '+raw):raw;
   const name=char.name||PID;
   addChat(name,t,'var(--accent)');
   send({type:'chat:message',text:t,channel:chatChannel,from:PID,fromName:name});

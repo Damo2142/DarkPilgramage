@@ -2651,7 +2651,7 @@
     },
     async resumeLatest() {
       try {
-        const res = await fetch('/api/session/resume', {
+        const res = await fetch('/api/session/resume-save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})

@@ -621,7 +621,7 @@ class CombatService {
     if (!c || !c.actorSlug) return null;
 
     const mapSvc = this.orchestrator.getService('map');
-    const actor = mapSvc?.customActors?.get(c.actorSlug) || mapSvc?.srdMonsters?.get(c.actorSlug);
+    const actor = mapSvc?.customActors?.get(c.actorSlug) || mapSvc?.srdMonsters?.find(m => m.slug === c.actorSlug);
     if (!actor?.actions?.[actionIndex]) return null;
 
     const action = actor.actions[actionIndex];
@@ -971,7 +971,7 @@ class CombatService {
 
     // INT check — only INT 6+ considers fleeing
     const mapSvc = this.orchestrator.getService('map');
-    const actor = c.actorSlug ? (mapSvc?.customActors?.get(c.actorSlug) || mapSvc?.srdMonsters?.get(c.actorSlug)) : null;
+    const actor = c.actorSlug ? (mapSvc?.customActors?.get(c.actorSlug) || mapSvc?.srdMonsters?.find(m => m.slug === c.actorSlug)) : null;
     const intScore = actor?.intelligence || 10;
     if (intScore < 6) return;
 
@@ -1072,7 +1072,7 @@ class CombatService {
     if (!c || !c.actorSlug) return { actions: [], legendaryActions: [], specialAbilities: [], forms: null };
 
     const mapSvc = this.orchestrator.getService('map');
-    const actor = mapSvc?.customActors?.get(c.actorSlug) || mapSvc?.srdMonsters?.get(c.actorSlug);
+    const actor = mapSvc?.customActors?.get(c.actorSlug) || mapSvc?.srdMonsters?.find(m => m.slug === c.actorSlug);
     if (!actor) return { actions: [], legendaryActions: [], specialAbilities: [], forms: null };
 
     const mapAction = (a, i) => {
@@ -1511,7 +1511,7 @@ Available targets: ${enemies.map(e => `"${e.name}" (id: check turnOrder)`).join(
 
     // Get actor data for context
     const mapSvc = this.orchestrator.getService('map');
-    const actor = combatant.actorSlug ? (mapSvc?.customActors?.get(combatant.actorSlug) || mapSvc?.srdMonsters?.get(combatant.actorSlug)) : null;
+    const actor = combatant.actorSlug ? (mapSvc?.customActors?.get(combatant.actorSlug) || mapSvc?.srdMonsters?.find(m => m.slug === combatant.actorSlug)) : null;
     const cr = actor?.challenge_rating || '0';
 
     if (!aiEngine?.gemini?.available) {

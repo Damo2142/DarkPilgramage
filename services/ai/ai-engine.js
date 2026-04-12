@@ -639,9 +639,7 @@ Stay strictly within what ${npcName} knows. 1-3 sentences of dialogue typical.`;
       const speakerId = segment.speaker;
       const player = this.state.get('players.' + speakerId);
       if (player && speakerId !== 'dm') {
-        const dexMod = player.character?.abilities?.dex
-          ? Math.floor((player.character.abilities.dex - 10) / 2)
-          : 0;
+        const dexMod = player.character?.abilities?.dex?.modifier ?? 0;
         const passive = 10 + dexMod;
         // DC 14 stealth — passive check
         const subtle = passive >= 14;

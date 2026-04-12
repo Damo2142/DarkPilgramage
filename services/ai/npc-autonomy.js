@@ -300,15 +300,15 @@ If the NPC would not act right now, use action "nothing".`;
         x = zone.points.reduce((s, p) => s + p.x, 0) / zone.points.length;
         y = zone.points.reduce((s, p) => s + p.y, 0) / zone.points.length;
       } else {
-        x = zone.x + zone.width / 2;
-        y = zone.y + zone.height / 2;
+        x = zone.x + zone.w / 2;
+        y = zone.y + zone.h / 2;
       }
 
       // Snap to grid
       x = Math.round(x / gs) * gs + gs / 2;
       y = Math.round(y / gs) * gs + gs / 2;
 
-      this.bus.dispatch('map:token_move', { tokenId, x, y });
+      this.bus.dispatch('token:move', { entityId: tokenId, to: { x, y } });
     }
   }
 

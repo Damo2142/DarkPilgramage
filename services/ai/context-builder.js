@@ -176,8 +176,8 @@ class ContextBuilder {
         for (const z of zones) {
           if (z.points) {
             // Polygon zone — skip for now (complex)
-          } else if (z.x != null && z.width != null) {
-            if (tok.x >= z.x && tok.x <= z.x + z.width && tok.y >= z.y && tok.y <= z.y + z.height) {
+          } else if (z.x != null && z.w != null) {
+            if (tok.x >= z.x && tok.x <= z.x + z.w && tok.y >= z.y && tok.y <= z.y + z.h) {
               inZone = ` in "${z.name || z.id}"`;
               break;
             }

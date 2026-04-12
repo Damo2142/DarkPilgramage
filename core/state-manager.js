@@ -169,6 +169,7 @@ class StateManager {
     this.set('session.status', 'active');
 
     // Start elapsed time tracking
+    if (this._elapsedInterval) clearInterval(this._elapsedInterval);
     this._elapsedInterval = setInterval(() => {
       if (this.get('session.status') === 'active') {
         const start = new Date(this.get('session.startTime'));
@@ -377,6 +378,7 @@ class StateManager {
    * Update player Dread score and calculate threshold
    */
   updateDread(playerId, newScore) {
+    const prev = this.get(`players.${playerId}.dread.score`);
     const clamped = Math.max(0, Math.min(100, newScore));
     let threshold = 'calm';
     if (clamped >= 80) threshold = 'broken';
@@ -392,7 +394,7 @@ class StateManager {
       playerId,
       score: clamped,
       threshold,
-      previous: this.get(`players.${playerId}.dread.score`)
+      previous: prev
     });
 
     return { score: clamped, threshold };

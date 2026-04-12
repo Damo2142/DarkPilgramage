@@ -60,7 +60,7 @@ class LightingService {
     }, 'lighting');
 
     // Combat round — check weather impact
-    this.bus.subscribe('combat:nextTurn', () => this._checkWeatherCombatEffects(), 'lighting');
+    this.bus.subscribe('combat:next_turn', () => this._checkWeatherCombatEffects(), 'lighting');
     this.bus.subscribe('combat:started', () => this._checkWeatherCombatEffects(), 'lighting');
 
     // Weather changes

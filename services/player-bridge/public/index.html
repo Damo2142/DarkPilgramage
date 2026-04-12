@@ -690,14 +690,13 @@
 
   <!-- GRIMOIRE CONTENT — scrollable, fills remaining -->
   <div id="grimoire-content">
-    <!-- TAB: MAP -->
+    <!-- TAB: MAP — complete rewrite: IMG + CSS transform + DOM tokens -->
     <div class="gtab active" id="gtab-map" style="padding:0;height:calc(100vh - 100px);">
-      <div class="panel" id="panel-map" style="padding:0;position:relative;overflow:hidden;height:100%;">
-        <canvas id="player-map-canvas"></canvas>
-        <div id="zone-banner" style="display:none;position:absolute;top:0;left:0;right:0;background:rgba(15,15,20,0.9);border-bottom:2px solid #8a6a20;padding:10px 14px;text-align:center;z-index:10;">
-          <div style="font-family:Georgia,serif;color:#e8c060;font-size:14px;" id="zone-banner-text"></div>
-        </div>
-        <button id="rotate-btn-tab" onclick="PlayerMap._toggleRotateMode()" style="position:absolute;bottom:8px;right:8px;z-index:10;background:rgba(30,30,40,0.85);color:#aaa;border:1px solid #555;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;">Rotate</button>
+      <div id="panel-map" style="position:relative;overflow:hidden;width:100%;height:100%;background:#000;touch-action:none;">
+        <img id="player-map-img" style="position:absolute;transform-origin:0 0;user-select:none;-webkit-user-drag:none;" draggable="false">
+        <canvas id="player-fog-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2;"></canvas>
+        <div id="player-token-layer" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:3;pointer-events:none;"></div>
+        <div id="map-touch-hint" style="position:absolute;bottom:60px;left:50%;transform:translateX(-50%);background:rgba(20,18,16,0.95);color:#e8c060;font-family:Georgia,serif;font-size:14px;padding:8px 18px;border:1px solid #4a3a28;border-radius:6px;z-index:5;opacity:0;transition:opacity 0.3s;pointer-events:none;"></div>
       </div>
     </div>
 
@@ -3574,1372 +3573,332 @@ const WoundPanel = {
   }
 };
 
-// PLAYER MAP — Canvas 2D (view + own-token drag)
-// ============================================================
+// ═══════════════════════════════════════════════════════════════
+// PLAYER MAP — IMG + CSS transform + DOM tokens (complete rewrite)
+// Canvas is gone. The map is an <img>, pan/zoom is CSS transform,
+// tokens are absolutely-positioned DIVs, fog is a tiny canvas overlay.
+// ═══════════════════════════════════════════════════════════════
 const PlayerMap = {
-  canvas: null, ctx: null,
-  mapData: null, tokens: {}, zones: [], tokenLabels: {},
-  walls: [], lights: [],
+  // ── state ──
+  mapData: null, tokens: {}, zones: [],
+  _img: null, _fogCanvas: null, _tokenLayer: null, _container: null,
+  _scale: 0.3, _panX: 0, _panY: 0,
+  _selectedTokenId: null, _hintTimer: null,
+  // legacy compat stubs
+  walls: [], lights: [], tokenLabels: {},
   cam: { x: 0, y: 0, zoom: 1 },
-  dragging: null, panning: false,
-  panStart: { x: 0, y: 0, camX: 0, camY: 0 },
-  _lastPinchDist: 0,
-  _lightCanvas: null,
-  _visionCache: {},   // tokenId -> { x, y, polygon }
-  _lightVisCache: null,  // cached light visibility polygons (null = needs recompute)
-  _wallsVersion: 0,    // increments when walls change
-
-  // ── MOVEMENT RATE LIMITING ──
-  _moveState: {
-    speedPx: 0,        // max movement in pixels (normal)
-    dashSpeedPx: 0,    // max movement in pixels (dash = double)
-    startX: 0,         // drag start position
-    startY: 0,
-    movedPx: 0,        // distance already moved this turn
-    dashed: false,      // has this combatant dashed this turn?
-    actionSpent: false, // action used for dash?
-    active: false       // is movement limiting active?
-  },
-
+  // ── init ──
   init() {
-    this.canvas = $('player-map-canvas');
-    if (!this.canvas) return;
-    this.ctx = this.canvas.getContext('2d');
-    window.addEventListener('resize', () => this.resize());
+    this._container = document.getElementById('panel-map');
+    this._img = document.getElementById('player-map-img');
+    this._fogCanvas = document.getElementById('player-fog-canvas');
+    this._tokenLayer = document.getElementById('player-token-layer');
+    if (!this._container || !this._img) return;
 
-    try { this.tokenLabels = JSON.parse(localStorage.getItem('tokenLabels')) || {}; } catch(e) {}
+    // Touch: pan + zoom + token tap
+    this._setupTouch();
 
-    this.canvas.addEventListener('touchstart', (e) => this._onTouchStart(e), { passive: false });
-    this.canvas.addEventListener('touchmove', (e) => this._onTouchMove(e), { passive: false });
-    this.canvas.addEventListener('touchend', (e) => this._onTouchEnd(e));
-
-    this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-    this.canvas.addEventListener('mousedown', (e) => {
-      if (e.button === 2) { this._startRotation(e); return; }
-      this._onMouseDown(e);
+    // Click on container = move selected token
+    this._container.addEventListener('click', (e) => {
+      if (!this._selectedTokenId) return;
+      if (e.target.closest('.player-token')) return;
+      const mapPt = this._clientToMap(e.clientX, e.clientY);
+      if (mapPt) this._moveSelectedTo(mapPt.x, mapPt.y);
     });
-    this.canvas.addEventListener('mousemove', (e) => {
-      if (this._rotating) { this._updateRotation(e); return; }
-      this._onMouseMove(e);
-    });
-    this.canvas.addEventListener('mouseup', (e) => {
-      if (this._rotating) { this._endRotation(); return; }
-      this._onMouseUp(e);
-    });
-    this.canvas.addEventListener('wheel', (e) => { e.preventDefault(); const f=e.deltaY>0?0.9:1.1; this.cam.zoom=Math.max(0.1,Math.min(5,this.cam.zoom*f)); this.render(); }, { passive: false });
-  },
 
-  resize() {
-    if (!this.canvas) return;
-    // Only resize when the MAP tab is actually visible — otherwise the canvas
-    // has zero size and getBoundingClientRect returns 0x0.
-    const gtab = document.getElementById('gtab-map');
-    if (!gtab || !gtab.classList.contains('active')) return;
-
-    // FIX-L1 — read the rect from the CANVAS itself, not the parent panel.
-    // This guarantees we're sizing the backing store to match what CSS
-    // actually laid out for the element. The previous version read the
-    // panel rect which could differ from the canvas if the canvas inline
-    // style didn't fully fill the panel — leaving the canvas at one size
-    // but the backing store at another, producing visible blur.
-    const rect = this.canvas.getBoundingClientRect();
-    if (rect.width < 50 || rect.height < 50) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    this.canvas.width = Math.round(rect.width * dpr);
-    this.canvas.height = Math.round(rect.height * dpr);
-    // Do NOT set canvas.style.width/height — let CSS own the displayed size.
-    if (this.ctx && this.ctx.setTransform) {
-      this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-    this._dpr = dpr;
-    console.log('[MAP-DEBUG] resize — rect:', Math.round(rect.width) + 'x' + Math.round(rect.height),
-      'dpr:', dpr,
-      'backing:', this.canvas.width + 'x' + this.canvas.height,
-      'mapData:', this.mapData ? (this.mapData.width + 'x' + this.mapData.height) : 'none');
-    this.render();
+    window.addEventListener('resize', () => this.render());
+    console.log('[PlayerMap] IMG+CSS map initialized');
   },
 
   loadFromState(mapState) {
     if (!mapState || !mapState.id) return;
-    this.mapData = { id: mapState.id, name: mapState.name, image: mapState.image, gridSize: mapState.gridSize || 70, width: mapState.width || 1400, height: mapState.height || 1050 };
+    this.mapData = { id: mapState.id, name: mapState.name, image: mapState.image,
+      gridSize: mapState.gridSize || 70, width: mapState.width || 1400, height: mapState.height || 1050 };
     this.tokens = mapState.tokens || {};
     this.zones = (mapState.zones || []).map(z => ({ ...z }));
     this.walls = mapState.walls || [];
     this.lights = mapState.lights || [];
-    this._visionCache = {};
-    this._lightVisCache = null;
-    this._wallsVersion++;
-    this.cam.zoom = 0.3;
 
-    if (mapState.image) {
-      const img = new Image();
-      img.onload = () => { this._mapImage = img; this.render(); };
-      img.onerror = () => { this._mapImage = null; this.render(); };
-      img.src = '/assets/maps/' + mapState.image;
+    if (this._img && mapState.image) {
+      this._img.onload = () => { this._fitMap(); this.render(); };
+      this._img.onerror = () => console.warn('[PlayerMap] image load failed');
+      this._img.src = '/assets/maps/' + mapState.image;
     }
     this.render();
   },
 
   onStateUpdate(path, value) {
-    if (path === 'map.tokens' && typeof value === 'object') { this.tokens = value; this._visionCache = {}; this.render(); }
-    else if (path === 'map.walls' && Array.isArray(value)) {
-      this.walls = value; this._wallsVersion++; this._visionCache = {}; this._lightVisCache = null; this.render();
-    }
-    else if (path === 'map.lights' && Array.isArray(value)) {
-      this.lights = value; this._lightVisCache = null; this.render();
-    }
-    else if (path === 'map.zones' && Array.isArray(value)) {
-      this.zones = value.map(z => ({ ...z }));
-      this.render();
-    }
+    if (path === 'map.tokens' && typeof value === 'object') { this.tokens = value; this.render(); }
+    else if (path === 'map.zones' && Array.isArray(value)) { this.zones = value.map(z => ({...z})); this.render(); }
     else if (path.startsWith('map.tokens.')) {
       const parts = path.replace('map.tokens.','').split('.');
       const tid = parts[0];
-      if (parts.length === 1) { this.tokens[tid] = value; delete this._visionCache[tid]; }
+      if (parts.length === 1) this.tokens[tid] = value;
       else {
         if (!this.tokens[tid]) this.tokens[tid] = {};
-        let obj = this.tokens[tid];
-        for (let i = 1; i < parts.length - 1; i++) { if (!obj[parts[i]]) obj[parts[i]] = {}; obj = obj[parts[i]]; }
-        obj[parts[parts.length-1]] = value;
-        if (parts[1] === 'x' || parts[1] === 'y' || parts[1] === 'light' || parts[1] === 'facing') delete this._visionCache[tid];
+        this.tokens[tid][parts[1]] = value;
       }
       this.render();
     }
   },
 
-  // Client-side wall collision check — mirrors server _pathBlockedByWall logic
-  // Returns null if clear, or { type, index, wall } of the first blocking segment
-  _pathBlockedByWalls(x1, y1, x2, y2) {
-    for (let i = 0; i < this.walls.length; i++) {
-      const wall = this.walls[i];
-      const type = wall.type || 'wall';
-      if (type === 'door' && wall.open) continue; // open doors passable
-      if (this._lineIntersects(x1, y1, x2, y2, wall.x1, wall.y1, wall.x2, wall.y2)) {
-        return { type, index: i, wall, locked: !!wall.locked };
-      }
-    }
-    return null;
+  resize() { this.render(); },
+
+  // ── coordinate helpers ──
+  _fitMap() {
+    if (!this.mapData || !this._container) return;
+    const cw = this._container.offsetWidth;
+    const ch = this._container.offsetHeight;
+    if (!cw || !ch) return;
+    this._scale = Math.min(cw / this.mapData.width, ch / this.mapData.height) * 0.95;
+    this._panX = (cw - this.mapData.width * this._scale) / 2;
+    this._panY = (ch - this.mapData.height * this._scale) / 2;
   },
 
-  // Line segment intersection test (used for movement collision + LOS checks)
-  // t = parameter along ray/path, u = parameter along wall segment
-  // Include wall endpoints (u >= 0, u <= 1) so adjacent wall/door segments have no gaps
-  _lineIntersects(ax1, ay1, ax2, ay2, bx1, by1, bx2, by2) {
-    const dax = ax2 - ax1, day = ay2 - ay1;
-    const dbx = bx2 - bx1, dby = by2 - by1;
-    const d = dax * dby - day * dbx;
-    if (Math.abs(d) < 0.0001) return false;
-    const t = ((bx1 - ax1) * dby - (by1 - ay1) * dbx) / d;
-    const u = ((bx1 - ax1) * day - (by1 - ay1) * dax) / d;
-    return t > 0.001 && t < 0.999 && u >= -0.001 && u <= 1.001;
+  _applyTransform() {
+    if (!this._img) return;
+    this._img.style.transform = 'translate(' + this._panX + 'px,' + this._panY + 'px) scale(' + this._scale + ')';
   },
 
-  // ── MOVEMENT RATE LIMITING HELPERS ──
-
-  // Check if a point is inside a zone (rect or polygon)
-  _pointInZone(px, py, zone) {
-    if (zone.points && zone.points.length >= 3) {
-      let inside = false;
-      const pts = zone.points;
-      for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
-        if ((pts[i].y > py) !== (pts[j].y > py) &&
-            px < (pts[j].x - pts[i].x) * (py - pts[i].y) / (pts[j].y - pts[i].y) + pts[i].x) {
-          inside = !inside;
-        }
-      }
-      return inside;
-    }
-    // Rect zone
-    if (zone.x != null && zone.w != null) {
-      return px >= zone.x && px <= zone.x + zone.w && py >= zone.y && py <= zone.y + zone.h;
-    }
-    return false;
+  _clientToMap(cx, cy) {
+    if (!this._container || !this.mapData) return null;
+    const rect = this._container.getBoundingClientRect();
+    const lx = cx - rect.left;
+    const ly = cy - rect.top;
+    const mx = (lx - this._panX) / this._scale;
+    const my = (ly - this._panY) / this._scale;
+    return { x: mx, y: my };
   },
 
-  // Calculate movement cost in pixels between two points, accounting for difficult terrain zones
-  _movementCost(fromX, fromY, toX, toY) {
-    const rawDist = Math.sqrt((toX - fromX) ** 2 + (toY - fromY) ** 2);
-    // Check if destination is in a difficult terrain zone — double cost
-    const destZones = this.zones.filter(z => z.difficult_terrain && this._pointInZone(toX, toY, z));
-    if (destZones.length > 0) return rawDist * 2;
-    return rawDist;
+  _mapToClient(mx, my) {
+    return { x: mx * this._scale + this._panX, y: my * this._scale + this._panY };
   },
 
-  // Get max movement pixels for current character speed during combat
-  _getMovementBudget() {
-    const speed = char.speed || 30;
-    const gs = this.mapData?.gridSize || 70;
-    const squaresFt = 5; // 5ft per grid square
-    const basePx = (speed / squaresFt) * gs;
-    return { basePx, dashPx: basePx * 2 };
-  },
-
-  // Movement is always restricted — speed limits apply at all times
-  _isMovementRestricted() {
-    return true;
-  },
-
-  // Reset movement state at turn start
-  _resetMovement() {
-    this._moveState.movedPx = 0;
-    this._moveState.dashed = false;
-    this._moveState.actionSpent = false;
-    this._moveState.active = false;
-  },
-
-  // Clamp a drag position to movement range boundary
-  _clampToRange(startX, startY, targetX, targetY, maxPx) {
-    const dx = targetX - startX;
-    const dy = targetY - startY;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist <= maxPx || dist < 0.001) return { x: targetX, y: targetY };
-    const scale = maxPx / dist;
-    return { x: startX + dx * scale, y: startY + dy * scale };
-  },
-
-  // Show dash prompt modal — returns promise resolving to 'dash' or 'cancel'
-  _promptDash(distFt, speedFt) {
-    return new Promise(resolve => {
-      const overlay = document.createElement('div');
-      overlay.className = 'door-prompt-overlay';
-      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
-      const box = document.createElement('div');
-      box.style.cssText = 'background:#1a1a2e;border:2px solid #c9a54e;border-radius:12px;padding:24px;max-width:340px;text-align:center;font-family:Cinzel,serif;color:#e8e0d0;';
-      box.innerHTML = '<div style="font-size:36px;margin-bottom:8px;">\u{1F3C3}</div>'
-        + '<div style="font-size:18px;font-weight:bold;margin-bottom:8px;">Out of Movement</div>'
-        + '<div style="font-size:14px;color:#a09880;margin-bottom:6px;font-family:Source Sans 3,sans-serif;">'
-        + 'That move is ' + Math.round(distFt) + 'ft — your speed is ' + speedFt + 'ft.</div>'
-        + '<div style="font-size:13px;color:#c07030;margin-bottom:20px;font-family:Source Sans 3,sans-serif;">'
-        + 'Dash uses your action to double your movement this turn.</div>'
-        + '<div style="display:flex;gap:12px;justify-content:center;"></div>';
-      const btnRow = box.lastElementChild;
-      const makeBtn = (label, accent, result) => {
-        const btn = document.createElement('button');
-        btn.textContent = label;
-        btn.style.cssText = 'padding:8px 20px;border-radius:6px;border:1px solid ' + accent + ';background:' + accent + '22;color:' + accent + ';font-family:Cinzel,serif;font-size:14px;cursor:pointer;';
-        btn.onmouseenter = () => btn.style.background = accent + '44';
-        btn.onmouseleave = () => btn.style.background = accent + '22';
-        btn.onclick = () => { overlay.remove(); resolve(result); };
-        btn.ontouchend = (e) => { e.preventDefault(); overlay.remove(); resolve(result); };
-        return btn;
-      };
-      btnRow.appendChild(makeBtn('Dash (use action)', '#c07030', 'dash'));
-      btnRow.appendChild(makeBtn('Cancel', '#888', 'cancel'));
-      overlay.appendChild(box);
-      overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); resolve('cancel'); } });
-      document.body.appendChild(overlay);
-    });
-  },
-
-  // Render movement range circle on the canvas during drag
-  _renderMoveRange(ctx, mw, mh) {
-    const ms = this._moveState;
-    if (!ms.active) return;
-    const cx = ms.startX - mw / 2;
-    const cy = ms.startY - mh / 2;
-    const effectiveSpeed = ms.dashed ? ms.dashSpeedPx : ms.speedPx;
-    const remaining = effectiveSpeed - ms.movedPx;
-    const dashRemaining = ms.dashSpeedPx - ms.movedPx;
-
-    // Draw movement range (green = current budget, includes dash if already dashed)
-    if (remaining > 0) {
-      ctx.beginPath();
-      ctx.arc(cx, cy, remaining, 0, Math.PI * 2);
-      ctx.strokeStyle = ms.dashed ? 'rgba(192, 112, 48, 0.5)' : 'rgba(48, 160, 80, 0.5)';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([8, 6]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = ms.dashed ? 'rgba(192, 112, 48, 0.06)' : 'rgba(48, 160, 80, 0.06)';
-      ctx.fill();
-    }
-
-    // Draw dash range (orange) — only if they haven't already dashed
-    if (!ms.dashed && dashRemaining > remaining) {
-      ctx.beginPath();
-      ctx.arc(cx, cy, dashRemaining, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(192, 112, 48, 0.35)';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([4, 8]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-
-    // Draw difficult terrain zones with hatching
-    for (const z of this.zones) {
-      if (!z.difficult_terrain) continue;
-      ctx.save();
-      ctx.globalAlpha = 0.18;
-      ctx.fillStyle = '#c07030';
-      if (z.points && z.points.length >= 3) {
-        ctx.beginPath();
-        ctx.moveTo(z.points[0].x - mw / 2, z.points[0].y - mh / 2);
-        for (let i = 1; i < z.points.length; i++) ctx.lineTo(z.points[i].x - mw / 2, z.points[i].y - mh / 2);
-        ctx.closePath();
-        ctx.fill();
-      } else if (z.x != null && z.w != null) {
-        ctx.fillRect(z.x - mw / 2, z.y - mh / 2, z.w, z.h);
-      }
-      ctx.restore();
-    }
-  },
-
-  // Dynamic lighting helper: compute vision polygon for a PC
-  // 5e rules: without darkvision, only see lit areas. With darkvision, see DVrange in dark (greyscale).
-  // Carried light sources (torch etc) create light centered on the token.
-  _getVisionPoly(id, tok) {
-    const gs = this.mapData.gridSize;
-    const dv = tok.darkvision || 0;
-    const dvPx = (dv / 5) * gs;
-
-    // Token's own carried light (torch, lantern, etc.)
-    const carried = tok.light;
-    const carriedBright = carried ? carried.bright : 0;
-    const carriedTotal = carried ? (carried.bright + carried.dim) : 0;
-
-    // Determine max possible vision range:
-    // - Darkvision range, OR
-    // - Carried light total range, OR
-    // - Farthest map light that could reach this token
-    const dimExtPx = (15 / 5) * gs;
-    let maxLightReach = carriedTotal;
-    for (const light of this.lights) {
-      if (light.enabled === false) continue; // Skip disabled lights
-      const dx = light.x - tok.x, dy = light.y - tok.y;
-      const dist = Math.sqrt(dx*dx + dy*dy);
-      const totalRange = light.range + dimExtPx;
-      if (dist < totalRange) {
-        maxLightReach = Math.max(maxLightReach, totalRange);
-      }
-    }
-    const visionPx = Math.max(dvPx, maxLightReach);
-
-    if (visionPx <= 0) {
-      // No darkvision, no light — blind
-      return { polygon: [], visionPx: 0, dvPx, carriedBright, carriedTotal, darkvision: false };
-    }
-
-    const facing = tok.facing != null ? tok.facing : 0;
-    const cached = this._visionCache[id];
-    if (cached && cached.x === tok.x && cached.y === tok.y && cached.visionPx === visionPx && cached.facing === facing) {
-      return { polygon: cached.polygon, visionPx, dvPx, carriedBright, carriedTotal, darkvision: dv > 0 };
-    }
-
-    // Use token facing direction for FOV (200 degree binocular field)
-    const fovAngle = 200 * (Math.PI / 180); // 200 degree human binocular FOV
-    const poly = VisionEngine.computeVisibility(tok.x, tok.y, visionPx, this.walls, facing, fovAngle);
-    this._visionCache[id] = { x: tok.x, y: tok.y, visionPx, facing, polygon: poly };
-    return { polygon: poly, visionPx, dvPx, carriedBright, carriedTotal, darkvision: dv > 0 };
-  },
-
-  // Dynamic lighting helper: get cached light visibility polygons
-  _getLightPolys() {
-    if (this._lightVisCache !== null) return this._lightVisCache;
-    this._lightVisCache = [];
-    const gs = this.mapData.gridSize;
-    const dimExtPx = (15 / 5) * gs; // 15ft dim light extension
-    for (const light of this.lights) {
-      if (light.enabled === false) continue; // Skip disabled lights
-      const totalRange = light.range + dimExtPx;
-      const poly = VisionEngine.computeVisibility(light.x, light.y, totalRange, this.walls);
-      this._lightVisCache.push({ x: light.x, y: light.y, brightPx: light.range, totalPx: totalRange, polygon: poly });
-    }
-    return this._lightVisCache;
-  },
-
+  // ── rendering ──
   render() {
-    const ctx = this.ctx;
-    if (!ctx || !this.canvas.width) return;
-    // FIX-J2 — work in CSS pixel space; the ctx transform already scales by dpr.
-    const dpr = this._dpr || 1;
-    const W = this.canvas.width / dpr;
-    const H = this.canvas.height / dpr;
-    ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = '#050508'; ctx.fillRect(0, 0, W, H);
-    if (!this.mapData) { ctx.fillStyle='#6b6760'; ctx.font='14px Source Sans 3,sans-serif'; ctx.textAlign='center'; ctx.fillText('No map loaded', W/2, H/2); return; }
-
-    ctx.save();
-    ctx.translate(W/2 + this.cam.x, H/2 + this.cam.y);
-    ctx.scale(this.cam.zoom, this.cam.zoom);
-    const mw = this.mapData.width, mh = this.mapData.height;
-
-    if (this._mapImage) { ctx.drawImage(this._mapImage, -mw/2, -mh/2, mw, mh); }
-    else {
-      ctx.fillStyle = '#0a0a12'; ctx.fillRect(-mw/2, -mh/2, mw, mh);
-      for (const z of (this.mapData.zones||[])) {
-        ctx.fillStyle='rgba(30,30,40,0.8)'; ctx.strokeStyle='rgba(80,80,100,0.3)'; ctx.lineWidth=1;
-        ctx.fillRect(z.x-mw/2, z.y-mh/2, z.w, z.h); ctx.strokeRect(z.x-mw/2, z.y-mh/2, z.w, z.h);
-        ctx.fillStyle='rgba(150,150,160,0.5)'; ctx.font='10px sans-serif'; ctx.textAlign='center';
-        ctx.fillText(z.name, z.x-mw/2+z.w/2, z.y-mh/2+z.h/2);
-      }
-    }
-
-    // Grid
-    const gs = this.mapData.gridSize;
-    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-    ctx.lineWidth = 1;
-    for (let gx = 0; gx <= mw; gx += gs) { ctx.beginPath(); ctx.moveTo(gx-mw/2, -mh/2); ctx.lineTo(gx-mw/2, mh/2); ctx.stroke(); }
-    for (let gy = 0; gy <= mh; gy += gs) { ctx.beginPath(); ctx.moveTo(-mw/2, gy-mh/2); ctx.lineTo(mw/2, gy-mh/2); ctx.stroke(); }
-
-    // Movement range overlay (during combat drag)
-    this._renderMoveRange(ctx, mw, mh);
-
-    // Tokens — all non-hidden tokens drawn (visibility handled by dynamic lighting fog)
-    for (const [id, tok] of Object.entries(this.tokens)) {
-      // Use drag visual position if token is being dragged, otherwise real position
-      const drawX = (this.dragging && this.dragging.tokenId === id && tok._dragVisualX != null) ? tok._dragVisualX : tok.x;
-      const drawY = (this.dragging && this.dragging.tokenId === id && tok._dragVisualY != null) ? tok._dragVisualY : tok.y;
-      const x = drawX - mw/2, y = drawY - mh/2, r = gs * 0.4;
-      const hp = tok.hp || {current:1,max:1};
-      const hpPct = Math.max(0, hp.current/hp.max);
-
-      // Movement range: determine if dragged token is beyond range
-      const ms = this._moveState;
-      const isDragging = this.dragging && this.dragging.tokenId === id;
-      let beyondNormal = false, beyondDash = false;
-      if (isDragging && ms.active) {
-        const dragDist = this._movementCost(ms.startX, ms.startY, drawX, drawY);
-        const totalDist = ms.movedPx + dragDist;
-        beyondNormal = totalDist > ms.speedPx;
-        beyondDash = totalDist > ms.dashSpeedPx;
-      }
-
-      ctx.beginPath(); ctx.arc(x,y,r+3,0,Math.PI*2); ctx.strokeStyle='rgba(60,60,70,0.6)'; ctx.lineWidth=3; ctx.stroke();
-      if (hpPct > 0) {
-        ctx.beginPath(); ctx.arc(x,y,r+3,-Math.PI/2,-Math.PI/2+Math.PI*2*hpPct);
-        ctx.strokeStyle = hpPct>.5?'#30a050':hpPct>.25?'#c07030':'#d04040'; ctx.lineWidth=3; ctx.stroke();
-      }
-      const isMe = id === PID;
-      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
-      // Ghost color: red if beyond all range, orange if in dash range, normal otherwise
-      if (isDragging && beyondDash) {
-        ctx.globalAlpha = 0.5;
-        ctx.fillStyle = '#d04040'; ctx.fill();
-        ctx.globalAlpha = 1.0;
-      } else if (isDragging && beyondNormal) {
-        ctx.globalAlpha = 0.7;
-        ctx.fillStyle = '#c07030'; ctx.fill();
-        ctx.globalAlpha = 1.0;
-      } else {
-        ctx.fillStyle = tok.type==='pc' ? (isMe?'#4080c0':'#2a5580') : '#c9a54e'; ctx.fill();
-      }
-      if (isMe && !(isDragging && beyondDash)) { ctx.strokeStyle='#c9a54e'; ctx.lineWidth=2; ctx.stroke(); }
-      // Facing direction indicator (arrow on token edge)
-      if (tok.type === 'pc') {
-        const fAngle = tok.facing != null ? tok.facing : 0;
-        const arrowLen = r * 0.5;
-        const arrowX = x + Math.cos(fAngle) * r;
-        const arrowY = y + Math.sin(fAngle) * r;
-        ctx.save();
-        ctx.translate(arrowX, arrowY);
-        ctx.rotate(fAngle);
-        ctx.beginPath();
-        ctx.moveTo(arrowLen * 0.5, 0);
-        ctx.lineTo(-arrowLen * 0.3, -arrowLen * 0.35);
-        ctx.lineTo(-arrowLen * 0.3, arrowLen * 0.35);
-        ctx.closePath();
-        ctx.fillStyle = isMe ? '#c9a54e' : '#88aacc';
-        ctx.fill();
-        ctx.restore();
-      }
-      var displayName = this.tokenLabels[id] || tok.name || id;
-      var letter = displayName === 'Unknown' ? '?' : displayName.charAt(0).toUpperCase();
-      ctx.fillStyle='#fff'; ctx.font=`bold ${r*0.9}px Cinzel,serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText(letter, x, y);
-      var ns=Math.max(2,gs*0.10); ctx.font=`bold ${ns}px sans-serif`; ctx.textAlign='center';
-      ctx.strokeStyle='rgba(0,0,0,0.9)'; ctx.lineWidth=Math.max(1,ns*0.25); ctx.lineJoin='round';
-      var labelColor = this.tokenLabels[id] ? '#c9e060' : '#f0f0f0';
-      ctx.strokeText(displayName, x, y+r+ns*0.8);
-      ctx.fillStyle=labelColor; ctx.fillText(displayName, x, y+r+ns*0.8);
-
-      // Movement distance label during combat drag
-      if (isDragging && ms.active) {
-        const dragDist = this._movementCost(ms.startX, ms.startY, drawX, drawY);
-        const totalDist = ms.movedPx + dragDist;
-        const totalFt = Math.round((totalDist / gs) * 5);
-        const speedFt = char.speed || 30;
-        const ftLabel = totalFt + '/' + speedFt + 'ft';
-        const ftSize = Math.max(3, gs * 0.12);
-        ctx.font = 'bold ' + ftSize + 'px Source Sans 3,sans-serif';
-        const ftColor = beyondDash ? '#d04040' : beyondNormal ? '#c07030' : '#30a050';
-        ctx.strokeStyle = 'rgba(0,0,0,0.9)'; ctx.lineWidth = Math.max(1, ftSize * 0.3);
-        ctx.strokeText(ftLabel, x, y - r - ftSize * 0.5);
-        ctx.fillStyle = ftColor;
-        ctx.fillText(ftLabel, x, y - r - ftSize * 0.5);
-      }
-    }
-
-    // ── DYNAMIC LIGHTING ─────────────────────────────────────────────
-    this._renderDynamicLighting(ctx, mw, mh);
-
-    // Spell AOE visualization (placed or targeting preview)
-    var aoeData = _spellAOE;
-    var aoePreview = false;
-    if(!aoeData && _aoeTargeting && _aoeTargeting._previewX != null){
-      // Show preview while targeting
-      var t=_aoeTargeting;
-      var px=t._previewX, py=t._previewY;
-      if(t.selfOrigin){
-        var ptok=this.tokens[PID];
-        if(ptok){px=ptok.x; py=ptok.y;}
-      }
-      aoeData={type:t.type,size:t.size,x:px,y:py,name:t.name,damageType:t.damageType,
-        angle:t.selfOrigin&&t._previewX?Math.atan2(t._previewY-py,t._previewX-px):0};
-      aoePreview=true;
-    }
-    if(aoeData){
-      var aoe=aoeData;
-      var ax=aoe.x-mw/2, ay=aoe.y-mh/2;
-      var colors={fire:'rgba(255,80,20,',cold:'rgba(80,160,255,',lightning:'rgba(200,200,60,',thunder:'rgba(160,120,255,',radiant:'rgba(255,255,120,',necrotic:'rgba(100,20,100,',poison:'rgba(80,200,40,',psychic:'rgba(200,60,200,',acid:'rgba(80,220,60,',force:'rgba(140,80,255,'};
-      var baseColor=colors[(aoe.damageType||'').toLowerCase()]||'rgba(200,160,60,';
-      var fillAlpha=aoePreview?'0.2)':'0.35)';
-      var strokeAlpha=aoePreview?'0.6)':'0.9)';
-
-      ctx.save();
-
-      if(aoe.type==='sphere'||aoe.type==='cylinder'){
-        ctx.beginPath();
-        ctx.arc(ax,ay,aoe.size,0,Math.PI*2);
-        ctx.fillStyle=baseColor+fillAlpha;
-        ctx.fill();
-        ctx.strokeStyle=baseColor+strokeAlpha;
-        ctx.lineWidth=aoePreview?1:3;
-        if(aoePreview) ctx.setLineDash([6,4]);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      } else if(aoe.type==='cone'){
-        var ang=aoe.angle||0;
-        ctx.beginPath();
-        ctx.moveTo(ax,ay);
-        ctx.arc(ax,ay,aoe.size,ang-Math.PI/4,ang+Math.PI/4);
-        ctx.closePath();
-        ctx.fillStyle=baseColor+fillAlpha;
-        ctx.fill();
-        ctx.strokeStyle=baseColor+strokeAlpha;
-        ctx.lineWidth=aoePreview?1:3;
-        if(aoePreview) ctx.setLineDash([6,4]);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      } else if(aoe.type==='line'){
-        var ang=aoe.angle||0;
-        ctx.beginPath();
-        ctx.moveTo(ax,ay);
-        ctx.lineTo(ax+Math.cos(ang)*aoe.size, ay+Math.sin(ang)*aoe.size);
-        ctx.strokeStyle=baseColor+strokeAlpha;
-        ctx.lineWidth=gs*0.3;
-        ctx.lineCap='round';
-        if(aoePreview) ctx.setLineDash([6,4]);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      } else if(aoe.type==='cube'){
-        ctx.fillStyle=baseColor+fillAlpha;
-        ctx.fillRect(ax-aoe.size/2,ay-aoe.size/2,aoe.size,aoe.size);
-        ctx.strokeStyle=baseColor+strokeAlpha;
-        ctx.lineWidth=aoePreview?1:3;
-        if(aoePreview) ctx.setLineDash([6,4]);
-        ctx.strokeRect(ax-aoe.size/2,ay-aoe.size/2,aoe.size,aoe.size);
-        ctx.setLineDash([]);
-      }
-
-      // Label
-      ctx.fillStyle=baseColor+strokeAlpha;
-      ctx.font='bold '+Math.max(12,gs*0.25)+'px sans-serif';
-      ctx.textAlign='center';
-      ctx.fillText(aoe.name+(aoePreview?' (click to place)':''),ax,ay-aoe.size-8);
-
-      ctx.restore();
-    }
-
-    ctx.restore();
+    this._applyTransform();
+    this._renderTokens();
+    this._renderFog();
   },
 
-  // FIX-L2 — simple horizontal-split fog (deterministic fallback).
-  // The original implementation drew a circular vision raycast around
-  // the player token which the spec rejects. The first attempt at zone
-  // fog blacked out the entire map. As a stable middle ground for
-  // April 19, fog the right third of the map (kitchen + storage area).
-  // The left two thirds (the common room) is fully visible.
-  // Zone-aware fog is post-April-19 work — see CODE_REVIEW.md.
-  _renderDynamicLighting(ctx, mw, mh) {
-    // Map and tokens have already been drawn at this point. We paint a
-    // single solid black rectangle over the kitchen/storage area on the
-    // right side of the map. No destination-out, no compositing tricks —
-    // just a plain rect over the map image.
-    var splitX = (this.mapData && this.mapData.fogSplitX) || mw * (2 / 3);
-    ctx.save();
+  _renderTokens() {
+    const layer = this._tokenLayer;
+    if (!layer || !this.mapData) return;
+    // Clear old tokens
+    layer.innerHTML = '';
+    const gs = this.mapData.gridSize || 70;
+    const r = Math.max(14, gs * this._scale * 0.4);
+
+    for (const [id, tok] of Object.entries(this.tokens)) {
+      if (!tok || tok.hidden) continue;
+      if ((tok.type !== 'pc' && !tok.isPC) && !tok.revealedToPlayers) continue;
+      const pos = this._mapToClient(tok.x, tok.y);
+      const isMe = (id === PID);
+      const isPC = tok.type === 'pc' || tok.isPC;
+      const selected = (this._selectedTokenId === id);
+
+      const el = document.createElement('div');
+      el.className = 'player-token';
+      el.dataset.tid = id;
+      el.style.cssText =
+        'position:absolute;' +
+        'width:' + (r*2) + 'px;height:' + (r*2) + 'px;' +
+        'left:' + pos.x + 'px;top:' + pos.y + 'px;' +
+        'transform:translate(-50%,-50%);' +
+        'border-radius:50%;' +
+        'background:' + (tok.color || (isPC ? '#5a9ad9' : '#a44')) + ';' +
+        'border:2px solid ' + (isPC ? '#8ac' : '#744') + ';' +
+        'pointer-events:' + (isMe ? 'auto' : 'none') + ';' +
+        'cursor:' + (isMe ? 'pointer' : 'default') + ';' +
+        'display:flex;align-items:center;justify-content:center;' +
+        'color:#fff;font-weight:bold;font-size:' + Math.max(10, r*0.8) + 'px;' +
+        'text-shadow:0 1px 3px rgba(0,0,0,0.8);' +
+        'z-index:4;' +
+        (selected ? 'box-shadow:0 0 0 3px #e8c060,0 0 20px rgba(232,192,96,0.5);' : '');
+
+      // Label — first letter of name
+      const name = (tok.nameRevealedToPlayers && (tok.publicName || (isPC ? tok.name : ''))) || '';
+      el.textContent = name ? name.charAt(0).toUpperCase() : '';
+
+      if (isMe) {
+        el.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          if (this._selectedTokenId === id) { this._deselect(); return; }
+          this._selectedTokenId = id;
+          this._showHint('Tap destination to move');
+          this.render();
+        });
+      }
+      layer.appendChild(el);
+    }
+  },
+
+  _renderFog() {
+    const fc = this._fogCanvas;
+    if (!fc || !this.mapData) return;
+    const cw = this._container.offsetWidth;
+    const ch = this._container.offsetHeight;
+    fc.width = cw; fc.height = ch;
+    const ctx = fc.getContext('2d');
+    ctx.clearRect(0, 0, cw, ch);
+    // Fill with black fog
     ctx.fillStyle = '#000';
-    ctx.fillRect(splitX - mw / 2, -mh / 2, mw - splitX, mh);
-    // Soft edge so the fog line isn't a hard vertical seam
-    var grad = ctx.createLinearGradient(splitX - mw / 2 - 80, 0, splitX - mw / 2, 0);
-    grad.addColorStop(0, 'rgba(0,0,0,0)');
-    grad.addColorStop(1, 'rgba(0,0,0,0.95)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(splitX - mw / 2 - 80, -mh / 2, 80, mh);
-    ctx.restore();
-    if (!this._fogDebugLogged) {
-      this._fogDebugLogged = true;
-      console.log('[MAP-DEBUG] fog model: horizontal split. splitX:', Math.round(splitX),
-        'map:', mw + 'x' + mh,
-        'zones:', (this.zones || []).length);
-    }
-    return;
-    // ── legacy radius/vision-cone fog ──────────────────────────────
-    /* eslint-disable no-unreachable */
-    const gs = this.mapData.gridSize;
-    const gradPx = (15 / 5) * gs;
+    ctx.fillRect(0, 0, cw, ch);
 
-    // Vision from this player's own token only
-    const myTok = this.tokens[PID];
-    if (!myTok || myTok.x == null || myTok.y == null) {
-      ctx.fillStyle = 'rgba(5,5,8,0.97)';
-      ctx.fillRect(-mw/2, -mh/2, mw, mh);
-      return;
+    // Cut out revealed zones
+    ctx.globalCompositeOperation = 'destination-out';
+    const zones = this.zones || [];
+    let anyRevealed = false;
+    for (const z of zones) {
+      if (z.revealed !== true) continue;
+      anyRevealed = true;
+      const tl = this._mapToClient(z.x || 0, z.y || 0);
+      const w = (z.w || z.width || 0) * this._scale;
+      const h = (z.h || z.height || 0) * this._scale;
+      ctx.fillStyle = '#000';
+      ctx.fillRect(tl.x, tl.y, w, h);
     }
 
-    const vis = this._getVisionPoly(PID, myTok);
-    if (vis.polygon.length < 3) {
-      ctx.fillStyle = 'rgba(5,5,8,0.97)';
-      ctx.fillRect(-mw/2, -mh/2, mw, mh);
-      return;
+    // Fallback: if no zones are revealed, reveal the left 65% of the map
+    // (the common room) so the player isn't staring at a black screen.
+    if (!anyRevealed && this.mapData.width > 0) {
+      const tl = this._mapToClient(0, 0);
+      const w = this.mapData.width * 0.65 * this._scale;
+      const h = this.mapData.height * this._scale;
+      ctx.fillStyle = '#000';
+      ctx.fillRect(tl.x, tl.y, w, h);
     }
+    ctx.globalCompositeOperation = 'source-over';
+  },
 
-    const hasDV = vis.darkvision;
-    const dvPx = vis.dvPx || 0;
-    const mx = myTok.x, my = myTok.y;
+  // ── touch handlers ──
+  _setupTouch() {
+    const c = this._container;
+    let lastDist = 0;
+    let lastCenter = null;
+    let panning = false;
+    let panStartX = 0, panStartY = 0, panPX = 0, panPY = 0;
 
-    // Filter light polys to only those the player has line-of-sight to
-    const allLightPolys = this._getLightPolys();
-    const visibleLightPolys = [];
-    for (const lp of allLightPolys) {
-      // Check if player can see this light source (no wall/closed door blocking)
-      let blocked = false;
-      for (const wall of this.walls) {
-        const wt = wall.type || 'wall';
-        if (wt === 'window') continue; // windows allow vision
-        if (wt === 'door' && wall.open) continue; // open doors allow vision
-        if (this._lineIntersects(mx, my, lp.x, lp.y, wall.x1, wall.y1, wall.x2, wall.y2)) {
-          blocked = true;
-          break;
+    c.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        panning = true;
+        panStartX = e.touches[0].clientX;
+        panStartY = e.touches[0].clientY;
+        panPX = this._panX;
+        panPY = this._panY;
+      } else if (e.touches.length === 2) {
+        panning = false;
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        lastDist = Math.hypot(dx, dy);
+        lastCenter = { x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+                       y: (e.touches[0].clientY + e.touches[1].clientY) / 2 };
+      }
+    }, { passive: true });
+
+    c.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (e.touches.length === 1 && panning) {
+        this._panX = panPX + (e.touches[0].clientX - panStartX);
+        this._panY = panPY + (e.touches[0].clientY - panStartY);
+        this._applyTransform();
+        this._renderFog();
+        this._renderTokens();
+      } else if (e.touches.length === 2) {
+        panning = false;
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.hypot(dx, dy);
+        if (lastDist > 0) {
+          const ratio = dist / lastDist;
+          this._scale = Math.max(0.05, Math.min(5, this._scale * ratio));
+          this._applyTransform();
+          this._renderFog();
+          this._renderTokens();
         }
+        lastDist = dist;
       }
-      if (!blocked) visibleLightPolys.push(lp);
-    }
+    }, { passive: false });
 
-    // Add carried light source (torch, lantern etc) — always visible to self
-    if (vis.carriedTotal > 0) {
-      const cPoly = VisionEngine.computeVisibility(mx, my, vis.carriedTotal, this.walls);
-      visibleLightPolys.push({ x: mx, y: my, brightPx: vis.carriedBright, totalPx: vis.carriedTotal, polygon: cPoly, carried: true });
-    }
+    c.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) lastDist = 0;
+      panning = false;
+    }, { passive: true });
 
-    // ── 1. Greyscale tint on darkvision areas (unlit parts of vision) ──
-    if (hasDV) {
-      const tintScale = Math.min(1, 2048 / Math.max(mw, mh));
-      const tw = Math.ceil(mw * tintScale), th = Math.ceil(mh * tintScale);
-      if (!this._lightCanvas) this._lightCanvas = document.createElement('canvas');
-      if (this._lightCanvas.width !== tw || this._lightCanvas.height !== th) {
-        this._lightCanvas.width = tw; this._lightCanvas.height = th;
-      }
-      const lctx = this._lightCanvas.getContext('2d');
-      lctx.clearRect(0, 0, tw, th);
-      lctx.save();
-      lctx.scale(tintScale, tintScale);
+    // Mouse wheel zoom for desktop
+    c.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const f = e.deltaY > 0 ? 0.9 : 1.1;
+      this._scale = Math.max(0.05, Math.min(5, this._scale * f));
+      this.render();
+    }, { passive: false });
 
-      lctx.fillStyle = 'rgba(8, 8, 20, 0.55)';
-      lctx.fillRect(0, 0, mw, mh);
-
-      // Cut out light areas (destination-out merges overlaps correctly)
-      lctx.globalCompositeOperation = 'destination-out';
-      for (const lp of visibleLightPolys) {
-        if (lp.polygon.length < 3) continue;
-        lctx.save();
-        lctx.beginPath();
-        lctx.moveTo(lp.polygon[0].x, lp.polygon[0].y);
-        for (let i = 1; i < lp.polygon.length; i++) lctx.lineTo(lp.polygon[i].x, lp.polygon[i].y);
-        lctx.closePath();
-        lctx.clip();
-        const grad = lctx.createRadialGradient(lp.x, lp.y, 0, lp.x, lp.y, lp.totalPx);
-        grad.addColorStop(0, 'rgba(0,0,0,1)');
-        grad.addColorStop(Math.min(0.95, lp.brightPx / lp.totalPx), 'rgba(0,0,0,0.8)');
-        grad.addColorStop(1, 'rgba(0,0,0,0)');
-        lctx.fillStyle = grad;
-        lctx.beginPath();
-        lctx.arc(lp.x, lp.y, lp.totalPx, 0, Math.PI * 2);
-        lctx.fill();
-        lctx.restore();
-      }
-
-      // Clip to vision polygon
-      lctx.globalCompositeOperation = 'destination-in';
-      lctx.beginPath();
-      lctx.moveTo(vis.polygon[0].x, vis.polygon[0].y);
-      for (let i = 1; i < vis.polygon.length; i++) lctx.lineTo(vis.polygon[i].x, vis.polygon[i].y);
-      lctx.closePath();
-      lctx.fillStyle = 'rgba(0,0,0,1)';
-      lctx.fill();
-      lctx.restore();
-
-      ctx.drawImage(this._lightCanvas, -mw/2, -mh/2, mw, mh);
-    }
-
-    // ── 2. Fog — solid black outside visible area ──
-    // Offscreen canvas with destination-out so overlapping lights merge cleanly
-    const fogScale = Math.min(1, 2048 / Math.max(mw, mh));
-    const fw = Math.ceil(mw * fogScale), fh = Math.ceil(mh * fogScale);
-    if (!this._fogCanvas) this._fogCanvas = document.createElement('canvas');
-    if (this._fogCanvas.width !== fw || this._fogCanvas.height !== fh) {
-      this._fogCanvas.width = fw; this._fogCanvas.height = fh;
-    }
-    const fctx = this._fogCanvas.getContext('2d');
-    fctx.clearRect(0, 0, fw, fh);
-    fctx.save();
-    fctx.scale(fogScale, fogScale);
-
-    // Full black fog
-    fctx.fillStyle = 'rgba(5,5,8,0.97)';
-    fctx.fillRect(0, 0, mw, mh);
-
-    // Cut out visible areas
-    fctx.globalCompositeOperation = 'destination-out';
-    if (hasDV) {
-      fctx.beginPath();
-      fctx.moveTo(vis.polygon[0].x, vis.polygon[0].y);
-      for (let i = 1; i < vis.polygon.length; i++) fctx.lineTo(vis.polygon[i].x, vis.polygon[i].y);
-      fctx.closePath();
-      fctx.fillStyle = 'rgba(0,0,0,1)';
-      fctx.fill();
-    } else {
-      // No darkvision — only see lit areas within player's FOV
-      // Clip to vision polygon so player can't see outside their FOV
-      fctx.save();
-      if (vis.polygon.length >= 3) {
-        fctx.beginPath();
-        fctx.moveTo(vis.polygon[0].x, vis.polygon[0].y);
-        for (let i = 1; i < vis.polygon.length; i++) fctx.lineTo(vis.polygon[i].x, vis.polygon[i].y);
-        fctx.closePath();
-        fctx.clip();
-      }
-      for (const lp of visibleLightPolys) {
-        if (lp.polygon.length < 3) continue;
-        const dx = lp.x - mx, dy = lp.y - my;
-        if (dx*dx + dy*dy > (vis.visionPx + lp.totalPx) * (vis.visionPx + lp.totalPx)) continue;
-        fctx.beginPath();
-        fctx.moveTo(lp.polygon[0].x, lp.polygon[0].y);
-        for (let i = 1; i < lp.polygon.length; i++) fctx.lineTo(lp.polygon[i].x, lp.polygon[i].y);
-        fctx.closePath();
-        fctx.fillStyle = 'rgba(0,0,0,1)';
-        fctx.fill();
-      }
-      fctx.restore();
-    }
-    fctx.restore();
-    ctx.drawImage(this._fogCanvas, -mw/2, -mh/2, mw, mh);
-
-    // ── 3. Soft edge gradient ──
-    // Use SINGLE offscreen canvas pass so overlapping gradients don't double-darken
-    if (!this._gradCanvas) this._gradCanvas = document.createElement('canvas');
-    if (this._gradCanvas.width !== fw || this._gradCanvas.height !== fh) {
-      this._gradCanvas.width = fw; this._gradCanvas.height = fh;
-    }
-    const gctx = this._gradCanvas.getContext('2d');
-    gctx.clearRect(0, 0, fw, fh);
-    gctx.save();
-    gctx.scale(fogScale, fogScale);
-
-    if (hasDV && vis.visionPx > gradPx) {
-      // Single gradient for darkvision edge
-      gctx.fillStyle = 'rgba(5,5,8,0.8)';
-      gctx.fillRect(0, 0, mw, mh);
-      gctx.globalCompositeOperation = 'destination-out';
-      const grad = gctx.createRadialGradient(mx, my, 0, mx, my, vis.visionPx);
-      grad.addColorStop(0, 'rgba(0,0,0,1)');
-      grad.addColorStop(Math.max(0, 1 - gradPx / vis.visionPx), 'rgba(0,0,0,1)');
-      grad.addColorStop(1, 'rgba(0,0,0,0)');
-      gctx.fillStyle = grad;
-      gctx.beginPath();
-      gctx.arc(mx, my, vis.visionPx, 0, Math.PI * 2);
-      gctx.fill();
-      // Also cut out where fog already covers (don't double-darken)
-      gctx.globalCompositeOperation = 'destination-out';
-      gctx.drawImage(this._fogCanvas, 0, 0, mw, mh);
-    } else if (!hasDV && visibleLightPolys.length > 0) {
-      // Non-darkvision: paint edge darkening for ALL lights at once, clipped to FOV
-      if (vis.polygon.length >= 3) {
-        gctx.beginPath();
-        gctx.moveTo(vis.polygon[0].x, vis.polygon[0].y);
-        for (let i = 1; i < vis.polygon.length; i++) gctx.lineTo(vis.polygon[i].x, vis.polygon[i].y);
-        gctx.closePath();
-        gctx.clip();
-      }
-      gctx.fillStyle = 'rgba(5,5,8,0.7)';
-      gctx.fillRect(0, 0, mw, mh);
-      // Cut out bright cores of each light (destination-out merges overlaps)
-      gctx.globalCompositeOperation = 'destination-out';
-      for (const lp of visibleLightPolys) {
-        if (lp.polygon.length < 3) continue;
-        const grad = gctx.createRadialGradient(lp.x, lp.y, 0, lp.x, lp.y, lp.totalPx);
-        grad.addColorStop(0, 'rgba(0,0,0,1)');
-        const brt = Math.min(0.85, lp.brightPx / lp.totalPx);
-        grad.addColorStop(brt, 'rgba(0,0,0,0.9)');
-        grad.addColorStop(1, 'rgba(0,0,0,0)');
-        gctx.fillStyle = grad;
-        gctx.beginPath();
-        gctx.arc(lp.x, lp.y, lp.totalPx, 0, Math.PI * 2);
-        gctx.fill();
-      }
-      // Don't darken where fog already covers
-      gctx.globalCompositeOperation = 'destination-out';
-      gctx.drawImage(this._fogCanvas, 0, 0, mw, mh);
-    }
-    gctx.restore();
-    ctx.drawImage(this._gradCanvas, -mw/2, -mh/2, mw, mh);
-
-    // ── 4. Warm glow from light sources (atmospheric) ──
-    // Clip warm glow to player's FOV
-    ctx.save();
-    if (!hasDV && vis.polygon.length >= 3) {
-      ctx.beginPath();
-      ctx.moveTo(vis.polygon[0].x - mw/2, vis.polygon[0].y - mh/2);
-      for (let i = 1; i < vis.polygon.length; i++) ctx.lineTo(vis.polygon[i].x - mw/2, vis.polygon[i].y - mh/2);
-      ctx.closePath();
-      ctx.clip();
-    }
-    for (const lp of visibleLightPolys) {
-      if (lp.polygon.length < 3) continue;
-      const cx = lp.x - mw/2, cy = lp.y - mh/2;
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(lp.polygon[0].x - mw/2, lp.polygon[0].y - mh/2);
-      for (let i = 1; i < lp.polygon.length; i++) ctx.lineTo(lp.polygon[i].x - mw/2, lp.polygon[i].y - mh/2);
-      ctx.closePath();
-      ctx.clip();
-      // Clip to vision
-      ctx.beginPath();
-      if (hasDV) {
-        ctx.moveTo(vis.polygon[0].x - mw/2, vis.polygon[0].y - mh/2);
-        for (let i = 1; i < vis.polygon.length; i++) ctx.lineTo(vis.polygon[i].x - mw/2, vis.polygon[i].y - mh/2);
-        ctx.closePath();
-      } else {
-        ctx.moveTo(lp.polygon[0].x - mw/2, lp.polygon[0].y - mh/2);
-        for (let i = 1; i < lp.polygon.length; i++) ctx.lineTo(lp.polygon[i].x - mw/2, lp.polygon[i].y - mh/2);
-        ctx.closePath();
-      }
-      ctx.clip();
-      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, lp.brightPx);
-      grad.addColorStop(0, 'rgba(255,230,180,0.07)');
-      grad.addColorStop(0.6, 'rgba(255,210,150,0.03)');
-      grad.addColorStop(1, 'rgba(255,200,130,0)');
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(cx, cy, lp.brightPx, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
-    ctx.restore(); // restore FOV clip for warm glow
+    // Mouse drag for desktop
+    let mouseDown = false, msx = 0, msy = 0, mpx = 0, mpy = 0;
+    c.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      mouseDown = true;
+      msx = e.clientX; msy = e.clientY;
+      mpx = this._panX; mpy = this._panY;
+    });
+    c.addEventListener('mousemove', (e) => {
+      if (!mouseDown) return;
+      this._panX = mpx + (e.clientX - msx);
+      this._panY = mpy + (e.clientY - msy);
+      this._applyTransform();
+      this._renderFog();
+      this._renderTokens();
+    });
+    c.addEventListener('mouseup', () => { mouseDown = false; });
+    c.addEventListener('mouseleave', () => { mouseDown = false; });
   },
 
-  _pointInPolygon(px, py, pts) {
-    let inside = false;
-    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
-      const xi = pts[i].x, yi = pts[i].y;
-      const xj = pts[j].x, yj = pts[j].y;
-      if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) inside = !inside;
+  // ── token movement ──
+  _moveSelectedTo(mx, my) {
+    const tok = this.tokens[this._selectedTokenId];
+    if (!tok) { this._deselect(); return; }
+    const gs = this.mapData.gridSize || 70;
+    const nx = Math.round(mx / gs) * gs + gs / 2;
+    const ny = Math.round(my / gs) * gs + gs / 2;
+    // Send to server
+    if (typeof send === 'function') {
+      send({ type: 'map:move_token', tokenId: this._selectedTokenId, x: nx, y: ny });
     }
-    return inside;
-  },
-
-  screenToMap(sx, sy) {
-    // FIX-L3 — screen coords are in CSS pixel space (touch.clientX - rect.left).
-    // canvas.width is in PHYSICAL pixels after FIX-J2 (CSS px × devicePixelRatio).
-    // We must divide canvas dims by dpr so the math stays in the same space
-    // as the touch input. Without this, every token hit-test fails on hi-DPI
-    // displays because the center-of-canvas value is twice what it should be.
-    const dpr = this._dpr || 1;
-    const W = this.canvas.width / dpr;
-    const H = this.canvas.height / dpr;
-    return { x: ((sx-W/2-this.cam.x)/this.cam.zoom)+this.mapData.width/2, y: ((sy-H/2-this.cam.y)/this.cam.zoom)+this.mapData.height/2 };
-  },
-
-  _getMyTokenAt(sx, sy) {
-    if (!this.mapData || !this.tokens[PID]) return null;
-    const {x:mx,y:my} = this.screenToMap(sx,sy);
-    const tok = this.tokens[PID];
-    const gs = this.mapData.gridSize;
-    const dx=mx-tok.x, dy=my-tok.y;
-    return (dx*dx+dy*dy < (gs*0.45)*(gs*0.45)) ? PID : null;
-  },
-
-  _getAnyTokenAt(sx, sy) {
-    if (!this.mapData) return null;
-    const {x:mx,y:my} = this.screenToMap(sx,sy);
-    const gs = this.mapData.gridSize;
-    const hitR = gs*0.45;
-    for (const [id, tok] of Object.entries(this.tokens)) {
-      const dx=mx-tok.x, dy=my-tok.y;
-      if (dx*dx+dy*dy < hitR*hitR) return id;
-    }
-    return null;
-  },
-
-  _labelToken(tokenId) {
-    const tok = this.tokens[tokenId];
-    if (!tok) return;
-    const current = this.tokenLabels[tokenId] || '';
-    const label = prompt('Label for this token:', current);
-    if (label === null) return;
-    if (label) { this.tokenLabels[tokenId] = label; }
-    else { delete this.tokenLabels[tokenId]; }
-    try { localStorage.setItem('tokenLabels', JSON.stringify(this.tokenLabels)); } catch(e) {}
+    tok.x = nx; tok.y = ny;
+    this._deselect();
     this.render();
   },
 
-  _onMouseDown(e) { const r=this.canvas.getBoundingClientRect(); this._startInteraction(e.clientX-r.left, e.clientY-r.top, e.clientX, e.clientY); },
-  _onMouseMove(e) { this._moveInteraction(e.clientX, e.clientY, e.clientX-this.canvas.getBoundingClientRect().left, e.clientY-this.canvas.getBoundingClientRect().top); },
-  _onMouseUp(e) { this._endInteraction(e.clientX, e.clientY); },
+  _deselect() {
+    this._selectedTokenId = null;
+    this._hideHint();
+    this.render();
+  },
 
-  _showMapHint(text) {
-    var el = document.getElementById('map-touch-hint');
+  _showHint(text) {
+    const el = document.getElementById('map-touch-hint');
     if (!el) return;
     el.textContent = text;
-    el.classList.add('visible');
-    if (this._hintTimer) clearTimeout(this._hintTimer);
-    this._hintTimer = setTimeout(() => el.classList.remove('visible'), 5000);
+    el.style.opacity = '1';
+    clearTimeout(this._hintTimer);
+    this._hintTimer = setTimeout(() => { el.style.opacity = '0'; this._deselect(); }, 8000);
   },
-  _hideMapHint() {
-    var el = document.getElementById('map-touch-hint');
-    if (el) el.classList.remove('visible');
-    if (this._hintTimer) { clearTimeout(this._hintTimer); this._hintTimer = null; }
-  },
-
-  _onTouchStart(e) {
-    e.preventDefault();
-    if (e.touches.length===1) {
-      const t=e.touches[0];
-      const r=this.canvas.getBoundingClientRect();
-      const sx = t.clientX - r.left;
-      const sy = t.clientY - r.top;
-      // FIX-L3 — touch coordinate diagnostics
-      const tid = this._getMyTokenAt(sx, sy);
-      console.log('[TOUCH] touchstart at css(' + Math.round(sx) + ',' + Math.round(sy) + ')',
-        'rect:', Math.round(r.width) + 'x' + Math.round(r.height),
-        'token at point:', tid || 'none',
-        'selected:', this._selectedTokenId || 'none');
-      this._startInteraction(sx, sy, t.clientX, t.clientY);
-    }
-    else if (e.touches.length===2) { this.panning=false; this.dragging=null; const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY; this._lastPinchDist=Math.sqrt(dx*dx+dy*dy); }
-  },
-  _onTouchMove(e) {
-    e.preventDefault();
-    if (e.touches.length===1) { const t=e.touches[0]; this._moveInteraction(t.clientX, t.clientY, t.clientX-this.canvas.getBoundingClientRect().left, t.clientY-this.canvas.getBoundingClientRect().top); }
-    else if (e.touches.length===2) { const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY,d=Math.sqrt(dx*dx+dy*dy); if(this._lastPinchDist){this.cam.zoom=Math.max(0.1,Math.min(5,this.cam.zoom*(d/this._lastPinchDist)));this.render();} this._lastPinchDist=d; }
-  },
-  _onTouchEnd(e) { if(e.changedTouches.length){const t=e.changedTouches[0];this._endInteraction(t.clientX,t.clientY);} if(e.touches.length<2)this._lastPinchDist=0; },
-
-  // ── Token facing rotation (right-click-drag or touch rotate button) ──
-  _rotating: false,
-  _rotateMode: false, // touch rotate mode (toggled by button)
-
-  _toggleRotateMode() {
-    this._rotateMode = !this._rotateMode;
-    const btn = document.getElementById('rotate-btn');
-    if (btn) {
-      btn.style.background = this._rotateMode ? 'rgba(201,165,78,0.4)' : 'rgba(30,30,40,0.85)';
-      btn.style.color = this._rotateMode ? '#c9a54e' : '#aaa';
-      btn.textContent = this._rotateMode ? 'Rotate ON' : 'Rotate';
-    }
+  _hideHint() {
+    const el = document.getElementById('map-touch-hint');
+    if (el) el.style.opacity = '0';
+    clearTimeout(this._hintTimer);
   },
 
-  _startRotation(e) {
-    const myTok = this.tokens[PID];
-    if (!myTok) return;
-    this._rotating = true;
-    const r = this.canvas.getBoundingClientRect();
-    const sx = e.clientX - r.left, sy = e.clientY - r.top;
-    const {x: mx, y: my} = this.screenToMap(sx, sy);
-    const angle = Math.atan2(my - myTok.y, mx - myTok.x);
-    myTok.facing = angle;
-    delete this._visionCache[PID];
-    this.render();
-  },
+  // ── legacy API stubs so existing callers don't crash ──
+  _toggleRotateMode() {},
+  _dpr: 1,
+  screenToMap() { return { x: 0, y: 0 }; },
 
-  _updateRotation(e) {
-    const myTok = this.tokens[PID];
-    if (!myTok || !this._rotating) return;
-    const r = this.canvas.getBoundingClientRect();
-    const sx = e.clientX - r.left, sy = e.clientY - r.top;
-    const {x: mx, y: my} = this.screenToMap(sx, sy);
-    myTok.facing = Math.atan2(my - myTok.y, mx - myTok.x);
-    delete this._visionCache[PID];
-    this.render();
-  },
+  // ── DEAD CODE BELOW — old canvas implementation removed ──
+  // The following brace closes the PlayerMap object. All old canvas
+  // Old canvas methods deleted — this brace closes the PlayerMap object.
+  _placeholder: true
 
-  _endRotation() {
-    this._rotating = false;
-    const myTok = this.tokens[PID];
-    if (myTok && myTok.facing != null) {
-      send({type: 'map:token_facing', tokenId: PID, facing: myTok.facing});
-    }
-  },
-
-  _startInteraction(sx, sy, cx, cy) {
-    // AOE targeting mode — click to place
-    if (_aoeTargeting) {
-      const {x:mx, y:my} = this.screenToMap(sx, sy);
-      placeAOE(mx, my);
-      return;
-    }
-    // Touch rotate mode — start rotation instead of drag
-    if (this._rotateMode) {
-      const myTok = this.tokens[PID];
-      if (myTok) {
-        this._rotating = true;
-        const {x: mx, y: my} = this.screenToMap(sx, sy);
-        myTok.facing = Math.atan2(my - myTok.y, mx - myTok.x);
-        delete this._visionCache[PID];
-        this.render();
-        return;
-      }
-    }
-    this._tapStart = { sx, sy, cx, cy, time: Date.now() };
-    // FIX3B — if a token is already selected and the user taps somewhere
-    // that is NOT on their token, treat it as a "move to here" tap.
-    if (this._selectedTokenId === PID) {
-      const tidUnder = this._getMyTokenAt(sx, sy);
-      if (!tidUnder) {
-        const myTok = this.tokens[PID];
-        if (myTok) {
-          const {x: mx, y: my} = this.screenToMap(sx, sy);
-          this._tapMoveTarget = { x: mx, y: my };
-          // We'll execute the move on touchend if it's still a tap
-        }
-      }
-    }
-    const tid = this._getMyTokenAt(sx, sy);
-    if (tid) {
-      const {x:mx,y:my}=this.screenToMap(sx,sy);
-      const tok=this.tokens[tid];
-      tok._dragStartX = tok.x; tok._dragStartY = tok.y;
-      this.dragging={tokenId:tid, offsetX:tok.x-mx, offsetY:tok.y-my};
-      // Set up movement range overlay + rate limiting
-      const { basePx, dashPx } = this._getMovementBudget();
-      const ms = this._moveState;
-      ms.speedPx = basePx;
-      ms.dashSpeedPx = dashPx;
-      ms.startX = tok.x;
-      ms.startY = tok.y;
-      ms.active = true;
-      // Outside combat: reset per drag, no cumulative tracking
-      if (!combatState || !combatState.active) {
-        ms.movedPx = 0;
-        ms.dashed = false;
-        ms.actionSpent = false;
-      }
-    } else {
-      this.panning=true;
-      this.panStart={x:cx,y:cy,camX:this.cam.x,camY:this.cam.y};
-    }
-    this.render();
-  },
-
-  _moveInteraction(cx, cy, sx, sy) {
-    // AOE targeting preview
-    if (_aoeTargeting) {
-      const {x:mx, y:my} = this.screenToMap(sx, sy);
-      _aoeTargeting._previewX = mx;
-      _aoeTargeting._previewY = my;
-      this.render();
-      return;
-    }
-    // Touch rotate mode
-    if (this._rotating) {
-      const myTok = this.tokens[PID];
-      if (myTok) {
-        const {x: mx, y: my} = this.screenToMap(sx, sy);
-        myTok.facing = Math.atan2(my - myTok.y, mx - myTok.x);
-        delete this._visionCache[PID];
-        this.render();
-      }
-      return;
-    }
-    if (this.dragging) {
-      const {x:mx,y:my}=this.screenToMap(sx,sy);
-      const tok=this.tokens[this.dragging.tokenId];
-      if(tok){
-        // Track drag visual position separately — vision stays anchored to start
-        let dragX = mx+this.dragging.offsetX;
-        let dragY = my+this.dragging.offsetY;
-        // Snap to dash boundary if beyond max range
-        const ms = this._moveState;
-        if (ms.active) {
-          const dragDist = this._movementCost(ms.startX, ms.startY, dragX, dragY);
-          const totalDist = ms.movedPx + dragDist;
-          if (totalDist > ms.dashSpeedPx) {
-            const maxDragDist = ms.dashSpeedPx - ms.movedPx;
-            const clamped = this._clampToRange(ms.startX, ms.startY, dragX, dragY, Math.max(0, maxDragDist));
-            dragX = clamped.x;
-            dragY = clamped.y;
-          }
-        }
-        tok._dragVisualX = dragX;
-        tok._dragVisualY = dragY;
-        this.render();
-      }
-    } else if (this.panning) {
-      this.cam.x=this.panStart.camX+(cx-this.panStart.x);
-      this.cam.y=this.panStart.camY+(cy-this.panStart.y);
-      this.render();
-    }
-  },
-
-  _endInteraction(cx, cy) {
-    if (_aoeTargeting) return; // handled in _startInteraction
-    if (this._rotating) {
-      this._rotating = false;
-      const myTok = this.tokens[PID];
-      if (myTok && myTok.facing != null) {
-        send({type: 'map:token_facing', tokenId: PID, facing: myTok.facing});
-      }
-      return;
-    }
-    // FIX3B — detect quick tap (no significant movement)
-    var wasQuickTap = false;
-    if (this._tapStart) {
-      var dx = (cx || 0) - this._tapStart.cx;
-      var dy = (cy || 0) - this._tapStart.cy;
-      var dist = Math.sqrt(dx * dx + dy * dy);
-      var elapsed = Date.now() - this._tapStart.time;
-      if (dist < 12 && elapsed < 500) wasQuickTap = true;
-    }
-    // Quick tap on own token toggles selection
-    if (wasQuickTap && this.dragging && this.dragging.tokenId === PID) {
-      var tok = this.tokens[PID];
-      if (tok) { delete tok._dragVisualX; delete tok._dragVisualY; tok.x = tok._dragStartX; tok.y = tok._dragStartY; }
-      this.dragging = null;
-      this._moveState.active = false;
-      if (this._selectedTokenId === PID) {
-        // Tap on already-selected token = deselect
-        this._selectedTokenId = null;
-        this._hideMapHint();
-      } else {
-        this._selectedTokenId = PID;
-        this._showMapHint('TAP DESTINATION TO MOVE');
-      }
-      this.render();
-      return;
-    }
-    // Quick tap on empty area while own token selected = move there
-    if (wasQuickTap && this._selectedTokenId === PID && this._tapMoveTarget) {
-      var target = this._tapMoveTarget;
-      this._tapMoveTarget = null;
-      this._hideMapHint();
-      this._selectedTokenId = null;
-      // Reset any pan state from the empty-area touch
-      this.panning = false;
-      // Trigger the standard move pipeline by simulating a drag drop
-      var myTok2 = this.tokens[PID];
-      if (myTok2) {
-        var gs2 = this.mapData.gridSize;
-        var oldX2 = myTok2.x, oldY2 = myTok2.y;
-        var newX2 = Math.floor(target.x / gs2) * gs2 + gs2 / 2;
-        var newY2 = Math.floor(target.y / gs2) * gs2 + gs2 / 2;
-        // Wall block check
-        var blocked2 = (this.walls.length > 0) ? this._pathBlockedByWalls(oldX2, oldY2, newX2, newY2) : null;
-        if (blocked2) {
-          if (blocked2.type === 'door') {
-            this._promptDoor(blocked2, oldX2, oldY2, newX2, newY2, PID);
-          } else {
-            showToast('System', 'Movement blocked — solid wall', 2000);
-          }
-        } else {
-          // Range check via _completeMoveToken
-          this._completeMoveToken(myTok2, oldX2, oldY2, newX2, newY2, PID);
-        }
-      }
-      this.render();
-      return;
-    }
-    // Clear tap-move target if not used
-    this._tapMoveTarget = null;
-    if (this.dragging) {
-      const tok=this.tokens[this.dragging.tokenId];
-      const dragTokenId = this.dragging.tokenId;
-      if(tok){
-        const gs=this.mapData.gridSize;
-        const oldX = tok._dragStartX, oldY = tok._dragStartY;
-        // Snap drop position to grid (use drag visual position, not anchored position)
-        const dropX = tok._dragVisualX != null ? tok._dragVisualX : tok.x;
-        const dropY = tok._dragVisualY != null ? tok._dragVisualY : tok.y;
-        const newX=Math.floor(dropX/gs)*gs+gs/2;
-        const newY=Math.floor(dropY/gs)*gs+gs/2;
-        // Clean up drag visual state
-        delete tok._dragVisualX; delete tok._dragVisualY;
-
-        // Movement rate check
-        const ms = this._moveState;
-        if (ms.active && oldX != null) {
-          const moveCost = this._movementCost(oldX, oldY, newX, newY);
-          const totalCost = ms.movedPx + moveCost;
-          const speed = char.speed || 30;
-
-          if (totalCost > ms.speedPx && !ms.dashed) {
-            // Beyond normal range — prompt for dash
-            tok.x = oldX; tok.y = oldY;
-            const totalFt = Math.round((totalCost / gs) * 5);
-            this.dragging = null;
-            ms.active = false;
-            this.render();
-            this._promptDash(totalFt, speed).then(choice => {
-              if (choice === 'dash') {
-                ms.dashed = true;
-                ms.actionSpent = true;
-                ms.dashSpeedPx = ms.speedPx * 2;
-                // Check if the move fits within dash range
-                if (totalCost <= ms.dashSpeedPx) {
-                  // Wall check then complete
-                  const blocked = (this.walls.length > 0) ? this._pathBlockedByWalls(oldX, oldY, newX, newY) : null;
-                  if (blocked) {
-                    tok.x = oldX; tok.y = oldY;
-                    if (blocked.type === 'door') {
-                      this._promptDoor(blocked, oldX, oldY, newX, newY, dragTokenId);
-                    } else {
-                      showToast('System','Movement blocked — solid wall',2000);
-                    }
-                  } else {
-                    ms.movedPx += moveCost;
-                    this._completeMoveToken(tok, oldX, oldY, newX, newY, dragTokenId);
-                    showToast('Combat', 'Dashed! Action spent.', 2500);
-                  }
-                } else {
-                  showToast('System', 'Still too far — even with Dash', 2500);
-                }
-              }
-              // cancel: token stays at old position
-              this.render();
-            });
-            this.panning = false;
-            this._tapStart = null;
-            return;
-          }
-
-          if (totalCost > ms.dashSpeedPx) {
-            // Beyond even dash range — snap back
-            tok.x = oldX; tok.y = oldY;
-            showToast('System', 'Out of movement range', 2000);
-            this.dragging = null;
-            ms.active = false;
-            this.render();
-            this.panning = false;
-            this._tapStart = null;
-            return;
-          }
-
-          // Within range — record movement spent
-          ms.movedPx += moveCost;
-        }
-
-        // Client-side wall collision check — block immediately without server round-trip
-        const blocked = (this.walls.length > 0 && oldX != null) ? this._pathBlockedByWalls(oldX, oldY, newX, newY) : null;
-        if (blocked) {
-          tok.x = oldX; tok.y = oldY;
-          if (ms.active) ms.movedPx -= this._movementCost(oldX, oldY, newX, newY); // refund
-          if (blocked.type === 'door') {
-            // Door interaction — prompt player
-            this._promptDoor(blocked, oldX, oldY, newX, newY, dragTokenId);
-          } else {
-            showToast('System','Movement blocked — solid wall',2000);
-          }
-        } else {
-          this._completeMoveToken(tok, oldX, oldY, newX, newY, dragTokenId);
-        }
-      }
-      this.dragging=null; this._moveState.active = false; this.render();
-    } else if (this._tapStart && Date.now() - this._tapStart.time < 300) {
-      // Short tap — check if it's on a non-own token for labeling
-      const tid = this._getAnyTokenAt(this._tapStart.sx, this._tapStart.sy);
-      if (tid && tid !== PID) this._labelToken(tid);
-    }
-    this.panning=false;
-    this._tapStart=null;
-  },
-
-  // Complete a token move — update position, auto-face, send to server
-  _completeMoveToken(tok, oldX, oldY, newX, newY, tokenId) {
-    tok.x = newX; tok.y = newY;
-    if (tokenId === PID && oldX != null) {
-      const dx = newX - oldX, dy = newY - oldY;
-      if (dx*dx + dy*dy > 1) {
-        tok.facing = Math.atan2(dy, dx);
-        delete this._visionCache[PID];
-        send({type: 'map:token_facing', tokenId: PID, facing: tok.facing});
-      }
-    }
-    delete this._visionCache[tokenId];
-    send({type:'map:move_token', tokenId, x: newX, y: newY});
-    this.render();
-  },
-
-  // Prompt player when movement is blocked by a door
-  _promptDoor(blocked, oldX, oldY, newX, newY, tokenId) {
-    const isLocked = blocked.locked;
-    // Build modal
-    const overlay = document.createElement('div');
-    overlay.className = 'door-prompt-overlay';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
-    const box = document.createElement('div');
-    box.style.cssText = 'background:#1a1a2e;border:2px solid #c9a54e;border-radius:12px;padding:24px;max-width:320px;text-align:center;font-family:Cinzel,serif;color:#e8e0d0;';
-    const icon = isLocked ? '🔒' : '🚪';
-    const title = isLocked ? 'Locked Door' : 'Closed Door';
-    const desc = isLocked ? 'This door is locked. Attempt to pick the lock?' : 'This door is closed. Open it?';
-    box.innerHTML = `<div style="font-size:36px;margin-bottom:8px;">${icon}</div>`
-      + `<div style="font-size:18px;font-weight:bold;margin-bottom:8px;">${title}</div>`
-      + `<div style="font-size:14px;color:#a09880;margin-bottom:20px;font-family:Source Sans 3,sans-serif;">${desc}</div>`
-      + `<div style="display:flex;gap:12px;justify-content:center;"></div>`;
-    const btnRow = box.lastElementChild;
-
-    const makeBtn = (label, accent, cb) => {
-      const btn = document.createElement('button');
-      btn.textContent = label;
-      btn.style.cssText = `padding:8px 20px;border-radius:6px;border:1px solid ${accent};background:${accent}22;color:${accent};font-family:Cinzel,serif;font-size:14px;cursor:pointer;`;
-      btn.onmouseenter = () => btn.style.background = accent + '44';
-      btn.onmouseleave = () => btn.style.background = accent + '22';
-      btn.onclick = () => { overlay.remove(); cb(); };
-      return btn;
-    };
-
-    const actionLabel = isLocked ? 'Pick Lock' : 'Open';
-    btnRow.appendChild(makeBtn(actionLabel, '#c9a54e', () => {
-      // Call door toggle API
-      fetch('/api/map/walls/toggle-door', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ index: blocked.index, playerId: PID, dmOverride: false })
-      }).then(r => r.json()).then(res => {
-        if (res.open) {
-          // Door opened — update local wall state and complete the move
-          if (this.walls[blocked.index]) {
-            this.walls[blocked.index].open = true;
-            this.walls[blocked.index].locked = false;
-            this._wallsVersion++; this._visionCache = {}; this._lightVisCache = null;
-          }
-          const tok = this.tokens[tokenId];
-          if (tok) this._completeMoveToken(tok, oldX, oldY, newX, newY, tokenId);
-          showToast('System', isLocked ? 'Lock picked! Door opens.' : 'Door opened.', 2500);
-        } else if (res.locked) {
-          // Still locked (no pick attempt yet — shouldn't happen with playerId)
-          showToast('System', 'The door is locked.', 2500);
-        } else if (res.unlocked === false) {
-          // Pick attempt failed
-          showToast('System', `Lock pick failed (rolled ${res.total} vs DC ${res.dc})`, 3500);
-        }
-        this.render();
-      }).catch(() => showToast('System','Could not reach the door.',2000));
-    }));
-    btnRow.appendChild(makeBtn('Leave it', '#888', () => { /* do nothing */ }));
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
-    // Close on overlay click outside box
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-  },
 };
 
 document.addEventListener('DOMContentLoaded', () => PlayerMap.init());

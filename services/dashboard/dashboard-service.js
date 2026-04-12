@@ -321,6 +321,15 @@ class DashboardService {
         res.json({ ok: true, durationMs: ms, until: Date.now() + ms });
       } catch (e) { res.status(500).json({ error: e.message }); }
     });
+    this.app.post('/api/max/acknowledge', (req, res) => {
+      try {
+        const aiEngine = this.orchestrator.getService('ai-engine');
+        const md = aiEngine && aiEngine.maxDirector;
+        if (md && typeof md.acknowledge === 'function') md.acknowledge();
+        res.json({ ok: true });
+      } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
     this.app.post('/api/max/resume', (req, res) => {
       try {
         const voiceSvc = this.orchestrator.getService('voice');

@@ -531,6 +531,8 @@
   <!-- FIX-C2 — MAX controls strip: pause + volume slider -->
   <div id="max-controls" style="flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:10px 24px;background:#1e1a14;border-bottom:1px solid var(--border);">
     <button id="btn-max-pause" class="session-btn danger large" onclick="MaxControls.togglePause()" style="min-width:160px;">⏸ PAUSE MAX (5m)</button>
+    <button class="session-btn muted" onclick="fetch('/api/max/acknowledge',{method:'POST'})" style="padding:10px 18px;font-size:14px;" title="SPACEBAR also works">→ MAX NEXT</button>
+    <span id="max-queue-count" style="font-family:monospace;font-size:11px;color:var(--text-dim);min-width:24px;text-align:center;" title="Max queue depth">0</span>
     <span id="max-pause-countdown" style="font-family:monospace;font-size:12px;color:var(--text-dim);min-width:90px;"></span>
     <!-- PHASE 6 — combat start button -->
     <button id="btn-combat" class="session-btn" onclick="CombatControls.toggle()" title="Start combat with every visible token on the active map">⚔ START COMBAT</button>
@@ -1012,6 +1014,8 @@ var MaxControls = {
       MaxControls.paused = !!d.paused;
       MaxControls.pausedUntil = d.pausedUntil || 0;
       if (typeof d.volume === 'number') MaxControls.volume = d.volume;
+      var qc = $('max-queue-count');
+      if (qc && typeof d.queueLength === 'number') qc.textContent = String(d.queueLength);
       MaxControls._updateButton();
     }).catch(function() {});
   },
@@ -1257,10 +1261,17 @@ function setAtmo(profile) {
 }
 
 // Hotkey: ` to toggle Max input
+// SPACEBAR: acknowledge Max delivery (advances queue)
 window.addEventListener('keydown', function(e) {
   if (e.key === '`' || e.key === '~') {
     e.preventDefault();
     toggleMaxInput();
+  }
+  if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'SELECT') {
+    e.preventDefault();
+    fetch('/api/max/acknowledge', { method: 'POST' }).catch(function() {});
+    var qEl = $('max-queue-count');
+    if (qEl) { var n = parseInt(qEl.textContent || '0'); if (n > 0) qEl.textContent = String(n - 1); }
   }
 });
 

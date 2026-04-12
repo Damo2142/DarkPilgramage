@@ -74,6 +74,8 @@ class MaxDirector {
     this.pausedUntil = 0;
     this.activeThrottleMs = THROTTLE_ACTIVE_MS;
     this.quietThrottleMs  = THROTTLE_QUIET_MS;
+    // PART 2 — Max delivery gate: one at a time with acknowledgment
+    this.waitingForAck = false;
 
     // NPC expected positions from timed events that have fired
     this.expectedPositions = {};      // npcId -> { x, y, source: eventId }
@@ -154,6 +156,12 @@ class MaxDirector {
     }
     if (this.bus) this.bus.dispatch('max:pause_state', { paused: this.paused, until: this.pausedUntil });
   }
+  acknowledge() {
+    this.waitingForAck = false;
+    console.log('[MaxDirector] Acknowledged — delivering next if queued.');
+    this._tick();
+  }
+
   isPaused() {
     if (this.paused && this.pausedUntil > Date.now()) return true;
     if (this.paused) {
@@ -232,6 +240,8 @@ class MaxDirector {
 
     if (!this.queue.length) return;
     if (this.paused) return;
+    // PART 2 — one at a time. Wait for SPACEBAR / MAX NEXT before delivering next.
+    if (this.waitingForAck) return;
 
     const silenceMs = now - this.lastTranscriptAt;
     const sinceLastDelivery = now - this.lastDeliveredAt;
@@ -278,6 +288,7 @@ class MaxDirector {
       return;
     }
     this.lastDeliveredAt = Date.now();
+    this.waitingForAck = true; // PART 2 — wait for ack before next delivery
     this._recordDelivered(entry.message);
     // Re-emit whisper with _maxRouted flag so we don't re-enqueue.
     // dm:whisper goes to the dashboard whisper log only — voice goes via voice:speak.

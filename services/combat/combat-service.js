@@ -213,6 +213,10 @@ class CombatService {
 
     this._setCombatState(combat);
     this._broadcastCombat('combat:started');
+    this.bus.dispatch('dm:whisper', {
+      text: 'Combat begins.',
+      priority: 1, category: 'combat'
+    });
     console.log(`[CombatService] Combat started with ${combatants.length} combatants. Round 1.`);
     return combat;
   }
@@ -227,6 +231,10 @@ class CombatService {
     };
     this._setCombatState(combat);
     this._broadcastCombat('combat:ended');
+    this.bus.dispatch('dm:whisper', {
+      text: 'Combat ends.',
+      priority: 1, category: 'combat'
+    });
     console.log('[CombatService] Combat ended.');
     return combat;
   }
@@ -270,6 +278,13 @@ class CombatService {
       combatant: combat.turnOrder[nextIdx],
       round: combat.round
     });
+    const upcomingNext = combat.turnOrder[nextIdx];
+    if (upcomingNext && upcomingNext.name) {
+      this.bus.dispatch('dm:whisper', {
+        text: `${upcomingNext.name}'s turn.`,
+        priority: 1, category: 'combat'
+      });
+    }
     return combat;
   }
 
@@ -293,6 +308,13 @@ class CombatService {
     combat.currentTurn = prevIdx;
     this._setCombatState(combat);
     this._broadcastCombat('combat:prev_turn', { combatant: combat.turnOrder[prevIdx], round: combat.round });
+    const upcomingPrev = combat.turnOrder[prevIdx];
+    if (upcomingPrev && upcomingPrev.name) {
+      this.bus.dispatch('dm:whisper', {
+        text: `${upcomingPrev.name}'s turn.`,
+        priority: 1, category: 'combat'
+      });
+    }
     return combat;
   }
 
@@ -326,6 +348,10 @@ class CombatService {
         // NPCs die at 0
         c.isAlive = false;
       }
+      this.bus.dispatch('dm:whisper', {
+        text: `${c.name} is down.`,
+        priority: 1, category: 'combat'
+      });
     }
 
     // Revive if healed from 0
@@ -455,6 +481,7 @@ class CombatService {
     if (!c) return null;
 
     const idx = c.conditions.indexOf(condition);
+    const wasAdded = idx < 0; // adding vs removing
     if (idx >= 0) {
       c.conditions.splice(idx, 1);
     } else {
@@ -464,6 +491,12 @@ class CombatService {
     this._setCombatState(combat);
     this._syncConditionsToToken(combatantId, c.conditions);
     this._broadcastCombat('combat:condition_changed', { combatantId, conditions: c.conditions, toggled: condition });
+    if (wasAdded) {
+      this.bus.dispatch('dm:whisper', {
+        text: `${c.name} is now ${condition}.`,
+        priority: 1, category: 'combat'
+      });
+    }
     return c;
   }
 
@@ -590,6 +623,10 @@ class CombatService {
     }
 
     this._broadcastCombat('combat:death_save', { combatantId, result, deathSaves: c.deathSaves });
+    this.bus.dispatch('dm:whisper', {
+      text: `${c.name} rolls a death save.`,
+      priority: 1, category: 'combat'
+    });
     return c;
   }
 
@@ -1429,7 +1466,8 @@ Available targets: ${enemies.map(e => `"${e.name}" (id: check turnOrder)`).join(
     const c = combat.turnOrder.find(x => x.id === combatantId);
     if (!c) return null;
 
-    if (!c.conditions.includes(condition)) c.conditions.push(condition);
+    const wasNew = !c.conditions.includes(condition);
+    if (wasNew) c.conditions.push(condition);
     if (!c._conditionDurations) c._conditionDurations = {};
     c._conditionDurations[condition] = {
       expiresRound: combat.round + durationRounds,
@@ -1439,6 +1477,12 @@ Available targets: ${enemies.map(e => `"${e.name}" (id: check turnOrder)`).join(
     this._setCombatState(combat);
     this._syncConditionsToToken(combatantId, c.conditions);
     this._broadcastCombat('combat:condition_changed', { combatantId, conditions: c.conditions, toggled: condition });
+    if (wasNew) {
+      this.bus.dispatch('dm:whisper', {
+        text: `${c.name} is now ${condition}.`,
+        priority: 1, category: 'combat'
+      });
+    }
     return c;
   }
 

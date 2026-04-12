@@ -112,8 +112,8 @@ class AmbientLifeService {
       this._resetAllStates();
     }, 'ambient-life');
 
-    this.bus.subscribe('combat:started', () => this._stopAll(), 'ambient-life');
-    this.bus.subscribe('combat:ended', () => this._onSessionStart(), 'ambient-life');
+    this.bus.subscribe('combat:started', () => this._stopForCombat(), 'ambient-life');
+    this.bus.subscribe('combat:ended', () => this._resumeFromCombat(), 'ambient-life');
 
     // DM overrides
     this.bus.subscribe('creature:skeleton_taken', () => {
@@ -225,6 +225,21 @@ class AmbientLifeService {
     if (this._dwellCheckInterval) { clearInterval(this._dwellCheckInterval); this._dwellCheckInterval = null; }
     if (this._performanceInterval) { clearTimeout(this._performanceInterval); this._performanceInterval = null; }
     if (this._creatureTickInterval) { clearInterval(this._creatureTickInterval); this._creatureTickInterval = null; }
+  }
+
+  // Combat pause scope: only stop environmental and creature ticks.
+  // NPC autonomous movement, player proximity dwell, and Katya performances
+  // continue running so the world stays alive during combat.
+  _stopForCombat() {
+    if (this._envTickInterval) { clearTimeout(this._envTickInterval); this._envTickInterval = null; }
+    if (this._creatureTickInterval) { clearInterval(this._creatureTickInterval); this._creatureTickInterval = null; }
+    console.log('[AmbientLife] Combat started — env tick + creature tick paused (dwell/npc-move/performance still running)');
+  }
+
+  _resumeFromCombat() {
+    if (!this._envTickInterval) this._startEnvTicks();
+    if (!this._creatureTickInterval) this._startCreatureEngine();
+    console.log('[AmbientLife] Combat ended — env tick + creature tick resumed');
   }
 
   _resetAllStates() {
@@ -466,7 +481,7 @@ class AmbientLifeService {
 
   _fireNpcMove() {
     if (this.state.get('session.status') !== 'active') return;
-    if (this.state.get('combat.active')) return;
+    // NPC movement continues during combat (non-combatant NPCs keep living)
     const npcs = this.config.npcs || {};
     const activeNpcs = Object.entries(npcs).filter(([, npc]) => (npc.status === 'alive' || !npc.status) && npc.name);
     if (activeNpcs.length === 0) return;
@@ -529,7 +544,7 @@ class AmbientLifeService {
 
   _checkDwells() {
     if (this.state.get('session.status') !== 'active') return;
-    if (this.state.get('combat.active')) return;
+    // Player proximity dwell continues during combat
     const tokens = this.state.get('map.tokens') || {};
     const gridSize = this.state.get('map.gridSize') || 70;
     const feetPerGrid = 5;

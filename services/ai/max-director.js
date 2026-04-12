@@ -124,6 +124,12 @@ class MaxDirector {
       this._updateExpectedPositions(env.data);
     }, 'max-director');
 
+    // Combat end — clear stale ack gate so the first post-combat whisper
+    // doesn't wait for the DM to press spacebar.
+    this.bus.subscribe('combat:ended', () => {
+      this.waitingForAck = false;
+    }, 'max-director');
+
     // Load NPC languages from state when available
     this.bus.subscribe('init', () => this._refreshLanguageCache(), 'max-director');
 
@@ -240,27 +246,40 @@ class MaxDirector {
 
     if (!this.queue.length) return;
     if (this.paused) return;
+
+    // COMBAT MODE — combat pace is too fast for the 45s throttle + spacebar
+    // ack gate. While combat.active, queue drains freely so HIGH/NORMAL
+    // whispers (hit narration, AI interjections, etc.) reach the DM ear in
+    // step with the action. URGENT already bypasses everything; this makes
+    // non-URGENT items effectively match.
+    const combatActive = !!(this.state && this.state.get && this.state.get('combat.active'));
+
     // PART 2 — one at a time. Wait for SPACEBAR / MAX NEXT before delivering next.
-    if (this.waitingForAck) return;
+    // Skipped during combat so the DM doesn't have to hammer the keyboard.
+    if (!combatActive && this.waitingForAck) return;
 
     const silenceMs = now - this.lastTranscriptAt;
     const sinceLastDelivery = now - this.lastDeliveredAt;
     const next = this.queue[0];
 
-    // FIX-C2 — strict throttle.
-    //   ACTIVE narration → 45s minimum since last delivery, regardless of priority
-    //   QUIET (30s+ no transcript) → 20s minimum
+    // FIX-C2 — strict throttle, relaxed during combat.
+    //   ACTIVE narration → 45s minimum since last delivery (peacetime)
+    //   QUIET (30s+ no transcript) → 20s minimum (peacetime)
+    //   COMBAT → 0 minimum (no gap between deliveries)
+    //   URGENT always bypasses via enqueue() direct-deliver path
     const isQuiet = silenceMs >= QUIET_THRESHOLD_MS;
-    const minGap = isQuiet ? this.quietThrottleMs : this.activeThrottleMs;
+    const minGap = combatActive ? 0 : (isQuiet ? this.quietThrottleMs : this.activeThrottleMs);
     if (sinceLastDelivery < minGap) return;
 
-    // Additional silence requirement so we don't talk over the DM mid-sentence:
-    //   HIGH wants ≥ 4s silence in active mode, immediate in quiet
-    //   NORMAL/LOW wants ≥ 8s silence
-    if (next.priority === 'HIGH') {
-      if (!isQuiet && silenceMs < 4000) return;
-    } else if (next.priority === 'NORMAL' || next.priority === 'LOW') {
-      if (silenceMs < 8000) return;
+    // Additional silence requirement so we don't talk over the DM mid-sentence.
+    // Waived during combat — the DM is narrating constantly and still needs
+    // to hear every turn/hit/condition announcement.
+    if (!combatActive) {
+      if (next.priority === 'HIGH') {
+        if (!isQuiet && silenceMs < 4000) return;
+      } else if (next.priority === 'NORMAL' || next.priority === 'LOW') {
+        if (silenceMs < 8000) return;
+      }
     }
 
     this._deliver(next);

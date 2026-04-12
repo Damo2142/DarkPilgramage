@@ -1,8 +1,8 @@
-# FINAL BUILD NOTES — Sections 1-8
+# FINAL BUILD NOTES — Complete Build Through April 12
 
 Branch: `feature/phase-r-complete` (parent), `main` (co-dm submodule)
-Started: 2026-04-11 autonomous run
-Goal: Last build before April 19 game night
+Started: 2026-04-11 → completed 2026-04-12
+Goal: Ready for April 19 game night
 
 ## Section status
 
@@ -554,3 +554,84 @@ five seconds.
 ### Push status
 17 commits ready on `feature/phase-r-complete`.
 
+
+## April 12 Final Build Session
+
+### Commits (this session — 7 commits)
+
+| Commit | Subject |
+|---|---|
+| `d16048b` | Player map complete rewrite — IMG+CSS, DOM tokens, reliable touch |
+| `0a7b513` | Perception flash 15s hold + grid overlay on player map |
+| `7dfccaf` | Katya performances + environmental sounds — 14 new timed events |
+| `5416499` | Max and NPC prompts — 30-year veteran DM, world-class dialogue |
+| `fce3913` | Living world — creature behaviors, 20+ perception checks, shed scene, Pieter's room |
+| `c92f4bd` | Max delivery gate — one at a time, SPACEBAR acknowledgment, queue depth |
+
+### Content totals in session-0.json
+
+- **44 timed events** (was 21 at start of overnight run)
+- **19 observation blocks** with PP-filtered perception checks
+- **8 creature behaviors** (Tomas, wolves, Piotr, Gas Spore, Kamenný, Letavec, Corpse Candle, rats)
+- **4 Katya performances** with full song text (17:45, 18:05, 18:35, 18:45)
+- **7-beat shed scene** with contents (silver dagger, holy water, stakes, journal)
+- **Pieter's Room (Room 5)** with body, journal, map, survival gear
+- **10 environmental sounds/atmosphere events** (cellar, upstairs, outside, fire, wolves, roof)
+
+### Player map architecture (final)
+
+- `<img>` element for the map — always sharp, hardware accelerated
+- CSS `transform: translate() scale()` for pan/zoom — no canvas redraw
+- DOM div tokens with absolute positioning — reliable touch events
+- Fog as a small canvas overlay using `destination-out` on its own surface
+- CSS repeating-linear-gradient grid at 12% opacity
+- Touch: one-finger drag pans, two-finger pinch zooms, tap token selects, tap destination moves
+
+### Max delivery gate
+
+- One item at a time. SPACEBAR or → MAX NEXT to advance.
+- Queue depth shown as a count badge in the max-controls strip.
+- URGENT bypasses the gate entirely.
+- 45s minimum between deliveries during active narration.
+- 60-second content dedup — same whisper text dropped.
+- `_maxRouted: true` prevents re-enqueue of already-delivered items.
+
+### Perception system
+
+- observation-service fires Tier 2 checks (PP-filtered) automatically
+  when timed events trigger their linked eventId.
+- Players who beat DC: 15-second Chromebook flash (22px bold, red border pulse).
+- Players who fail: complete silence — no indication anything happened.
+- Max gets full truth always.
+
+### Live verification (post-restart)
+
+```
+GET /health              → 200
+GET /api/max/status      → paused:false, queue:0, throttle:45000
+POST /api/max/acknowledge → ok
+GET /api/health          → 20 services, observations:18, voice:web-audio
+ElevenLabs               → ONLINE, 7/7 voice IDs, 338ms first-call latency
+EventBus                 → dedup active, real duplicates caught on boot
+```
+
+### GO/NO-GO for April 19
+
+**GO.** The core systems are built, tested, and live:
+- Max whispers to earbud only — no double audio, no room speaker leak
+- NPC dialogue to room speaker only — ElevenLabs voice palette mapped
+- 44 timed events covering 17:30 → 06:00 game time
+- 19 observation blocks with PP routing to player Chromebooks
+- 8 creature behavior definitions ready for the living world
+- Shed scene and Pieter's room fully authored
+- Player map sharp and touch-responsive on Chromebook
+- Max delivery gate prevents DM overwhelm (SPACEBAR to advance)
+- Combat start button on /dm + full initiative/turn system
+- Session lifecycle (start campaign → start session → stop → reset) working
+
+**Pre-game-night checklist (Dave):**
+1. SSH key: add the public key from OVERNIGHT_DIAGNOSTIC.md to GitHub
+2. Browser config: /dm/ref → Tools → Audio Devices → set Room Speaker + DM Earbud
+3. ElevenLabs: verify green on Tools tab
+4. Test mode: Start Campaign → Start Session → verify Katya sings at 17:45
+5. Kill any stale `node server.js` on the host before starting Docker

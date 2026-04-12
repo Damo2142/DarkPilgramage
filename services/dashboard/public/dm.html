@@ -1262,6 +1262,8 @@ function setAtmo(profile) {
 
 // 528Hz ACK tone — plays on each Max delivery acknowledgment.
 // Short sine burst with fast attack/release so it doesn't clash with narration.
+// Routes through MaxControls._earbudSinkId via AudioContext.setSinkId so the
+// tone goes to the DM earbud only, same as Max ElevenLabs audio.
 var _maxAckAudioCtx = null;
 function playMaxAckTone() {
   try {
@@ -1272,17 +1274,30 @@ function playMaxAckTone() {
     }
     var ctx = _maxAckAudioCtx;
     if (ctx.state === 'suspended') { try { ctx.resume(); } catch (e) {} }
-    var osc = ctx.createOscillator();
-    var gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.value = 528;
-    var t = ctx.currentTime;
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start(t);
-    osc.stop(t + 0.20);
+
+    var doPlay = function() {
+      try {
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = 528;
+        var t = ctx.currentTime;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.20);
+      } catch (e) { /* ignore */ }
+    };
+
+    // Route to DM earbud via setSinkId — same pattern as MaxControls.handleMaxAudio
+    var earbudSink = window.MaxControls && MaxControls._earbudSinkId;
+    if (earbudSink && typeof ctx.setSinkId === 'function' && ctx.sinkId !== earbudSink) {
+      ctx.setSinkId(earbudSink).then(doPlay).catch(function() { doPlay(); });
+    } else {
+      doPlay();
+    }
   } catch (e) { /* ignore — ack tone is cosmetic */ }
 }
 

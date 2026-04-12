@@ -1304,7 +1304,7 @@ function connect(){
   if (window._wsInitialized && ws && (ws.readyState === 0 || ws.readyState === 1)) return;
   window._wsInitialized = true;
   ws=new WebSocket(WSU);
-  ws.onopen=()=>{$('conn-dot').classList.add('on');PlayerMic.start();};
+  ws.onopen=()=>{$('conn-dot').classList.add('on');};
   ws.onmessage=e=>{try{handle(JSON.parse(e.data));}catch(err){console.error(err);}};
   ws.onclose=()=>{$('conn-dot').classList.remove('on');$('ovmsg').textContent='Reconnecting...';$('overlay').classList.remove('hidden');$('app').classList.remove('visible');window._wsInitialized=false;setTimeout(connect,3000);};
   ws.onerror=console.error;
@@ -4579,6 +4579,109 @@ window.ChatTab = ChatTab;
     }
   }, 200);
   setTimeout(function() { clearInterval(checkInterval); }, 5000);
+})();
+</script>
+
+<!-- PUSH-TO-TALK BUTTON — bottom of screen, hold to stream mic -->
+<style>
+  #ptt-btn {
+    position: fixed; left: 12px; right: 12px; bottom: 12px;
+    height: 72px; padding: 0 20px;
+    font-family: inherit; font-size: 20px; font-weight: 700; letter-spacing: 1.5px;
+    color: #e8c060; background: linear-gradient(180deg, #2a2420 0%, #1e1a14 100%);
+    border: 2px solid #4a3a28; border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+    z-index: 9999;
+    touch-action: none;   /* prevent scroll/gesture cancellation on touch */
+    user-select: none; -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    cursor: pointer;
+    transition: transform 0.08s ease-out;
+  }
+  #ptt-btn:active { transform: translateY(1px); }
+  #ptt-btn.active {
+    color: #fff;
+    background: linear-gradient(180deg, #c13030 0%, #8a1a1a 100%);
+    border-color: #ff5050;
+    box-shadow: 0 0 0 0 rgba(220, 50, 50, 0.9);
+    animation: ptt-pulse 0.9s ease-out infinite;
+  }
+  @keyframes ptt-pulse {
+    0%   { box-shadow: 0 0 0 0   rgba(220, 50, 50, 0.75); }
+    70%  { box-shadow: 0 0 0 18px rgba(220, 50, 50, 0); }
+    100% { box-shadow: 0 0 0 0   rgba(220, 50, 50, 0); }
+  }
+  /* Leave space at bottom of scroll container so content isn't hidden behind the PTT */
+  body { padding-bottom: 96px; }
+</style>
+<button id="ptt-btn" type="button" aria-pressed="false">🎙 HOLD TO SPEAK</button>
+<script>
+(function() {
+  // Push-to-talk: hold = mic active, release = mic stops.
+  // Uses the existing PlayerMic.start()/stop() which streams audio:chunk over WS.
+  var btn = document.getElementById('ptt-btn');
+  if (!btn) return;
+  var active = false;
+
+  function engage(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (active) return;
+    active = true;
+    btn.classList.add('active');
+    btn.setAttribute('aria-pressed', 'true');
+    btn.textContent = '🔴 SPEAKING…';
+    try {
+      if (window.PlayerMic && typeof PlayerMic.start === 'function') {
+        PlayerMic.start();
+      }
+    } catch (err) { console.warn('[PTT] start failed:', err && err.message); }
+  }
+
+  function release(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!active) return;
+    active = false;
+    btn.classList.remove('active');
+    btn.setAttribute('aria-pressed', 'false');
+    btn.textContent = '🎙 HOLD TO SPEAK';
+    try {
+      if (window.PlayerMic && typeof PlayerMic.stop === 'function') {
+        PlayerMic.stop();
+      }
+    } catch (err) { console.warn('[PTT] stop failed:', err && err.message); }
+  }
+
+  // Pointer events cover mouse + touch + pen uniformly on modern Chromebooks
+  btn.addEventListener('pointerdown', function(e) {
+    // Capture so we still receive pointerup even if finger slides off
+    try { btn.setPointerCapture(e.pointerId); } catch (err) {}
+    engage(e);
+  });
+  btn.addEventListener('pointerup', release);
+  btn.addEventListener('pointercancel', release);
+  btn.addEventListener('pointerleave', function(e) {
+    // If pointer leaves without releasing (fallback on older browsers)
+    if (active && e.buttons === 0) release(e);
+  });
+
+  // Touch fallback for older webviews that don't emit pointer events
+  btn.addEventListener('touchstart', function(e) { e.preventDefault(); engage(e); }, { passive: false });
+  btn.addEventListener('touchend', function(e) { e.preventDefault(); release(e); }, { passive: false });
+  btn.addEventListener('touchcancel', release);
+
+  // Keyboard fallback: space bar while button focused, purely for dev
+  btn.addEventListener('keydown', function(e) {
+    if (e.code === 'Space' && !e.repeat) { e.preventDefault(); engage(e); }
+  });
+  btn.addEventListener('keyup', function(e) {
+    if (e.code === 'Space') { e.preventDefault(); release(e); }
+  });
+
+  // If user navigates away or tab hidden mid-press, release cleanly
+  window.addEventListener('blur', function() { if (active) release(); });
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden && active) release();
+  });
 })();
 </script>
 

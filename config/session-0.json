@@ -349,6 +349,135 @@
           "priority": 1,
           "category": "story"
         }
+      },
+      {
+        "id": "katya_crossroads_inn",
+        "gameTime": "1274-10-15T17:45:00",
+        "event": "npc:scripted_speech",
+        "data": {
+          "npcId": "patron-minstrel",
+          "npc": "Katya Voss",
+          "text": "At the crossroads inn where the three roads meet, the fire burns low and the wind brings sleet, the stranger sits where the shadows fall, and orders his wine but drinks none at all.",
+          "languageId": "common",
+          "narratorTranslation": null
+        }
+      },
+      {
+        "id": "katya_three_travelers",
+        "gameTime": "1274-10-15T18:05:00",
+        "event": "npc:scripted_speech",
+        "data": {
+          "npcId": "patron-minstrel",
+          "npc": "Katya Voss",
+          "text": "There is a story they tell in the villages east of here. About three travelers who came to a mountain inn on a night much like this one. The first was a merchant, fat and prosperous. The second was a priest, thin and righteous. The third ordered wine and sat very still and the firelight never quite reached his corner. In the morning the merchant and the priest continued on their way. The third traveler was still there. Some inns are like that.",
+          "languageId": "common",
+          "narratorTranslation": null
+        }
+      },
+      {
+        "id": "katya_piotr_lament",
+        "gameTime": "1274-10-15T18:35:00",
+        "event": "npc:scripted_speech",
+        "data": {
+          "npcId": "patron-minstrel",
+          "npc": "Katya Voss",
+          "text": "Piotr went down to the dark below, where the cold things sleep and the cold winds blow. He said I'll be back before the candle dies, but the candle burned out and he closed his eyes. His wife set a place for him every night, she kept the fire burning, she kept the light. But Piotr stayed down in the dark below, where the cold things sleep and the cold winds blow.",
+          "languageId": "common",
+          "narratorTranslation": null,
+          "followUp": {
+            "delaySeconds": 5,
+            "npcId": "patron-minstrel",
+            "npc": "Katya Voss",
+            "text": "She picks up something bright and cheerful. The contrast is deliberate.",
+            "languageId": "common"
+          }
+        }
+      },
+      {
+        "id": "katya_pallid_hart",
+        "gameTime": "1274-10-15T18:45:00",
+        "event": "npc:scripted_speech",
+        "data": {
+          "npcId": "patron-minstrel",
+          "npc": "Katya Voss",
+          "text": "They say a white deer runs these mountains. Old as the mountains themselves. You see it on the road sometimes, just at the edge of the treeline. They also say you only see it when someone is about to die. I heard someone saw it on the road tonight, just before the storm closed in.",
+          "languageId": "common",
+          "narratorTranslation": null
+        }
+      },
+      {
+        "id": "cellar_sound_18",
+        "gameTime": "1274-10-15T18:00:00",
+        "event": "sound:play",
+        "data": { "name": "scratching", "volume": 15 }
+      },
+      {
+        "id": "upstairs_footsteps_18_20",
+        "gameTime": "1274-10-15T18:20:00",
+        "event": "sound:play",
+        "data": { "name": "footsteps", "volume": 25 }
+      },
+      {
+        "id": "fire_gutter_18_30",
+        "gameTime": "1274-10-15T18:30:00",
+        "event": "dm:whisper",
+        "data": {
+          "text": "The fire gutters briefly. No draft. No door opened. Something below drew the warmth downward.",
+          "priority": 3,
+          "category": "atmosphere"
+        }
+      },
+      {
+        "id": "outside_shape_18_50",
+        "gameTime": "1274-10-15T18:50:00",
+        "event": "dm:whisper",
+        "data": {
+          "text": "Something large moved past the window. Two seconds. Wrong proportions for any animal. The Letavec made its first pass — scented the inn. Brother Aldric's holy symbol and the blizzard are keeping it at the tree line.",
+          "priority": 2,
+          "category": "story"
+        }
+      },
+      {
+        "id": "cellar_chain_21",
+        "gameTime": "1274-10-15T21:00:00",
+        "event": "sound:play",
+        "data": { "name": "chains", "volume": 20 }
+      },
+      {
+        "id": "wolf_howl_20",
+        "gameTime": "1274-10-15T20:00:00",
+        "event": "sound:play",
+        "data": { "name": "wolf_howl", "volume": 40 }
+      },
+      {
+        "id": "roof_impact_21_30",
+        "gameTime": "1274-10-15T21:30:00",
+        "event": "dm:whisper",
+        "data": {
+          "text": "Something landed on the roof. Heavy. One impact. Then nothing. Too heavy for wind.",
+          "priority": 2,
+          "category": "atmosphere"
+        }
+      },
+      {
+        "id": "shutter_scratches_23",
+        "gameTime": "1274-10-15T23:00:00",
+        "event": "dm:whisper",
+        "data": {
+          "text": "Three scratches at the north shutters. Deliberate. Then silence.",
+          "priority": 2,
+          "category": "atmosphere"
+        }
+      },
+      {
+        "id": "wind_drops_05_30",
+        "gameTime": "1274-10-16T05:30:00",
+        "event": "dm:whisper",
+        "data": {
+          "text": "The wind drops completely. Total silence outside. The Letavec has returned to its den. Dawn is coming.",
+          "priority": 3,
+          "category": "atmosphere"
+        }
       }
     ],
 

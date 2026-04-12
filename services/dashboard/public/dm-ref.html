@@ -1283,9 +1283,9 @@ function openNpcCard(npcId) {
 
   var voiceLabel = '';
   if (n.voiceCode) voiceLabel = n.voiceCode;
-  if (n.voiceProfileDetails && n.voiceProfileDetails.fallbackEchoVoice) {
-    voiceLabel += (voiceLabel ? ' — ' : '') + n.voiceProfileDetails.fallbackEchoVoice;
-  }
+  // FIX-D — fallbackEchoVoice is no longer used (Echo removed). Show the
+  // ElevenLabs voice palette code instead. Stale fallbackEchoVoice fields
+  // in session-0 are kept for historical reference but not displayed.
 
   var html = '<div class="ov-title">' + esc(n.name) + (n.cr ? '  <span style="font-size:14px;color:var(--text-dim);">CR ' + n.cr + '</span>' : '') + '</div>' +
     '<div class="ov-subtitle"><span>' + esc(n.trueIdentity || n.role || '') + '</span><span>' + esc(voiceLabel) + '</span></div>' +

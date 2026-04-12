@@ -997,33 +997,21 @@
       <div class="panel-section" data-panel="soundboard">
       <div class="section-header"><span class="drag-handle">⠿</span>Sound Board</div>
       <div style="padding:6px 8px;">
-        <!-- Audio output routing -->
+        <!-- FIX-D — only Web Audio sinks. Echo/Alexa removed entirely. -->
         <div style="display:flex;gap:3px;margin-bottom:3px;align-items:center;">
-          <div style="font-size:9px;color:var(--text-dim);white-space:nowrap;">SFX Out:</div>
+          <div style="font-size:9px;color:var(--text-dim);white-space:nowrap;">Room Speaker:</div>
           <select id="audio-output-sfx" style="flex:1;font-size:10px;padding:3px;background:var(--surface3);color:var(--text);border:1px solid var(--surface3);border-radius:3px;" onchange="SoundBoard.setSfxOutput(this.value)">
             <option value="default">Default speakers</option>
           </select>
         </div>
         <div style="display:flex;gap:3px;margin-bottom:3px;align-items:center;">
-          <div style="font-size:9px;color:var(--text-dim);white-space:nowrap;">Earbud:</div>
+          <div style="font-size:9px;color:var(--text-dim);white-space:nowrap;">DM Earbud:</div>
           <select id="audio-output-earbud" style="flex:1;font-size:10px;padding:3px;background:var(--surface3);color:var(--text);border:1px solid var(--surface3);border-radius:3px;" onchange="SoundBoard.setEarbudOutput(this.value)">
             <option value="default">Default speakers</option>
           </select>
           <button class="sm" onclick="SoundBoard.refreshAudioOutputs()" title="Refresh audio devices" style="font-size:10px;padding:3px 5px;">&#x21bb;</button>
         </div>
-        <!-- Echo device selector for directional -->
-        <div style="display:flex;gap:3px;margin-bottom:3px;align-items:center;">
-          <div style="font-size:9px;color:var(--text-dim);white-space:nowrap;">Echo:</div>
-          <select id="echo-device-select" style="flex:1;font-size:10px;padding:3px;background:var(--surface3);color:var(--text);border:1px solid var(--surface3);border-radius:3px;">
-            <option value="">Primary</option>
-            <option value="office_dot">Office Dot</option>
-            <option value="kitchen_echo">Kitchen</option>
-            <option value="dining_room">Dining Room</option>
-            <option value="living_room">Living Room</option>
-          </select>
-          <button class="sm" onclick="SoundBoard.refreshDevices()" title="Refresh Echo devices" style="font-size:10px;padding:3px 5px;">&#x21bb;</button>
-        </div>
-        <div id="echo-status" style="font-size:9px;color:var(--text-dim);margin-bottom:4px;"></div>
+        <div style="font-size:9px;color:var(--text-dim);margin-bottom:4px;font-style:italic;">Room Speaker: NPC dialogue + ambient. DM Earbud: Max only.</div>
 
         <!-- Sound Effects -->
         <div style="font-size:9px;color:var(--text-dim);margin-bottom:3px;">Sound Effects</div>
@@ -1063,21 +1051,13 @@
           <span id="sfx-vol-label" style="font-size:9px;color:var(--text-dim);width:28px;text-align:right;">70%</span>
         </div>
 
-        <!-- Echo Directional quick buttons -->
-        <div style="font-size:9px;color:var(--text-dim);margin-bottom:3px;">Echo Directional (quick)</div>
-        <div style="display:flex;gap:3px;margin-bottom:4px;">
-          <button class="sm" onclick="SoundBoard.echoSpeak('footsteps')" style="flex:1;font-size:9px;">Footsteps</button>
-          <button class="sm" onclick="SoundBoard.echoSpeak('door_creak')" style="flex:1;font-size:9px;">Door</button>
-          <button class="sm" onclick="SoundBoard.echoSpeak('chains')" style="flex:1;font-size:9px;">Chains</button>
-          <button class="sm" onclick="SoundBoard.echoSpeak('whisper')" style="flex:1;font-size:9px;">Whisper</button>
-        </div>
-        <div id="directional-status" style="font-size:9px;color:var(--text-dim);margin-bottom:3px;"></div>
-
-        <!-- Echo cookie refresh guide removed (FIX-D) — Echo/Alexa is gone.
-             All audio now plays via Web Audio API on the configured PC sinks. -->
-
-        <!-- NPC Voice (Echo TTS) -->
-        <div style="font-size:9px;color:var(--text-dim);margin-bottom:3px;">Speak as NPC (Echo TTS)</div>
+        <!-- FIX-D — Echo Directional + NPC Voice (Echo TTS) sections
+             removed. All NPC voice now flows through ElevenLabs to the
+             room speaker via the dispatched npc:audio event chain. The
+             Speak as NPC text input below dispatches voice:speak
+             {profile, useElevenLabs:true} which voice-service routes
+             to the configured Room Speaker sink. -->
+        <div style="font-size:9px;color:var(--text-dim);margin-bottom:3px;">Speak as NPC (Room Speaker)</div>
         <div style="display:flex;gap:3px;margin-bottom:4px;">
           <select id="voice-profile-select" style="flex:1;font-size:10px;padding:3px;background:var(--surface3);color:var(--text);border:1px solid var(--surface3);border-radius:3px;">
             <option value="narrator">Narrator</option>
@@ -1092,7 +1072,7 @@
           </select>
         </div>
         <div style="display:flex;gap:3px;margin-bottom:4px;">
-          <input id="voice-speak-input" type="text" placeholder="Text to speak on Echo..." style="flex:1;font-size:10px;padding:4px 6px;background:var(--surface3);color:var(--text);border:1px solid var(--surface3);border-radius:3px;">
+          <input id="voice-speak-input" type="text" placeholder="Text to speak on the room speaker..." style="flex:1;font-size:10px;padding:4px 6px;background:var(--surface3);color:var(--text);border:1px solid var(--surface3);border-radius:3px;">
           <button class="sm primary" onclick="SoundBoard.speakText()" style="padding:4px 8px;">Speak</button>
         </div>
 
@@ -2086,7 +2066,10 @@
         }
         break;
       case 'voice:devices':
-        if (msg.data?.devices) SoundBoard.updateDeviceList(msg.data.devices);
+        // FIX-D — voice:devices still fires from voice-service but it
+        // now reports logical channels (room/earbud/player) not Echo.
+        // Nothing to do here; the Web Audio sinks are configured via
+        // localStorage on the dashboard browser.
         break;
       case 'sound:ambient':
         if (msg.data?.name) {
@@ -2807,55 +2790,19 @@
       if (this._loopAudio) this._loopAudio.volume = this._volume;
     },
 
-    // ── Echo Directional (TTS from other rooms) ────────────────────
-
-    getSelectedDevice() {
-      const sel = document.getElementById('echo-device-select');
-      return sel?.value || '';
-    },
-
-    echoSpeak(effect) {
-      const device = this.getSelectedDevice();
-      ws.send(JSON.stringify({ type: 'audio:directional', effect, device: device || undefined }));
-      const statusEl = document.getElementById('directional-status');
-      if (statusEl) { statusEl.textContent = `Echo: ${effect}`; setTimeout(() => statusEl.textContent = '', 3000); }
-    },
+    // ── Speak as NPC — routes through voice-service ElevenLabs path
+    //    on the room speaker sink. FIX-D removed echoSpeak / refreshDevices /
+    //    updateDeviceList / getSelectedDevice — Echo is gone everywhere.
 
     speakText() {
       const input = document.getElementById('voice-speak-input');
       const profile = document.getElementById('voice-profile-select').value;
       const text = input.value.trim();
       if (!text) return;
-      const device = this.getSelectedDevice();
-      ws.send(JSON.stringify({ type: 'voice:speak', text, profile, device: device || undefined }));
+      // Dispatch a voice:speak — voice-service routes to npc:audio (room sink)
+      // because there's no profile='max'. NEVER pass a device override.
+      ws.send(JSON.stringify({ type: 'voice:speak', text, profile }));
       input.value = '';
-    },
-
-    refreshDevices() {
-      ws.send(JSON.stringify({ type: 'voice:list_devices' }));
-    },
-
-    updateDeviceList(devices) {
-      this._devices = devices || [];
-      const sel = document.getElementById('echo-device-select');
-      const statusEl = document.getElementById('echo-status');
-      if (!sel) return;
-
-      const current = sel.value;
-      sel.innerHTML = '<option value="_local">Local (this device)</option><option value="">Echo: Primary</option>';
-      for (const d of this._devices) {
-        const opt = document.createElement('option');
-        opt.value = d.key || d.serial;
-        opt.textContent = `Echo: ${d.name}`;
-        sel.appendChild(opt);
-      }
-      if (current) sel.value = current;
-
-      if (statusEl) {
-        statusEl.textContent = this._devices.length > 0
-          ? `${this._devices.length} Echo device(s)`
-          : 'No Echo devices';
-      }
     },
 
     // ── Custom Sound Generation ────────────────────────────────────
@@ -2899,7 +2846,7 @@
   });
 
   // Request device list on load
-  setTimeout(() => { SoundBoard.refreshDevices(); SoundBoard.refreshAudioOutputs(); }, 2000);
+  setTimeout(() => { SoundBoard.refreshAudioOutputs(); }, 2000);
 
   // === PACING & TENSION PANEL ===
   const PacingPanel = {

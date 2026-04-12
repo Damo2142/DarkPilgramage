@@ -884,11 +884,12 @@ function renderPlayerCard(pid, p) {
         '<span style="font-family:monospace;font-size:11px;color:' + hpColor + ';margin-left:8px;" title="HP — DM only">' + hpCur + '/' + hpMax + '</span>' +
       '</div>' +
     '</div>' +
-    // FIX-H1 — DM heal controls
-    '<div class="pc-row" style="gap:6px;">' +
+    // FIX-H1 + FIX-J1 — DM heal controls
+    '<div class="pc-row" style="gap:6px;flex-wrap:wrap;">' +
       '<span class="label">Heal</span>' +
       '<button class="tool-btn" style="font-size:10px;padding:3px 8px;" onclick="event.stopPropagation();HealCtl.heal(\'' + pid + '\',\'' + esc(name) + '\')">+ HEAL</button>' +
       '<button class="tool-btn" style="font-size:10px;padding:3px 8px;" onclick="event.stopPropagation();HealCtl.fullRest(\'' + pid + '\',\'' + esc(name) + '\')">FULL REST</button>' +
+      '<button class="tool-btn" style="font-size:10px;padding:3px 8px;" onclick="event.stopPropagation();HealCtl.clearWounds(\'' + pid + '\',\'' + esc(name) + '\')">CLEAR WOUNDS</button>' +
     '</div>' +
     '<div class="pc-row horror ' + horrorCls + '">' +
       '<span class="label">Horror</span>' +
@@ -1821,6 +1822,12 @@ var HealCtl = {
   fullRest: function(playerId, name) {
     if (!confirm('Full rest for ' + name + '? Restores HP, stamina, and clears all wounds.')) return;
     fetch('/api/players/' + encodeURIComponent(playerId) + '/full-rest', { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function(d) { if (d.error) alert(d.error); });
+  },
+  clearWounds: function(playerId, name) {
+    if (!confirm('Clear all wound tiers for ' + name + '? (HP and stamina untouched.)')) return;
+    fetch('/api/players/' + encodeURIComponent(playerId) + '/clear-wounds', { method: 'POST' })
       .then(function(r) { return r.json(); })
       .then(function(d) { if (d.error) alert(d.error); });
   },

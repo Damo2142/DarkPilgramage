@@ -410,6 +410,17 @@ class DashboardService {
     // Session save/reset/resume
     this.app.post('/api/session/reset', (req, res) => {
       this.state.resetSession(this.config);
+      // FIX-J1 — wounds + HP + stamina full reset on session reset.
+      // Characters are reloaded after resetSession; give them a tick
+      // and then call campaign-service to restore everyone to full.
+      setTimeout(() => {
+        try {
+          const camp = this.orchestrator.getService('campaign');
+          if (camp && typeof camp._restoreAllPlayersToFull === 'function') {
+            camp._restoreAllPlayersToFull('session-reset');
+          }
+        } catch (e) { console.warn('[Dashboard] reset full-restore error:', e.message); }
+      }, 100);
       res.json({ status: 'reset' });
     });
 

@@ -161,6 +161,12 @@
       width:100vw !important;
       height:calc(100vh - 36px) !important;
     }
+    /* FIX-J2 — keep the canvas pixel-perfect; backing store size is set
+       in JS to match rect × devicePixelRatio so the display is sharp. */
+    #player-map-canvas{
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+    }
     body.map-fullscreen #tab-bar{
       position:fixed;top:0;left:0;right:0;z-index:200;
       background:rgba(20,18,16,0.92);
@@ -190,11 +196,62 @@
     .tab-btn.active{color:#e8c060;border-bottom-color:#e8c060;}
     .gtab{display:none;}
     .gtab.active{display:block;}
-    /* PHASE 5C — chat tab uses flex column layout */
+    /* PHASE 5C / FIX-K1 — chat tab is a full-height flex column.
+       The chat tab needs explicit dimensions so the input bar pins to
+       the bottom and the history fills the rest. */
+    #gtab-chat{
+      padding:0;
+      height:calc(100vh - 100px);
+      flex-direction:column;
+      background:#1e1a14;
+    }
     #gtab-chat.active{display:flex !important;}
-    /* PHASE 5C — chat history message styling on the dedicated tab */
+    #chat-history{
+      flex:1;
+      overflow-y:auto;
+      -webkit-overflow-scrolling:touch;
+      padding:14px 16px;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      overscroll-behavior:contain;
+    }
     #chat-history .chat-msg{align-self:flex-start;max-width:90%;}
-    #chat-history{overscroll-behavior:contain;}
+    #chat-input-bar{
+      flex:0 0 auto;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:10px;
+      background:#0e0c0a;
+      border-top:1px solid #3a3028;
+    }
+    #chat-tab-input{
+      flex:1;
+      background:#1a1814;
+      color:#e8d0a0;
+      border:1px solid #3a3028;
+      border-radius:6px;
+      padding:12px 14px;
+      font-size:15px;
+      font-family:inherit;
+      min-height:42px;
+    }
+    #chat-tab-mic, #chat-tab-send{
+      background:#2a2420;
+      color:#e8c060;
+      border:1px solid #3a3028;
+      border-radius:6px;
+      padding:10px 14px;
+      font-size:14px;
+      font-family:inherit;
+      cursor:pointer;
+      min-height:42px;
+      min-width:50px;
+    }
+    #chat-tab-mic{font-size:18px;padding:10px 14px;}
+    #chat-tab-send{padding:10px 16px;}
+    #chat-tab-mic.recording{background:#aa2a1a;color:#fff;animation:mic-pulse 1s ease-in-out infinite;}
 
     /* Limb rows */
     .limb-row{
@@ -635,13 +692,17 @@
       </div>
     </div>
 
-    <!-- TAB: CHAT — PHASE 5C: dedicated full-screen chat interface -->
-    <div class="gtab" id="gtab-chat" style="padding:0;height:calc(100vh - 100px);display:none;flex-direction:column;">
-      <div id="chat-history" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 16px;background:#1e1a14;display:flex;flex-direction:column;gap:6px;"></div>
-      <div id="chat-input-bar" style="flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:10px;background:#0e0c0a;border-top:1px solid #3a3028;">
-        <input id="chat-tab-input" type="text" placeholder="Speak to Max, an NPC, or another player..." onkeydown="if(event.key==='Enter')ChatTab.send()" style="flex:1;background:#1a1814;color:#e8d0a0;border:1px solid #3a3028;border-radius:6px;padding:12px 14px;font-size:15px;font-family:inherit;min-height:42px;">
-        <button id="chat-tab-mic" onclick="ChatTab.toggleMic()" title="Tap to record" style="background:#2a2420;color:#e8c060;border:1px solid #3a3028;border-radius:6px;padding:10px 14px;font-size:18px;cursor:pointer;min-height:42px;min-width:50px;">🎤</button>
-        <button onclick="ChatTab.send()" style="background:#2a2420;color:#e8c060;border:1px solid #3a3028;border-radius:6px;padding:10px 16px;font-size:14px;font-family:inherit;cursor:pointer;min-height:42px;">SEND</button>
+    <!-- TAB: CHAT — PHASE 5C / FIX-K1: dedicated full-screen chat interface
+         No inline display:none — that was overriding the .gtab.active rule
+         and leaving the panel blank when CHAT was selected. -->
+    <div class="gtab" id="gtab-chat">
+      <div id="chat-history">
+        <div id="chat-empty-state" style="margin:auto;text-align:center;color:#6a5a48;font-style:italic;padding:24px;">Speak to Max, an NPC, or another player...</div>
+      </div>
+      <div id="chat-input-bar">
+        <input id="chat-tab-input" type="text" placeholder="Type to Max, an NPC, or another player..." onkeydown="if(event.key==='Enter')ChatTab.send()">
+        <button id="chat-tab-mic" onclick="ChatTab.toggleMic()" title="Tap to record">🎤</button>
+        <button id="chat-tab-send" onclick="ChatTab.send()">SEND</button>
       </div>
     </div>
 
@@ -3568,8 +3629,20 @@ const PlayerMap = {
     if (!panel) return;
     const rect = panel.getBoundingClientRect();
     if (rect.width < 50 || rect.height < 50) return;
-    this.canvas.width = rect.width;
-    this.canvas.height = rect.height;
+    // FIX-J2 — high-DPI support. The canvas backing store needs to match
+    // physical pixels (CSS px × devicePixelRatio), then ctx.scale brings
+    // the drawing coords back into CSS-px units. Without this the canvas
+    // is rendered at 1x and the browser smears it across the actual
+    // hi-DPI display, producing the blur the player sees on /player/kim.
+    var dpr = window.devicePixelRatio || 1;
+    this.canvas.style.width = rect.width + 'px';
+    this.canvas.style.height = rect.height + 'px';
+    this.canvas.width = Math.round(rect.width * dpr);
+    this.canvas.height = Math.round(rect.height * dpr);
+    if (this.ctx && this.ctx.setTransform) {
+      this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    this._dpr = dpr;
     this.render();
   },
 
@@ -3864,7 +3937,10 @@ const PlayerMap = {
   render() {
     const ctx = this.ctx;
     if (!ctx || !this.canvas.width) return;
-    const W = this.canvas.width, H = this.canvas.height;
+    // FIX-J2 — work in CSS pixel space; the ctx transform already scales by dpr.
+    const dpr = this._dpr || 1;
+    const W = this.canvas.width / dpr;
+    const H = this.canvas.height / dpr;
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = '#050508'; ctx.fillRect(0, 0, W, H);
     if (!this.mapData) { ctx.fillStyle='#6b6760'; ctx.font='14px Source Sans 3,sans-serif'; ctx.textAlign='center'; ctx.fillText('No map loaded', W/2, H/2); return; }
@@ -4064,7 +4140,38 @@ const PlayerMap = {
     ctx.restore();
   },
 
+  // FIX-J3 — Zone-based fog. The previous implementation used dynamic
+  // vision raycasting which produced a circular/oval reveal around the
+  // player token. Per spec, fog must follow zone polygon boundaries
+  // defined in session-0.json — the same model /table uses. The whole
+  // common-room rectangle reveals at once when the room is revealed,
+  // not just a circle around the token.
   _renderDynamicLighting(ctx, mw, mh) {
+    // Paint solid fog over the entire map first
+    ctx.save();
+    ctx.fillStyle = 'rgba(5,5,8,0.97)';
+    ctx.fillRect(-mw/2, -mh/2, mw, mh);
+    // Then erase the fog inside each revealed zone (rect or polygon)
+    ctx.globalCompositeOperation = 'destination-out';
+    const zones = (this.zones || this.mapData && this.mapData.zones || []);
+    for (const z of zones) {
+      if (z.revealed !== true) continue;
+      ctx.beginPath();
+      if (z.points && z.points.length >= 3) {
+        ctx.moveTo(z.points[0].x - mw/2, z.points[0].y - mh/2);
+        for (let i = 1; i < z.points.length; i++) ctx.lineTo(z.points[i].x - mw/2, z.points[i].y - mh/2);
+        ctx.closePath();
+      } else if (z.x != null && z.w != null) {
+        ctx.rect(z.x - mw/2, z.y - mh/2, z.w, z.h);
+      } else { continue; }
+      ctx.fillStyle = 'rgba(0,0,0,1)';
+      ctx.fill();
+    }
+    ctx.restore();
+    return; // Skip the rest of the legacy dynamic-lighting pipeline.
+    // (Code below is preserved for reference but never runs because of
+    //  the early return above.)
+    /* eslint-disable no-unreachable */
     const gs = this.mapData.gridSize;
     const gradPx = (15 / 5) * gs;
 
@@ -5309,6 +5416,9 @@ var ChatBar = {
     // msg = { type: max|npc|narrator|player|partial|system, speaker?, text }
     var stack = document.getElementById('chat-history') || document.getElementById('chat-stack');
     if (!stack) return;
+    // FIX-K1 — hide the empty-state placeholder on first real message
+    var empty = document.getElementById('chat-empty-state');
+    if (empty) empty.remove();
     var type = msg.type || 'player';
     var div = document.createElement('div');
     div.className = 'chat-msg ' + type;

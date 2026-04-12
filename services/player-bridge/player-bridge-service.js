@@ -95,6 +95,20 @@ class PlayerBridgeService {
       res.json({ ok: true, healed: results.length, results });
     });
 
+    // FIX-J1 — Clear wounds only (HP/stamina untouched)
+    this.app.post('/api/players/:playerId/clear-wounds', (req, res) => {
+      const { playerId } = req.params;
+      const wounds = { head: 0, torso: 0, leftArm: 0, rightArm: 0, leftLeg: 0, rightLeg: 0 };
+      this.state.set('players.' + playerId + '.wounds', wounds);
+      this.bus.dispatch('wounds:updated', { playerId, wounds, reason: 'dm-clear' });
+      const charName = this.state.get('players.' + playerId + '.character.name') || playerId;
+      this.bus.dispatch('dm:whisper', {
+        text: charName + ' wound state cleared by DM.',
+        priority: 3, category: 'heal', source: 'dm-clear-wounds'
+      });
+      res.json({ ok: true, playerId, wounds });
+    });
+
     // FIX-H1 — Heal selected list to full. body: { playerIds: ['kim','jerome'] }
     this.app.post('/api/players/heal-selected', (req, res) => {
       const { playerIds } = req.body || {};

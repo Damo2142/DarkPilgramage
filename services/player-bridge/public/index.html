@@ -4140,38 +4140,13 @@ const PlayerMap = {
     ctx.restore();
   },
 
-  // FIX-J3 — Zone-based fog. The previous implementation used dynamic
-  // vision raycasting which produced a circular/oval reveal around the
-  // player token. Per spec, fog must follow zone polygon boundaries
-  // defined in session-0.json — the same model /table uses. The whole
-  // common-room rectangle reveals at once when the room is revealed,
-  // not just a circle around the token.
+  // REVERTED FIX-J3 — Zone-based fog blacked out the player map because
+  // destination-out on top of the already-drawn map image erased BOTH the
+  // fog AND the map underneath where the rect intersected. Restoring the
+  // original radius/vision-based fog. A proper zone-clipped renderer is
+  // post-April-19 work — see CODE_REVIEW.md "Recommendations".
+  // FIX-J2 (DPR scaling) is unaffected — it lives in resize(), not here.
   _renderDynamicLighting(ctx, mw, mh) {
-    // Paint solid fog over the entire map first
-    ctx.save();
-    ctx.fillStyle = 'rgba(5,5,8,0.97)';
-    ctx.fillRect(-mw/2, -mh/2, mw, mh);
-    // Then erase the fog inside each revealed zone (rect or polygon)
-    ctx.globalCompositeOperation = 'destination-out';
-    const zones = (this.zones || this.mapData && this.mapData.zones || []);
-    for (const z of zones) {
-      if (z.revealed !== true) continue;
-      ctx.beginPath();
-      if (z.points && z.points.length >= 3) {
-        ctx.moveTo(z.points[0].x - mw/2, z.points[0].y - mh/2);
-        for (let i = 1; i < z.points.length; i++) ctx.lineTo(z.points[i].x - mw/2, z.points[i].y - mh/2);
-        ctx.closePath();
-      } else if (z.x != null && z.w != null) {
-        ctx.rect(z.x - mw/2, z.y - mh/2, z.w, z.h);
-      } else { continue; }
-      ctx.fillStyle = 'rgba(0,0,0,1)';
-      ctx.fill();
-    }
-    ctx.restore();
-    return; // Skip the rest of the legacy dynamic-lighting pipeline.
-    // (Code below is preserved for reference but never runs because of
-    //  the early return above.)
-    /* eslint-disable no-unreachable */
     const gs = this.mapData.gridSize;
     const gradPx = (15 / 5) * gs;
 

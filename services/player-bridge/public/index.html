@@ -4621,20 +4621,85 @@ window.ChatTab = ChatTab;
   // Uses the existing PlayerMic.start()/stop() which streams audio:chunk over WS.
   var btn = document.getElementById('ptt-btn');
   if (!btn) return;
-  var active = false;
+  var active = false;       // button currently held
+  var starting = false;     // PlayerMic.start() pending (prevents re-entry)
+  var micBlocked = false;   // permission denied — stay in error state until retry
+  var _pttAudioCtx = null;  // pre-created so engage() can resume() on user gesture
 
-  function engage(e) {
+  // ── One-time mic permission warmup ────────────────────────────────
+  // Fire getUserMedia on page load so the browser permission prompt
+  // appears BEFORE the first PTT press. Eliminates the race where
+  // the user releases the button while the prompt is still visible.
+  function warmupMicPermission() {
+    // Pre-create an AudioContext (starts suspended on Chromebooks until
+    // a user gesture). engage() will resume() it on first press to fix
+    // the Chromebook suspended-context bug.
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC && !_pttAudioCtx) _pttAudioCtx = new AC();
+    } catch (e) {}
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      console.warn('[PTT] getUserMedia unavailable (non-HTTPS or unsupported browser)');
+      btn.textContent = '🎙 MIC UNAVAILABLE';
+      micBlocked = true;
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(function(stream) {
+        // Release the warmup stream immediately — we only wanted the grant.
+        stream.getTracks().forEach(function(t) { t.stop(); });
+        console.log('[PTT] Mic permission warmup succeeded');
+        micBlocked = false;
+        btn.textContent = '🎙 HOLD TO SPEAK';
+      })
+      .catch(function(err) {
+        console.warn('[PTT] Warmup failed:', err && err.message);
+        btn.textContent = '🎙 MIC BLOCKED — TAP TO RETRY';
+        micBlocked = true;
+      });
+  }
+  // Fire warmup shortly after the script loads so the page renders first.
+  setTimeout(warmupMicPermission, 800);
+
+  async function engage(e) {
     if (e && e.preventDefault) e.preventDefault();
-    if (active) return;
+    if (active || starting) return;
     active = true;
+    starting = true;
     btn.classList.add('active');
     btn.setAttribute('aria-pressed', 'true');
     btn.textContent = '🔴 SPEAKING…';
     try {
-      if (window.PlayerMic && typeof PlayerMic.start === 'function') {
-        PlayerMic.start();
+      // Chromebook AudioContext fix — browsers create contexts in
+      // 'suspended' state; resume() on user gesture unblocks playback.
+      if (_pttAudioCtx && _pttAudioCtx.state === 'suspended') {
+        try { await _pttAudioCtx.resume(); } catch (ctxErr) {}
       }
-    } catch (err) { console.warn('[PTT] start failed:', err && err.message); }
+      if (window.PlayerMic && typeof PlayerMic.start === 'function') {
+        await PlayerMic.start();
+      }
+      // Race guard: if release() fired while we were awaiting start(),
+      // tear the mic down now so it doesn't stay hot after release.
+      if (!active && window.PlayerMic && typeof PlayerMic.stop === 'function') {
+        PlayerMic.stop();
+        return;
+      }
+      // PlayerMic.start() swallows permission errors in its own catch.
+      // Detect failure via the _active flag it sets on success.
+      if (window.PlayerMic && !window.PlayerMic._active) {
+        throw new Error('Microphone permission denied or unavailable');
+      }
+      micBlocked = false;
+    } catch (err) {
+      console.warn('[PTT] start failed:', err && err.message);
+      active = false;
+      micBlocked = true;
+      btn.classList.remove('active');
+      btn.setAttribute('aria-pressed', 'false');
+      btn.textContent = '🎙 MIC BLOCKED — TAP TO RETRY';
+    } finally {
+      starting = false;
+    }
   }
 
   function release(e) {
@@ -4643,7 +4708,8 @@ window.ChatTab = ChatTab;
     active = false;
     btn.classList.remove('active');
     btn.setAttribute('aria-pressed', 'false');
-    btn.textContent = '🎙 HOLD TO SPEAK';
+    // Keep the error text if mic is blocked so user knows to retry.
+    if (!micBlocked) btn.textContent = '🎙 HOLD TO SPEAK';
     try {
       if (window.PlayerMic && typeof PlayerMic.stop === 'function') {
         PlayerMic.stop();

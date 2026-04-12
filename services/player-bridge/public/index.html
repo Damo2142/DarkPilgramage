@@ -694,6 +694,7 @@
     <div class="gtab active" id="gtab-map" style="padding:0;height:calc(100vh - 100px);">
       <div id="panel-map" style="position:relative;overflow:hidden;width:100%;height:100%;background:#000;touch-action:none;">
         <img id="player-map-img" style="position:absolute;transform-origin:0 0;user-select:none;-webkit-user-drag:none;" draggable="false">
+        <div id="player-grid-overlay" style="position:absolute;transform-origin:0 0;pointer-events:none;z-index:1;opacity:0.12;"></div>
         <canvas id="player-fog-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2;"></canvas>
         <div id="player-token-layer" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:3;pointer-events:none;"></div>
         <div id="map-touch-hint" style="position:absolute;bottom:60px;left:50%;transform:translateX(-50%);background:rgba(20,18,16,0.95);color:#e8c060;font-family:Georgia,serif;font-size:14px;padding:8px 18px;border:1px solid #4a3a28;border-radius:6px;z-index:5;opacity:0;transition:opacity 0.3s;pointer-events:none;"></div>
@@ -3051,17 +3052,46 @@ function handleNarratorWhisper(m) {
   else if (typeof showToast === 'function') showToast('Narrator', text, 10000);
 }
 
-// Section 3 — Window perception flash. No sound, no notification, no journal entry.
+// Perception flash — 15s hold, 5s slow fade, 22px centered, full-screen
+// edge pulse in blood red. Must be visible in peripheral vision from 3ft.
 function showPerceptionFlash(text) {
   var f = document.createElement('div');
-  f.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9000;border:2px solid rgba(180,20,20,0.6);box-shadow:inset 0 0 40px rgba(180,20,20,0.2);transition:opacity 1s ease;opacity:1;display:flex;align-items:center;justify-content:center;';
+  f.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9000;' +
+    'border:3px solid rgba(170,32,16,0.8);' +
+    'box-shadow:inset 0 0 60px rgba(170,32,16,0.25);' +
+    'transition:opacity 5s ease;opacity:1;' +
+    'display:flex;align-items:center;justify-content:center;' +
+    'animation:perception-pulse 0.8s ease-in-out 3;';
   var msg = document.createElement('div');
-  msg.style.cssText = 'font-size:16px;color:#e8d0a0;text-align:center;max-width:80%;font-family:serif;text-shadow:0 0 8px rgba(0,0,0,0.9);';
+  msg.style.cssText = 'font-size:22px;font-weight:bold;color:#e8d0a0;' +
+    'text-align:center;max-width:80%;line-height:1.5;' +
+    'font-family:Georgia,serif;' +
+    'text-shadow:0 0 12px rgba(0,0,0,0.9),0 0 24px rgba(0,0,0,0.5);' +
+    'background:rgba(0,0,0,0.6);padding:16px 24px;border-radius:8px;';
   msg.textContent = text || '';
   f.appendChild(msg);
+  // Inject keyframes if not already present
+  if (!document.getElementById('perception-pulse-style')) {
+    var style = document.createElement('style');
+    style.id = 'perception-pulse-style';
+    style.textContent = '@keyframes perception-pulse{' +
+      '0%,100%{border-color:rgba(170,32,16,0.8);box-shadow:inset 0 0 60px rgba(170,32,16,0.25);}' +
+      '50%{border-color:rgba(200,40,20,1);box-shadow:inset 0 0 100px rgba(200,40,20,0.4);}' +
+    '}';
+    document.head.appendChild(style);
+  }
   document.body.appendChild(f);
-  // Hold 2 seconds, fade over 1 second
-  setTimeout(function() { f.style.opacity = '0'; setTimeout(function() { f.remove(); }, 1000); }, 2000);
+  // After pulse animation (3 × 0.8s = 2.4s) the border holds as steady dim glow.
+  // Hold 15 seconds total, then 5 second slow dissolve.
+  setTimeout(function() {
+    f.style.animation = 'none';
+    f.style.borderColor = 'rgba(170,32,16,0.4)';
+    f.style.boxShadow = 'inset 0 0 40px rgba(170,32,16,0.15)';
+  }, 2400);
+  setTimeout(function() {
+    f.style.opacity = '0';
+    setTimeout(function() { f.remove(); }, 5500);
+  }, 15000);
 }
 
 // ── QUEST JOURNAL (Feature 47) ──────────────────────────────────────
@@ -3657,7 +3687,20 @@ const PlayerMap = {
 
   _applyTransform() {
     if (!this._img) return;
-    this._img.style.transform = 'translate(' + this._panX + 'px,' + this._panY + 'px) scale(' + this._scale + ')';
+    var t = 'translate(' + this._panX + 'px,' + this._panY + 'px) scale(' + this._scale + ')';
+    this._img.style.transform = t;
+    // Grid overlay tracks the map image exactly
+    var grid = document.getElementById('player-grid-overlay');
+    if (grid && this.mapData) {
+      grid.style.transform = t;
+      grid.style.width = this.mapData.width + 'px';
+      grid.style.height = this.mapData.height + 'px';
+      var gs = this.mapData.gridSize || 140;
+      // CSS repeating gradient grid — no canvas, always sharp
+      grid.style.backgroundImage =
+        'repeating-linear-gradient(0deg, transparent, transparent ' + (gs-1) + 'px, rgba(200,180,140,0.5) ' + (gs-1) + 'px, rgba(200,180,140,0.5) ' + gs + 'px),' +
+        'repeating-linear-gradient(90deg, transparent, transparent ' + (gs-1) + 'px, rgba(200,180,140,0.5) ' + (gs-1) + 'px, rgba(200,180,140,0.5) ' + gs + 'px)';
+    }
   },
 
   _clientToMap(cx, cy) {

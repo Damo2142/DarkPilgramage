@@ -1,6 +1,6 @@
 {
   "id": "pallidhearfloor1",
-  "name": "Pallid Hart \u2014 Ground Floor",
+  "name": "Pallid Hart — Ground Floor",
   "image": "pallidhearfloor1.png",
   "gridSize": 140,
   "width": 4900,
@@ -451,7 +451,7 @@
         {
           "skill": "investigation",
           "dc": 12,
-          "successText": "Behind the flour sacks, you notice scratch marks on the floor \u2014 something heavy has been dragged through here recently.",
+          "successText": "Behind the flour sacks, you notice scratch marks on the floor — something heavy has been dragged through here recently.",
           "failText": null,
           "dmWhisper": "Player noticed drag marks in kitchen leading toward the cellar access",
           "triggerOnce": true,
@@ -480,7 +480,7 @@
         {
           "skill": "perception",
           "dc": 10,
-          "successText": "You hear scratching inside the walls. Rats \u2014 lots of them. But there's another sound beneath it. Deeper. Like something large, pacing.",
+          "successText": "You hear scratching inside the walls. Rats — lots of them. But there's another sound beneath it. Deeper. Like something large, pacing.",
           "failText": "The storage room is dusty and cluttered. Nothing seems out of place.",
           "dmWhisper": "Player heard scratching/pacing sounds in storage",
           "triggerOnce": true,
@@ -490,131 +490,11 @@
     }
   ],
   "tokens": {
-    "marta-mmmq6srj1": {
-      "name": "Marta Kowalski",
-      "type": "npc",
-      "x": 3990,
-      "y": 1330,
-      "image": "marta.png",
-      "visible": true,
-      "hidden": false,
-      "hp": {
-        "current": 8,
-        "max": 8
-      },
-      "ac": 10,
-      "actorSlug": "marta"
-    },
-    "patron-farmer-mmmq6srj2": {
-      "name": "Old Gregor",
-      "type": "npc",
-      "x": 3570,
-      "y": 1330,
-      "image": "patron-farmer.png",
-      "visible": true,
-      "hidden": false,
-      "hp": {
-        "current": 11,
-        "max": 11
-      },
-      "ac": 10,
-      "actorSlug": "patron-farmer"
-    },
-    "patron-merchant-mmmq6srj3": {
-      "name": "Henryk the Merchant",
-      "type": "npc",
-      "x": 3430,
-      "y": 1470,
-      "image": "patron-merchant.png",
-      "visible": true,
-      "hidden": false,
-      "hp": {
-        "current": 9,
-        "max": 9
-      },
-      "ac": 10,
-      "actorSlug": "patron-merchant"
-    },
-    "patron-minstrel-mmmq6srj4": {
-      "name": "Katya Voss",
-      "type": "npc",
-      "x": 2870,
-      "y": 1470,
-      "image": "patron-minstrel.png",
-      "visible": true,
-      "hidden": false,
-      "hp": {
-        "current": 16,
-        "max": 16
-      },
-      "ac": 12,
-      "actorSlug": "patron-minstrel"
-    },
-    "patron-pilgrim-mmmq6srk5": {
-      "name": "Brother Aldric",
-      "type": "npc",
-      "x": 2590,
-      "y": 1330,
-      "image": "patron-pilgrim.png",
-      "visible": true,
-      "hidden": false,
-      "hp": {
-        "current": 11,
-        "max": 11
-      },
-      "ac": 10,
-      "actorSlug": "patron-pilgrim"
-    },
-    "swarm-of-rats-mmmq6srk8": {
-      "name": "Swarm of Rats",
-      "type": "npc",
-      "x": 4410,
-      "y": 2170,
-      "image": "swarm-of-rats.png",
-      "visible": false,
-      "hidden": true,
-      "hp": {
-        "current": 24,
-        "max": 24
-      },
-      "ac": 10,
-      "actorSlug": "swarm-of-rats"
-    },
-    "vladislav-mmmq6srl10": {
-      "name": "Vladislav Dragan",
-      "type": "npc",
-      "x": 1050,
-      "y": 1890,
-      "image": "vladislav.png",
-      "visible": true,
-      "hidden": false,
-      "hp": {
-        "current": 144,
-        "max": 144
-      },
-      "ac": 16,
-      "actorSlug": "vladislav"
-    },
-    "werewolf-mmmq6srl11": {
-      "name": "Tomas Birkov",
-      "type": "npc",
-      "x": 3710,
-      "y": 1750,
-      "image": "werewolf.png",
-      "visible": true,
-      "hidden": false,
-      "hp": {
-        "current": 58,
-        "max": 58
-      },
-      "ac": 11,
-      "actorSlug": "werewolf"
-    },
     "spurt-ai-pc": {
       "name": "Spurt the Sorcerer",
       "type": "pc",
-      "x": 1890,
-      "y": 1190,
+      "x": 2030,
+      "y": 1050,
       "image": "spurt.png",
       "visible": true,
       "hidden": false,
@@ -624,35 +504,164 @@
       },
       "ac": 12,
       "ddbId": "162472191",
-      "aiControlled": true
+      "aiControlled": true,
+      "nameRevealedToPlayers": false
     },
     "kim": {
       "name": "Zarina Firethorn",
       "type": "pc",
-      "x": 1890,
-      "y": 1610,
+      "x": 2450,
+      "y": 1470,
       "image": "kim.webp",
       "visible": true,
       "hp": {
-        "current": 10,
+        "current": 22,
         "max": 22,
         "temp": 0
       },
-      "ac": 15
-    },
-    "jerome": {
-      "name": "Barry Goodfellow Frascht",
-      "type": "pc",
-      "x": 2310,
-      "y": 1610,
-      "image": "jerome.webp",
-      "visible": true,
-      "hp": {
-        "current": 18,
-        "max": 18,
-        "temp": 0
+      "ac": 15,
+      "nameRevealedToPlayers": false,
+      "light": {
+        "bright": 560,
+        "dim": 560
       },
-      "ac": 11
+      "facing": -2.356194490192345
+    },
+    "marta": {
+      "actorSlug": "marta",
+      "name": "Marta Kowalski",
+      "type": "npc",
+      "x": 3977.942143326759,
+      "y": 1335.568704799474,
+      "image": "marta.webp",
+      "visible": true,
+      "hidden": false,
+      "hp": {
+        "current": 10,
+        "max": 10
+      },
+      "ac": 10,
+      "nameRevealedToPlayers": false,
+      "publicName": ""
+    },
+    "tomas": {
+      "actorSlug": "tomas",
+      "name": "Tomas Birkov",
+      "type": "npc",
+      "x": 3717.58711374096,
+      "y": 1735.3057199211046,
+      "image": "tomas.webp",
+      "visible": true,
+      "hidden": false,
+      "hp": {
+        "current": 10,
+        "max": 10
+      },
+      "ac": 10,
+      "nameRevealedToPlayers": false,
+      "publicName": ""
+    },
+    "hooded-stranger": {
+      "actorSlug": "hooded-stranger",
+      "name": "Vladislav Dragan",
+      "type": "npc",
+      "x": 1050.7429803303355,
+      "y": 1853.5460814718745,
+      "image": "hooded-stranger.webp",
+      "visible": true,
+      "hidden": false,
+      "hp": {
+        "current": 10,
+        "max": 10
+      },
+      "ac": 10,
+      "nameRevealedToPlayers": false,
+      "publicName": ""
+    },
+    "aldous-kern": {
+      "actorSlug": "aldous-kern",
+      "name": "Aldous Kern",
+      "type": "npc",
+      "x": 2313.4871200322277,
+      "y": 777.6090406732494,
+      "image": "aldous-kern.webp",
+      "visible": true,
+      "hidden": false,
+      "hp": {
+        "current": 10,
+        "max": 10
+      },
+      "ac": 10,
+      "nameRevealedToPlayers": false,
+      "publicName": ""
+    },
+    "patron-farmer": {
+      "actorSlug": "patron-farmer",
+      "name": "Old Gregor",
+      "type": "npc",
+      "x": 3436.12593555667,
+      "y": 1485.3205499798576,
+      "image": "patron-farmer.webp",
+      "visible": true,
+      "hidden": false,
+      "hp": {
+        "current": 10,
+        "max": 10
+      },
+      "ac": 10,
+      "nameRevealedToPlayers": false,
+      "publicName": ""
+    },
+    "patron-merchant": {
+      "actorSlug": "patron-merchant",
+      "name": "Henryk the Merchant",
+      "type": "npc",
+      "x": 3567.2501492099245,
+      "y": 1338.030337383051,
+      "image": "patron-merchant.webp",
+      "visible": true,
+      "hidden": false,
+      "hp": {
+        "current": 10,
+        "max": 10
+      },
+      "ac": 10,
+      "nameRevealedToPlayers": false,
+      "publicName": ""
+    },
+    "patron-pilgrim": {
+      "actorSlug": "patron-pilgrim",
+      "name": "Brother Aldric",
+      "type": "npc",
+      "x": 2699.6748725726356,
+      "y": 1169.1854595281748,
+      "image": "patron-pilgrim.webp",
+      "visible": true,
+      "hidden": false,
+      "hp": {
+        "current": 10,
+        "max": 10
+      },
+      "ac": 10,
+      "nameRevealedToPlayers": false,
+      "publicName": ""
+    },
+    "patron-minstrel": {
+      "actorSlug": "patron-minstrel",
+      "name": "Katya Voss",
+      "type": "npc",
+      "x": 2719.433315725866,
+      "y": 2000.8362940686814,
+      "image": "patron-minstrel.webp",
+      "visible": true,
+      "hidden": false,
+      "hp": {
+        "current": 10,
+        "max": 10
+      },
+      "ac": 10,
+      "nameRevealedToPlayers": false,
+      "publicName": ""
     }
   },
   "floorLinks": [

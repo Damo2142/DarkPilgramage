@@ -30,6 +30,8 @@ class SocialCombatService {
     this._ambientInterval = null;
     this._ambientEnabled = true;
     this._lastAmbientFire = 0;
+    this._ambientBaseMinMs = 120000;  // 2 min minimum
+    this._ambientBaseMaxMs = 240000;  // 4 min maximum
   }
 
   async init(orchestrator) {
@@ -343,10 +345,22 @@ Generate ONE line of spoken dialogue (in quotation marks) that this NPC would sa
   }
 
   _scheduleNextAmbient() {
-    const intervalMs = 480000 + Math.floor(Math.random() * 240000); // 8-12 min
+    // Horror score scales frequency: higher horror = more frequent ambient behavior
+    // Average horror across all players, 0-100
+    const horrorService = this.orchestrator?.getService('horror');
+    const horrorScores = horrorService?.horrorScores || {};
+    const scores = Object.values(horrorScores);
+    const avgHorror = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+
+    // Scale: horror 0 = full interval, horror 100 = half interval
+    const scale = 1 - (avgHorror / 200); // 1.0 at horror 0, 0.5 at horror 100
+    const minMs = Math.floor(this._ambientBaseMinMs * scale);
+    const maxMs = Math.floor(this._ambientBaseMaxMs * scale);
+    const intervalMs = minMs + Math.floor(Math.random() * (maxMs - minMs));
+
     this._ambientInterval = setTimeout(() => {
       this._fireAmbientObservation();
-      this._scheduleNextAmbient(); // Schedule next
+      this._scheduleNextAmbient();
     }, intervalMs);
   }
 
@@ -388,12 +402,17 @@ Generate ONE ambient observation sentence about what they are doing. Format: "${
         );
 
         if (response) {
+          const text = response.trim();
           this.bus.dispatch('dm:whisper', {
-            text: `Ambient — ${npcName}: ${response.trim()}`,
+            text: `Ambient — ${npcName}: ${text}`,
             priority: 5,
             category: 'ambient'
           });
-          console.log(`[SocialCombat] Ambient: ${npcName} — ${response.trim().substring(0, 60)}...`);
+          // Also send to all player screens as atmospheric flavor
+          this.bus.dispatch('ambient:observation', {
+            npcId, npcName, text, timestamp: Date.now()
+          });
+          console.log(`[SocialCombat] Ambient: ${npcName} — ${text.substring(0, 60)}...`);
           return;
         }
       } catch (e) {
@@ -407,29 +426,78 @@ Generate ONE ambient observation sentence about what they are doing. Format: "${
         'polishes the same glass she has been holding for ten minutes',
         'glances at the cellar door and quickly looks away',
         'wipes down the bar with sharp, nervous movements',
-        'pours herself a drink, stares at it, does not drink'
+        'pours herself a drink, stares at it, does not drink',
+        'flinches at a creak from upstairs, then forces a smile',
+        'moves a candle closer to the bar, as if the light itself is a comfort',
+        'whispers something to herself — sounds like a prayer',
+        'drops a glass behind the bar. Catches it. Her hands are shaking'
       ],
       'tomas': [
         'drums his fingers on the table in an irregular rhythm',
         'pulls his collar tighter and stares at the window',
         'counts something under his breath, loses count, starts again',
-        'scratches at his forearm through his sleeve'
+        'scratches at his forearm through his sleeve',
+        'stands abruptly, walks to the window, sits back down',
+        'sniffs the air and his jaw tightens',
+        'checks the door latch for the third time',
+        'tilts his head toward the cellar, nostrils flaring'
       ],
       'hooded-stranger': [
         'has not moved. The shadows around him seem deeper',
         'tilts his head, listening to something no one else can hear',
         'his hand rests on the table — the fingers are very long',
-        'the faintest smile. Gone before you can be sure'
+        'the faintest smile. Gone before you can be sure',
+        'his eyes catch the firelight for an instant. The reflection is wrong',
+        'a moth lands on his sleeve. It dies immediately',
+        'turns his head exactly toward whoever last mentioned the cellar',
+        'the candle nearest him gutters and dims, though there is no draft'
+      ],
+      'patron-farmer': [
+        'stares into his stew. Has not taken a single bite',
+        'mutters about his grandmother and crosses himself',
+        'shakes his head slowly, as if confirming something terrible',
+        'looks at the stranger\'s corner and goes pale',
+        'grips the edge of the table until his knuckles whiten',
+        'whispers to no one: "Same as the goats. Same as the goats."'
+      ],
+      'patron-merchant': [
+        'checks his coin purse again. Counts under his breath',
+        'eyes the door, calculating the distance to his horse',
+        'takes a long drink and refills immediately',
+        'leans toward the nearest player and whispers: "We should leave at first light"',
+        'flinches at the wind and pulls his coat tighter',
+        'rearranges his goods under the table for the fourth time'
+      ],
+      'patron-pilgrim': [
+        'his lips move in prayer. The words are barely audible',
+        'clutches his holy symbol and closes his eyes',
+        'opens his eyes and stares at the stranger\'s corner with undisguised fear',
+        'reaches for the flask at his belt, hesitates, then resumes praying',
+        'the candle beside him burns steady and tall while others flicker',
+        'makes the sign of the cross toward the cellar door'
+      ],
+      'patron-minstrel': [
+        'runs her fingers across the lute strings without playing',
+        'watches everyone with those sharp, clever eyes',
+        'scribbles something in a small journal, then closes it quickly',
+        'hums a melody under her breath — something old and minor-key',
+        'tilts her head, listening to the building creak and settle',
+        'catches your eye and raises an eyebrow as if to say: "you see it too?"'
       ]
     };
 
-    const npcFallbacks = fallbacks[npcId] || [`sits quietly, watching the room`];
+    const npcFallbacks = fallbacks[npcId] || ['sits quietly, watching the room'];
     const text = npcFallbacks[Math.floor(Math.random() * npcFallbacks.length)];
 
     this.bus.dispatch('dm:whisper', {
       text: `Ambient — ${npcName}: ${text}`,
       priority: 5,
       category: 'ambient'
+    });
+
+    // Also send to all player screens
+    this.bus.dispatch('ambient:observation', {
+      npcId, npcName, text, timestamp: Date.now()
     });
 
     console.log(`[SocialCombat] Ambient (fallback): ${npcName} — ${text}`);

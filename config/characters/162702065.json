@@ -18,7 +18,7 @@
     "max": 18,
     "temp": 0
   },
-  "ac": 12,
+  "ac": 11,
   "speed": 30,
   "initiative": 1,
   "proficiencyBonus": 2,
@@ -266,8 +266,7 @@
       "weight": 10,
       "rarity": "Common",
       "magic": false,
-      "ac": 11,
-      "acType": "light"
+      "ac": 11
     },
     {
       "name": "Dagger",
@@ -562,7 +561,7 @@
     "description": null
   },
   "patron": "Fiend Patron",
-  "_syncedAt": "2026-04-07T02:02:11.954Z",
+  "_syncedAt": "2026-04-11T23:41:04.757Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/162702065"
 }

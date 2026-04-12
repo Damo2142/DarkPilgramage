@@ -295,8 +295,8 @@
       "enabled": true
     },
     {
-      "x": 1324,
-      "y": 204,
+      "x": 1323,
+      "y": 187,
       "range": 700,
       "color": "ffeccd8b",
       "enabled": false
@@ -430,7 +430,7 @@
       "y": 1680,
       "w": 560,
       "h": 560,
-      "revealed": false,
+      "revealed": true,
       "description": "A dark corridor. The floorboards creak ominously. Something skittered in the shadows."
     },
     {
@@ -440,7 +440,7 @@
       "y": 1680,
       "w": 980,
       "h": 560,
-      "revealed": false,
+      "revealed": true,
       "description": "The main upper hallway. Faded portraits line the walls — their eyes seem to follow you."
     },
     {
@@ -450,7 +450,7 @@
       "y": 1680,
       "w": 1260,
       "h": 560,
-      "revealed": false,
+      "revealed": true,
       "description": "The hallway stretches into shadow. A cold draft seeps from under one of the doors."
     },
     {
@@ -479,7 +479,7 @@
       "y": 840,
       "w": 2100,
       "h": 840,
-      "revealed": false,
+      "revealed": true,
       "description": "A wide landing at the top of the stairs. Candlelight flickers. The air smells of old wood and something metallic."
     },
     {
@@ -592,68 +592,56 @@
     }
   ],
   "tokens": {
-    "vampire-spawn-upper": {
-      "name": "Vampire Spawn",
-      "type": "npc",
-      "x": 1190,
-      "y": 770,
-      "image": "vampire-spawn.png",
-      "visible": false,
-      "hidden": true,
-      "hp": {
-        "current": 82,
-        "max": 82
-      },
-      "ac": 15,
-      "actorSlug": "vampire-spawn"
-    },
-    "swarm-bats-upper": {
+    "swarm-of-bats-mnvzwk2l": {
+      "actorSlug": "swarm-of-bats",
       "name": "Swarm of Bats",
       "type": "npc",
-      "x": 2310,
+      "x": 1750,
       "y": 490,
       "image": "swarm-of-bats.png",
-      "visible": false,
-      "hidden": true,
+      "visible": true,
+      "hidden": false,
       "hp": {
         "current": 22,
         "max": 22
       },
       "ac": 12,
-      "actorSlug": "swarm-of-bats"
+      "nameRevealedToPlayers": false,
+      "publicName": ""
     },
-    "swarm-rats-upper": {
+    "swarm-of-rats-mnvzwaqb": {
+      "actorSlug": "swarm-of-rats",
       "name": "Swarm of Rats",
       "type": "npc",
-      "x": 1190,
-      "y": 2030,
+      "x": 770,
+      "y": 630,
       "image": "swarm-of-rats.png",
-      "visible": false,
-      "hidden": true,
+      "visible": true,
+      "hidden": false,
       "hp": {
         "current": 24,
         "max": 24
       },
       "ac": 10,
-      "actorSlug": "swarm-of-rats"
+      "nameRevealedToPlayers": false,
+      "publicName": ""
     },
-    "jerome": {
-      "name": "Barry Goodfellow Frascht",
-      "type": "pc",
-      "x": 1330,
-      "y": 910,
-      "image": "jerome.webp",
+    "vampire-spawn-mnvzw22m": {
+      "actorSlug": "vampire-spawn",
+      "name": "Vampire Spawn",
+      "type": "npc",
+      "x": 1470,
+      "y": 630,
+      "image": "vampire-spawn.png",
       "visible": true,
+      "hidden": false,
       "hp": {
-        "current": 18,
-        "max": 18,
-        "temp": 0
+        "current": 82,
+        "max": 82
       },
-      "ac": 12,
-      "light": {
-        "bright": 560,
-        "dim": 560
-      }
+      "ac": 15,
+      "nameRevealedToPlayers": false,
+      "publicName": ""
     }
   },
   "floorLinks": [

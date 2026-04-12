@@ -217,6 +217,78 @@ class DashboardService {
       res.json({ samples: sorted.length, avgMs: avg, medianMs: median, p95Ms: p95, recent: samples.slice(-5) });
     });
 
+    // ─── Heal endpoints (FIX-H1 / FIX-J1) ───────────────────────
+    // The /dm/ref Tools tab and player cards call these on port 3200.
+    // The actual implementation lives in player-bridge — we delegate
+    // by calling the service method directly. No HTTP hop.
+    const _healHelper = () => this.orchestrator.getService('player-bridge');
+
+    this.app.post('/api/players/:playerId/heal', (req, res) => {
+      try {
+        const svc = _healHelper();
+        if (!svc || typeof svc._healPlayer !== 'function') return res.status(503).json({ error: 'player-bridge unavailable' });
+        const amount = parseInt((req.body || {}).amount, 10);
+        if (!Number.isFinite(amount) || amount <= 0) return res.status(400).json({ error: 'amount required' });
+        const result = svc._healPlayer(req.params.playerId, amount, false);
+        if (!result) return res.status(404).json({ error: 'player not found' });
+        res.json(result);
+      } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
+    this.app.post('/api/players/:playerId/full-rest', (req, res) => {
+      try {
+        const svc = _healHelper();
+        if (!svc || typeof svc._healPlayer !== 'function') return res.status(503).json({ error: 'player-bridge unavailable' });
+        const result = svc._healPlayer(req.params.playerId, 0, true);
+        if (!result) return res.status(404).json({ error: 'player not found' });
+        res.json(result);
+      } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
+    this.app.post('/api/players/:playerId/clear-wounds', (req, res) => {
+      try {
+        const wounds = { head: 0, torso: 0, leftArm: 0, rightArm: 0, leftLeg: 0, rightLeg: 0 };
+        this.state.set('players.' + req.params.playerId + '.wounds', wounds);
+        this.bus.dispatch('wounds:updated', { playerId: req.params.playerId, wounds, reason: 'dm-clear' });
+        const charName = this.state.get('players.' + req.params.playerId + '.character.name') || req.params.playerId;
+        this.bus.dispatch('dm:whisper', {
+          text: charName + ' wound state cleared by DM.',
+          priority: 3, category: 'heal', source: 'dm-clear-wounds'
+        });
+        res.json({ ok: true, playerId: req.params.playerId, wounds });
+      } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
+    this.app.post('/api/players/heal-all', (req, res) => {
+      try {
+        const svc = _healHelper();
+        if (!svc || typeof svc._healPlayer !== 'function') return res.status(503).json({ error: 'player-bridge unavailable' });
+        const players = this.state.get('players') || {};
+        const results = [];
+        for (const [pid, p] of Object.entries(players)) {
+          if (!p || p.absent || p.notYetArrived) continue;
+          const r = svc._healPlayer(pid, 0, true);
+          if (r) results.push(r);
+        }
+        res.json({ ok: true, healed: results.length, results });
+      } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
+    this.app.post('/api/players/heal-selected', (req, res) => {
+      try {
+        const svc = _healHelper();
+        if (!svc || typeof svc._healPlayer !== 'function') return res.status(503).json({ error: 'player-bridge unavailable' });
+        const { playerIds } = req.body || {};
+        if (!Array.isArray(playerIds)) return res.status(400).json({ error: 'playerIds array required' });
+        const results = [];
+        for (const pid of playerIds) {
+          const r = svc._healPlayer(pid, 0, true);
+          if (r) results.push(r);
+        }
+        res.json({ ok: true, healed: results.length, results });
+      } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
     // ─── Service restart API (CR-5) ─────────────────────────────
     this.app.get('/api/services', (req, res) => {
       try {

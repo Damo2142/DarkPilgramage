@@ -562,6 +562,13 @@
         <button class="tool-btn" onclick="Tools.sessionSaveState()">Save State</button>
         <button class="tool-btn" onclick="Tools.sessionRestoreState()">Restore State</button>
       </div>
+      <!-- FIX-H1 — bulk heal controls -->
+      <div class="tool-row" style="margin-top:8px;">
+        <label>Heal</label>
+        <button class="tool-btn primary" onclick="HealCtl.healAll()">+ Heal All</button>
+        <button class="tool-btn" onclick="HealCtl.openHealSelected()">Heal Selected…</button>
+      </div>
+      <div id="heal-selected-list" style="display:none;font-size:11px;color:var(--text-dim);padding:6px 0;"></div>
       <div class="tool-row">
         <label>Skip Time</label>
         <input type="number" id="skip-amount" placeholder="amount" value="1" style="max-width:80px;">
@@ -804,6 +811,13 @@ function renderPlayerCard(pid, p) {
       '</div>';
   }
 
+  // FIX-H2 — DM-only HP display
+  var hp = ch.hp || {};
+  var hpCur = (typeof hp.current === 'number') ? hp.current : 0;
+  var hpMax = (typeof hp.max === 'number') ? hp.max : 0;
+  var hpPctCard = hpMax > 0 ? Math.round((hpCur / hpMax) * 100) : 0;
+  var hpColor = hpPctCard > 70 ? '#6aaa6a' : hpPctCard > 35 ? '#e09030' : '#cc3020';
+
   var stamina = p.stamina || {};
   var staminaCur = stamina.current || 0;
   var staminaMax = stamina.max || 1;
@@ -865,7 +879,16 @@ function renderPlayerCard(pid, p) {
     '</div>' +
     '<div class="pc-row">' +
       '<span class="label">Wounds</span>' +
-      '<div class="wound-dots">' + woundDots + '<span class="wound-state-label">' + woundStateLabel + '</span></div>' +
+      '<div class="wound-dots">' + woundDots + '<span class="wound-state-label">' + woundStateLabel + '</span>' +
+        // FIX-H2 — DM-only HP readout next to wound dots
+        '<span style="font-family:monospace;font-size:11px;color:' + hpColor + ';margin-left:8px;" title="HP — DM only">' + hpCur + '/' + hpMax + '</span>' +
+      '</div>' +
+    '</div>' +
+    // FIX-H1 — DM heal controls
+    '<div class="pc-row" style="gap:6px;">' +
+      '<span class="label">Heal</span>' +
+      '<button class="tool-btn" style="font-size:10px;padding:3px 8px;" onclick="event.stopPropagation();HealCtl.heal(\'' + pid + '\',\'' + esc(name) + '\')">+ HEAL</button>' +
+      '<button class="tool-btn" style="font-size:10px;padding:3px 8px;" onclick="event.stopPropagation();HealCtl.fullRest(\'' + pid + '\',\'' + esc(name) + '\')">FULL REST</button>' +
     '</div>' +
     '<div class="pc-row horror ' + horrorCls + '">' +
       '<span class="label">Horror</span>' +
@@ -1773,6 +1796,76 @@ var LangTools = {
   }
 };
 window.LangTools = LangTools;
+
+// ═══════════════════════════════════════════════════════════════
+// FIX-H1 — Heal control UI (per-card buttons + Tools tab bulk)
+// ═══════════════════════════════════════════════════════════════
+var HealCtl = {
+  heal: function(playerId, name) {
+    var input = prompt('Heal ' + name + ' for how many HP?', '10');
+    if (input == null) return;
+    var amount = parseInt(input, 10);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      alert('Enter a positive number.');
+      return;
+    }
+    fetch('/api/players/' + encodeURIComponent(playerId) + '/heal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount: amount })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.error) { alert(d.error); return; }
+      console.log('[HealCtl]', d);
+    });
+  },
+  fullRest: function(playerId, name) {
+    if (!confirm('Full rest for ' + name + '? Restores HP, stamina, and clears all wounds.')) return;
+    fetch('/api/players/' + encodeURIComponent(playerId) + '/full-rest', { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function(d) { if (d.error) alert(d.error); });
+  },
+  healAll: function() {
+    if (!confirm('Heal ALL present players to full?')) return;
+    fetch('/api/players/heal-all', { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.error) alert(d.error);
+        else alert('Healed ' + d.healed + ' player(s) to full.');
+      });
+  },
+  openHealSelected: function() {
+    var el = $('heal-selected-list');
+    if (!el) return;
+    if (el.style.display === 'block') { el.style.display = 'none'; return; }
+    fetch('/api/state').then(function(r) { return r.json(); }).then(function(s) {
+      var players = (s && s.players) || {};
+      var rows = [];
+      for (var pid in players) {
+        var p = players[pid];
+        if (!p || p.absent || p.notYetArrived) continue;
+        var name = (p.character && p.character.name) || pid;
+        rows.push('<label style="display:block;padding:3px 0;"><input type="checkbox" class="heal-sel-cb" data-pid="' + esc(pid) + '"> ' + esc(name) + '</label>');
+      }
+      el.innerHTML = rows.join('') +
+        '<button class="tool-btn primary" style="margin-top:6px;" onclick="HealCtl.applyHealSelected()">Heal Selected to Full</button>';
+      el.style.display = 'block';
+    });
+  },
+  applyHealSelected: function() {
+    var ids = [];
+    document.querySelectorAll('.heal-sel-cb').forEach(function(cb) { if (cb.checked) ids.push(cb.dataset.pid); });
+    if (!ids.length) { alert('No players selected.'); return; }
+    fetch('/api/players/heal-selected', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ playerIds: ids })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.error) alert(d.error);
+      else { alert('Healed ' + d.healed + ' player(s).'); $('heal-selected-list').style.display = 'none'; }
+    });
+  }
+};
+window.HealCtl = HealCtl;
 
 // ═══════════════════════════════════════════════════════════════
 // AudioDevices — Tools tab > Audio Devices section (FIX-B5)

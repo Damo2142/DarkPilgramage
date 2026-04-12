@@ -292,6 +292,41 @@ class CampaignService {
     return auto;
   }
 
+  // FIX-H2 — restore every present player to full HP, full stamina,
+  // and zero wound tiers. Called by start-campaign and (in test mode)
+  // by start-session. Operates on state directly so it doesn't depend
+  // on player-bridge being available.
+  _restoreAllPlayersToFull(reason) {
+    const players = this.state.get('players') || {};
+    let restored = 0;
+    for (const [pid, p] of Object.entries(players)) {
+      if (!p || p.absent || p.notYetArrived) continue;
+      const ch = p.character;
+      if (!ch || !ch.hp || typeof ch.hp.max !== 'number') continue;
+      const maxHp = ch.hp.max;
+      this.state.set('players.' + pid + '.character.hp.current', maxHp);
+      this.state.set('players.' + pid + '.character.hp.temp', 0);
+      this.bus.dispatch('hp:update', { playerId: pid, current: maxHp, max: maxHp, source: reason || 'session-restore' });
+      // Stamina
+      const stam = this.state.get('players.' + pid + '.stamina');
+      if (stam && typeof stam.max === 'number') {
+        stam.current = stam.max;
+        stam.state = 'fresh';
+        this.state.set('players.' + pid + '.stamina', stam);
+        this.bus.dispatch('stamina:updated', { playerId: pid, current: stam.max, max: stam.max, state: 'fresh', reason: reason || 'session-restore' });
+      }
+      // Wounds
+      const wounds = { head: 0, torso: 0, leftArm: 0, rightArm: 0, leftLeg: 0, rightLeg: 0 };
+      this.state.set('players.' + pid + '.wounds', wounds);
+      this.bus.dispatch('wounds:updated', { playerId: pid, wounds, reason: reason || 'session-restore' });
+      restored++;
+    }
+    if (restored > 0) {
+      console.log('[Campaign] FIX-H2 restored ' + restored + ' player(s) to full (' + (reason || 'session-restore') + ')');
+    }
+    return restored;
+  }
+
   _unitToMs(amount, unit) {
     const a = parseInt(amount) || 0;
     const u = (unit || 'hours').toLowerCase();
@@ -1166,6 +1201,10 @@ Keep each event to 1-2 sentences. Format as JSON array: [{"title": "...", "descr
         ratio: '1:1'
       };
       this.state.set('worldAnchor', anchor);
+      // FIX-H2 — fresh campaign start always restores every player to
+      // full HP and full stamina. No carried-over damage from previous
+      // sessions or DDB sync state.
+      this._restoreAllPlayersToFull('campaign-start');
       this.addWorldHistoryEntry({
         type: 'campaign-start',
         content: 'The Dark Pilgrimage begins. The world clock is anchored. October 15 1274, 17:30.',
@@ -1177,6 +1216,12 @@ Keep each event to 1-2 sentences. Format as JSON array: [{"title": "...", "descr
 
     app.post('/api/session/start', async (req, res) => {
       this.sessionMode = 'live-session';
+      // FIX-H2 — in test mode, always reset every player to full HP and
+      // stamina so the DM can rehearse without manually healing first.
+      // Live-mode start does NOT auto-heal (preserves between-session HP).
+      if (this.testMode) {
+        this._restoreAllPlayersToFull('test-session-start');
+      }
       // Auto-snapshot
       this._autoSnapshot();
       this.bus.dispatch('atmosphere:set', { profile: 'tavern_warm' });

@@ -1,0 +1,487 @@
+{
+  "ddbId": "164126673",
+  "name": "Zarina Firethorn",
+  "class": "Fighter",
+  "classes": [
+    {
+      "name": "Fighter",
+      "level": 3,
+      "subclass": "Eldritch Knight"
+    }
+  ],
+  "level": 3,
+  "race": "Mark of Detection Half-Elf",
+  "background": "Soldier",
+  "alignment": "LN",
+  "hp": {
+    "current": 22,
+    "max": 22,
+    "temp": 0
+  },
+  "ac": 15,
+  "speed": 30,
+  "initiative": 3,
+  "proficiencyBonus": 2,
+  "abilities": {
+    "str": {
+      "score": 15,
+      "modifier": 2,
+      "modifierStr": "+2"
+    },
+    "dex": {
+      "score": 17,
+      "modifier": 3,
+      "modifierStr": "+3"
+    },
+    "con": {
+      "score": 13,
+      "modifier": 1,
+      "modifierStr": "+1"
+    },
+    "int": {
+      "score": 10,
+      "modifier": 0,
+      "modifierStr": "+0"
+    },
+    "wis": {
+      "score": 12,
+      "modifier": 1,
+      "modifierStr": "+1"
+    },
+    "cha": {
+      "score": 8,
+      "modifier": -1,
+      "modifierStr": "-1"
+    }
+  },
+  "savingThrows": {
+    "str": {
+      "modifier": 2,
+      "proficient": false
+    },
+    "dex": {
+      "modifier": 3,
+      "proficient": false
+    },
+    "con": {
+      "modifier": 1,
+      "proficient": false
+    },
+    "int": {
+      "modifier": 0,
+      "proficient": false
+    },
+    "wis": {
+      "modifier": 1,
+      "proficient": false
+    },
+    "cha": {
+      "modifier": -1,
+      "proficient": false
+    }
+  },
+  "skills": {
+    "acrobatics": {
+      "modifier": 3,
+      "proficiency": "none"
+    },
+    "animal-handling": {
+      "modifier": 1,
+      "proficiency": "none"
+    },
+    "arcana": {
+      "modifier": 0,
+      "proficiency": "none"
+    },
+    "athletics": {
+      "modifier": 4,
+      "proficiency": "proficiency"
+    },
+    "deception": {
+      "modifier": -1,
+      "proficiency": "none"
+    },
+    "history": {
+      "modifier": 0,
+      "proficiency": "none"
+    },
+    "insight": {
+      "modifier": 1,
+      "proficiency": "none"
+    },
+    "intimidation": {
+      "modifier": 1,
+      "proficiency": "proficiency"
+    },
+    "investigation": {
+      "modifier": 0,
+      "proficiency": "none"
+    },
+    "medicine": {
+      "modifier": 1,
+      "proficiency": "none"
+    },
+    "nature": {
+      "modifier": 0,
+      "proficiency": "none"
+    },
+    "perception": {
+      "modifier": 3,
+      "proficiency": "proficiency"
+    },
+    "performance": {
+      "modifier": -1,
+      "proficiency": "none"
+    },
+    "persuasion": {
+      "modifier": -1,
+      "proficiency": "none"
+    },
+    "religion": {
+      "modifier": 0,
+      "proficiency": "none"
+    },
+    "sleight-of-hand": {
+      "modifier": 3,
+      "proficiency": "none"
+    },
+    "stealth": {
+      "modifier": 5,
+      "proficiency": "proficiency"
+    },
+    "survival": {
+      "modifier": 1,
+      "proficiency": "none"
+    }
+  },
+  "spellSlots": null,
+  "spells": [],
+  "attacks": [],
+  "features": [
+    {
+      "name": "Darkvision",
+      "source": "Set Base",
+      "description": ""
+    },
+    {
+      "name": "Saving Throws",
+      "source": "Advantage",
+      "description": ""
+    },
+    {
+      "name": "Magical Sleep",
+      "source": "Immunity",
+      "description": ""
+    },
+    {
+      "name": "Common",
+      "source": "Language",
+      "description": ""
+    },
+    {
+      "name": "Elvish",
+      "source": "Language",
+      "description": ""
+    },
+    {
+      "name": "Draconic",
+      "source": "Language",
+      "description": ""
+    },
+    {
+      "name": "Subclass",
+      "source": "Set",
+      "description": ""
+    },
+    {
+      "name": "One-Handed Melee Attacks",
+      "source": "Damage",
+      "description": ""
+    }
+  ],
+  "senses": {
+    "darkvision": 60
+  },
+  "inventory": [
+    {
+      "name": "Potion of Healing",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Potion",
+      "weight": 0.5,
+      "rarity": "Common",
+      "magic": true,
+      "modifiers": {}
+    },
+    {
+      "name": "Shield",
+      "quantity": 1,
+      "equipped": true,
+      "type": "Armor",
+      "weight": 6,
+      "rarity": "Common",
+      "magic": false,
+      "ac": 2,
+      "acType": "shield"
+    },
+    {
+      "name": "Chain Mail",
+      "quantity": 1,
+      "equipped": true,
+      "type": "Armor",
+      "weight": 55,
+      "rarity": "Common",
+      "magic": false,
+      "ac": 16
+    },
+    {
+      "name": "Dagger",
+      "quantity": 1,
+      "equipped": true,
+      "type": "Weapon",
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false,
+      "damage": "1d4",
+      "damageType": "Piercing",
+      "subtype": "melee",
+      "properties": [
+        "finesse",
+        "light",
+        "thrown",
+        "nick"
+      ],
+      "range": "20/60ft"
+    },
+    {
+      "name": "Longsword",
+      "quantity": 1,
+      "equipped": true,
+      "type": "Weapon",
+      "weight": 3,
+      "rarity": "Common",
+      "magic": false,
+      "damage": "1d8",
+      "damageType": "Slashing",
+      "subtype": "melee",
+      "properties": [
+        "versatile",
+        "sap"
+      ],
+      "range": "5/5ft"
+    },
+    {
+      "name": "Crossbow, Light",
+      "quantity": 1,
+      "equipped": true,
+      "type": "Weapon",
+      "weight": 5,
+      "rarity": "Common",
+      "magic": false,
+      "damage": "1d8",
+      "damageType": "Piercing",
+      "subtype": "ranged",
+      "properties": [
+        "ammunition",
+        "loading",
+        "range",
+        "two-handed",
+        "slow"
+      ],
+      "range": "80/320ft"
+    },
+    {
+      "name": "Maul",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Weapon",
+      "weight": 10,
+      "rarity": "Common",
+      "magic": false,
+      "damage": "2d6",
+      "damageType": "Bludgeoning",
+      "subtype": "melee",
+      "properties": [
+        "heavy",
+        "two-handed",
+        "topple"
+      ],
+      "range": "5/5ft"
+    },
+    {
+      "name": "Crossbow Bolts",
+      "quantity": 20,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 1.5,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Backpack",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 5,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Chalk (1 piece)",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 0,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Clothes, Common",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 3,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Clothes, Fine",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 6,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Playing Card Set",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 0,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Antitoxin",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 0,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Crowbar",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 5,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Hammer",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 3,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Piton",
+      "quantity": 10,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 0.25,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Rations (1 day)",
+      "quantity": 10,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 2,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Rope, Hempen (50 feet)",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 10,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Tinderbox",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Torch",
+      "quantity": 10,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Waterskin",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 5,
+      "rarity": "Common",
+      "magic": false
+    }
+  ],
+  "conditions": [],
+  "currency": {
+    "pp": 0,
+    "gp": 10,
+    "ep": 0,
+    "sp": 0,
+    "cp": 0
+  },
+  "languages": [
+    "Common",
+    "Elvish",
+    "Draconic"
+  ],
+  "backstory": {
+    "personalityTraits": "I face problems head-on. A simple, direct solution is the best path to success.\nI\u2019ve lost too many friends, and I\u2019m slow to make new ones.",
+    "ideals": "Responsibility. I do what I must and obey just authority. (Lawful)",
+    "bonds": "Those who fight beside me are those worth dying for.\nThose who fight beside me are those worth dying for.",
+    "flaws": "I\u2019d rather eat my armor than admit when I\u2019m wrong.",
+    "backstoryText": "The Disgraced \"Risk Analyst\" - this is my unofficial title...\nI was a rising star in the Tower of Inquisition in Wroat, specializing in \"Social Risk Assessment.\" My job was to shadow Brelish nobles and ensure they didn't walk into scandals or assassinations. However, I uncovered a conspiracy involving a corrupt Medani elder and a high-ranking Brelish official. Instead of being rewarded, I was \"given a leave of absence\" to avoid a political firestorm since I am only half elvin even though my mother has worked hard to fit into the lifestyle with my father.\n\nMotivation: I travel to keep my head down, but my conscience (and the Medani tendency to help the community) keeps drawing me into local mysteries.\n\nWizard Subclass: Divination (The Mark of Detection literally allows me to see the future/truth) which helps prevent the \"risk\" before it happens.\n\nThe Mark: My father wanted a son but I was born a daughter instead.  From early on, I worked to keep up with my father's friends sons and participated in their training to prove myself.  His heritage was from the Mark of Detection subrace (from Eberron: Rising from the Last War),  I get a 1d4 bonus to Insight and Investigation checks, which is perfect for a half elf with magical sensitivities who wants to act like a detective.The Noble Background: My previous \"Position of Privilege\" represents my House's legal standing. Even though I am on a \"leave of absence\", I can get an audience with local constables or minor lords simply by showing my signet ring and the Mark on your skin.\nThe Personality: Medani heirs are often described as \"twitchy\" or hyper-alert. I tend to never sits with my back to the door and constantly scan the room for \"subtle threats.\"",
+    "allies": null,
+    "organizations": null,
+    "enemies": null,
+    "otherNotes": null
+  },
+  "appearance": {
+    "gender": "Female",
+    "age": 35,
+    "height": "5'10\"",
+    "weight": 150,
+    "size": null,
+    "eyes": "Amber",
+    "hair": "Brown",
+    "skin": "Olive",
+    "faith": null,
+    "description": null
+  },
+  "patron": "Eldritch Knight",
+  "_syncedAt": "2026-04-11T23:41:04.820Z",
+  "_source": "ddb",
+  "_ddbUrl": "https://www.dndbeyond.com/characters/164126673"
+}

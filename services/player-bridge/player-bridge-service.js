@@ -62,6 +62,51 @@ class PlayerBridgeService {
       res.json({ current: newHp, max });
     });
 
+    // FIX-H1 — DM heal API. Heals one player by N HP and N stamina
+    // simultaneously. body: { amount: number }. Capped at max.
+    this.app.post('/api/players/:playerId/heal', (req, res) => {
+      const { playerId } = req.params;
+      const amount = parseInt((req.body || {}).amount, 10);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        return res.status(400).json({ error: 'amount (positive number) required' });
+      }
+      const result = this._healPlayer(playerId, amount, false);
+      if (!result) return res.status(404).json({ error: 'player not found' });
+      res.json(result);
+    });
+
+    // FIX-H1 — Full rest. Restores HP and stamina to max.
+    this.app.post('/api/players/:playerId/full-rest', (req, res) => {
+      const { playerId } = req.params;
+      const result = this._healPlayer(playerId, 0, true);
+      if (!result) return res.status(404).json({ error: 'player not found' });
+      res.json(result);
+    });
+
+    // FIX-H1 — Heal All present players to full
+    this.app.post('/api/players/heal-all', (req, res) => {
+      const players = this.state.get('players') || {};
+      const results = [];
+      for (const [pid, p] of Object.entries(players)) {
+        if (!p || p.absent || p.notYetArrived) continue;
+        const r = this._healPlayer(pid, 0, true);
+        if (r) results.push(r);
+      }
+      res.json({ ok: true, healed: results.length, results });
+    });
+
+    // FIX-H1 — Heal selected list to full. body: { playerIds: ['kim','jerome'] }
+    this.app.post('/api/players/heal-selected', (req, res) => {
+      const { playerIds } = req.body || {};
+      if (!Array.isArray(playerIds)) return res.status(400).json({ error: 'playerIds array required' });
+      const results = [];
+      for (const pid of playerIds) {
+        const r = this._healPlayer(pid, 0, true);
+        if (r) results.push(r);
+      }
+      res.json({ ok: true, healed: results.length, results });
+    });
+
     // Proxy combat attack to combat service (so player JS can call same-origin)
     this.app.post('/api/combat/attack', (req, res) => {
       const combatSvc = this.orchestrator.getService('combat');
@@ -1103,6 +1148,63 @@ class PlayerBridgeService {
       default:
         console.log(`[PlayerBridge] Unknown message from ${playerId}: ${msg.type}`);
     }
+  }
+
+  // FIX-H1 — Heal a single player by `amount` HP and `amount` stamina,
+  // OR fully restore both if fullRest is true. Dispatches hp:update and
+  // stamina:set events and a max:audio whisper for critical recoveries.
+  _healPlayer(playerId, amount, fullRest) {
+    const playerState = this.state.get(`players.${playerId}`);
+    if (!playerState) return null;
+    const charHp = this.state.get(`players.${playerId}.character.hp`);
+    if (!charHp || typeof charHp.max !== 'number') return null;
+
+    const hpBefore = typeof charHp.current === 'number' ? charHp.current : 0;
+    const hpMax = charHp.max;
+    const hpAmount = fullRest ? hpMax : Math.max(0, Math.min(amount, hpMax - hpBefore));
+    const newHp = fullRest ? hpMax : Math.min(hpMax, hpBefore + hpAmount);
+    this.state.set(`players.${playerId}.character.hp.current`, newHp);
+    this.bus.dispatch('hp:update', { playerId, current: newHp, max: hpMax, source: fullRest ? 'full-rest' : 'dm-heal' });
+
+    // Stamina recovery — same amount as HP
+    const stam = this.state.get(`players.${playerId}.stamina`);
+    let newStam = null;
+    if (stam && typeof stam.max === 'number') {
+      const stamBefore = typeof stam.current === 'number' ? stam.current : 0;
+      newStam = fullRest ? stam.max : Math.min(stam.max, stamBefore + (amount || 0));
+      stam.current = newStam;
+      // Recompute state
+      const pct = newStam / stam.max;
+      let st = 'fresh';
+      if (pct <= 0) st = 'collapsed';
+      else if (pct < 0.12) st = 'spent';
+      else if (pct < 0.35) st = 'exhausted';
+      else if (pct < 0.60) st = 'winded';
+      stam.state = st;
+      this.state.set(`players.${playerId}.stamina`, stam);
+      this.bus.dispatch('stamina:updated', { playerId, current: newStam, max: stam.max, state: stam.state, reason: fullRest ? 'full-rest' : 'dm-heal' });
+    }
+
+    // Reset wound tiers on full rest
+    if (fullRest) {
+      const wounds = { head: 0, torso: 0, leftArm: 0, rightArm: 0, leftLeg: 0, rightLeg: 0 };
+      this.state.set(`players.${playerId}.wounds`, wounds);
+      this.bus.dispatch('wounds:updated', { playerId, wounds, reason: 'full-rest' });
+    }
+
+    const charName = (playerState.character && playerState.character.name) || playerId;
+    const wasCritical = hpBefore <= Math.max(1, hpMax * 0.2);
+    const text = fullRest
+      ? charName + ' is fully restored. HP and stamina back to maximum.'
+      : charName + ' is restored. HP and stamina both recovered (' + hpBefore + ' → ' + newHp + ').';
+    this.bus.dispatch('dm:whisper', {
+      text,
+      priority: wasCritical ? 1 : 3,
+      category: 'heal',
+      source: 'dm-heal'
+    });
+    console.log('[PlayerBridge] HEAL ' + playerId + (fullRest ? ' FULL REST' : ' +' + amount) + ' → HP ' + newHp + '/' + hpMax + (newStam != null ? ' STAM ' + newStam + '/' + (stam && stam.max) : ''));
+    return { playerId, hp: { before: hpBefore, after: newHp, max: hpMax }, stamina: stam ? { current: newStam, max: stam.max, state: stam.state } : null, fullRest: !!fullRest };
   }
 
   // FIX-B6/C3 — duplicate WS message detection.

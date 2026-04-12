@@ -24,15 +24,148 @@
       "description": "The mountain road approach. Can be used for flashback sequences — what each PC saw on the road before reaching the inn.",
       "readAloud": "The wind cuts through your cloak like a knife made of ice. Snow hammers your face until you can barely see ten feet ahead. The mountain road is a guess now — a memory of packed earth beneath the drifts. The trees press close on either side, their branches creaking and groaning. And then — ahead, barely visible through the white curtain — a warm orange glow. A building. An inn.",
       "atmosphere": "blizzard_dark"
+    },
+    {
+      "id": "shed",
+      "name": "The Shed",
+      "triggerWindow": {
+        "start": "19:30",
+        "end": "20:30"
+      },
+      "manualTrigger": true,
+      "beats": [
+        {
+          "id": "shed-1",
+          "dc": 10,
+          "low": "The cold is immediate.",
+          "mid": "Inn sounds farther away.",
+          "high": "Something out here is very still."
+        },
+        {
+          "id": "shed-2",
+          "dc": 11,
+          "low": "Tracks aren't human.",
+          "mid": "Circle the shed.",
+          "high": "Three times. Stood there."
+        },
+        {
+          "id": "shed-3",
+          "dc": 12,
+          "low": "Door is open.",
+          "mid": "No wind to move it.",
+          "high": "Something not moving inside."
+        },
+        {
+          "id": "shed-4",
+          "dc": 8,
+          "low": "Something under canvas.",
+          "mid": "Wrong shape.",
+          "high": "Canvas too still. Holding its breath."
+        },
+        {
+          "id": "shed-5",
+          "dc": 14,
+          "low": "Something moved.",
+          "mid": "Gargoyle moved.",
+          "high": "Looking at you since you walked in."
+        },
+        {
+          "id": "shed-6",
+          "takesSkeleton": "One step. Between you and door.",
+          "leavesSkeleton": "Looks away."
+        },
+        {
+          "id": "shed-7",
+          "dc": 13,
+          "low": "Something flew over.",
+          "mid": "Wingspan wrong.",
+          "high": "Membrane wings. Horse-sized. Two seconds."
+        }
+      ],
+      "contents": [
+        {
+          "id": "firewood",
+          "dc": 0
+        },
+        {
+          "id": "silver-dagger",
+          "dc": 8,
+          "itemKey": true
+        },
+        {
+          "id": "holy-water-x3",
+          "dc": 8,
+          "itemKey": true
+        },
+        {
+          "id": "stakes-x6",
+          "dc": 8,
+          "itemKey": true
+        },
+        {
+          "id": "healers-kit",
+          "dc": 8
+        },
+        {
+          "id": "pieter-journal",
+          "dc": 8
+        },
+        {
+          "id": "goat-carcass",
+          "dc": 10
+        },
+        {
+          "id": "wall-marks",
+          "dc": 14
+        }
+      ]
+    },
+    {
+      "id": "room5",
+      "name": "Pieter's Room",
+      "entryText": "Cold. Candle gone. Pack half unpacked. Man in the bed.",
+      "maxWhisper": "Everything they need is in that pack.",
+      "contents": [
+        {
+          "id": "silver-dagger-r5",
+          "dc": 8,
+          "itemKey": true
+        },
+        {
+          "id": "holy-water-r5",
+          "dc": 8,
+          "itemKey": true
+        },
+        {
+          "id": "stakes-r5",
+          "dc": 8,
+          "itemKey": true
+        },
+        {
+          "id": "healers-kit-r5",
+          "dc": 8
+        },
+        {
+          "id": "journal-r5",
+          "dc": 8
+        },
+        {
+          "id": "map-r5",
+          "dc": 14
+        }
+      ],
+      "pieter": {
+        "medicineDC10": "Dead for hours. No wounds. That's wrong.",
+        "medicineDC15": "Something drained him."
+      },
+      "ratsAvoid": true
     }
   ],
-
   "world": {
     "clock": {
       "startTime": "1274-10-15T17:30:00",
       "timeScale": 1
     },
-
     "weather": {
       "initial": {
         "type": "blizzard",
@@ -48,10 +181,20 @@
           "startTime": "1274-10-15T19:00:00",
           "atmosphereModifiers": {
             "levelModifier": -10,
-            "flicker": { "intensity": 0.25, "speed": "medium" }
+            "flicker": {
+              "intensity": 0.25,
+              "speed": "medium"
+            }
           },
           "effects": [
-            { "event": "dm:whisper", "data": { "text": "The storm outside is getting worse. Describe the wind howling louder, snow pressing against the windows.", "priority": 4, "category": "atmosphere" } }
+            {
+              "event": "dm:whisper",
+              "data": {
+                "text": "The storm outside is getting worse. Describe the wind howling louder, snow pressing against the windows.",
+                "priority": 4,
+                "category": "atmosphere"
+              }
+            }
           ]
         },
         {
@@ -62,11 +205,25 @@
           "startTime": "1274-10-15T22:00:00",
           "atmosphereModifiers": {
             "levelModifier": -15,
-            "flicker": { "intensity": 0.35, "speed": "fast" },
-            "playerEffect": { "type": "terror_pulse", "payload": {}, "durationMs": 800 }
+            "flicker": {
+              "intensity": 0.35,
+              "speed": "fast"
+            },
+            "playerEffect": {
+              "type": "terror_pulse",
+              "payload": {},
+              "durationMs": 800
+            }
           },
           "effects": [
-            { "event": "dm:whisper", "data": { "text": "Thunder cracks — not normal thunder. It sounds like something enormous moving through the mountains. The whole inn shudders.", "priority": 3, "category": "atmosphere" } }
+            {
+              "event": "dm:whisper",
+              "data": {
+                "text": "Thunder cracks — not normal thunder. It sounds like something enormous moving through the mountains. The whole inn shudders.",
+                "priority": 3,
+                "category": "atmosphere"
+              }
+            }
           ]
         },
         {
@@ -77,10 +234,20 @@
           "startTime": "1274-10-16T04:00:00",
           "atmosphereModifiers": {
             "levelModifier": -5,
-            "flicker": { "intensity": 0.1, "speed": "slow_pulse" }
+            "flicker": {
+              "intensity": 0.1,
+              "speed": "slow_pulse"
+            }
           },
           "effects": [
-            { "event": "dm:whisper", "data": { "text": "The storm is dying down. The silence is almost worse than the wind. Dawn is coming.", "priority": 4, "category": "atmosphere" } }
+            {
+              "event": "dm:whisper",
+              "data": {
+                "text": "The storm is dying down. The silence is almost worse than the wind. Dawn is coming.",
+                "priority": 4,
+                "category": "atmosphere"
+              }
+            }
           ]
         },
         {
@@ -90,12 +257,18 @@
           "description": "The storm has passed. Pale dawn light creeps through the shutters. Snow lies deep and still.",
           "startTime": "1274-10-16T06:00:00",
           "effects": [
-            { "event": "dm:whisper", "data": { "text": "Dawn breaks. The blizzard is over. Thin light pushes through every crack. The world outside is white and silent.", "priority": 3, "category": "atmosphere" } }
+            {
+              "event": "dm:whisper",
+              "data": {
+                "text": "Dawn breaks. The blizzard is over. Thin light pushes through every crack. The world outside is white and silent.",
+                "priority": 3,
+                "category": "atmosphere"
+              }
+            }
           ]
         }
       ]
     },
-
     "timedEvents": [
       {
         "id": "sunset_complete",
@@ -125,7 +298,10 @@
         "event": "token:move",
         "data": {
           "entityId": "vladislav",
-          "to": { "x": 22, "y": 8 },
+          "to": {
+            "x": 22,
+            "y": 8
+          },
           "duration": 800,
           "hidden": false,
           "reason": "ambient",
@@ -138,7 +314,10 @@
         "event": "token:move",
         "data": {
           "entityId": "tomas",
-          "to": { "x": 14, "y": 14 },
+          "to": {
+            "x": 14,
+            "y": 14
+          },
           "duration": 1000,
           "hidden": true,
           "reason": "flee",
@@ -151,7 +330,10 @@
         "event": "token:move",
         "data": {
           "entityId": "marta",
-          "to": { "x": 6, "y": 4 },
+          "to": {
+            "x": 6,
+            "y": 4
+          },
           "duration": 600,
           "hidden": false,
           "reason": "ambient",
@@ -164,7 +346,10 @@
         "event": "token:move",
         "data": {
           "entityId": "piotr",
-          "to": { "x": 13, "y": 8 },
+          "to": {
+            "x": 13,
+            "y": 8
+          },
           "duration": 400,
           "hidden": true,
           "condition": "secret_revealed:cellar_contents",
@@ -178,7 +363,10 @@
         "event": "token:move",
         "data": {
           "entityId": "kamenny",
-          "to": { "x": 18, "y": 16 },
+          "to": {
+            "x": 18,
+            "y": 16
+          },
           "duration": 600,
           "hidden": true,
           "reason": "event",
@@ -211,7 +399,9 @@
         "event": "world:moonrise",
         "data": {
           "description": "The full moon rises behind the storm clouds. Tomas feels it.",
-          "effects": ["tomas_agitation_increase"]
+          "effects": [
+            "tomas_agitation_increase"
+          ]
         }
       },
       {
@@ -233,7 +423,13 @@
           "description": "Scratching sounds from beneath the floor. The cellar.",
           "readAloud": "A sound. From below. Scritch. Scritch-scritch. Like nails on wood. Everyone hears it. Marta freezes.",
           "staticNarration": "From beneath the floor — scritch, scritch-scritch. Nails on wood. Marta freezes mid-pour.",
-          "checks": [{ "skill": "Perception", "dc": 12, "success": "It's coming from directly under the bar — the cellar." }]
+          "checks": [
+            {
+              "skill": "Perception",
+              "dc": 12,
+              "success": "It's coming from directly under the bar — the cellar."
+            }
+          ]
         },
         "repeating": true,
         "intervalMinutes": 20
@@ -409,13 +605,19 @@
         "id": "cellar_sound_18",
         "gameTime": "1274-10-15T18:00:00",
         "event": "sound:play",
-        "data": { "name": "scratching", "volume": 15 }
+        "data": {
+          "name": "scratching",
+          "volume": 15
+        }
       },
       {
         "id": "upstairs_footsteps_18_20",
         "gameTime": "1274-10-15T18:20:00",
         "event": "sound:play",
-        "data": { "name": "footsteps", "volume": 25 }
+        "data": {
+          "name": "footsteps",
+          "volume": 25
+        }
       },
       {
         "id": "fire_gutter_18_30",
@@ -441,13 +643,19 @@
         "id": "cellar_chain_21",
         "gameTime": "1274-10-15T21:00:00",
         "event": "sound:play",
-        "data": { "name": "chains", "volume": 20 }
+        "data": {
+          "name": "chains",
+          "volume": 20
+        }
       },
       {
         "id": "wolf_howl_20",
         "gameTime": "1274-10-15T20:00:00",
         "event": "sound:play",
-        "data": { "name": "wolf_howl", "volume": 40 }
+        "data": {
+          "name": "wolf_howl",
+          "volume": 40
+        }
       },
       {
         "id": "roof_impact_21_30",
@@ -478,9 +686,103 @@
           "priority": 3,
           "category": "atmosphere"
         }
+      },
+      {
+        "id": "vlad_food_1735",
+        "gameTime": "1274-10-15T17:35:00",
+        "event": "ambient:observation",
+        "data": {
+          "npcId": "hooded-stranger",
+          "npcName": "The stranger",
+          "text": "has not touched his food.",
+          "durationMs": 30000
+        }
+      },
+      {
+        "id": "aldous_drinks_1740",
+        "gameTime": "1274-10-15T17:40:00",
+        "event": "ambient:observation",
+        "data": {
+          "npcId": "aldous-kern",
+          "npcName": "Aldous Kern",
+          "text": "ordered two drinks. Nobody across from him.",
+          "durationMs": 30000
+        }
+      },
+      {
+        "id": "gregor_door_1735",
+        "gameTime": "1274-10-15T17:35:00",
+        "event": "ambient:observation",
+        "data": {
+          "npcId": "patron-farmer",
+          "npcName": "Old Gregor",
+          "text": "watches the door. Past afraid. Resigned.",
+          "durationMs": 30000
+        }
+      },
+      {
+        "id": "tomas_watch_1800",
+        "gameTime": "1274-10-15T18:00:00",
+        "event": "ambient:observation",
+        "data": {
+          "npcId": "tomas",
+          "npcName": "Tomas",
+          "text": "glancing at back door. Agitated.",
+          "durationMs": 30000
+        }
+      },
+      {
+        "id": "henryk_vlad_1815",
+        "gameTime": "1274-10-15T18:15:00",
+        "event": "ambient:observation",
+        "data": {
+          "npcId": "patron-merchant",
+          "npcName": "Henryk",
+          "text": "glancing at corner table. Uncomfortable.",
+          "durationMs": 30000
+        }
+      },
+      {
+        "id": "tomas_losing_2100",
+        "gameTime": "1274-10-15T21:00:00",
+        "event": "dm:whisper",
+        "data": {
+          "text": "Tomas has one hour before moonrise. He needs the cellar.",
+          "priority": 2,
+          "category": "story"
+        }
+      },
+      {
+        "id": "wolf_approach_2000",
+        "gameTime": "1274-10-15T20:00:00",
+        "event": "dm:whisper",
+        "data": {
+          "text": "Wolf at the door. Alone. Scouting. Pack at tree line.",
+          "priority": 3,
+          "category": "atmosphere"
+        }
+      },
+      {
+        "id": "corpse_candle_midnight",
+        "gameTime": "1274-10-16T00:00:00",
+        "event": "dm:whisper",
+        "data": {
+          "text": "Corpse Candle appears. Circuits room. Pauses near Tomas. DC 6. Do not let them attack it.",
+          "priority": 1,
+          "category": "story"
+        }
+      },
+      {
+        "id": "rats_exodus_2300",
+        "gameTime": "1274-10-15T23:00:00",
+        "event": "dm:whisper",
+        "data": {
+          "text": "Rats coming down from above. Something worse up there.",
+          "priority": 3,
+          "category": "atmosphere"
+        }
       }
     ],
-
     "environmentalCues": [
       {
         "id": "blizzard_road",
@@ -513,64 +815,134 @@
         ]
       }
     ],
-
     "secrets": [
       {
         "id": "vladislav_is_vampire",
         "description": "The hooded stranger is Vladislav Dragan, a vampire. He is responsible for the disappearances.",
-        "knownBy": ["hooded-stranger"],
-        "discoveryMethods": ["Find his coffin in the cellar", "Catch him feeding", "Holy symbol test", "See him avoid the fire/mirrors"],
+        "knownBy": [
+          "hooded-stranger"
+        ],
+        "discoveryMethods": [
+          "Find his coffin in the cellar",
+          "Catch him feeding",
+          "Holy symbol test",
+          "See him avoid the fire/mirrors"
+        ],
         "revealConsequences": "Vladislav drops pretense. He is either confronted directly or begins openly hunting. Atmosphere shifts to terror_peak.",
-        "linkedClues": ["cellar_coffin", "no_reflection", "avoids_fire"],
-        "linkedBeats": ["discovery"]
+        "linkedClues": [
+          "cellar_coffin",
+          "no_reflection",
+          "avoids_fire"
+        ],
+        "linkedBeats": [
+          "discovery"
+        ]
       },
       {
         "id": "tomas_is_werewolf",
         "description": "Tomas Birkov is a werewolf. He transforms at the full moon, which is tonight.",
-        "knownBy": ["tomas"],
-        "discoveryMethods": ["Examine his wounds (DC14 Medicine/Nature)", "Catch him trying to lock himself away", "See the full moon trigger him"],
+        "knownBy": [
+          "tomas"
+        ],
+        "discoveryMethods": [
+          "Examine his wounds (DC14 Medicine/Nature)",
+          "Catch him trying to lock himself away",
+          "See the full moon trigger him"
+        ],
         "revealConsequences": "If revealed early, Tomas begs for help. If transformation happens publicly, panic — possible combat. He is not evil, just cursed.",
-        "linkedClues": ["tomas_scratches", "tomas_cellar_desperation"],
-        "linkedBeats": ["escalation"]
+        "linkedClues": [
+          "tomas_scratches",
+          "tomas_cellar_desperation"
+        ],
+        "linkedBeats": [
+          "escalation"
+        ]
       },
       {
         "id": "piotr_is_spawn",
         "description": "Marta's husband Piotr was turned into a vampire spawn by Vladislav. He is in the cellar.",
-        "knownBy": ["hooded-stranger"],
-        "discoveryMethods": ["Enter the cellar and find him", "Marta breaks down and reveals she heard his voice", "Vladislav taunts Marta with it"],
+        "knownBy": [
+          "hooded-stranger"
+        ],
+        "discoveryMethods": [
+          "Enter the cellar and find him",
+          "Marta breaks down and reveals she heard his voice",
+          "Vladislav taunts Marta with it"
+        ],
         "revealConsequences": "Marta is devastated. The spawn may attack. This is the emotional core of the session.",
-        "linkedClues": ["cellar_sounds", "marta_husband_missing"],
-        "linkedBeats": ["discovery", "confrontation"]
+        "linkedClues": [
+          "cellar_sounds",
+          "marta_husband_missing"
+        ],
+        "linkedBeats": [
+          "discovery",
+          "confrontation"
+        ]
       },
       {
         "id": "cellar_contents",
         "description": "The cellar contains Vladislav's coffin, Piotr as a vampire spawn, and the drained bodies of two missing travelers.",
-        "knownBy": ["hooded-stranger"],
-        "discoveryMethods": ["Open the cellar door and go down", "Break through the floor"],
+        "knownBy": [
+          "hooded-stranger"
+        ],
+        "discoveryMethods": [
+          "Open the cellar door and go down",
+          "Break through the floor"
+        ],
         "revealConsequences": "Everything becomes clear. The full horror of what has been happening. Multiple secrets may reveal at once.",
-        "linkedClues": ["cellar_coffin", "cellar_bodies", "cellar_spawn"],
-        "linkedBeats": ["discovery"]
+        "linkedClues": [
+          "cellar_coffin",
+          "cellar_bodies",
+          "cellar_spawn"
+        ],
+        "linkedBeats": [
+          "discovery"
+        ]
       },
       {
         "id": "both_want_cellar",
         "description": "Both Tomas (to lock himself in before transformation) and Vladislav (to protect his coffin) want access to the cellar. They are in silent competition.",
-        "knownBy": ["tomas", "hooded-stranger"],
-        "discoveryMethods": ["Watch both NPCs' behavior toward the cellar", "Ask Tomas why he keeps looking at the cellar door"],
+        "knownBy": [
+          "tomas",
+          "hooded-stranger"
+        ],
+        "discoveryMethods": [
+          "Watch both NPCs' behavior toward the cellar",
+          "Ask Tomas why he keeps looking at the cellar door"
+        ],
         "revealConsequences": "Players realize the cellar is the key to everything. Increases tension dramatically.",
-        "linkedClues": ["tomas_cellar_desperation", "vladislav_cellar_interest"]
+        "linkedClues": [
+          "tomas_cellar_desperation",
+          "vladislav_cellar_interest"
+        ]
       },
       {
         "id": "frascht_family_hunters",
         "description": "The Frascht family are legendary monster hunters — a Van Helsing bloodline known and feared across the supernatural world for generations. Barry's parents were active hunters who died fighting Vladislav (or his network). Barry has no memory of this — he was too young. The genie patron knows the full truth but is forbidden from revealing it. Barry's 'paranoid' gear (stakes, holy water, mirror, manacles) is instinct — the hunter blood calling. Vladislav recognizes the Frascht name immediately and is both fascinated and wary. The last Frascht, untrained, sitting in his lair.",
-        "knownBy": ["hooded-stranger", "genie-patron"],
-        "discoveryMethods": ["Vladislav lets it slip in dialogue", "Barry finds a family journal or symbol", "Tomas or another monster recognizes the name", "Katya knows a ballad about the Frascht hunters", "The genie breaks its silence in a moment of desperation"],
+        "knownBy": [
+          "hooded-stranger",
+          "genie-patron"
+        ],
+        "discoveryMethods": [
+          "Vladislav lets it slip in dialogue",
+          "Barry finds a family journal or symbol",
+          "Tomas or another monster recognizes the name",
+          "Katya knows a ballad about the Frascht hunters",
+          "The genie breaks its silence in a moment of desperation"
+        ],
         "revealConsequences": "Barry's entire identity shifts. The 'imaginary friend' is real. His parents were heroes, not ordinary people. Vladislav killed them. Barry must choose: embrace the family legacy or reject it. This is a campaign-spanning revelation — do NOT reveal it all at once. Plant seeds in Session 0, pay it off over the arc.",
-        "linkedClues": ["frascht_name_reaction", "hunter_instinct", "genie_panic"],
-        "linkedBeats": ["discovery", "confrontation"],
+        "linkedClues": [
+          "frascht_name_reaction",
+          "hunter_instinct",
+          "genie_panic"
+        ],
+        "linkedBeats": [
+          "discovery",
+          "confrontation"
+        ],
         "aiInstructions": "CRITICAL: This is the biggest player-specific secret in the campaign. Vladislav KNOWS the Frascht name. When he hears it, he goes still — just for a moment. He studies Barry differently from the other players. He is careful, respectful, almost nostalgic. He does NOT attack Barry directly unless forced. He wants to understand how much Barry knows. Drop TINY hints in Session 0 only: a reaction to the name, a comment about 'old families', Vladislav watching Barry's hands when he handles the stakes. Do NOT reveal the full truth yet. The genie should be unusually agitated — it knows where they are and what Vladislav is. If Barry talks to his 'imaginary friend', the genie is terrified but cannot explain why."
       }
     ],
-
     "clues": [
       {
         "id": "dead_deer",
@@ -703,30 +1075,47 @@
         "readAloud": "Your imaginary friend hasn't spoken since you entered the inn. That's unusual — normally you can't shut them up. When you reach out, there's... static. Fear. A feeling like a hand gripping your wrist, pulling you toward the door. Then one word, barely a whisper: 'Leave.'"
       }
     ],
-
     "discoveryChains": [
       {
         "id": "vampire_investigation",
         "description": "The chain of evidence leading to the vampire reveal",
-        "clueChain": ["dead_deer", "avoids_fire", "cellar_sounds", "no_reflection", "cellar_coffin"],
+        "clueChain": [
+          "dead_deer",
+          "avoids_fire",
+          "cellar_sounds",
+          "no_reflection",
+          "cellar_coffin"
+        ],
         "revealsSecret": "vladislav_is_vampire"
       },
       {
         "id": "missing_husband",
         "description": "The trail from Marta's grief to Piotr's fate",
-        "clueChain": ["marta_husband_missing", "cellar_sounds", "cellar_spawn"],
+        "clueChain": [
+          "marta_husband_missing",
+          "cellar_sounds",
+          "cellar_spawn"
+        ],
         "revealsSecret": "piotr_is_spawn"
       }
     ],
-
     "branches": [
       {
         "id": "cellar_before_confrontation",
         "description": "Players find the cellar before Vladislav reveals himself — they have evidence and initiative",
         "triggeredBy": "discovery",
-        "conditions": ["secret:vladislav_is_vampire:revealed"],
+        "conditions": [
+          "secret:vladislav_is_vampire:revealed"
+        ],
         "effects": [
-          { "event": "dm:whisper", "data": { "text": "Players found the evidence first. Vladislav knows they know — he must act. He can try to flee, fight, or negotiate. His disposition determines which.", "priority": 1, "category": "story" } }
+          {
+            "event": "dm:whisper",
+            "data": {
+              "text": "Players found the evidence first. Vladislav knows they know — he must act. He can try to flee, fight, or negotiate. His disposition determines which.",
+              "priority": 1,
+              "category": "story"
+            }
+          }
         ],
         "convergeTo": "climax"
       },
@@ -734,9 +1123,18 @@
         "id": "vladislav_reveals_first",
         "description": "Vladislav strikes before players find the cellar — they are blindsided",
         "triggeredBy": "escalation",
-        "conditions": ["secret:vladislav_is_vampire:unrevealed"],
+        "conditions": [
+          "secret:vladislav_is_vampire:unrevealed"
+        ],
         "effects": [
-          { "event": "dm:whisper", "data": { "text": "Vladislav acts first. The players don't know what he is yet. This is a horror reveal, not a confrontation. Play it for maximum dread.", "priority": 1, "category": "story" } }
+          {
+            "event": "dm:whisper",
+            "data": {
+              "text": "Vladislav acts first. The players don't know what he is yet. This is a horror reveal, not a confrontation. Play it for maximum dread.",
+              "priority": 1,
+              "category": "story"
+            }
+          }
         ],
         "convergeTo": "climax"
       },
@@ -744,14 +1142,23 @@
         "id": "tomas_transforms_public",
         "description": "Tomas transforms in the common room — chaos erupts, two monsters in the inn",
         "triggeredBy": "escalation",
-        "conditions": ["time:after:23:30", "npc:tomas:status:alive"],
+        "conditions": [
+          "time:after:23:30",
+          "npc:tomas:status:alive"
+        ],
         "effects": [
-          { "event": "dm:whisper", "data": { "text": "Tomas transforms. Two monsters in one inn. This is the worst-case scenario and the most dramatic. Vladislav may use the chaos to feed or escape.", "priority": 1, "category": "story" } }
+          {
+            "event": "dm:whisper",
+            "data": {
+              "text": "Tomas transforms. Two monsters in one inn. This is the worst-case scenario and the most dramatic. Vladislav may use the chaos to feed or escape.",
+              "priority": 1,
+              "category": "story"
+            }
+          }
         ],
         "convergeTo": "climax"
       }
     ],
-
     "futureHooks": [
       {
         "id": "hook-marta-husband",
@@ -759,8 +1166,13 @@
         "payoffCondition": "Players discover Piotr's fate and make a choice",
         "payoffSession": 1,
         "session": 0,
-        "linkedSecrets": ["piotr_in_cellar"],
-        "linkedNpcs": ["marta", "piotr-kowalski"],
+        "linkedSecrets": [
+          "piotr_in_cellar"
+        ],
+        "linkedNpcs": [
+          "marta",
+          "piotr-kowalski"
+        ],
         "notes": "If players promise to help Piotr, Marta provides safe haven at The Pallid Hart for future sessions"
       },
       {
@@ -768,7 +1180,9 @@
         "description": "If Vladislav escapes the inn alive, he becomes a recurring antagonist across the three-castle arc",
         "payoffCondition": "Vladislav survives Session 0",
         "payoffSession": 2,
-        "linkedNpcs": ["vladislav"],
+        "linkedNpcs": [
+          "vladislav"
+        ],
         "notes": "Vladislav flees toward Houska (Castle 2). Players may encounter him again with new spawn."
       },
       {
@@ -776,7 +1190,9 @@
         "description": "Tomas Birkov's werewolf curse — if players learn of it and let him live, he may seek their help curing it",
         "payoffCondition": "Players interact with Tomas's lycanthropy without killing him",
         "payoffSession": 1,
-        "linkedNpcs": ["werewolf"],
+        "linkedNpcs": [
+          "werewolf"
+        ],
         "notes": "Tomas knows mountain routes to Houska. Could become guide or enemy."
       },
       {
@@ -785,42 +1201,59 @@
         "payoffCondition": "Players thoroughly search the cellar",
         "payoffBeat": "cellar_investigation",
         "payoffSession": 1,
-        "linkedSecrets": ["vladislav_is_vampire"],
+        "linkedSecrets": [
+          "vladislav_is_vampire"
+        ],
         "notes": "This plants the seed for the Houska arc (sessions 2-4)"
       }
     ],
-
     "factions": [
       {
         "id": "local-villagers",
         "name": "Mountain Villagers",
         "description": "The scattered communities of the Orava mountain region. Superstitious, fearful, desperate for help.",
         "initialScore": 0,
-        "regions": ["orava-mountains", "pallid-hart"]
+        "regions": [
+          "orava-mountains",
+          "pallid-hart"
+        ]
       },
       {
         "id": "church-of-light",
         "name": "The Church of Light",
         "description": "Local clergy and inquisitors. Suspicious of outsiders but aligned against undead. Brother Aldric is their representative.",
         "initialScore": 10,
-        "regions": ["orava-mountains", "houska"],
-        "allies": ["local-villagers"]
+        "regions": [
+          "orava-mountains",
+          "houska"
+        ],
+        "allies": [
+          "local-villagers"
+        ]
       },
       {
         "id": "vladislav-network",
         "name": "Vladislav's Brood",
         "description": "The vampire lord's growing network of spawn, thralls, and unwitting servants.",
         "initialScore": -30,
-        "regions": ["orava-mountains", "houska", "cachtice"],
-        "enemies": ["church-of-light"]
+        "regions": [
+          "orava-mountains",
+          "houska",
+          "cachtice"
+        ],
+        "enemies": [
+          "church-of-light"
+        ]
       }
     ],
-
     "lightSources": [
       {
         "id": "fireplace",
         "name": "Common Room Fireplace",
-        "position": { "x": 12, "y": 8 },
+        "position": {
+          "x": 12,
+          "y": 8
+        },
         "brightRadius": 20,
         "dimRadius": 40,
         "fuelType": "fireplace",
@@ -831,7 +1264,10 @@
       {
         "id": "sconce-nw",
         "name": "Wall Sconce (NW Corner)",
-        "position": { "x": 3, "y": 2 },
+        "position": {
+          "x": 3,
+          "y": 2
+        },
         "brightRadius": 10,
         "dimRadius": 20,
         "fuelType": "torch",
@@ -842,7 +1278,10 @@
       {
         "id": "sconce-ne",
         "name": "Wall Sconce (NE Corner)",
-        "position": { "x": 22, "y": 2 },
+        "position": {
+          "x": 22,
+          "y": 2
+        },
         "brightRadius": 10,
         "dimRadius": 20,
         "fuelType": "torch",
@@ -853,7 +1292,10 @@
       {
         "id": "sconce-sw",
         "name": "Wall Sconce (SW Corner)",
-        "position": { "x": 3, "y": 14 },
+        "position": {
+          "x": 3,
+          "y": 14
+        },
         "brightRadius": 10,
         "dimRadius": 20,
         "fuelType": "torch",
@@ -864,7 +1306,10 @@
       {
         "id": "sconce-se",
         "name": "Wall Sconce (SE Corner)",
-        "position": { "x": 22, "y": 14 },
+        "position": {
+          "x": 22,
+          "y": 14
+        },
         "brightRadius": 10,
         "dimRadius": 20,
         "fuelType": "torch",
@@ -875,7 +1320,10 @@
       {
         "id": "table-candle-1",
         "name": "Table Candle (Bar)",
-        "position": { "x": 8, "y": 5 },
+        "position": {
+          "x": 8,
+          "y": 5
+        },
         "brightRadius": 5,
         "dimRadius": 10,
         "fuelType": "candle",
@@ -886,7 +1334,10 @@
       {
         "id": "table-candle-2",
         "name": "Table Candle (Center)",
-        "position": { "x": 12, "y": 10 },
+        "position": {
+          "x": 12,
+          "y": 10
+        },
         "brightRadius": 5,
         "dimRadius": 10,
         "fuelType": "candle",
@@ -897,7 +1348,10 @@
       {
         "id": "katya-lantern",
         "name": "Katya's Lantern",
-        "position": { "x": 16, "y": 6 },
+        "position": {
+          "x": 16,
+          "y": 6
+        },
         "brightRadius": 15,
         "dimRadius": 30,
         "fuelType": "lantern",
@@ -907,7 +1361,10 @@
       {
         "id": "aldric-symbol",
         "name": "Brother Aldric's Holy Symbol",
-        "position": { "x": 18, "y": 12 },
+        "position": {
+          "x": 18,
+          "y": 12
+        },
         "brightRadius": 0,
         "dimRadius": 10,
         "fuelType": "holy_symbol",
@@ -915,80 +1372,388 @@
         "startTime": "1274-10-15T23:00:00"
       }
     ],
-
     "observations": [
       {
         "eventId": "vladislav_watches",
         "items": [
-          { "id": "obs-1730-vlad-food", "tier": 1, "text": "Vladislav has not touched his food or drink" },
-          { "id": "obs-1730-tomas-window", "tier": 2, "dc": 12, "text": "Tomas keeps glancing at the window, then quickly looking away.", "linkedSecret": "tomas_is_werewolf" },
-          { "id": "obs-1730-vlad-chair", "tier": 2, "dc": 14, "text": "Vladislav's chair faces the cellar door, not the room. He chose that position deliberately.", "linkedSecret": "both_want_cellar" },
-          { "id": "obs-aldous-1", "tier": 2, "dc": 13, "text": "The man by the door ordered two drinks. He is sitting alone. He has not touched either of them. He keeps looking at the empty chair across from him.", "linkedSecret": "false-hydra-seed" },
-          { "id": "obs-aldous-2", "tier": 2, "dc": 15, "text": "The pilgrim near the door just waved at someone across the room. There is nobody there. He stopped mid-wave looked confused and went back to his drink.", "linkedSecret": "false-hydra-seed" },
-          { "id": "obs-letavec-1", "tier": 2, "dc": 14, "text": "Something circled the inn twice before the storm peaked. The tracks in the snow at the tree line are wrong — too large for a wolf, the wrong shape for a bear, and they stop at the edge of the trees without continuing in any direction.", "linkedSecret": "nocni-letavec-seed", "timing": "Only available if any player goes near a window or door during the early session" }
+          {
+            "id": "obs-1730-vlad-food",
+            "tier": 1,
+            "text": "Vladislav has not touched his food or drink"
+          },
+          {
+            "id": "obs-1730-tomas-window",
+            "tier": 2,
+            "dc": 12,
+            "text": "Tomas keeps glancing at the window, then quickly looking away.",
+            "linkedSecret": "tomas_is_werewolf"
+          },
+          {
+            "id": "obs-1730-vlad-chair",
+            "tier": 2,
+            "dc": 14,
+            "text": "Vladislav's chair faces the cellar door, not the room. He chose that position deliberately.",
+            "linkedSecret": "both_want_cellar"
+          },
+          {
+            "id": "obs-aldous-1",
+            "tier": 2,
+            "dc": 13,
+            "text": "The man by the door ordered two drinks. He is sitting alone. He has not touched either of them. He keeps looking at the empty chair across from him.",
+            "linkedSecret": "false-hydra-seed"
+          },
+          {
+            "id": "obs-aldous-2",
+            "tier": 2,
+            "dc": 15,
+            "text": "The pilgrim near the door just waved at someone across the room. There is nobody there. He stopped mid-wave looked confused and went back to his drink.",
+            "linkedSecret": "false-hydra-seed"
+          },
+          {
+            "id": "obs-letavec-1",
+            "tier": 2,
+            "dc": 14,
+            "text": "Something circled the inn twice before the storm peaked. The tracks in the snow at the tree line are wrong — too large for a wolf, the wrong shape for a bear, and they stop at the edge of the trees without continuing in any direction.",
+            "linkedSecret": "nocni-letavec-seed",
+            "timing": "Only available if any player goes near a window or door during the early session"
+          }
         ]
       },
       {
         "eventId": "vladislav_watches",
         "items": [
-          { "id": "obs-1900-vlad-tracks", "tier": 2, "dc": 15, "text": "His eyes track one of you specifically — not the room. He is watching someone.", "linkedSecret": "vladislav_is_vampire" },
-          { "id": "obs-1900-vlad-still", "tier": 2, "dc": 13, "text": "He has not shifted position in over an hour. Not even to adjust his cloak. Nobody sits that still." },
-          { "id": "obs-aldous-3", "tier": 3, "dc": 12, "investigationType": "insight", "text": "Aldous Kern — DC12 Insight — he refers to 'we' and 'us' but is visibly alone and has no explanation for it", "dmSuggest": "Something about the pilgrim troubles you. He keeps speaking as though he is not alone.", "linkedSecret": "false-hydra-seed" },
-          { "id": "obs-aldous-zarina", "tier": 2, "dc": 12, "targetCharacter": "zarina-firethorn", "bypassPPCheck": true, "text": "You have interviewed enough people to know when someone is editing themselves. The pilgrim by the door keeps catching a pronoun he does not mean to use. He is not lying. He genuinely does not know what he is missing.", "linkedSecret": "false-hydra-seed" }
+          {
+            "id": "obs-1900-vlad-tracks",
+            "tier": 2,
+            "dc": 15,
+            "text": "His eyes track one of you specifically — not the room. He is watching someone.",
+            "linkedSecret": "vladislav_is_vampire"
+          },
+          {
+            "id": "obs-1900-vlad-still",
+            "tier": 2,
+            "dc": 13,
+            "text": "He has not shifted position in over an hour. Not even to adjust his cloak. Nobody sits that still."
+          },
+          {
+            "id": "obs-aldous-3",
+            "tier": 3,
+            "dc": 12,
+            "investigationType": "insight",
+            "text": "Aldous Kern — DC12 Insight — he refers to 'we' and 'us' but is visibly alone and has no explanation for it",
+            "dmSuggest": "Something about the pilgrim troubles you. He keeps speaking as though he is not alone.",
+            "linkedSecret": "false-hydra-seed"
+          },
+          {
+            "id": "obs-aldous-zarina",
+            "tier": 2,
+            "dc": 12,
+            "targetCharacter": "zarina-firethorn",
+            "bypassPPCheck": true,
+            "text": "You have interviewed enough people to know when someone is editing themselves. The pilgrim by the door keeps catching a pronoun he does not mean to use. He is not lying. He genuinely does not know what he is missing.",
+            "linkedSecret": "false-hydra-seed"
+          }
         ]
       },
       {
         "eventId": "katya_song_stops",
         "items": [
-          { "id": "obs-1930-katya-stops", "tier": 1, "text": "Katya stops playing abruptly and stares at something behind the bar" },
-          { "id": "obs-1930-brass-plate", "tier": 2, "dc": 14, "text": "She is looking at the brass plate on the wall — the polished one that catches reflections.", "linkedSecret": "vladislav_is_vampire" },
-          { "id": "obs-1930-no-reflect", "tier": 3, "dc": 12, "text": "Examine the brass plate — something about the way Katya stopped troubles you", "suggest": "Something about the way Katya stopped troubles you. You follow her gaze to the polished brass on the wall..." }
+          {
+            "id": "obs-1930-katya-stops",
+            "tier": 1,
+            "text": "Katya stops playing abruptly and stares at something behind the bar"
+          },
+          {
+            "id": "obs-1930-brass-plate",
+            "tier": 2,
+            "dc": 14,
+            "text": "She is looking at the brass plate on the wall — the polished one that catches reflections.",
+            "linkedSecret": "vladislav_is_vampire"
+          },
+          {
+            "id": "obs-1930-no-reflect",
+            "tier": 3,
+            "dc": 12,
+            "text": "Examine the brass plate — something about the way Katya stopped troubles you",
+            "suggest": "Something about the way Katya stopped troubles you. You follow her gaze to the polished brass on the wall..."
+          }
         ]
       },
       {
         "eventId": "moonrise",
         "items": [
-          { "id": "obs-1945-tomas-grips", "tier": 1, "text": "Tomas grips the edge of his table hard enough to turn his knuckles white" },
-          { "id": "obs-1945-tomas-shaking", "tier": 2, "dc": 12, "text": "His hands are shaking. He is gripping the table to hide it.", "linkedSecret": "tomas_is_werewolf" },
-          { "id": "obs-1945-tomas-sweat", "tier": 2, "dc": 14, "text": "Sweat beads on his forehead despite sitting away from the fire. His breath comes short and fast.", "linkedSecret": "tomas_is_werewolf" }
+          {
+            "id": "obs-1945-tomas-grips",
+            "tier": 1,
+            "text": "Tomas grips the edge of his table hard enough to turn his knuckles white"
+          },
+          {
+            "id": "obs-1945-tomas-shaking",
+            "tier": 2,
+            "dc": 12,
+            "text": "His hands are shaking. He is gripping the table to hide it.",
+            "linkedSecret": "tomas_is_werewolf"
+          },
+          {
+            "id": "obs-1945-tomas-sweat",
+            "tier": 2,
+            "dc": 14,
+            "text": "Sweat beads on his forehead despite sitting away from the fire. His breath comes short and fast.",
+            "linkedSecret": "tomas_is_werewolf"
+          }
         ]
       },
       {
         "eventId": "gregor_collapse",
         "items": [
-          { "id": "obs-2100-gregor-falls", "tier": 1, "text": "Old Gregor slides from his chair without a sound — he simply folds and drops" },
-          { "id": "obs-2100-gregor-wounds", "tier": 3, "dc": 12, "text": "Medicine check on Gregor — two puncture wounds on his neck", "suggest": "Something about the way he fell does not look right. Not like a faint. More like... emptied." }
+          {
+            "id": "obs-2100-gregor-falls",
+            "tier": 1,
+            "text": "Old Gregor slides from his chair without a sound — he simply folds and drops"
+          },
+          {
+            "id": "obs-2100-gregor-wounds",
+            "tier": 3,
+            "dc": 12,
+            "text": "Medicine check on Gregor — two puncture wounds on his neck",
+            "suggest": "Something about the way he fell does not look right. Not like a faint. More like... emptied."
+          }
         ]
       },
       {
         "eventId": "tomas_cellar_attempt",
         "items": [
-          { "id": "obs-2130-vlad-fingers", "tier": 2, "dc": 15, "text": "Vladislav's fingers have been slowly curling and uncurling for several minutes. Like a predator flexing its claws.", "linkedSecret": "vladislav_is_vampire" },
-          { "id": "obs-2130-both-cellar", "tier": 2, "dc": 13, "text": "Both Vladislav and Tomas are watching the cellar door. Neither is aware the other is doing it.", "linkedSecret": "both_want_cellar" },
-          { "id": "obs-2130-tomas-stands", "tier": 1, "text": "Tomas stands abruptly, knocking his chair back. His eyes are wild." }
+          {
+            "id": "obs-2130-vlad-fingers",
+            "tier": 2,
+            "dc": 15,
+            "text": "Vladislav's fingers have been slowly curling and uncurling for several minutes. Like a predator flexing its claws.",
+            "linkedSecret": "vladislav_is_vampire"
+          },
+          {
+            "id": "obs-2130-both-cellar",
+            "tier": 2,
+            "dc": 13,
+            "text": "Both Vladislav and Tomas are watching the cellar door. Neither is aware the other is doing it.",
+            "linkedSecret": "both_want_cellar"
+          },
+          {
+            "id": "obs-2130-tomas-stands",
+            "tier": 1,
+            "text": "Tomas stands abruptly, knocking his chair back. His eyes are wild."
+          }
         ]
       },
       {
         "eventId": "aldric_prayer",
         "items": [
-          { "id": "obs-2300-aldric-prays", "tier": 1, "text": "Brother Aldric begins praying loudly, his holy symbol glowing with faint light" },
-          { "id": "obs-2300-vlad-jaw", "tier": 2, "dc": 13, "text": "Vladislav's jaw tightens when the holy symbol catches the light. A muscle jumps in his cheek.", "linkedSecret": "vladislav_is_vampire" },
-          { "id": "obs-2300-vlad-marks", "tier": 2, "dc": 15, "text": "His hand grips the chair arm so hard it leaves marks in the wood. Finger-shaped grooves pressed into oak.", "linkedSecret": "vladislav_is_vampire" }
+          {
+            "id": "obs-2300-aldric-prays",
+            "tier": 1,
+            "text": "Brother Aldric begins praying loudly, his holy symbol glowing with faint light"
+          },
+          {
+            "id": "obs-2300-vlad-jaw",
+            "tier": 2,
+            "dc": 13,
+            "text": "Vladislav's jaw tightens when the holy symbol catches the light. A muscle jumps in his cheek.",
+            "linkedSecret": "vladislav_is_vampire"
+          },
+          {
+            "id": "obs-2300-vlad-marks",
+            "tier": 2,
+            "dc": 15,
+            "text": "His hand grips the chair arm so hard it leaves marks in the wood. Finger-shaped grooves pressed into oak.",
+            "linkedSecret": "vladislav_is_vampire"
+          }
         ]
       },
       {
         "eventId": "cellar_entry",
         "trigger": "scene-change:cellar OR beat:cellar_investigation",
         "items": [
-          { "id": "obs-gasspore-1", "tier": 1, "text": "There is something floating in the center of the cellar. Round. Large. With stalks extending from its surface. Your stomach drops.", "dmWhisper": "Gas Spore visible — players may mistake it for a Beholder — do not correct them yet" },
-          { "id": "obs-gasspore-2", "tier": 2, "dc": 12, "triggerRange": 60, "text": "The shape floats without intention — it drifts on air currents rather than moving with purpose. A Beholder moves. This thing drifts.", "linkedSecret": "gas-spore-identity" },
-          { "id": "obs-gasspore-3", "tier": 2, "dc": 13, "triggerRange": 30, "text": "The eyestalks hang wrong — limp, like wilted stems. The smell reaches you now. Earthy. Damp. Like a cellar after rain, not like a living thing.", "linkedSecret": "gas-spore-identity" },
-          { "id": "obs-gasspore-4", "tier": 2, "dc": 15, "triggerRange": 15, "text": "This is not a Beholder. The surface is soft and mottled like a mushroom cap. The central eye is milky and fixed — it has never seen anything. This is something that wants you to think it is a Beholder.", "linkedSecret": "gas-spore-identity", "onSuccess": "token-label-update:gas-spore-revealed" },
-          { "id": "obs-gasspore-zarina", "tier": 2, "dc": 12, "targetCharacter": "zarina-firethorn", "bypassPPCheck": true, "text": "You have seen men freeze when they see something they cannot categorize. Your instinct is different — you look for what is wrong with the thing not what it is. The stalks are wrong. The movement is wrong. The smell is wrong. This is not what it appears to be.", "linkedSecret": "gas-spore-identity" }
+          {
+            "id": "obs-gasspore-1",
+            "tier": 1,
+            "text": "There is something floating in the center of the cellar. Round. Large. With stalks extending from its surface. Your stomach drops.",
+            "dmWhisper": "Gas Spore visible — players may mistake it for a Beholder — do not correct them yet"
+          },
+          {
+            "id": "obs-gasspore-2",
+            "tier": 2,
+            "dc": 12,
+            "triggerRange": 60,
+            "text": "The shape floats without intention — it drifts on air currents rather than moving with purpose. A Beholder moves. This thing drifts.",
+            "linkedSecret": "gas-spore-identity"
+          },
+          {
+            "id": "obs-gasspore-3",
+            "tier": 2,
+            "dc": 13,
+            "triggerRange": 30,
+            "text": "The eyestalks hang wrong — limp, like wilted stems. The smell reaches you now. Earthy. Damp. Like a cellar after rain, not like a living thing.",
+            "linkedSecret": "gas-spore-identity"
+          },
+          {
+            "id": "obs-gasspore-4",
+            "tier": 2,
+            "dc": 15,
+            "triggerRange": 15,
+            "text": "This is not a Beholder. The surface is soft and mottled like a mushroom cap. The central eye is milky and fixed — it has never seen anything. This is something that wants you to think it is a Beholder.",
+            "linkedSecret": "gas-spore-identity",
+            "onSuccess": "token-label-update:gas-spore-revealed"
+          },
+          {
+            "id": "obs-gasspore-zarina",
+            "tier": 2,
+            "dc": 12,
+            "targetCharacter": "zarina-firethorn",
+            "bypassPPCheck": true,
+            "text": "You have seen men freeze when they see something they cannot categorize. Your instinct is different — you look for what is wrong with the thing not what it is. The stalks are wrong. The movement is wrong. The smell is wrong. This is not what it appears to be.",
+            "linkedSecret": "gas-spore-identity"
+          }
+        ]
+      },
+      {
+        "eventId": "katya_crossroads_inn",
+        "items": [
+          {
+            "id": "obs-1745-henryk",
+            "tier": 2,
+            "dc": 13,
+            "text": "The merchant's face changed when she started singing."
+          },
+          {
+            "id": "obs-1745-vlad",
+            "tier": 2,
+            "dc": 11,
+            "text": "The man in the corner didn't react at all."
+          }
+        ]
+      },
+      {
+        "eventId": "katya_three_travelers",
+        "items": [
+          {
+            "id": "obs-1805-vlad",
+            "tier": 2,
+            "dc": 11,
+            "text": "He felt nothing about a story that should disturb anyone."
+          }
+        ]
+      },
+      {
+        "eventId": "katya_piotr_lament",
+        "items": [
+          {
+            "id": "obs-1835-marta",
+            "tier": 2,
+            "dc": 10,
+            "text": "She left before the second verse. She knew that song was about her."
+          },
+          {
+            "id": "obs-1835-katya",
+            "tier": 2,
+            "dc": 14,
+            "text": "The minstrel didn't look at the innkeeper once."
+          }
+        ]
+      },
+      {
+        "eventId": "katya_pallid_hart",
+        "items": [
+          {
+            "id": "obs-1845-gregor",
+            "tier": 2,
+            "dc": 11,
+            "text": "He nodded. He saw it and still came tonight."
+          },
+          {
+            "id": "obs-1845-katya",
+            "tier": 2,
+            "dc": 14,
+            "text": "She knows exactly what she's looking at."
+          }
+        ]
+      },
+      {
+        "eventId": "fire_gutter_18_30",
+        "items": [
+          {
+            "id": "obs-1830-fire",
+            "tier": 2,
+            "dc": 13,
+            "text": "The cold came up through the floorboards, not from any door."
+          }
+        ]
+      },
+      {
+        "eventId": "outside_shape_18_50",
+        "items": [
+          {
+            "id": "obs-1850-shape",
+            "tier": 2,
+            "dc": 19,
+            "text": "Wrong proportions for any animal you have a name for."
+          }
+        ]
+      },
+      {
+        "eventId": "cellar_sound_18",
+        "items": [
+          {
+            "id": "obs-1800-cellar",
+            "tier": 2,
+            "dc": 16,
+            "text": "Something moved below. Trying not to."
+          }
+        ]
+      },
+      {
+        "eventId": "cellar_chain_21",
+        "items": [
+          {
+            "id": "obs-2100-chain",
+            "tier": 2,
+            "dc": 15,
+            "text": "Chains. Below the floor. Not free."
+          }
+        ]
+      },
+      {
+        "eventId": "upstairs_footsteps_18_20",
+        "items": [
+          {
+            "id": "obs-1820-up",
+            "tier": 2,
+            "dc": 12,
+            "text": "Whoever is up there doesn't want to be heard."
+          }
+        ]
+      },
+      {
+        "eventId": "roof_impact_21_30",
+        "items": [
+          {
+            "id": "obs-2130-roof",
+            "tier": 2,
+            "dc": 14,
+            "text": "Something landed on the roof. Too heavy for wind."
+          }
+        ]
+      },
+      {
+        "eventId": "shutter_scratches_23",
+        "items": [
+          {
+            "id": "obs-2300-scratches",
+            "tier": 2,
+            "dc": 11,
+            "text": "Three scratches. Deliberate. Then silence."
+          }
         ]
       }
     ],
-
     "items": [
       {
         "id": "bag-of-holding-cellar",
@@ -1003,20 +1768,49 @@
         "spurtReaction": "Spurt will not go near it at Dread 41+. He watches it from across the room."
       }
     ],
-
     "windowWaypoints": [
-      { "id": "window-north", "wall": "north", "x": 12, "y": 2, "perceptionBaseDC": 15, "description": "north window of the common room" },
-      { "id": "window-south", "wall": "south", "x": 12, "y": 14, "perceptionBaseDC": 15, "description": "south window of the common room" },
-      { "id": "window-east", "wall": "east", "x": 22, "y": 8, "perceptionBaseDC": 15, "description": "east window of the common room" },
-      { "id": "window-west", "wall": "west", "x": 2, "y": 8, "perceptionBaseDC": 15, "description": "west window of the common room" }
+      {
+        "id": "window-north",
+        "wall": "north",
+        "x": 12,
+        "y": 2,
+        "perceptionBaseDC": 15,
+        "description": "north window of the common room"
+      },
+      {
+        "id": "window-south",
+        "wall": "south",
+        "x": 12,
+        "y": 14,
+        "perceptionBaseDC": 15,
+        "description": "south window of the common room"
+      },
+      {
+        "id": "window-east",
+        "wall": "east",
+        "x": 22,
+        "y": 8,
+        "perceptionBaseDC": 15,
+        "description": "east window of the common room"
+      },
+      {
+        "id": "window-west",
+        "wall": "west",
+        "x": 2,
+        "y": 8,
+        "perceptionBaseDC": 15,
+        "description": "west window of the common room"
+      }
     ],
-
     "hazards": [
       {
         "id": "fireplace",
         "type": "fire",
         "name": "Common Room Fireplace",
-        "position": { "x": 12, "y": 8 },
+        "position": {
+          "x": 12,
+          "y": 8
+        },
         "radius": 1,
         "active": true,
         "damage": "1d6",
@@ -1030,7 +1824,10 @@
         "id": "storm-outside",
         "type": "cold",
         "name": "Blizzard (Outdoors)",
-        "position": { "x": -5, "y": 8 },
+        "position": {
+          "x": -5,
+          "y": 8
+        },
         "radius": 100,
         "active": true,
         "damage": "1d6",
@@ -1043,7 +1840,10 @@
         "id": "cellar-stairs",
         "type": "fall",
         "name": "Cellar Stairs",
-        "position": { "x": 6, "y": 12 },
+        "position": {
+          "x": 6,
+          "y": 12
+        },
         "radius": 1,
         "active": true,
         "damage": "1d6",
@@ -1056,7 +1856,10 @@
         "id": "balcony-edge",
         "type": "fall",
         "name": "Second Floor Balcony",
-        "position": { "x": 12, "y": 2 },
+        "position": {
+          "x": 12,
+          "y": 2
+        },
         "radius": 1,
         "active": true,
         "damage": "2d6",
@@ -1066,63 +1869,113 @@
         "description": "2d6 fall damage if pushed over the balcony edge"
       }
     ],
-
     "reputationTriggers": [
       {
         "id": "help-tomas-chain",
         "eventId": "tomas_chained",
         "reason": "Helped Tomas chain himself before transformation",
-        "factionReputation": { "local-villagers": 3 },
-        "npcStanding": { "tomas": 2 }
+        "factionReputation": {
+          "local-villagers": 3
+        },
+        "npcStanding": {
+          "tomas": 2
+        }
       },
       {
         "id": "vladislav-escapes",
         "eventId": "vladislav_escape",
         "reason": "Vladislav escaped the inn",
-        "factionReputation": { "church-of-light": -5 }
+        "factionReputation": {
+          "church-of-light": -5
+        }
       },
       {
         "id": "save-marta",
         "eventId": "marta_saved",
         "reason": "Saved Marta from danger",
-        "factionReputation": { "local-villagers": 2 },
-        "npcStanding": { "marta": 5 }
+        "factionReputation": {
+          "local-villagers": 2
+        },
+        "npcStanding": {
+          "marta": 5
+        }
       },
       {
         "id": "attack-tomas-early",
         "eventId": "tomas_attacked",
         "reason": "Attacked Tomas before transformation",
-        "npcStanding": { "tomas": -3 }
+        "npcStanding": {
+          "tomas": -3
+        }
       },
       {
         "id": "holy-items-effective",
         "eventId": "holy_items_used",
         "reason": "Used holy items effectively against undead",
-        "factionReputation": { "church-of-light": 2 }
+        "factionReputation": {
+          "church-of-light": 2
+        }
       }
     ],
-
     "monsterTells": {
       "hooded-stranger": [
-        { "actionType": "feeding", "text": "His nostrils flare almost imperceptibly. He has been watching the target for three minutes without blinking." },
-        { "actionType": "feeding", "text": "Something shifts behind those eyes — hunger, ancient and patient, surfacing for just a moment." },
-        { "actionType": "moving", "text": "He unfolds from his chair with no sound — no creak, no scrape, no effort. Like shadow given form." },
-        { "actionType": "moving", "text": "He moves between the shadows as if the darkness parts for him. You almost lose track of where he is." },
-        { "actionType": "revealing", "text": "The candlelight catches his teeth for just a moment — too many, too sharp." },
-        { "actionType": "revealing", "text": "His hood shifts and the firelight finds his face. The skin is wrong — too smooth, too pale, like something carved from marble." },
-        { "actionType": "general", "text": "He tilts his head at an angle that is not quite human. Like a bird studying prey." },
-        { "actionType": "wound", "text": "The wound closes. Not heals — closes. Like it was never there. He does not even flinch." }
+        {
+          "actionType": "feeding",
+          "text": "His nostrils flare almost imperceptibly. He has been watching the target for three minutes without blinking."
+        },
+        {
+          "actionType": "feeding",
+          "text": "Something shifts behind those eyes — hunger, ancient and patient, surfacing for just a moment."
+        },
+        {
+          "actionType": "moving",
+          "text": "He unfolds from his chair with no sound — no creak, no scrape, no effort. Like shadow given form."
+        },
+        {
+          "actionType": "moving",
+          "text": "He moves between the shadows as if the darkness parts for him. You almost lose track of where he is."
+        },
+        {
+          "actionType": "revealing",
+          "text": "The candlelight catches his teeth for just a moment — too many, too sharp."
+        },
+        {
+          "actionType": "revealing",
+          "text": "His hood shifts and the firelight finds his face. The skin is wrong — too smooth, too pale, like something carved from marble."
+        },
+        {
+          "actionType": "general",
+          "text": "He tilts his head at an angle that is not quite human. Like a bird studying prey."
+        },
+        {
+          "actionType": "wound",
+          "text": "The wound closes. Not heals — closes. Like it was never there. He does not even flinch."
+        }
       ],
       "tomas": [
-        { "actionType": "transformation", "text": "His breath comes in short, sharp bursts. He is counting something under his breath — a prayer, or a countdown." },
-        { "actionType": "transformation", "text": "His eyes flash amber in the firelight. For just a moment, they are not human eyes." },
-        { "actionType": "moving", "text": "He stands before he means to. Catches himself. Sits back down. His leg bounces with desperate energy." },
-        { "actionType": "general", "text": "He scratches at his forearms unconsciously. The scratches are already there — deep, like claws." },
-        { "actionType": "wound", "text": "The wound knits shut faster than it should. The flesh around it ripples, like something beneath the skin is fighting to get out." }
+        {
+          "actionType": "transformation",
+          "text": "His breath comes in short, sharp bursts. He is counting something under his breath — a prayer, or a countdown."
+        },
+        {
+          "actionType": "transformation",
+          "text": "His eyes flash amber in the firelight. For just a moment, they are not human eyes."
+        },
+        {
+          "actionType": "moving",
+          "text": "He stands before he means to. Catches himself. Sits back down. His leg bounces with desperate energy."
+        },
+        {
+          "actionType": "general",
+          "text": "He scratches at his forearms unconsciously. The scratches are already there — deep, like claws."
+        },
+        {
+          "actionType": "wound",
+          "text": "The wound knits shut faster than it should. The flesh around it ripples, like something beneath the skin is fighting to get out."
+        }
       ]
     }
   },
-
   "backstories": {
     "_note": "Fill in each PC's reason for being at the crossroads once character sheets are imported. Use appearance data from DDB for physical descriptions shown to other players.",
     "jerome": {
@@ -1133,7 +1986,6 @@
       "notYetArrived": true
     }
   },
-
   "campaign": {
     "lore": [
       {
@@ -1141,28 +1993,45 @@
         "title": "The Pallid Hart",
         "category": "geography",
         "content": "A small inn at a crossroads deep in the Orava mountains — where the north road from the villages meets the old pilgrim trail from the west. Run by Marta Kowalski and her husband Piotr (now missing). Named for a ghostly white stag said to appear at the crossroads before death comes to the mountains. The cellar is older than the inn — locals say it was built over the foundations of a monastery that was abandoned under mysterious circumstances. The crossroads itself has a dark reputation: the old legends say the devil walks crossroads at midnight, offering bargains to desperate travelers. Locals leave offerings of bread and salt at the junction and avoid it after dark.",
-        "tags": ["orava", "inn", "session-0", "crossroads"]
+        "tags": [
+          "orava",
+          "inn",
+          "session-0",
+          "crossroads"
+        ]
       },
       {
         "id": "lore-crossroads-folklore",
         "title": "Crossroads — The Devil's Junction",
         "category": "folklore",
         "content": "In Central European folklore, crossroads are liminal places — thresholds between worlds where the boundaries thin. The devil is said to appear at crossroads at midnight to offer bargains: power, wealth, love, or knowledge, always at a terrible price. Travelers who linger at crossroads after dark risk encountering wandering spirits, demons, or the restless dead. In 1274, these beliefs are deeply held — peasants leave offerings of bread and salt, hang iron nails above the junction, and never travel the crossing after sunset. The Pallid Hart was built at such a crossroads, which locals see as either brave or foolish. The fact that travelers keep disappearing from this particular crossroads has only strengthened the superstition.",
-        "tags": ["folklore", "crossroads", "session-0"]
+        "tags": [
+          "folklore",
+          "crossroads",
+          "session-0"
+        ]
       },
       {
         "id": "lore-night-travel",
         "title": "Nobody Travels at Night",
         "category": "setting",
         "content": "In 1274, traveling the mountain forests of the Orava region after dark is considered suicidal. The roads are barely more than packed-earth trails, unlit, with no milestones or markers. Wolf packs are bold and coordinated — they take livestock and have been known to attack travelers. Bears emerge from hibernation unpredictably. But the real fear is older and deeper: the strigoi. The walking dead. Things that drink blood and wear human faces. Every village has stories. Every family has lost someone on these roads who was never found. Only merchants on tight schedules, pilgrims with more faith than sense, soldiers under orders, and locals who know the trails like their own hands will travel these mountains — and even they stop at sunset. Anyone still on the road after dark has either made a terrible mistake or is running from something worse than what waits in the dark.",
-        "tags": ["setting", "orava", "session-0"]
+        "tags": [
+          "setting",
+          "orava",
+          "session-0"
+        ]
       },
       {
         "id": "lore-vladislav",
         "title": "Vladislav Dragan — The Hooded Stranger",
         "category": "npc",
         "content": "A vampire lord posing as a weary traveler. He arrived at The Pallid Hart two days ago. His true purpose: to feed on isolated travelers and expand his brood. He created Piotr as a spawn and keeps him in the cellar. Vladislav is connected to a larger vampire network centered on Houska Castle in Bohemia.",
-        "tags": ["vampire", "antagonist", "session-0"],
+        "tags": [
+          "vampire",
+          "antagonist",
+          "session-0"
+        ],
         "hidden": true
       },
       {
@@ -1170,7 +2039,10 @@
         "title": "Tomas Birkov — The Trapper",
         "category": "npc",
         "content": "A werewolf disguised as a mountain trapper. Tomas was bitten three months ago and is losing control. He came to the inn seeking the cellar — he heard rumors of old chains in the monastery foundations where he could restrain himself during the full moon. He does not know about Vladislav.",
-        "tags": ["werewolf", "session-0"],
+        "tags": [
+          "werewolf",
+          "session-0"
+        ],
         "hidden": true
       },
       {
@@ -1178,14 +2050,22 @@
         "title": "The Orava Mountains",
         "category": "geography",
         "content": "A remote, heavily forested mountain range in the northern Slovak region of the Kingdom of Hungary. In 1274, these mountains are sparsely populated, with scattered villages connected by dangerous mountain roads. Wolves, bears, and worse things prowl the forests. The region has a dark reputation — travelers disappear, livestock is found drained of blood, and the locals whisper about things that walk at night.",
-        "tags": ["orava", "geography", "setting"]
+        "tags": [
+          "orava",
+          "geography",
+          "setting"
+        ]
       },
       {
         "id": "lore-three-castles",
         "title": "The Three Castles",
         "category": "history",
         "content": "Three ancient castles form the backbone of the vampire conspiracy: Orava Castle in the Slovak mountains (the starting region), Houska Castle in Bohemia (said to be built over a gateway to Hell), and Čachtice Castle in western Hungary (seat of a noble family with dark secrets). The Dark Pilgrimage follows this path.",
-        "tags": ["campaign-arc", "castles", "setting"],
+        "tags": [
+          "campaign-arc",
+          "castles",
+          "setting"
+        ],
         "hidden": true
       }
     ],
@@ -1195,7 +2075,14 @@
         "description": "Wolf packs have been moving closer to the mountain road, driven by something in the deep forest",
         "trigger": "between_sessions",
         "effects": [
-          { "event": "dm:whisper", "data": { "text": "Between sessions: wolves closing in on the road. Travelers report larger packs than normal.", "priority": 4, "category": "story" } }
+          {
+            "event": "dm:whisper",
+            "data": {
+              "text": "Between sessions: wolves closing in on the road. Travelers report larger packs than normal.",
+              "priority": 4,
+              "category": "story"
+            }
+          }
         ]
       },
       {
@@ -1203,12 +2090,18 @@
         "description": "Another traveler has gone missing on the mountain road — the third this month",
         "trigger": "between_sessions",
         "effects": [
-          { "event": "dm:whisper", "data": { "text": "Between sessions: another disappearance reported. Villagers are talking about closing the road.", "priority": 4, "category": "story" } }
+          {
+            "event": "dm:whisper",
+            "data": {
+              "text": "Between sessions: another disappearance reported. Villagers are talking about closing the road.",
+              "priority": 4,
+              "category": "story"
+            }
+          }
         ]
       }
     ]
   },
-
   "npcs": {
     "marta": {
       "name": "Marta Kowalski",
@@ -1220,7 +2113,10 @@
       "roomPosition": "bar — Echo nearest kitchen or bar position",
       "mirrorReflection": "normal",
       "voiceCode": "F1",
-      "languages": ["common", "slovak"],
+      "languages": [
+        "common",
+        "slovak"
+      ],
       "primaryLanguage": "slovak",
       "commonFluency": "conversational",
       "languageNote": "Switches to Slovak when frightened or emotional. Her Common breaks down under stress.",
@@ -1230,15 +2126,42 @@
         "spurt": "Bewildered — has never seen a Kobold, watches him carefully"
       },
       "prices": {
-        "room_common": { "cp": 2, "description": "A straw pallet in the common room shared with whoever else is there" },
-        "room_private": { "sp": 1, "description": "A small private room with a bolt on the door" },
-        "meal_simple": { "cp": 3, "description": "Bread, hard cheese, something hot" },
-        "meal_full": { "cp": 8, "description": "Bread, meat of some kind, vegetables, small beer" },
-        "ale_common": { "cp": 1, "description": "A tankard of the house ale" },
-        "ale_good": { "cp": 3, "description": "Better ale from the lower cellar" },
-        "wine": { "cp": 5, "description": "Wine of uncertain origin and mediocre quality" },
-        "stabling": { "cp": 5, "description": "Hay, water, a stall for the night" },
-        "bath": { "cp": 2, "description": "Hot water carried up — she charges for the wood" }
+        "room_common": {
+          "cp": 2,
+          "description": "A straw pallet in the common room shared with whoever else is there"
+        },
+        "room_private": {
+          "sp": 1,
+          "description": "A small private room with a bolt on the door"
+        },
+        "meal_simple": {
+          "cp": 3,
+          "description": "Bread, hard cheese, something hot"
+        },
+        "meal_full": {
+          "cp": 8,
+          "description": "Bread, meat of some kind, vegetables, small beer"
+        },
+        "ale_common": {
+          "cp": 1,
+          "description": "A tankard of the house ale"
+        },
+        "ale_good": {
+          "cp": 3,
+          "description": "Better ale from the lower cellar"
+        },
+        "wine": {
+          "cp": 5,
+          "description": "Wine of uncertain origin and mediocre quality"
+        },
+        "stabling": {
+          "cp": 5,
+          "description": "Hay, water, a stall for the night"
+        },
+        "bath": {
+          "cp": 2,
+          "description": "Hot water carried up — she charges for the wood"
+        }
       },
       "creditPolicy": "Extends credit to people she trusts. Trust level Considering or higher gets one night credit. She does not forget debts.",
       "priceNegotiation": "Does not negotiate on room price. Will throw in a meal for a group that has been decent to her.",
@@ -1263,14 +2186,26 @@
           "goal": "Keep everyone calm and survive until morning",
           "priority": 1,
           "conditions": [],
-          "actions": ["Serve drinks", "Avoid the cellar", "Keep the fire going"]
+          "actions": [
+            "Serve drinks",
+            "Avoid the cellar",
+            "Keep the fire going"
+          ]
         },
         {
           "id": "protect_guests",
           "goal": "Warn guests if danger becomes undeniable",
           "priority": 2,
-          "conditions": [{ "type": "beat_completed", "beatId": "escalation" }],
-          "actions": ["Breaks down crying", "Reveals everything she knows about the cellar sounds and missing husband"]
+          "conditions": [
+            {
+              "type": "beat_completed",
+              "beatId": "escalation"
+            }
+          ],
+          "actions": [
+            "Breaks down crying",
+            "Reveals everything she knows about the cellar sounds and missing husband"
+          ]
         }
       ],
       "dialogueHints": {
@@ -1297,7 +2232,10 @@
       "roomPosition": "near door — Echo nearest entrance",
       "mirrorReflection": "normal",
       "voiceCode": "M3",
-      "languages": ["slovak", "common"],
+      "languages": [
+        "slovak",
+        "common"
+      ],
       "primaryLanguage": "slovak",
       "commonFluency": "basic",
       "languageNote": "His Common is functional but simple. Complex questions confuse him. Tonight his answers are shorter than usual — he is distracted and frightened.",
@@ -1329,16 +2267,36 @@
           "priority": 1,
           "conditions": [],
           "timerMinutes": 90,
-          "actions": ["Ask Marta about the cellar casually", "Offer to fetch wine as excuse", "If blocked, become desperate"],
-          "onComplete": { "event": "dm:whisper", "data": { "text": "Tomas has reached the cellar. If Vladislav's coffin is there, they will encounter each other.", "priority": 1, "category": "story" } },
-          "onFail": { "event": "world:tomas_transformation", "data": { "description": "Tomas transforms in the common room" } }
+          "actions": [
+            "Ask Marta about the cellar casually",
+            "Offer to fetch wine as excuse",
+            "If blocked, become desperate"
+          ],
+          "onComplete": {
+            "event": "dm:whisper",
+            "data": {
+              "text": "Tomas has reached the cellar. If Vladislav's coffin is there, they will encounter each other.",
+              "priority": 1,
+              "category": "story"
+            }
+          },
+          "onFail": {
+            "event": "world:tomas_transformation",
+            "data": {
+              "description": "Tomas transforms in the common room"
+            }
+          }
         },
         {
           "id": "hide_nature",
           "goal": "Keep his lycanthropy secret from everyone",
           "priority": 2,
           "conditions": [],
-          "actions": ["Keep sleeves down", "Deflect questions about the scratches", "Claim he's just cold"]
+          "actions": [
+            "Keep sleeves down",
+            "Deflect questions about the scratches",
+            "Claim he's just cold"
+          ]
         }
       ],
       "dialogueHints": {
@@ -1377,7 +2335,20 @@
       "roomPosition": "far corner — Echo in far corner of dining room",
       "mirrorReflection": "none",
       "voiceCode": "M2",
-      "languages": ["common", "latin", "slovak", "german", "french", "greek", "arabic", "old_church_slavonic", "old_russian", "magyar", "english", "polish"],
+      "languages": [
+        "common",
+        "latin",
+        "slovak",
+        "german",
+        "french",
+        "greek",
+        "arabic",
+        "old_church_slavonic",
+        "old_russian",
+        "magyar",
+        "english",
+        "polish"
+      ],
       "primaryLanguage": "common",
       "languageNote": "Speaks all European languages without accent — each perfectly calibrated to the era he learned it. Church Slavonic he learned from its creators in 863 AD. This is the tell no player will notice until they already know what he is.",
       "specialLanguageRules": {
@@ -1411,23 +2382,52 @@
           "goal": "Prevent anyone from entering the cellar and discovering his coffin",
           "priority": 1,
           "conditions": [],
-          "actions": ["Watch the cellar door", "Subtly redirect anyone who approaches it", "If necessary, cause a distraction"]
+          "actions": [
+            "Watch the cellar door",
+            "Subtly redirect anyone who approaches it",
+            "If necessary, cause a distraction"
+          ]
         },
         {
           "id": "feed_tonight",
           "goal": "Feed on an isolated guest before dawn",
           "priority": 2,
-          "conditions": [{ "type": "beat_completed", "beatId": "unease" }],
+          "conditions": [
+            {
+              "type": "beat_completed",
+              "beatId": "unease"
+            }
+          ],
           "timerMinutes": 120,
-          "actions": ["Identify the weakest or most isolated guest", "Create an opportunity for isolation", "Strike when alone"],
-          "onComplete": { "event": "dm:whisper", "data": { "text": "Vladislav has fed. A patron or PC has been attacked. If not discovered, he will be emboldened.", "priority": 1, "category": "story" } }
+          "actions": [
+            "Identify the weakest or most isolated guest",
+            "Create an opportunity for isolation",
+            "Strike when alone"
+          ],
+          "onComplete": {
+            "event": "dm:whisper",
+            "data": {
+              "text": "Vladislav has fed. A patron or PC has been attacked. If not discovered, he will be emboldened.",
+              "priority": 1,
+              "category": "story"
+            }
+          }
         },
         {
           "id": "eliminate_threat",
           "goal": "Eliminate anyone who discovers his true nature",
           "priority": 0,
-          "conditions": [{ "type": "secret_revealed", "secretId": "vladislav_is_vampire" }],
-          "actions": ["Drop all pretense", "Attack or attempt to flee to cellar", "Call Piotr spawn to assist"]
+          "conditions": [
+            {
+              "type": "secret_revealed",
+              "secretId": "vladislav_is_vampire"
+            }
+          ],
+          "actions": [
+            "Drop all pretense",
+            "Attack or attempt to flee to cellar",
+            "Call Piotr spawn to assist"
+          ]
         }
       ],
       "dialogueHints": {
@@ -1462,11 +2462,26 @@
         "leverage": true,
         "directQuestion": "There are older things than me in these mountains. That should concern you considerably.",
         "socialCombatUnlocks": [
-          { "momentum": 3, "reveals": "It has been active before. I have seen it." },
-          { "momentum": 5, "reveals": "It does not want to kill you. That is not a comfort." },
-          { "momentum": 7, "reveals": "It wants something specific from specific people in your group. You should determine which ones before it does." },
-          { "momentum": 9, "reveals": "There is a place in the mountains. Roman stonework. That is where it sleeps." },
-          { "momentum": 10, "reveals": "The basin. Destroy the basin. Everything else is temporary." }
+          {
+            "momentum": 3,
+            "reveals": "It has been active before. I have seen it."
+          },
+          {
+            "momentum": 5,
+            "reveals": "It does not want to kill you. That is not a comfort."
+          },
+          {
+            "momentum": 7,
+            "reveals": "It wants something specific from specific people in your group. You should determine which ones before it does."
+          },
+          {
+            "momentum": 9,
+            "reveals": "There is a place in the mountains. Roman stonework. That is where it sleeps."
+          },
+          {
+            "momentum": 10,
+            "reveals": "The basin. Destroy the basin. Everything else is temporary."
+          }
         ]
       },
       "hydraAwareness": true,
@@ -1489,7 +2504,9 @@
       "roomPosition": "corner near door opposite Vladislav — appropriate Echo",
       "mirrorReflection": "normal",
       "voiceCode": "M1",
-      "languages": ["common"],
+      "languages": [
+        "common"
+      ],
       "primaryLanguage": "common",
       "languageNote": "Common only. Educated man, well-spoken. His articulate speech makes the absence of his brother's name more noticeable — a man this careful with words should have mentioned where he was going.",
       "dispositions": {
@@ -1530,7 +2547,12 @@
         "He arrived breathing hard despite the cold. He has not explained why he was moving fast. He keeps glancing at the door."
       ],
       "aiDialogueBrief": "Aldous is gentle and distracted. He loses thoughts mid-sentence. He is traveling to Houska — he had a reason that felt important but cannot remember it clearly. He refers to 'we' and 'us' involuntarily then catches himself and looks confused. He does not know his brother Willem exists. He cannot be told — he will hear the words and they will not stick. His journal sits open on the table with entries referencing 'W.' throughout. He is not dangerous. He is a warning the party does not yet have context to understand. Sample voice: 'Three weeks on the road. Or — yes, three weeks. I keep thinking it felt longer with... anyway. Are you bound for the castle as well?'",
-      "addressableAs": ["Aldous", "Kern", "the pilgrim", "the man by the door"],
+      "addressableAs": [
+        "Aldous",
+        "Kern",
+        "the pilgrim",
+        "the man by the door"
+      ],
       "knowledgeBoundaries": [
         "He does not know Willem exists — cannot be told, words do not stick",
         "He does not know why he is going to Houska with any clarity",
@@ -1564,7 +2586,10 @@
       "roomPosition": "cellar — Echo nearest cellar (or down-direction routing if available)",
       "mirrorReflection": "distorted",
       "voiceCode": "M3",
-      "languages": ["slovak", "common"],
+      "languages": [
+        "slovak",
+        "common"
+      ],
       "primaryLanguage": "slovak",
       "languageNote": "In the cellar. Chained. Whatever language he speaks now comes out wrong — flat affect, wrong cadence, pauses in wrong places. He is not the man who spoke these languages before.",
       "dispositions": {
@@ -1607,7 +2632,11 @@
       },
       "staminaProfile": "none",
       "moralProfile": "none",
-      "immunities": ["prone", "grappled", "restrained"],
+      "immunities": [
+        "prone",
+        "grappled",
+        "restrained"
+      ],
       "traits": [
         {
           "name": "Death Burst",
@@ -1644,7 +2673,6 @@
       "dialogueHistory": []
     }
   },
-
   "patron-farmer": {
     "name": "Old Gregor",
     "role": "Elderly farmer, fatalistic and resigned",
@@ -1658,7 +2686,9 @@
     "roomPosition": "hearth — Echo nearest fireplace position",
     "mirrorReflection": "normal",
     "voiceCode": "M1",
-    "languages": ["slovak"],
+    "languages": [
+      "slovak"
+    ],
     "primaryLanguage": "slovak",
     "commonFluency": "none",
     "languageNote": "Slovak only. No Common at all. Watches faces not words. Communicates through expression and gesture with non-Slovak speakers. Has things to say but no way to say them to most of the party.",
@@ -1702,7 +2732,10 @@
     "roomPosition": "middle of room — main room speaker",
     "mirrorReflection": "normal",
     "voiceCode": "M3",
-    "languages": ["common", "german"],
+    "languages": [
+      "common",
+      "german"
+    ],
     "primaryLanguage": "german",
     "commonFluency": "fluent",
     "languageNote": "Comfortable in both. Defaults to German when nervous — which is often tonight.",
@@ -1725,14 +2758,34 @@
       "Noticed the stranger doesn't eat or drink"
     ],
     "inventory": [
-      { "id": "boot-wax", "name": "boot wax", "futureHook": "false-hydra-breaking-song", "note": "Future ear protection against the False Hydra's song at Houska" }
+      {
+        "id": "boot-wax",
+        "name": "boot wax",
+        "futureHook": "false-hydra-breaking-song",
+        "note": "Future ear protection against the False Hydra's song at Houska"
+      }
     ],
     "prices": {
-      "torch": { "cp": 1, "description": "A good torch, will last an hour" },
-      "rope_hemp_50ft": { "sp": 1, "description": "Hempen rope, fifty feet, well made" },
-      "rations_1day": { "cp": 5, "description": "Dried food for one day, not pleasant but adequate" },
-      "boot_wax": { "cp": 3, "description": "A small pot of boot wax, keeps leather from cracking" },
-      "candle": { "cp": 1, "description": "Tallow candle, burns for an hour" }
+      "torch": {
+        "cp": 1,
+        "description": "A good torch, will last an hour"
+      },
+      "rope_hemp_50ft": {
+        "sp": 1,
+        "description": "Hempen rope, fifty feet, well made"
+      },
+      "rations_1day": {
+        "cp": 5,
+        "description": "Dried food for one day, not pleasant but adequate"
+      },
+      "boot_wax": {
+        "cp": 3,
+        "description": "A small pot of boot wax, keeps leather from cracking"
+      },
+      "candle": {
+        "cp": 1,
+        "description": "Tallow candle, burns for an hour"
+      }
     },
     "creditPolicy": "Cash only. He is a merchant.",
     "priceNegotiation": "Will negotiate on bulk purchases. Reduce price by 10 percent for buying three or more of the same item.",
@@ -1762,7 +2815,11 @@
     "roomPosition": "wherever he is sitting — use nearest Echo to his current token position on map",
     "mirrorReflection": "normal",
     "voiceCode": "M2",
-    "languages": ["common", "english", "latin"],
+    "languages": [
+      "common",
+      "english",
+      "latin"
+    ],
     "primaryLanguage": "english",
     "commonFluency": "fluent",
     "languageNote": "His Common is slightly accented — English native speaker. His Latin is formal and ecclesiastical. He is the party's best bridge to the church.",
@@ -1806,7 +2863,12 @@
     "roomPosition": "center room — main room speaker",
     "mirrorReflection": "normal",
     "voiceCode": "F2",
-    "languages": ["common", "slovak", "german", "french"],
+    "languages": [
+      "common",
+      "slovak",
+      "german",
+      "french"
+    ],
     "primaryLanguage": "common",
     "frenchFluency": "songs and performance only",
     "languageNote": "The most linguistically capable person in the room after Vladislav. She edits what she translates — her personality shapes every message she passes on. She makes herself more useful by being the only bridge.",
@@ -1877,7 +2939,6 @@
     },
     "dialogueHistory": []
   },
-
   "story": {
     "currentAct": "act1_crossroads",
     "beats": [
@@ -1887,9 +2948,24 @@
         "status": "pending",
         "readAloud": "You have each been sitting in this small tavern for a while now — some of you for only a few minutes, others for an hour or more. You have watched people come in from the storm, shaking snow from their cloaks, stamping feeling back into frozen boots. The Pallid Hart sits where two roads cross in the mountains — the north road from the villages and the old pilgrim trail from the west. The locals say crossroads are cursed places. Where the devil walks at midnight, offering bargains to the desperate.\n\nNobody travels these forests at night. The wolves are bold, the paths treacherous, and the old-timers whisper of things far worse than wolves that move between the trees after dark. Yet here you all are — strangers driven together by a blizzard that fell like a hammer.\n\nThe common room is cramped, low-ceilinged, dark wood. A fire crackles in the stone hearth, casting long shadows that jump and stretch across the walls. Behind the bar, a thin, dark-haired woman grips a glass she has been polishing far too long. Her eyes dart to every sound. In the far corner, almost lost in shadow, a hooded figure sits motionless at a table. They have not moved since you arrived. They have not spoken.\n\nYou do not know each other's names. But you have been watching. You notice things.",
         "checks": [
-          { "skill": "Insight", "dc": 10, "success": "The innkeeper is terrified. Not of the storm — of something else. She keeps glancing at the cellar door and then quickly away, as if forcing herself not to look.", "fail": "The innkeeper seems nervous, but it could just be the storm." },
-          { "skill": "Perception", "dc": 12, "success": "The hooded stranger in the corner has not moved since you arrived. Not a muscle. You are not even sure he is breathing. His plate of food sits untouched.", "fail": "Just a tired traveler in a hood. Nothing unusual." },
-          { "skill": "Perception", "dc": 10, "success": "You notice the other travelers in the room. Each arrived alone. Each seems to carry their own weight of trouble. You can observe what they look like and how they carry themselves.", "fail": "Just a room full of strangers sheltering from the storm." }
+          {
+            "skill": "Insight",
+            "dc": 10,
+            "success": "The innkeeper is terrified. Not of the storm — of something else. She keeps glancing at the cellar door and then quickly away, as if forcing herself not to look.",
+            "fail": "The innkeeper seems nervous, but it could just be the storm."
+          },
+          {
+            "skill": "Perception",
+            "dc": 12,
+            "success": "The hooded stranger in the corner has not moved since you arrived. Not a muscle. You are not even sure he is breathing. His plate of food sits untouched.",
+            "fail": "Just a tired traveler in a hood. Nothing unusual."
+          },
+          {
+            "skill": "Perception",
+            "dc": 10,
+            "success": "You notice the other travelers in the room. Each arrived alone. Each seems to carry their own weight of trouble. You can observe what they look like and how they carry themselves.",
+            "fail": "Just a room full of strangers sheltering from the storm."
+          }
         ],
         "playerDescriptions": {
           "_note": "When a player succeeds on Perception DC 10, describe the OTHER PCs using appearance data from their character sheets. Each player sees different descriptions based on who they are looking at. Use anonymous mode — no names, just physical observations.",
@@ -1913,8 +2989,18 @@
           "vladislav": "A hooded figure in the far corner, sitting in shadow so deep the firelight does not seem to reach it. A tall man — that much is clear from the length of his frame, even seated. A plate of food sits before him, untouched. A full mug. He does not eat. He does not drink. He does not move. Beneath the hood, nothing is visible except, occasionally, the faint glint of eyes catching the firelight. Watching."
         },
         "checks": [
-          { "skill": "Insight", "dc": 12, "success": "Henryk the merchant is putting on a brave face but his hands are shaking. Brother Aldric's prayers have an urgency to them — he is genuinely frightened. Katya is studying everyone, cataloguing details. Gregor looks like a man who has already given up.", "fail": "The patrons seem tired but otherwise normal travelers sheltering from the storm." },
-          { "skill": "Perception", "dc": 13, "success": "The trapper by the door — Tomas — keeps touching his forearms. He rolls his sleeves down the moment he notices you looking. His hands are clenched into fists.", "fail": "Just another nervous traveler." }
+          {
+            "skill": "Insight",
+            "dc": 12,
+            "success": "Henryk the merchant is putting on a brave face but his hands are shaking. Brother Aldric's prayers have an urgency to them — he is genuinely frightened. Katya is studying everyone, cataloguing details. Gregor looks like a man who has already given up.",
+            "fail": "The patrons seem tired but otherwise normal travelers sheltering from the storm."
+          },
+          {
+            "skill": "Perception",
+            "dc": 13,
+            "success": "The trapper by the door — Tomas — keeps touching his forearms. He rolls his sleeves down the moment he notices you looking. His hands are clenched into fists.",
+            "fail": "Just another nervous traveler."
+          }
         ],
         "atmosphere": "tavern_warm",
         "dmNotes": "This beat naturally follows the opening. After players describe themselves, describe the NPCs. Use the npcDescriptions above — read them as the players look around the room. Let players approach any patron. Katya is the most talkative and will approach PCs first. Gregor is doom-and-gloom. Tomas deflects everything. The stranger says nothing unless directly addressed. Marta offers stew and ale."
@@ -1925,9 +3011,24 @@
         "status": "pending",
         "readAloud": "An hour passes. The fire burns lower. Marta adds no wood, though the pile beside the hearth is full. The ale is warm but the room is getting colder. The stranger still hasn't moved. Katya's song falters and stops — she says the acoustics in here are 'wrong.' Old Gregor pushes his untouched stew away and says, very quietly: 'Something happened here. Something bad. Can't you feel it?' No one answers him. But you can feel it. Something in the walls. Something waiting.",
         "checks": [
-          { "skill": "Perception", "dc": 12, "success": "A sound from below the floor — faint, rhythmic. Scratching. Like fingernails on stone. Then it stops.", "fail": "You hear the wind and the fire. Nothing else." },
-          { "skill": "Investigation", "dc": 11, "success": "There's a cloth draped over the cellar door handle. Looking closer, you see scratches on the doorframe — deep ones, from the inside.", "fail": "Nothing catches your eye." },
-          { "skill": "Insight", "dc": 14, "success": "Marta flinched when the scratching sound came. She heard it too. And Tomas — Tomas went rigid, like a hunting dog catching a scent.", "fail": "Hard to read anyone in this gloom." }
+          {
+            "skill": "Perception",
+            "dc": 12,
+            "success": "A sound from below the floor — faint, rhythmic. Scratching. Like fingernails on stone. Then it stops.",
+            "fail": "You hear the wind and the fire. Nothing else."
+          },
+          {
+            "skill": "Investigation",
+            "dc": 11,
+            "success": "There's a cloth draped over the cellar door handle. Looking closer, you see scratches on the doorframe — deep ones, from the inside.",
+            "fail": "Nothing catches your eye."
+          },
+          {
+            "skill": "Insight",
+            "dc": 14,
+            "success": "Marta flinched when the scratching sound came. She heard it too. And Tomas — Tomas went rigid, like a hunting dog catching a scent.",
+            "fail": "Hard to read anyone in this gloom."
+          }
         ],
         "atmosphere": "tavern_tense",
         "dmNotes": "This beat should trigger naturally as players settle in. Mark it when players first express suspicion or unease. The scratching sound is key — it's Piotr in the cellar."
@@ -1938,9 +3039,24 @@
         "status": "pending",
         "readAloud": "You ask Marta about her husband. She freezes. The glass she was polishing slips and shatters on the floor. For a long moment, the only sound is the wind and the fire. Then, very quietly, with tears rolling down her cheeks: 'Piotr went down to the cellar three weeks ago. He never came back up. I can hear him down there, sometimes. Scratching. But that's not... that's not Piotr anymore. I know it isn't. I just... I don't know what to do.'",
         "checks": [
-          { "skill": "Insight", "dc": 10, "success": "She is telling the truth. Every word. The grief is real — but so is the terror. She has been living with this for three weeks, alone.", "fail": "Sounds like she might be confused by grief." },
-          { "skill": "Perception", "dc": 13, "success": "When Marta mentioned the cellar, the stranger's hand tightened on the edge of his table. Just for a moment. Then perfect stillness again.", "fail": "The stranger didn't react." },
-          { "skill": "Medicine", "dc": 12, "success": "If something has been alive in the cellar for three weeks without food, it isn't alive in any normal sense of the word.", "fail": "People can survive a long time without food. Probably." }
+          {
+            "skill": "Insight",
+            "dc": 10,
+            "success": "She is telling the truth. Every word. The grief is real — but so is the terror. She has been living with this for three weeks, alone.",
+            "fail": "Sounds like she might be confused by grief."
+          },
+          {
+            "skill": "Perception",
+            "dc": 13,
+            "success": "When Marta mentioned the cellar, the stranger's hand tightened on the edge of his table. Just for a moment. Then perfect stillness again.",
+            "fail": "The stranger didn't react."
+          },
+          {
+            "skill": "Medicine",
+            "dc": 12,
+            "success": "If something has been alive in the cellar for three weeks without food, it isn't alive in any normal sense of the word.",
+            "fail": "People can survive a long time without food. Probably."
+          }
         ],
         "atmosphere": "tavern_tense",
         "dmNotes": "This can trigger from any conversation about Piotr, the cellar, or the missing travelers. Mark it when Marta reveals her husband is missing. Key clue — links to cellar_sounds and piotr_in_cellar secrets."
@@ -1951,10 +3067,30 @@
         "status": "pending",
         "readAloud": "The inn feels smaller now. The shadows deeper. The fire lower. Everyone in this room is hiding something — you can feel it. The cellar door is right there, the scratches on its frame clearly visible. The stranger watches. Marta wrings her hands. Tomas keeps checking the shuttered windows, as though expecting the moon. The question is no longer whether something is wrong. The question is: what are you going to do about it?",
         "checks": [
-          { "skill": "Investigation", "dc": 14, "success": "Searching the stranger's corner of the room, you find that his plate of food is untouched — not a single bite. His mug is full. But most disturbing: the candle nearest him has gone out, and the wax is ice cold. As if the warmth is being drawn from it.", "fail": "Nothing unusual about his table." },
-          { "skill": "Investigation", "dc": 12, "success": "Behind the bar, you find Marta's logbook. The last three entries show guests who checked in but never checked out. Their rooms are still made up, belongings still inside.", "fail": "Just a normal innkeeper's ledger." },
-          { "skill": "Perception", "dc": 16, "success": "You catch the stranger's reflection — or rather, you DON'T. In the brass serving plate behind the bar, everyone in the room is reflected. Everyone except him. Where he sits, there is only empty chair.", "fail": "Nothing in the reflections catches your eye." },
-          { "skill": "Religion", "dc": 13, "success": "Brother Aldric's holy symbol — he keeps touching it, unconsciously turning it toward the stranger. It's an instinct. Something in his faith is reacting to the presence in that corner.", "fail": "Aldric seems devout but frightened, like everyone else." }
+          {
+            "skill": "Investigation",
+            "dc": 14,
+            "success": "Searching the stranger's corner of the room, you find that his plate of food is untouched — not a single bite. His mug is full. But most disturbing: the candle nearest him has gone out, and the wax is ice cold. As if the warmth is being drawn from it.",
+            "fail": "Nothing unusual about his table."
+          },
+          {
+            "skill": "Investigation",
+            "dc": 12,
+            "success": "Behind the bar, you find Marta's logbook. The last three entries show guests who checked in but never checked out. Their rooms are still made up, belongings still inside.",
+            "fail": "Just a normal innkeeper's ledger."
+          },
+          {
+            "skill": "Perception",
+            "dc": 16,
+            "success": "You catch the stranger's reflection — or rather, you DON'T. In the brass serving plate behind the bar, everyone in the room is reflected. Everyone except him. Where he sits, there is only empty chair.",
+            "fail": "Nothing in the reflections catches your eye."
+          },
+          {
+            "skill": "Religion",
+            "dc": 13,
+            "success": "Brother Aldric's holy symbol — he keeps touching it, unconsciously turning it toward the stranger. It's an instinct. Something in his faith is reacting to the presence in that corner.",
+            "fail": "Aldric seems devout but frightened, like everyone else."
+          }
         ],
         "atmosphere": "investigation",
         "dmNotes": "Let players drive this. They can search rooms, question NPCs, examine the cellar door, look for evidence. Each action should reveal a clue. The no-reflection clue is the big one — if anyone checks a mirror or reflective surface near Vladislav."
@@ -1965,9 +3101,24 @@
         "status": "pending",
         "readAloud": "The fire goes out. All at once, as if something exhaled on it. The room plunges into darkness. Someone screams — you think it's Katya. A crash of breaking glass. The shutters slam open and the blizzard howls in, driving snow across the floor. In the momentary flash of moonlight through the window, you see two things: the stranger's chair is empty — he was there a second ago — and Tomas is on his knees, clutching his head, a sound like a growl tearing from his throat. The shutters slam closed. Darkness again. And from the cellar, the scratching becomes pounding.",
         "checks": [
-          { "skill": "Perception", "dc": 10, "success": "In the darkness, you hear movement — inhumanly fast — near the ceiling. Something is above you.", "fail": "The darkness is total. You can't see or hear anything over the wind." },
-          { "skill": "Constitution", "dc": 12, "success": "You keep your nerve. You can act.", "fail": "Terror grips you. You are frozen for a moment, unable to act (lose your first round of actions)." },
-          { "skill": "Investigation", "dc": 11, "success": "Feeling along the wall, you find a lantern. One match. One shot at light.", "fail": "You can't find anything useful in the dark." }
+          {
+            "skill": "Perception",
+            "dc": 10,
+            "success": "In the darkness, you hear movement — inhumanly fast — near the ceiling. Something is above you.",
+            "fail": "The darkness is total. You can't see or hear anything over the wind."
+          },
+          {
+            "skill": "Constitution",
+            "dc": 12,
+            "success": "You keep your nerve. You can act.",
+            "fail": "Terror grips you. You are frozen for a moment, unable to act (lose your first round of actions)."
+          },
+          {
+            "skill": "Investigation",
+            "dc": 11,
+            "success": "Feeling along the wall, you find a lantern. One match. One shot at light.",
+            "fail": "You can't find anything useful in the dark."
+          }
         ],
         "atmosphere": "dread_rising",
         "dmNotes": "This is the horror peak before combat. The fire going out should be dramatic — all lights in the room (Hubitat) go dark simultaneously. Let them fumble in darkness for 30-60 seconds of real time. Tomas is fighting his transformation. Vladislav has moved."
@@ -1978,9 +3129,24 @@
         "status": "pending",
         "readAloud": "The cellar stairs descend into a cold that has nothing to do with winter. The walls are ancient — older than the inn above, rough-hewn monastery stone stained dark with something you don't want to identify. At the bottom: a narrow passage, the ceiling so low you have to duck. The air smells of copper and rot. Chains hang from the walls — old, rusted. The scratching sound is louder now. Much louder. And then you see it: in the far corner, a makeshift coffin made of rough planks. Beside it, crouched in the shadows, is what was once a man. Piotr Kowalski stares at you with dead white eyes, his mouth open, two elongated canines gleaming in your torchlight. He hisses.",
         "checks": [
-          { "skill": "Investigation", "dc": 13, "success": "The coffin contains a velvet lining, a sealed letter addressed to 'Houska,' and dried blood. This is not Piotr's coffin — it belongs to the stranger upstairs.", "fail": "A coffin. Terrifying but you can't bring yourself to search it." },
-          { "skill": "Religion", "dc": 12, "success": "A vampire spawn. Created by a vampire's bite. Piotr is no longer human — but a stronger vampire controls him. Destroy the master, and the spawn may find peace. Or they may simply go feral.", "fail": "Undead. Very dangerous. That's all you know." },
-          { "skill": "Perception", "dc": 14, "success": "Letters scattered on the floor, written in an old Slavic dialect. They reference 'the gathering at Houska' and 'the three seats of power.' There is a larger conspiracy here.", "fail": "Nothing else in the cellar catches your eye." }
+          {
+            "skill": "Investigation",
+            "dc": 13,
+            "success": "The coffin contains a velvet lining, a sealed letter addressed to 'Houska,' and dried blood. This is not Piotr's coffin — it belongs to the stranger upstairs.",
+            "fail": "A coffin. Terrifying but you can't bring yourself to search it."
+          },
+          {
+            "skill": "Religion",
+            "dc": 12,
+            "success": "A vampire spawn. Created by a vampire's bite. Piotr is no longer human — but a stronger vampire controls him. Destroy the master, and the spawn may find peace. Or they may simply go feral.",
+            "fail": "Undead. Very dangerous. That's all you know."
+          },
+          {
+            "skill": "Perception",
+            "dc": 14,
+            "success": "Letters scattered on the floor, written in an old Slavic dialect. They reference 'the gathering at Houska' and 'the three seats of power.' There is a larger conspiracy here.",
+            "fail": "Nothing else in the cellar catches your eye."
+          }
         ],
         "atmosphere": "revelation",
         "dmNotes": "Piotr spawn attacks if approached within 10 feet. He is CR3 — dangerous but beatable. The letter to Houska is a campaign hook. If players search thoroughly, they find evidence of the three-castle conspiracy."
@@ -1991,8 +3157,18 @@
         "status": "pending",
         "readAloud": "Now you understand. The hooded stranger. The missing travelers. Piotr in the cellar. The dead, bloodless deer on the road. It was never the storm you needed to fear. It was never the cold. It was the thing sitting in the corner of this inn, watching you with ancient, hungry eyes, waiting for the right moment to feed. And now it knows that you know.",
         "checks": [
-          { "skill": "Arcana", "dc": 14, "success": "Vampires are vulnerable to sunlight, running water, and stakes through the heart. They cannot enter a residence without invitation — but Vladislav was invited by Marta. Garlic repels them. Holy symbols wielded with faith cause them pain.", "fail": "You know vampires are dangerous. That's about it." },
-          { "skill": "Religion", "dc": 12, "success": "Brother Aldric's holy symbol could be a weapon if wielded with true faith. A prayer of turning could force the vampire back. But it requires genuine conviction — fear alone isn't enough.", "fail": "You remember something about holy symbols and vampires but the details escape you." }
+          {
+            "skill": "Arcana",
+            "dc": 14,
+            "success": "Vampires are vulnerable to sunlight, running water, and stakes through the heart. They cannot enter a residence without invitation — but Vladislav was invited by Marta. Garlic repels them. Holy symbols wielded with faith cause them pain.",
+            "fail": "You know vampires are dangerous. That's about it."
+          },
+          {
+            "skill": "Religion",
+            "dc": 12,
+            "success": "Brother Aldric's holy symbol could be a weapon if wielded with true faith. A prayer of turning could force the vampire back. But it requires genuine conviction — fear alone isn't enough.",
+            "fail": "You remember something about holy symbols and vampires but the details escape you."
+          }
         ],
         "atmosphere": "revelation",
         "dmNotes": "This beat fires when the vampire secret is definitively revealed — either through cellar evidence, caught feeding, no-reflection discovery, or direct confrontation. The revelation flash player effect should fire here."
@@ -2003,8 +3179,18 @@
         "status": "pending",
         "readAloud": "Vladislav rises from his chair — or rather, he is suddenly standing, with no visible transition between sitting and standing. The hood falls back. His face is pale as bone, angular, beautiful in the way a knife is beautiful. His eyes are dark and old — centuries old. He smiles, and you see the fangs. 'I had hoped,' he says, his voice like silk over broken glass, 'to leave without unpleasantness. But you have made that... difficult.' The shadows in the room seem to lean toward him, as if drawn by gravity. The temperature drops. The fire, if it was still burning, dies.",
         "checks": [
-          { "skill": "Intimidation", "dc": 18, "success": "You stand your ground. Vladislav's smile falters — just for a moment. He is used to terror. Defiance surprises him.", "fail": "His presence is overwhelming. Ancient. Predatory. Every instinct screams at you to run." },
-          { "skill": "Persuasion", "dc": 20, "success": "You appeal to whatever humanity remains. For a moment — just a moment — something flickers in those dead eyes. Then it's gone. 'You remind me of someone I knew. Before.' He pauses. 'They died badly.'", "fail": "He is beyond persuasion. He is beyond reason. He is hunger wearing a human face." }
+          {
+            "skill": "Intimidation",
+            "dc": 18,
+            "success": "You stand your ground. Vladislav's smile falters — just for a moment. He is used to terror. Defiance surprises him.",
+            "fail": "His presence is overwhelming. Ancient. Predatory. Every instinct screams at you to run."
+          },
+          {
+            "skill": "Persuasion",
+            "dc": 20,
+            "success": "You appeal to whatever humanity remains. For a moment — just a moment — something flickers in those dead eyes. Then it's gone. 'You remind me of someone I knew. Before.' He pauses. 'They died badly.'",
+            "fail": "He is beyond persuasion. He is beyond reason. He is hunger wearing a human face."
+          }
         ],
         "atmosphere": "terror_peak",
         "dmNotes": "Vladislav is CR13. He will NOT fight to the death — if reduced below 50 HP, he flees (mist form to cellar or out window). He fights smart: Charm on the strongest fighter, bite on the isolated, legendary actions to scatter the party. Call Piotr spawn if cellar wasn't cleared."
@@ -2015,9 +3201,24 @@
         "status": "pending",
         "readAloud": "Combat erupts in the cramped common room. Tables shatter. The fire scatters embers across the floor. Vladislav moves like smoke — appearing, striking, vanishing. If Tomas hasn't already transformed, the violence and the moonlight push him over the edge. The patrons scream and scatter. Marta dives behind the bar. Brother Aldric raises his holy symbol with shaking hands. This is not a fight you were prepared for. This is survival. Hold until dawn — or die in the dark.",
         "checks": [
-          { "skill": "Athletics", "dc": 13, "success": "You flip a heavy table to create cover, giving half-cover (+2 AC) to anyone behind it.", "fail": "The table is heavier than you expected. No cover." },
-          { "skill": "Perception", "dc": 14, "success": "You spot Vladislav's movement pattern — he always returns to the cellar door side. That's his escape route.", "fail": "He's too fast to track." },
-          { "skill": "Religion", "dc": 15, "success": "Brother Aldric's faith holds. His holy symbol blazes with light — Vladislav recoils (disadvantage on attacks against Aldric this round).", "fail": "Aldric's faith wavers. The symbol is just metal." }
+          {
+            "skill": "Athletics",
+            "dc": 13,
+            "success": "You flip a heavy table to create cover, giving half-cover (+2 AC) to anyone behind it.",
+            "fail": "The table is heavier than you expected. No cover."
+          },
+          {
+            "skill": "Perception",
+            "dc": 14,
+            "success": "You spot Vladislav's movement pattern — he always returns to the cellar door side. That's his escape route.",
+            "fail": "He's too fast to track."
+          },
+          {
+            "skill": "Religion",
+            "dc": 15,
+            "success": "Brother Aldric's faith holds. His holy symbol blazes with light — Vladislav recoils (disadvantage on attacks against Aldric this round).",
+            "fail": "Aldric's faith wavers. The symbol is just metal."
+          }
         ],
         "atmosphere": "combat",
         "dmNotes": "This is the final combat. Vladislav (CR13), potentially Piotr spawn (CR3), potentially transformed Tomas (CR3 werewolf). Use the combat AI system for NPC tactics. If Vladislav escapes, mark hook-vladislav-escape as foreshadowed. If Tomas transforms, play for tragedy — he didn't want this."
@@ -2035,9 +3236,137 @@
     "cluesDiscovered": [],
     "decisions": []
   },
-
   "atmosphere": {
     "currentProfile": "tavern_warm",
     "startNote": "Session begins in tavern_warm — fire crackling, Katya performing, ale flowing. Shift to tavern_tense as clues emerge. The warm start makes the descent into horror more effective."
+  },
+  "creatureBehaviors": {
+    "tomas": {
+      "behaviorLoop": true,
+      "checkIntervalSec": 300,
+      "currentState": "nervous",
+      "stateProgression": [
+        {
+          "time": "17:30",
+          "state": "nervous"
+        },
+        {
+          "time": "19:00",
+          "state": "agitated"
+        },
+        {
+          "time": "20:00",
+          "state": "struggling"
+        },
+        {
+          "time": "21:00",
+          "state": "losing_control"
+        },
+        {
+          "time": "22:00",
+          "state": "transform_imminent"
+        }
+      ],
+      "perceptionByState": {
+        "nervous": {
+          "dc": 12,
+          "text": "Losing track."
+        },
+        "agitated": {
+          "dc": 11,
+          "text": "Watching the clock."
+        },
+        "struggling": {
+          "dc": 10,
+          "text": "Sweating."
+        },
+        "losing_control": {
+          "dc": 9,
+          "text": "Trying to leave."
+        },
+        "transform_imminent": {
+          "dc": 8,
+          "text": "His eyes are wrong."
+        }
+      }
+    },
+    "wolves": {
+      "behaviorLoop": true,
+      "checkIntervalSec": 60,
+      "count": 4,
+      "currentState": "distant",
+      "stateProgression": [
+        {
+          "time": "17:30",
+          "state": "distant"
+        },
+        {
+          "time": "19:30",
+          "state": "curious"
+        },
+        {
+          "time": "20:30",
+          "state": "present"
+        },
+        {
+          "time": "23:00",
+          "state": "aggressive"
+        }
+      ],
+      "distanceByState": {
+        "distant": 200,
+        "curious": 60,
+        "present": 40,
+        "aggressive": 20
+      }
+    },
+    "piotr": {
+      "behaviorLoop": true,
+      "checkIntervalSec": 600,
+      "currentState": "dormant",
+      "chainLength": 8,
+      "stateProgression": [
+        {
+          "time": "17:30",
+          "state": "dormant"
+        },
+        {
+          "time": "19:00",
+          "state": "restless"
+        },
+        {
+          "time": "21:00",
+          "state": "active"
+        },
+        {
+          "time": "23:00",
+          "state": "desperate"
+        }
+      ]
+    },
+    "gasSpore": {
+      "behaviorLoop": true,
+      "checkIntervalSec": 600,
+      "driftRateFtPerMin": 0.1
+    },
+    "kamenny": {
+      "behaviorLoop": true,
+      "checkIntervalSec": 120,
+      "circuitDurationMin": 120
+    },
+    "letavec": {
+      "behaviorLoop": true,
+      "checkIntervalSec": 60,
+      "circuitIntervalMin": 13
+    },
+    "corpseCandle": {
+      "behaviorLoop": false,
+      "triggerTime": "00:00"
+    },
+    "rats": {
+      "behaviorLoop": true,
+      "checkIntervalSec": 300,
+      "avoids": "room5"
+    }
   }
 }

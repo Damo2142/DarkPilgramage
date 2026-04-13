@@ -20,6 +20,7 @@ const HorrorService = require('./services/horror/horror-service');
 const SocialCombatService = require('./services/social-combat/social-combat-service');
 const HazardService = require('./services/hazard/hazard-service');
 const AmbientLifeService = require('./services/ambient-life/ambient-life-service');
+const ScenePopulationService = require('./services/scene-population/scene-population-service');
 const { loadConfig } = require('./utils/config-loader');
 
 // Auto-discover session config: CLI arg > config/session-0.json > defaults only
@@ -55,6 +56,7 @@ orchestrator.register(new HorrorService());
 orchestrator.register(new SocialCombatService());
 orchestrator.register(new HazardService());
 orchestrator.register(new AmbientLifeService());
+orchestrator.register(new ScenePopulationService());
 
 orchestrator.startAll().catch(err => {
   console.error('Fatal startup error:', err);

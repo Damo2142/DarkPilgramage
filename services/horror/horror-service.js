@@ -330,8 +330,19 @@ Respond in JSON only:
             { maxTokens: 300, temperature: 0.9 }
           );
 
-          // Try to parse JSON from response
-          const jsonMatch = response.match(/\{[\s\S]*\}/);
+          // Try to parse JSON from response. Gemini may return null/empty
+          // when the system prompt is too large (MAX_TOKENS), the safety
+          // filter blocks, or the network fails — skip the AI arc step
+          // gracefully but allow the barry-specific hardcoded block below
+          // to still run.
+          const jsonMatch = (typeof response === 'string' && response)
+            ? response.match(/\{[\s\S]*\}/)
+            : null;
+          if (!jsonMatch) {
+            if (!response) {
+              console.log(`[Horror] Arc profile skipped for ${playerId}: empty response from Gemini`);
+            }
+          }
           if (jsonMatch) {
             const profile = JSON.parse(jsonMatch[0]);
             this.arcProfiles[playerId] = profile;

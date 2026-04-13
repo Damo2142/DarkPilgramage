@@ -4579,16 +4579,14 @@ var ChatBar = {
   toggleMic: function() {
     var btn = document.getElementById('chat-mic-btn');
     if (!btn) return;
+    // Mic is PTT-only — start is reserved for the PTT engage() path.
+    // This toggle is defensive cleanup only: if something left the mic
+    // active, tapping the button will stop it.
     if (window.PlayerMic && PlayerMic._active) {
       PlayerMic.stop && PlayerMic.stop();
       btn.classList.remove('active');
       var inp = document.getElementById('chat-input');
       if (inp) inp.placeholder = 'Speak to Max, an NPC, or another player...';
-    } else if (window.PlayerMic) {
-      PlayerMic.start();
-      btn.classList.add('active');
-      var inp2 = document.getElementById('chat-input');
-      if (inp2) inp2.placeholder = 'Listening...';
     }
   },
   // FIX10 — message persistence
@@ -4673,14 +4671,12 @@ var ChatTab = {
   toggleMic: function() {
     var btn = document.getElementById('chat-tab-mic');
     var input = document.getElementById('chat-tab-input');
+    // Mic is PTT-only — start is reserved for the PTT engage() path.
+    // Defensive cleanup only: if the mic is somehow active, tap stops it.
     if (window.PlayerMic && PlayerMic._active) {
       if (PlayerMic.stop) PlayerMic.stop();
       if (btn) { btn.textContent = '🎤'; btn.style.background = '#2a2420'; btn.style.color = '#e8c060'; }
       if (input) input.placeholder = 'Speak to Max, an NPC, or another player...';
-    } else if (window.PlayerMic) {
-      PlayerMic.start();
-      if (btn) { btn.textContent = '⏺'; btn.style.background = '#aa2a1a'; btn.style.color = '#fff'; btn.style.animation = 'mic-pulse 1s ease-in-out infinite'; }
-      if (input) input.placeholder = 'Listening...';
     }
   }
 };

@@ -285,6 +285,18 @@ class CombatService {
         priority: 1, category: 'combat'
       });
     }
+
+    // Build 7 — auto-combat. If the upcoming combatant is not a PC, fire
+    // its turn automatically after a short delay so the turn-announcement
+    // audio lands first. PCs (including Spurt, which spurt-agent.js owns)
+    // are left alone — type === 'pc' combatants never auto-run here.
+    if (upcomingNext && upcomingNext.type !== 'pc' && upcomingNext.isAlive) {
+      setTimeout(() => {
+        try { this._autoNpcTurn(upcomingNext); }
+        catch (e) { console.warn('[CombatService] auto-npc turn error:', e.message); }
+      }, 1500);
+    }
+
     return combat;
   }
 
@@ -1165,6 +1177,159 @@ class CombatService {
         console.log(`[CombatService] ${combatant.name} attacks ${result.targetName}: ${result.hit ? 'HIT' : 'MISS'} (${rollResult.attackRoll} vs AC ${result.targetAC})${result.hit ? `, ${result.damage} ${result.damageType}` : ''}`);
       }
     }
+  }
+
+  // ── Build 7 — auto-combat for non-PC combatants ─────────────────
+  //
+  // Fires ~1500ms after combat:next_turn broadcasts a non-PC turn. INT-
+  // tiered target selection: random / nearest-ish / lowest-HP / highest-
+  // threat. Attack uses the creature's first action from its config (or a
+  // sensible fallback), rolls d20+bonus vs target AC, and applies damage
+  // through modifyHp — same path player attacks take in Build 5.
+  //
+  // Spurt (PC, AI-controlled by spurt-agent.js) is deliberately not
+  // handled here — spurt-agent already subscribes to combat:next_turn
+  // and owns his decisions.
+
+  _autoNpcTurn(combatant) {
+    if (!combatant) return;
+    if (combatant.type === 'pc') return; // spurt-agent handles PCs
+
+    const intelligence = Number.isFinite(combatant.int)
+      ? combatant.int
+      : (combatant.stats?.int ?? this._creatureIntFromConfig(combatant.actorSlug) ?? 5);
+
+    const combat = this._getCombatState();
+    const turnOrder = combat.turnOrder || [];
+
+    // Valid targets: alive PCs (NPC-on-NPC combat isn't modelled here).
+    const targets = turnOrder.filter(c =>
+      c && c.id !== combatant.id && c.type === 'pc' && c.hp?.current > 0
+    );
+    if (targets.length === 0) {
+      this.bus.dispatch('dm:whisper', {
+        text: `${combatant.name}: no valid targets. Holds action.`,
+        priority: 1, category: 'combat'
+      });
+      return;
+    }
+
+    let target;
+    if (intelligence <= 3) {
+      target = targets[Math.floor(Math.random() * targets.length)];
+    } else if (intelligence <= 7) {
+      // "Nearest" — without a real distance map, use first in turn order
+      target = targets[0];
+    } else if (intelligence <= 11) {
+      target = targets.reduce((a, b) => (a.hp.current < b.hp.current ? a : b));
+    } else {
+      // Highest level/CR = highest threat
+      target = targets.reduce((a, b) => {
+        const av = Number(a.level || a.cr || 1);
+        const bv = Number(b.level || b.cr || 1);
+        return av > bv ? a : b;
+      });
+    }
+
+    const action = this._creatureActionFromConfig(combatant.actorSlug) || {
+      name: 'Attack',
+      attackBonus: Math.max(2, Math.floor((intelligence - 10) / 2) + 2),
+      damage: '1d6',
+      damageType: 'bludgeoning'
+    };
+
+    const attackRoll = Math.floor(Math.random() * 20) + 1;
+    const attackBonus = Number.isFinite(action.attackBonus) ? action.attackBonus : 3;
+    const total = attackRoll + attackBonus;
+    const targetAC = target.ac || 10;
+    const crit = attackRoll === 20;
+    const hit = total >= targetAC || crit;
+
+    if (hit) {
+      const rolled = this._rollDiceExpression(action.damage || '1d6');
+      const totalDamage = crit ? rolled * 2 : rolled;
+
+      // Apply via the same path player attacks take in Build 5
+      this.modifyHp(target.id, -Math.abs(totalDamage));
+
+      this.bus.dispatch('dm:whisper', {
+        text:
+          `${combatant.name} uses ${action.name} on ${target.name} — ` +
+          `rolled ${attackRoll} + ${attackBonus} = ${total} vs AC ${targetAC} — ` +
+          `${crit ? 'CRITICAL HIT' : 'HIT'} — ${totalDamage} ${action.damageType || 'damage'}.`,
+        priority: 1, category: 'combat'
+      });
+    } else {
+      this.bus.dispatch('dm:whisper', {
+        text:
+          `${combatant.name} uses ${action.name} on ${target.name} — ` +
+          `rolled ${attackRoll} + ${attackBonus} = ${total} vs AC ${targetAC} — MISS.`,
+        priority: 1, category: 'combat'
+      });
+    }
+  }
+
+  _creatureConfigFor(actorSlug) {
+    if (!actorSlug) return null;
+    // Cache per-instance so we don't re-read disk every turn
+    if (!this._creatureConfigCache) this._creatureConfigCache = new Map();
+    if (this._creatureConfigCache.has(actorSlug)) return this._creatureConfigCache.get(actorSlug);
+    let cfg = null;
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      for (const dir of ['creatures', 'actors']) {
+        const p = path.join(__dirname, '..', '..', 'config', dir, `${actorSlug}.json`);
+        if (fs.existsSync(p)) { cfg = JSON.parse(fs.readFileSync(p, 'utf8')); break; }
+      }
+    } catch (e) { /* keep null */ }
+    this._creatureConfigCache.set(actorSlug, cfg);
+    return cfg;
+  }
+
+  _creatureIntFromConfig(actorSlug) {
+    const cfg = this._creatureConfigFor(actorSlug);
+    if (!cfg) return null;
+    if (Number.isFinite(cfg.intelligence)) return cfg.intelligence;
+    if (cfg.abilities?.int?.score != null) return cfg.abilities.int.score;
+    return null;
+  }
+
+  _creatureActionFromConfig(actorSlug) {
+    const cfg = this._creatureConfigFor(actorSlug);
+    if (!cfg) return null;
+    const actions = Array.isArray(cfg.actions) ? cfg.actions : [];
+    const first = actions.find(a => a && (a.name && (a.attackBonus != null || a.damage)));
+    if (!first) return null;
+    // Normalize common shapes: DDB-style "+9 to hit ... 7 (1d6+4)" vs simple config
+    let attackBonus = first.attackBonus;
+    if (attackBonus == null && typeof first.desc === 'string') {
+      const m = first.desc.match(/\+(\d+)\s*to\s*hit/i);
+      if (m) attackBonus = parseInt(m[1], 10);
+    }
+    let damage = first.damage;
+    if (!damage && typeof first.desc === 'string') {
+      const m = first.desc.match(/\((\d+d\d+(?:\s*\+\s*\d+)?)\)/);
+      if (m) damage = m[1].replace(/\s+/g, '');
+    }
+    return {
+      name: first.name || 'Attack',
+      attackBonus: Number.isFinite(attackBonus) ? attackBonus : 3,
+      damage: damage || '1d6',
+      damageType: first.damageType || 'bludgeoning'
+    };
+  }
+
+  _rollDiceExpression(expr) {
+    // Handles "1d6", "2d6+3", "1d8-1" — returns int total, min 1.
+    const m = String(expr || '').match(/(\d+)\s*d\s*(\d+)\s*([+-]\s*\d+)?/i);
+    if (!m) return 1;
+    const count = parseInt(m[1], 10) || 1;
+    const sides = parseInt(m[2], 10) || 6;
+    const bonus = m[3] ? parseInt(m[3].replace(/\s+/g, ''), 10) : 0;
+    let total = 0;
+    for (let i = 0; i < count; i++) total += Math.floor(Math.random() * sides) + 1;
+    return Math.max(1, total + bonus);
   }
 
   // ── Routes ─────────────────────────────────────────────────────────────

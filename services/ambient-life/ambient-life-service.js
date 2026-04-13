@@ -867,6 +867,64 @@ class AmbientLifeService {
     } else if (isLateNight && Math.random() < 0.25) {
       this.bus.dispatch('observation:trigger', { id: `letavec-wing-${totalMinutes}`, dc: 13, text: 'Something large passes overhead. The wingbeats are slow and enormous. Then silence.' });
     }
+
+    // Addition 2 — telepathy scan. Each Letavec circuit, every chosen
+    // target makes a Wisdom save. The save flash is delivered via the
+    // existing combat:save_required infra (Build 6); the DM rolls at the
+    // table, then resolves outcome via POST /api/telepathy/resolve which
+    // dispatches telepathy:touch with the appropriate style.
+    this._fireLetavecTelepathyScan();
+  }
+
+  _fireLetavecTelepathyScan() {
+    const letavecConfig = this._loadCreatureConfig('nocni-letavec');
+    if (!letavecConfig?.telepathy) return;
+
+    const players = this.state.get('players') || {};
+    // Per spec: only chosen targets are scanned. The list is hardcoded
+    // to match the Session 0 selection — Spurt's id is held as
+    // 'spurt-ai-pc' for the future AI-controlled-PC slot, and 'jerome'
+    // covers Barry (absent S0 — won't fire until he joins, but listed
+    // so the scan triggers correctly when he arrives). If a listed
+    // playerId isn't in state.players or is absent, the entry skips.
+    const chosenTargets = ['kim', 'nick', 'jen', 'ed', 'jerome', 'spurt-ai-pc'];
+    for (const playerId of chosenTargets) {
+      const playerState = players[playerId];
+      if (!playerState || playerState.absent) continue;
+
+      this.bus.dispatch('combat:save_required', {
+        playerId,
+        saveType: 'Wisdom',
+        cause: letavecConfig.telepathy.onSaveSuccess.chromebookText
+      });
+
+      this._whisperDM(
+        `LETAVEC TELEPATHY — ${playerId} must make DC ${letavecConfig.telepathy.saveDC} Wisdom save. ` +
+        `On success: gold flash "${letavecConfig.telepathy.onSaveSuccess.chromebookText}". ` +
+        `On fail: silent text "${letavecConfig.telepathy.onSaveFailure.chromebookText}". ` +
+        `To deliver result: POST /api/telepathy/resolve {playerId, source:"letavec", saved:true/false}`,
+        2, 'story'
+      );
+    }
+  }
+
+  _loadCreatureConfig(slug) {
+    if (!slug) return null;
+    if (!this._creatureConfigCache) this._creatureConfigCache = new Map();
+    if (this._creatureConfigCache.has(slug)) return this._creatureConfigCache.get(slug);
+    let cfg = null;
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      for (const dir of ['creatures', 'actors', 'npcs']) {
+        const p = path.join(__dirname, '..', '..', 'config', dir, `${slug}.json`);
+        if (fs.existsSync(p)) { cfg = JSON.parse(fs.readFileSync(p, 'utf8')); break; }
+      }
+    } catch (e) {
+      console.warn(`[AmbientLife] _loadCreatureConfig(${slug}) failed: ${e.message}`);
+    }
+    this._creatureConfigCache.set(slug, cfg);
+    return cfg;
   }
 
   _fireWolfLetavecEvent(h, m) {
@@ -1457,6 +1515,73 @@ Available: rat-swarm (1 token, CR 1/4), bat-swarm (1 token, CR 1/4), wolf (1 tok
         this._whisperDM(`Page save FAILED. Influence holds at ${this._pageState.influence}.`, 2, 'story');
       }
       res.json({ ok: true, influence: this._pageState.influence });
+    });
+
+    // ── Addition 2 — telepathy save resolver ──
+    // DM rolls the Wisdom save at the table after the player gets the
+    // initial save flash, then POSTs the outcome here. We load the
+    // source's telepathy block and dispatch telepathy:touch with the
+    // appropriate style (gold-flash / silent / null).
+    //
+    // Body: { playerId, source: 'vladislav'|'letavec'|'page', saved: bool }
+    app.post('/api/telepathy/resolve', (req, res) => {
+      const { playerId, source, saved } = req.body || {};
+      if (!playerId || !source) return res.status(400).json({ error: 'playerId and source required' });
+
+      // Vladislav's stat block lives in config/actors/, not config/npcs/.
+      const configMap = {
+        'vladislav': 'config/actors/vladislav.json',
+        'letavec':   'config/creatures/nocni-letavec.json',
+        'page':      'config/npcs/necronomicon-page.json'
+      };
+      const relPath = configMap[source];
+      if (!relPath) return res.status(400).json({ error: `Unknown source: ${source}` });
+
+      let telepathy;
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const cfg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', relPath), 'utf8'));
+        telepathy = cfg.telepathy;
+      } catch (e) {
+        return res.status(404).json({ error: `Config not found for source: ${source}` });
+      }
+      if (!telepathy) return res.status(400).json({ error: `Source ${source} has no telepathy block` });
+
+      if (saved) {
+        // Resisted — gold-flash chromebook + DM whisper
+        this.bus.dispatch('telepathy:touch', {
+          playerId,
+          style: 'gold-flash',
+          text: telepathy.onSaveSuccess?.chromebookText || ''
+        });
+        this._whisperDM(telepathy.onSaveSuccess?.dmWhisper || '', 2, 'story');
+        // Necronomicon page: also bump no-influence-this-hour record
+        if (source === 'page' && this._pageState) {
+          this._pageState.lastHourTicked = new Date().getHours();
+        }
+      } else {
+        const fail = telepathy.onSaveFailure || {};
+        if (fail.mode === 'planted-thought') {
+          const templates = Array.isArray(fail.thoughtTemplates) ? fail.thoughtTemplates : [];
+          const text = templates.length
+            ? templates[Math.floor(Math.random() * templates.length)]
+            : '';
+          this.bus.dispatch('telepathy:touch', { playerId, style: 'silent', text });
+          // Page-specific: planted thought = +5 influence
+          if (source === 'page' && this._pageState) {
+            this._pageState.influence = Math.min(100, this._pageState.influence + 5);
+          }
+        } else if (fail.chromebookStyle === 'silent' && fail.chromebookText) {
+          this.bus.dispatch('telepathy:touch', { playerId, style: 'silent', text: fail.chromebookText });
+        } else {
+          // Information-mode: nothing visible to the player
+          this.bus.dispatch('telepathy:touch', { playerId, style: null, text: null });
+        }
+        this._whisperDM(fail.dmWhisper || '', 1, 'story');
+      }
+
+      res.json({ ok: true, playerId, source, saved: !!saved });
     });
 
     console.log('[AmbientLife] Routes registered');

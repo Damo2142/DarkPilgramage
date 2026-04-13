@@ -1416,6 +1416,8 @@ function handle(m){
     case 'combat:save_required':    displaySaveRequired(m.saveType, m.cause); break;
     case 'combat:condition_update': displayConditionUpdate(m.condition, m.narrative, m.active); break;
     case 'combat:your_turn':        displayYourTurn(m.spellStatus, m.movementFeet); break;
+    // Addition 2 — telepathy contact (Vladislav / Letavec / Page)
+    case 'telepathy:touch':         displayTelepathyTouch(m.style, m.text); break;
     // Audio streaming for remote players
     case 'audio:play':
       if(m.url) { const a=new Audio(m.url); a.volume=m.volume||0.5; a.play().catch(()=>{}); }
@@ -3203,6 +3205,46 @@ function displayYourTurn(spellStatus, movementFeet) {
   document.body.appendChild(label);
 
   setTimeout(function() { flash.remove(); label.remove(); }, 30000);
+}
+
+// Addition 2 — telepathy contact UI.
+// gold-flash: short gold border with italic text — the player resisted
+// silent: italic text in CONDITION tab, no border — planted as a thought
+function displayTelepathyTouch(style, text) {
+  if (style === 'gold-flash') {
+    _installSavePulseStyle();
+    var flash = document.createElement('div');
+    flash.style.cssText = 'position:fixed;inset:0;border:22px solid #c8a820;' +
+      'pointer-events:none;z-index:9999;box-sizing:border-box;' +
+      'animation:save-pulse 0.9s ease-in-out 3;';
+    document.body.appendChild(flash);
+
+    var label = document.createElement('div');
+    label.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);' +
+      'background:rgba(0,0,0,0.85);color:#c8a820;font-size:16px;font-style:italic;' +
+      'padding:20px 32px;border:1px solid #c8a820;z-index:10000;text-align:center;' +
+      'max-width:400px;font-family:Georgia,serif;';
+    label.textContent = text || '';
+    document.body.appendChild(label);
+
+    setTimeout(function() { flash.remove(); label.remove(); }, 8000);
+  } else if (style === 'silent') {
+    var condTab = document.querySelector('[data-tab="condition"]') || document.body;
+    var thought = document.createElement('div');
+    thought.style.cssText = 'font-style:italic;color:#8b7355;margin:8px 0;font-size:13px;' +
+      'opacity:0;transition:opacity 2s;';
+    thought.textContent = text || '';
+    condTab.appendChild(thought);
+    // Fade in slowly — like a thought arriving
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() { thought.style.opacity = '1'; });
+    });
+    // Fade out + remove after 2 minutes
+    setTimeout(function() {
+      thought.style.opacity = '0';
+      setTimeout(function() { thought.remove(); }, 2000);
+    }, 120000);
+  }
 }
 
 // ── QUEST JOURNAL (Feature 47) ──────────────────────────────────────

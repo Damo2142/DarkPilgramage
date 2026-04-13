@@ -650,6 +650,23 @@ class PlayerBridgeService {
       });
     }, 'player-bridge');
 
+    // Addition 2 — telepathy:touch fires for all three sources
+    // (Vladislav, Letavec, Page). Style determines presentation:
+    //   'gold-flash' = save success — gold border + italic text
+    //   'silent'     = save failure with sensation/thought — italic text in CONDITION tab, no border
+    //   null         = information stolen — DM whisper only, nothing to player
+    this.bus.subscribe('telepathy:touch', (env) => {
+      const data = env.data || {};
+      if (!data.playerId) return;
+      const { playerId, style, text } = data;
+      if (!style) return; // information mode — DM whisper only
+      this._sendToPlayer(playerId, {
+        type: 'telepathy:touch',
+        style,
+        text: text || ''
+      });
+    }, 'player-bridge');
+
     this.bus.subscribe('dm:private_message', (env) => {
       const { playerId, text, durationMs } = env.data;
       if (playerId === 'all') {

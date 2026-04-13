@@ -64,5 +64,27 @@
     "whatHeKnows": "He has seen this page before. He knows what it is. He knows what it wants. He said no to the entity in 1189 partly because of what this book did to the man who used it."
   },
   "dreamText": "You are in a library with no walls. Shelves extend in every direction beyond sight. The books have no titles. One shelf has a gap — the exact width and height of the page you found. Something in the library is aware of you. It does not move. It does not speak. It is simply present the way a very large thing in a very small room is present.",
-  "dmNotes": "The page is not evil. It is not malevolent. It simply wants to go home. The horror is that it will use whoever it needs to use to get there and feel nothing about any of it. It chose Pieter. Pieter lasted three weeks. It will choose someone in the party next."
+  "dmNotes": "The page is not evil. It is not malevolent. It simply wants to go home. The horror is that it will use whoever it needs to use to get there and feel nothing about any of it. It chose Pieter. Pieter lasted three weeks. It will choose someone in the party next.",
+  "telepathy": {
+    "range": "carrier-only",
+    "saveDC": "matches-current-influence-dc",
+    "saveType": "Wisdom",
+    "onSaveSuccess": {
+      "chromebookText": "Something in you that isn't you reaches toward the southeast. You push it back.",
+      "chromebookStyle": "gold-flash",
+      "dmWhisper": "Carrier resisted the page's pull. Influence does not increase this hour."
+    },
+    "onSaveFailure": {
+      "mode": "planted-thought",
+      "chromebookDelivery": "italic, no border, no flash — presented as the carrier's own thought",
+      "thoughtTemplates": [
+        "You find yourself thinking the book should be somewhere southeast of here.",
+        "The pack feels heavier than it should. You should check what's inside.",
+        "Something in you is very certain that staying here is a mistake.",
+        "You have a sudden conviction that you know which direction to go."
+      ],
+      "dmWhisper": "Page planted a thought. Influence increases by 5. Player received it as their own — do not telegraph."
+    },
+    "trigger": "hourly-while-carried"
+  }
 }

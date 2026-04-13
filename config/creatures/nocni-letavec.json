@@ -280,5 +280,23 @@
     "session1to2": "First direct encounter at camp. Driven off after damage. Returns next night for 13 nights total.",
     "session2": "Followed party to Houska. Vladislav aware of it \u2014 considers it a nuisance and useful deterrent. Will not help party against it.",
     "session3": "Party finds den location. First opportunity to permanently end the cycle."
+  },
+  "telepathy": {
+    "range": 60,
+    "saveDC": 15,
+    "saveType": "Wisdom",
+    "onSaveSuccess": {
+      "chromebookText": "Something cold passes through your thoughts. Not words. Just the sense of being measured.",
+      "chromebookStyle": "gold-flash",
+      "dmWhisper": "Chosen target resisted the scan. Letavec continues circuit \u2014 will try again next pass."
+    },
+    "onSaveFailure": {
+      "mode": "sensation",
+      "chromebookText": "A hunger that is not yours. A sense of distance and patience and something specific it wants from you.",
+      "chromebookStyle": "silent",
+      "dmWhisper": "Letavec confirmed its target. Now knows the player's current emotional state and primary fear."
+    },
+    "trigger": "letavec-circuit-passes-within-60ft-of-chosen-target",
+    "note": "No words. Never words. Just the cold weight of being assessed by something very old and very patient."
   }
 }

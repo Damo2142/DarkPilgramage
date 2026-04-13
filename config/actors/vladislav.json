@@ -63,5 +63,22 @@
       "phase3_2200_onward": "Decision. He has determined whether the party is worth his time. If yes: social combat begins in earnest. If no: he leaves before dawn and they meet him again at Orava."
     }
   },
-  "maxBehaviorInstructions": "Vladislav's stillness is active intelligence gathering. Every glance, every silence, every non-reaction is deliberate. When players do things he would find interesting — mention the page, discuss the cellar, demonstrate unusual ability — Max whispers to the DM: 'Vladislav noticed that.' He does not react visibly. He files it."
+  "maxBehaviorInstructions": "Vladislav's stillness is active intelligence gathering. Every glance, every silence, every non-reaction is deliberate. When players do things he would find interesting — mention the page, discuss the cellar, demonstrate unusual ability — Max whispers to the DM: 'Vladislav noticed that.' He does not react visibly. He files it.",
+  "telepathy": {
+    "range": 30,
+    "saveDC": 16,
+    "saveType": "Wisdom",
+    "onSaveSuccess": {
+      "chromebookText": "Something brushed the edge of your thoughts.",
+      "chromebookStyle": "gold-flash",
+      "dmWhisper": "A player resisted Vladislav's scan. He knows they resisted. He is more interested now."
+    },
+    "onSaveFailure": {
+      "mode": "information",
+      "chromebookText": null,
+      "dmWhisper": "Vladislav read what was uppermost in their mind. The player's most recent spoken concern is what he took. They do not know."
+    },
+    "trigger": "sustained-eye-contact-or-direct-conversation",
+    "note": "He does not intrude without reason. Every scan is deliberate. He takes only what is useful."
+  }
 }

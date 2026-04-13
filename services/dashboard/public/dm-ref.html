@@ -516,6 +516,17 @@
     <div id="combat-tracker">
       <div id="combat-empty">No active combat</div>
     </div>
+
+    <!-- Addition 5 — manually add a token to active combat mid-fight -->
+    <div id="add-to-combat-panel" style="margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:4px;">
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Add to Combat</div>
+      <div style="display:flex;gap:8px;">
+        <input id="add-combat-input" type="text" placeholder="Token name or NPC ID"
+          style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:4px;font-size:13px;">
+        <button class="tool-btn" onclick="addToCombat()">Add</button>
+      </div>
+      <div id="add-combat-status" style="font-size:11px;color:var(--text-dim);margin-top:6px;"></div>
+    </div>
   </div>
 
   <!-- TOOLS TAB -->
@@ -1268,6 +1279,33 @@ setTimeout(Encounter.refresh, 1500);
 // ═══════════════════════════════════════════════════════════════
 // COMBAT TRACKER
 // ═══════════════════════════════════════════════════════════════
+
+// Addition 5 — manually inject a token into active combat from the
+// "Add to Combat" panel. Calls /api/combat/add-combatant with the
+// trimmed input (matched server-side against token name or actorSlug).
+function addToCombat() {
+  var input = document.getElementById('add-combat-input');
+  var status = document.getElementById('add-combat-status');
+  var name = input && input.value ? input.value.trim() : '';
+  if (!name || !status) return;
+
+  status.textContent = 'Adding...';
+  fetch('/api/combat/add-combatant', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: name })
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d && d.ok) {
+      status.textContent = (d.name || name) + ' added at initiative ' + d.initiative;
+      input.value = '';
+    } else {
+      status.textContent = (d && d.error) || ('Not found: ' + name);
+    }
+  }).catch(function(e) {
+    status.textContent = 'Error — ' + (e && e.message || 'check server');
+  });
+}
+
 function renderCombat() {
   var el = $('combat-tracker');
   var meta = $('combat-meta');

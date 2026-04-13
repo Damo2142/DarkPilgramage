@@ -1364,6 +1364,72 @@ class CombatService {
       res.json(combat);
     });
 
+    // Addition 5 — POST /api/combat/add-combatant
+    // DM-side button on dm-ref Tools/Combat tab to add any token to
+    // an active fight mid-combat. Rolls initiative, inserts at the
+    // correct slot (with currentTurn pointer-shift like Addition 4).
+    app.post('/api/combat/add-combatant', (req, res) => {
+      const combat = this._getCombatState();
+      if (!combat.active) return res.status(400).json({ error: 'No active combat' });
+
+      const { name, tokenId } = req.body || {};
+      if (!name && !tokenId) return res.status(400).json({ error: 'name or tokenId required' });
+
+      const tokens = this.state.get('map.tokens') || {};
+      const entry = tokenId
+        ? [tokenId, tokens[tokenId]]
+        : Object.entries(tokens).find(([, t]) =>
+            (t && t.name && t.name.toLowerCase().includes(String(name).toLowerCase())) ||
+            (t && t.actorSlug && t.actorSlug.toLowerCase().includes(String(name).toLowerCase()))
+          );
+      if (!entry || !entry[1]) {
+        return res.status(404).json({ error: `Token not found: ${name || tokenId}` });
+      }
+
+      const [tid, token] = entry;
+      if ((combat.turnOrder || []).some(c => c && c.id === tid)) {
+        return res.status(400).json({ error: `${token.name} is already in combat` });
+      }
+
+      const initMod = this._getInitMod({ ...token, id: tid });
+      const initRoll = this._rollD20();
+      const initiative = initRoll + initMod;
+
+      const newCombatant = {
+        id: tid,
+        name: token.name || tid,
+        type: token.type || 'npc',
+        initiative,
+        initRoll,
+        initMod,
+        hp: token.hp || { current: 10, max: 10 },
+        ac: token.ac || 10,
+        actorSlug: token.actorSlug,
+        conditions: [],
+        deathSaves: { successes: 0, failures: 0 },
+        isAlive: true
+      };
+
+      if (!combat.turnOrder) combat.turnOrder = [];
+      const insertAt = combat.turnOrder.findIndex(c => (c?.initiative ?? -Infinity) < initiative);
+      if (insertAt === -1) {
+        combat.turnOrder.push(newCombatant);
+      } else {
+        combat.turnOrder.splice(insertAt, 0, newCombatant);
+        // Same pointer-shift as Addition 4 so the active turn doesn't change identity
+        if (insertAt <= combat.currentTurn) combat.currentTurn += 1;
+      }
+
+      this._setCombatState(combat);
+      this._broadcastCombat('combat:combatant_added', { combatant: newCombatant });
+      this.bus.dispatch('dm:whisper', {
+        text: `${token.name} added to combat — initiative ${initiative}.`,
+        priority: 1, category: 'combat'
+      });
+
+      res.json({ ok: true, name: token.name, initiative, tokenId: tid });
+    });
+
     // Addition 3 — POST /api/combat/initiate
     // DM confirms a player-initiated combat. Reads combat.pendingInitiation
     // (set by combat:player_initiated subscriber when the comm-router

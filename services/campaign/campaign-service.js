@@ -152,6 +152,21 @@ class CampaignService {
     // Auto-generate recap on session end
     this.bus.subscribe('session:ended', async (env) => {
       await this._generateSessionRecap(env.data);
+      // MemPalace integration 2: mine the session log into the palace so
+      // Max remembers it next session. Failure-silent: if the CLI is
+      // missing or fails the rest of the recap pipeline is unaffected.
+      try {
+        const mempalace = require('../ai/mempalace-client');
+        const path = require('path');
+        const sessionsDir = path.resolve(__dirname, '..', '..', 'sessions');
+        // Fire-and-forget — do not await blocking the recap response,
+        // but use a then/catch so unhandled rejections don't surface.
+        mempalace.mine(sessionsDir, { wing: 'co_dm', room: 'sessions' })
+          .then(ok => console.log(`[Campaign] mempalace mine ${ok ? 'ok' : 'failed-silently'}`))
+          .catch(() => {});
+      } catch (e) {
+        // mempalace-client missing — silent per integration brief
+      }
     }, 'campaign');
 
     // Track timeline events from story beats

@@ -65,10 +65,18 @@ class NpcHandler {
   }
 
   /**
-   * Generate dialogue for a specific NPC
+   * Generate dialogue for a specific NPC.
+   *
+   * MemPalace recall: before building the prompt we ask the palace for
+   * the top 3 results keyed on the NPC. The compressed recall is
+   * injected as a `## PALACE RECALL` section at the top of the context
+   * string. Failure-silent: if the CLI is unavailable or times out, the
+   * context is identical to what the pre-integration code produced.
    */
   async generateDialogue(npcId, manualPrompt = null) {
-    const context = this.ctx.buildNpcContext(npcId);
+    const npcForQuery = this.state.get(`npcs.${npcId}`);
+    const recallTopic = (npcForQuery && npcForQuery.name) || npcId;
+    const context = await this.ctx.buildNpcContextWithRecall(npcId, recallTopic);
     if (!context) return null;
 
     const npc = this.state.get(`npcs.${npcId}`);
@@ -246,6 +254,60 @@ Wrong: Marta flinches, her eyes darting to the door`;
       text: suggestion.text,
       timestamp: Date.now()
     });
+
+    // MemPalace integration 3 — significant NPC interactions get
+    // persisted to a minable file under sessions/, which the
+    // session:ended hook in campaign-service mines into the palace.
+    //
+    // suggestion.importance is honored if upstream sets it (>7 = save);
+    // otherwise we derive significance from keyword presence so the
+    // interesting Session-0 beats land in memory without requiring any
+    // change to the dialogue generator. Failure-silent.
+    try {
+      const score = this._scoreDialogueSignificance(suggestion);
+      if (score > 7) {
+        const mempalace = require('./mempalace-client');
+        const npcName = suggestion.npc || suggestion.npcId || 'NPC';
+        // No single addressed player in this code path — record the
+        // line with the speaker. Future enhancement could associate
+        // with the most recent transcript speaker if known.
+        const line = `${npcName}: "${(suggestion.text || '').replace(/\s+/g, ' ').trim().slice(0, 400)}"`;
+        mempalace.appendMemory(line, { tag: `npc:${suggestion.npcId || 'unknown'}` })
+          .catch(() => {});
+      }
+    } catch (e) {
+      // mempalace-client missing or other issue — silent per brief
+    }
+  }
+
+  /**
+   * Heuristic significance score for an NPC dialogue suggestion. Used by
+   * the MemPalace integration to decide whether to persist the line for
+   * next session's recall. Returns 0–10.
+   *
+   * Honors suggestion.importance if present; otherwise scores by keyword
+   * matches against campaign-critical topics (Vladislav, Necronomicon,
+   * Houska, the Letavec, the cellar, southeast pull) plus length.
+   */
+  _scoreDialogueSignificance(suggestion) {
+    if (Number.isFinite(suggestion?.importance)) return Number(suggestion.importance);
+    const text = String(suggestion?.text || '').toLowerCase();
+    if (!text) return 0;
+    let score = 0;
+    const keywords = [
+      'vladislav', 'necronomicon', 'page', 'houska', 'orava', 'cellar',
+      'letavec', 'southeast', 'pieter', 'piotr', 'tomas', 'marta',
+      'wolf', 'spawn', 'hunter', 'bloodline', 'patron', 'ancient'
+    ];
+    for (const kw of keywords) {
+      if (text.includes(kw)) score += 2;
+    }
+    if (text.length > 100) score += 2;
+    if (text.length > 200) score += 1;
+    // Heavyweight NPCs always interesting for memory
+    const id = String(suggestion?.npcId || '').toLowerCase();
+    if (id === 'hooded-stranger' || id === 'vladislav' || id === 'tomas') score += 3;
+    return Math.min(10, score);
   }
 
   /**

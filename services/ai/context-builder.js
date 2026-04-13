@@ -4,6 +4,16 @@
  * into a context block the AI can reason about.
  */
 
+// MemPalace client — used by the async recall wrappers below. Require is
+// done lazily so a missing module would not break the existing sync paths.
+let _mempalace = null;
+function _getMemPalace() {
+  if (_mempalace) return _mempalace;
+  try { _mempalace = require('./mempalace-client'); }
+  catch (e) { _mempalace = { search: async () => null, isAvailable: async () => false }; }
+  return _mempalace;
+}
+
 class ContextBuilder {
   constructor(state, config) {
     this.state = state;
@@ -106,10 +116,19 @@ class ContextBuilder {
   }
 
   /**
-   * Get the full context as a single string for system prompts
+   * Get the full context as a single string for system prompts.
+   *
+   * Palace recall (if present) is rendered FIRST so it lands before the
+   * bulkier state sections that get truncated under prompt-budget
+   * pressure. The recall string is already bounded to ~200 tokens by
+   * the client.
    */
   toPromptString(context) {
     const parts = [];
+
+    if (context.palaceRecall) {
+      parts.push(`## PALACE RECALL\n${context.palaceRecall}`);
+    }
 
     if (context.scene) {
       parts.push(`## Current Scene\n${context.scene}`);
@@ -396,6 +415,48 @@ class ContextBuilder {
     if (story.cluesDiscovered?.length) parts.push(`Clues found: ${story.cluesDiscovered.join(', ')}`);
 
     return parts.join('\n') || 'No story tracking active';
+  }
+
+  /**
+   * MemPalace-aware context builders. These are async wrappers around
+   * the sync builders above — they run the palace search first, then
+   * attach the compressed recall as `context.palaceRecall` which
+   * toPromptString renders as a `## PALACE RECALL` section.
+   *
+   * The palace search is silent-fail: if the CLI is missing or times
+   * out, palaceRecall is omitted and the context is identical to what
+   * the sync builder would produce. Callers never need to try/catch.
+   */
+
+  async getPalaceRecall(topic, opts = {}) {
+    if (!topic || typeof topic !== 'string') return null;
+    const mp = _getMemPalace();
+    try {
+      return await mp.search(topic, { results: 3, ...opts });
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async buildNpcContextWithRecall(npcId, topic) {
+    const ctx = this.buildNpcContext(npcId);
+    if (!ctx) return null;
+    // Default topic = NPC name, which is what Max would actually recall against
+    const query = topic || ctx.npc?.split('\n')?.[0]?.replace(/^Name:\s*/, '') || npcId;
+    ctx.palaceRecall = await this.getPalaceRecall(query);
+    return ctx;
+  }
+
+  async buildAtmosphereContextWithRecall(topic) {
+    const ctx = this.buildAtmosphereContext();
+    if (topic) ctx.palaceRecall = await this.getPalaceRecall(topic);
+    return ctx;
+  }
+
+  async buildStoryContextWithRecall(topic) {
+    const ctx = this.buildStoryContext();
+    if (topic) ctx.palaceRecall = await this.getPalaceRecall(topic);
+    return ctx;
   }
 
   /**

@@ -197,6 +197,26 @@ class DashboardService {
       res.json(this.config || {});
     });
 
+    // ── MemPalace integration 4 — search the palace from the UI ──
+    // GET /api/mempalace/search?q={query}&room={room}&results={n}
+    // Failure-silent: if the CLI is missing, returns { ok:false, recall:null }.
+    this.app.get('/api/mempalace/search', async (req, res) => {
+      const q = req.query?.q;
+      if (!q || typeof q !== 'string') {
+        return res.status(400).json({ ok: false, error: 'q required' });
+      }
+      try {
+        const mempalace = require('../ai/mempalace-client');
+        const recall = await mempalace.search(q, {
+          room: req.query.room,
+          results: Math.max(1, Math.min(10, parseInt(req.query.results, 10) || 3))
+        });
+        res.json({ ok: true, query: q, recall });
+      } catch (e) {
+        res.json({ ok: false, query: q, recall: null, error: e.message });
+      }
+    });
+
     // ─── Latency telemetry (CR-3) ───────────────────────────────
     // Tracks Max audio pipeline latency. Populated by voice-service via
     // the max:latency event the dashboard subscribes to via wildcard.

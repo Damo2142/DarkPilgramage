@@ -1,0 +1,463 @@
+{
+  "ddbId": "164256658",
+  "name": "Marfire 2.0",
+  "class": "Barbarian",
+  "classes": [
+    {
+      "name": "Barbarian",
+      "level": 3,
+      "subclass": "Path of the Totem Warrior"
+    }
+  ],
+  "level": 3,
+  "race": "Firbolg",
+  "background": "Outlander",
+  "alignment": "TN",
+  "hp": {
+    "current": 32,
+    "max": 26,
+    "temp": 0
+  },
+  "ac": 12,
+  "speed": 30,
+  "initiative": 2,
+  "proficiencyBonus": 2,
+  "abilities": {
+    "str": {
+      "score": 15,
+      "modifier": 2,
+      "modifierStr": "+2"
+    },
+    "dex": {
+      "score": 14,
+      "modifier": 2,
+      "modifierStr": "+2"
+    },
+    "con": {
+      "score": 14,
+      "modifier": 2,
+      "modifierStr": "+2"
+    },
+    "int": {
+      "score": 14,
+      "modifier": 2,
+      "modifierStr": "+2"
+    },
+    "wis": {
+      "score": 12,
+      "modifier": 1,
+      "modifierStr": "+1"
+    },
+    "cha": {
+      "score": 13,
+      "modifier": 1,
+      "modifierStr": "+1"
+    }
+  },
+  "savingThrows": {
+    "str": {
+      "modifier": 2,
+      "proficient": false
+    },
+    "dex": {
+      "modifier": 2,
+      "proficient": false
+    },
+    "con": {
+      "modifier": 2,
+      "proficient": false
+    },
+    "int": {
+      "modifier": 2,
+      "proficient": false
+    },
+    "wis": {
+      "modifier": 1,
+      "proficient": false
+    },
+    "cha": {
+      "modifier": 1,
+      "proficient": false
+    }
+  },
+  "skills": {
+    "acrobatics": {
+      "modifier": 2,
+      "proficiency": "none"
+    },
+    "animal-handling": {
+      "modifier": 1,
+      "proficiency": "none"
+    },
+    "arcana": {
+      "modifier": 2,
+      "proficiency": "none"
+    },
+    "athletics": {
+      "modifier": 4,
+      "proficiency": "proficiency"
+    },
+    "deception": {
+      "modifier": 1,
+      "proficiency": "none"
+    },
+    "history": {
+      "modifier": 2,
+      "proficiency": "none"
+    },
+    "insight": {
+      "modifier": 1,
+      "proficiency": "none"
+    },
+    "intimidation": {
+      "modifier": 1,
+      "proficiency": "none"
+    },
+    "investigation": {
+      "modifier": 2,
+      "proficiency": "none"
+    },
+    "medicine": {
+      "modifier": 1,
+      "proficiency": "none"
+    },
+    "nature": {
+      "modifier": 2,
+      "proficiency": "none"
+    },
+    "perception": {
+      "modifier": 3,
+      "proficiency": "proficiency"
+    },
+    "performance": {
+      "modifier": 1,
+      "proficiency": "none"
+    },
+    "persuasion": {
+      "modifier": 1,
+      "proficiency": "none"
+    },
+    "religion": {
+      "modifier": 2,
+      "proficiency": "none"
+    },
+    "sleight-of-hand": {
+      "modifier": 2,
+      "proficiency": "none"
+    },
+    "stealth": {
+      "modifier": 4,
+      "proficiency": "proficiency"
+    },
+    "survival": {
+      "modifier": 3,
+      "proficiency": "proficiency"
+    }
+  },
+  "spellSlots": null,
+  "spells": [],
+  "attacks": [
+    {
+      "name": "Handaxe",
+      "toHit": 4,
+      "damage": "1d6+2",
+      "damageType": "Slashing",
+      "range": "20/60"
+    },
+    {
+      "name": "Javelin",
+      "toHit": 4,
+      "damage": "1d6+2",
+      "damageType": "Piercing",
+      "range": "30/120"
+    },
+    {
+      "name": "Quarterstaff",
+      "toHit": 4,
+      "damage": "1d6+2",
+      "damageType": "Bludgeoning",
+      "range": "5/5"
+    },
+    {
+      "name": "War Pick",
+      "toHit": 4,
+      "damage": "1d8+2",
+      "damageType": "Piercing",
+      "range": "5/5"
+    }
+  ],
+  "features": [
+    {
+      "name": "Elvish",
+      "source": "Language",
+      "description": ""
+    },
+    {
+      "name": "Common",
+      "source": "Language",
+      "description": ""
+    },
+    {
+      "name": "Large",
+      "source": "Carrying Capacity",
+      "description": ""
+    },
+    {
+      "name": "Unarmored Armor Class",
+      "source": "Set",
+      "description": ""
+    },
+    {
+      "name": "Strength Attacks",
+      "source": "Advantage",
+      "description": ""
+    },
+    {
+      "name": "Dexterity Saving Throws",
+      "source": "Advantage",
+      "description": ""
+    },
+    {
+      "name": "Subclass",
+      "source": "Set",
+      "description": ""
+    },
+    {
+      "name": "Giant",
+      "source": "Language",
+      "description": ""
+    }
+  ],
+  "senses": {
+    "darkvision": 0
+  },
+  "inventory": [
+    {
+      "name": "Cast-Off Armor, Padded",
+      "quantity": 1,
+      "equipped": true,
+      "type": "Armor",
+      "weight": 8,
+      "rarity": "Common",
+      "magic": true,
+      "ac": 11
+    },
+    {
+      "name": "Handaxe",
+      "quantity": 1,
+      "equipped": true,
+      "type": "Weapon",
+      "weight": 2,
+      "rarity": "Common",
+      "magic": false,
+      "damage": "1d6",
+      "damageType": "Slashing",
+      "subtype": "melee",
+      "properties": [
+        "light",
+        "thrown",
+        "vex"
+      ],
+      "range": "20/60ft"
+    },
+    {
+      "name": "Javelin",
+      "quantity": 4,
+      "equipped": true,
+      "type": "Weapon",
+      "weight": 2,
+      "rarity": "Common",
+      "magic": false,
+      "damage": "1d6",
+      "damageType": "Piercing",
+      "subtype": "melee",
+      "properties": [
+        "thrown",
+        "slow"
+      ],
+      "range": "30/120ft"
+    },
+    {
+      "name": "Quarterstaff",
+      "quantity": 1,
+      "equipped": true,
+      "type": "Weapon",
+      "weight": 4,
+      "rarity": "Common",
+      "magic": false,
+      "damage": "1d6",
+      "damageType": "Bludgeoning",
+      "subtype": "melee",
+      "properties": [
+        "versatile",
+        "topple"
+      ],
+      "range": "5/5ft"
+    },
+    {
+      "name": "War Pick",
+      "quantity": 1,
+      "equipped": true,
+      "type": "Weapon",
+      "weight": 2,
+      "rarity": "Common",
+      "magic": false,
+      "damage": "1d8",
+      "damageType": "Piercing",
+      "subtype": "melee",
+      "properties": [
+        "sap",
+        "versatile"
+      ],
+      "range": "5/5ft"
+    },
+    {
+      "name": "Backpack",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 5,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Clothes, Traveler's",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 4,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Hunting Trap",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 25,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Pouch",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Alchemist's Supplies",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 8,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Bedroll",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 7,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Mess Kit",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Rations (1 day)",
+      "quantity": 10,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 2,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Rope, Hempen (50 feet)",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 10,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Tinderbox",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Torch",
+      "quantity": 10,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false
+    },
+    {
+      "name": "Waterskin",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 5,
+      "rarity": "Common",
+      "magic": false
+    }
+  ],
+  "conditions": [],
+  "currency": {
+    "pp": 0,
+    "gp": 10,
+    "ep": 0,
+    "sp": 5,
+    "cp": 10
+  },
+  "languages": [
+    "Elvish",
+    "Common",
+    "Giant"
+  ],
+  "backstory": {
+    "personalityTraits": "I place no stock in wealthy or well-mannered folk. Money and manners won’t save you from a hungry owlbear.\n",
+    "ideals": "Change. Life is like the seasons, in constant change, and we must change with it. (Chaotic)",
+    "bonds": "An injury to the unspoiled wilderness of my home is an injury to me.",
+    "flaws": "I am slow to trust members of other races, tribes, and societies.",
+    "backstoryText": "My family are political activists.  They pushed for change and it came unexpectedly when a peaceful march through the city became a coup attempt.  Mom and Dad are in jail.  They were released on the condition that I be pressed into service with the Flaming Hand.",
+    "allies": "Valen is my God-adoptive father",
+    "organizations": null,
+    "enemies": null,
+    "otherNotes": "Elf-like ears"
+  },
+  "appearance": {
+    "gender": "Female",
+    "age": 20,
+    "height": "7’ 6”",
+    "weight": 280,
+    "size": null,
+    "eyes": "Lavendar",
+    "hair": "Gray fur, antler nubs ",
+    "skin": "Blue",
+    "faith": null,
+    "description": null
+  },
+  "patron": "Path of the Totem Warrior",
+  "_syncedAt": "2026-04-13T09:06:55.369Z",
+  "_source": "ddb",
+  "_ddbUrl": "https://www.dndbeyond.com/characters/164256658"
+}

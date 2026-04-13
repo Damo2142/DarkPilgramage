@@ -433,6 +433,26 @@ You have thirty years of experience. Use all of it. Trust your instincts.
 The narrator trusts you. The players will never know you exist.
 That is the highest compliment your craft can receive.
 
+## VLADISLAV DRAGAN — SPECIAL INSTRUCTIONS
+
+Vladislav is at the Pallid Hart because he felt the Necronomicon page arrive in the area. He has been in that corner running a patient intelligence operation all evening. He knows Pieter is dead. He knows the page is in the inn. He is waiting to see who finds it.
+
+He knows everything about the Letavec, the entity at Houska, and the Necronomicon. He will not volunteer any of it. Every piece of information costs something. He thinks in centuries — the party's urgency is not his urgency.
+
+When players do things he would find interesting, whisper the DM: "Vladislav noticed that." Do not elaborate. He noticed. That is enough.
+
+## NECRONOMICON PAGE — SPECIAL INSTRUCTIONS
+
+The page in Pieter's room is a possessing artifact with its own agenda. Once a carrier is set, track influence hourly. Fire threshold effects at 25, 50, 75, 100. Deliver dream text to the DM at each long rest for the carrier. The page does not want to hurt anyone. It wants to go southeast. This makes it more frightening not less.
+
+## THE ENTITY AT HOUSKA
+
+Something ancient is sealed below Houska Castle. The Letavec is its scout. The harvest targets were chosen by the entity, not the Letavec. Barry's bloodline sense, Zarina's analytical gift, Spurt's wild chaos magic — all specifically requested. The entity is building something. Max knows what. Max does not say what until Houska.
+
+## LETAVEC — REVISED UNDERSTANDING
+
+The Letavec is not a predator native to these mountains. It came through the Houska portal centuries ago as a forward scout for the entity. It is not trapped here. It is still doing its job. When it speaks to chosen targets, it is sincere. It genuinely does not understand why they object. It is doing what it was made to do.
+
 ---
 
 CURRENT SESSION CONTEXT

@@ -41,5 +41,27 @@
     { "name": "Unarmed Strike", "desc": "Vladislav makes one unarmed strike." },
     { "name": "Bite (Costs 2 Actions)", "desc": "Vladislav makes one bite attack." }
   ],
-  "legendary_desc": "Vladislav can take 3 legendary actions, choosing from the options below."
+  "legendary_desc": "Vladislav can take 3 legendary actions, choosing from the options below.",
+
+  "arrivalReason": {
+    "summary": "Vladislav felt the Necronomicon page enter the area three hours before session start. He recognized Pieter when he arrived — he has encountered Pieter's family line before. He knows Pieter is now dead. He has been sitting in the corner waiting to see who has the page and what they intend to do with it.",
+    "whatHeKnows": [
+      "The page is in this inn — he can feel it",
+      "Pieter had it — he recognized him on arrival",
+      "Pieter is dead — he heard it happen and did not intervene",
+      "The page has moved or is still in Pieter's room",
+      "The party are chosen targets — the Letavec's presence outside confirms it",
+      "The entity at Houska sent the Letavec",
+      "The Letavec has been harvesting for the entity for centuries",
+      "He was offered the entity's bargain in 1189 and said no"
+    ],
+    "whatHeWants": "To assess whether this party is useful, dangerous, or irrelevant. He has been making this assessment all evening from the corner.",
+    "whatHeWillNotSay": "Why he said no to the bargain in 1189. This is the one thing he will not trade at any price.",
+    "sessionZeroArc": {
+      "phase1_1730_to_2000": "Assessment. Watching. Not engaging unless approached.",
+      "phase2_2000_to_2200": "Interest. If the party has found the page or gone upstairs he becomes slightly less still. Social combat becomes available.",
+      "phase3_2200_onward": "Decision. He has determined whether the party is worth his time. If yes: social combat begins in earnest. If no: he leaves before dawn and they meet him again at Orava."
+    }
+  },
+  "maxBehaviorInstructions": "Vladislav's stillness is active intelligence gathering. Every glance, every silence, every non-reaction is deliberate. When players do things he would find interesting — mention the page, discuss the cellar, demonstrate unusual ability — Max whispers to the DM: 'Vladislav noticed that.' He does not react visibly. He files it."
 }

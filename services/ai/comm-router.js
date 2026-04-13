@@ -102,22 +102,21 @@ class CommRouter {
     this.bus.subscribe('characters:loaded', () => this._refreshNameCache(), 'comm-router');
     this.bus.subscribe('state:session_loaded', () => this._refreshNameCache(), 'comm-router');
 
-    // Primary chat handling — intercepts player:chat events
+    // Primary chat handling — intercepts player:chat events.
+    // routePlayerInput is async since Build 5 (combat parser); we return
+    // the promise so the event-bus wrapper awaits it, and attach .catch
+    // so rejections don't become unhandled rejections.
     this.bus.subscribe('player:chat', (env) => {
-      try {
-        this.routePlayerInput(env.data || {});
-      } catch (e) {
+      return this.routePlayerInput(env.data || {}).catch(e => {
         console.warn('[CommRouter] route error:', e.message);
-      }
+      });
     }, 'comm-router');
 
     // Voice transcription that's NOT a Max wake word also goes through routing
     this.bus.subscribe('transcript:player', (env) => {
-      try {
-        const d = env.data || {};
-        if (!d.playerId) return;
-        this.routePlayerInput({ playerId: d.playerId, text: d.text || '' });
-      } catch (e) {}
+      const d = env.data || {};
+      if (!d.playerId) return;
+      return this.routePlayerInput({ playerId: d.playerId, text: d.text || '' }).catch(() => {});
     }, 'comm-router');
 
     // NPC dialogue dispatched by AI engine — apply proximity routing
@@ -234,7 +233,7 @@ class CommRouter {
 
   // ─── Main router ───────────────────────────────────────────────
 
-  routePlayerInput(data) {
+  async routePlayerInput(data) {
     const { playerId, text } = data;
     if (!playerId || !text) return;
 
@@ -243,6 +242,21 @@ class CommRouter {
     const safeText = this._sanitizePlayerInput(text, playerId);
     if (!safeText) return;
     data = { ...data, text: safeText };
+
+    // Combat action parsing — fires first during active combat. Attack
+    // declarations, damage rolls, spell casting, saves, movement, and
+    // the other standard actions are resolved here before they can be
+    // routed to NPC / P2P / Max as dialogue. If the parser consumes the
+    // utterance it returns true and we stop routing.
+    try {
+      const combat = this.state.get('combat');
+      if (combat && combat.active) {
+        const handled = await this._parseCombatSpeech(safeText, playerId);
+        if (handled) return;
+      }
+    } catch (e) {
+      console.warn('[CommRouter] combat parser error:', e.message);
+    }
 
     // Detect language switch in player utterance (e.g. "in Draconic", "in Elvish", "in Slovak")
     const langId = this._detectLanguageHint(safeText);
@@ -967,6 +981,254 @@ class CommRouter {
       text
     });
     // Deliberate: no dm:whisper, no logging
+  }
+
+  // ─── Combat action parser ──────────────────────────────────────
+  //
+  // Fires BEFORE the rest of routing when combat.active is true. Returns
+  // true when the utterance was consumed (so routePlayerInput should not
+  // continue to NPC / P2P / Max routing). Returns false when nothing
+  // matched — routing continues normally.
+  //
+  // Damage and HP changes are applied via combat-service.modifyHp()
+  // directly — there is no `combat:apply_damage` event in this codebase.
+  //
+  // Pending state lives under `combat.pendingDamage` and
+  // `combat.pendingSpell` as dotted-path state, which does not disturb
+  // the main combat object (state-manager `set` is path-scoped).
+
+  async _parseCombatSpeech(transcript, playerId) {
+    const combat = this.state.get('combat') || {};
+    if (!combat.active) return false;
+
+    const text = String(transcript || '').toLowerCase().trim();
+    if (!text) return false;
+
+    const combatants = combat.turnOrder || [];
+    const playerState = this.state.get(`players.${playerId}`) || {};
+    const character = playerState.character;
+    if (!character) return false;
+
+    // ── ATTACK DECLARATION ──────────────────────────────────────
+    // "I attack the spawn with my dagger, I rolled a 17"
+    // "attack spawn dagger 17"
+    const attackMatch = text.match(/attack\s+(?:the\s+)?(.+?)(?:\s+with\s+(?:my\s+)?(.+?))?\s*[,.]?\s*(?:i\s+)?rolled?\s+(?:a\s+)?(\d+)/i);
+    if (attackMatch) {
+      const targetName = attackMatch[1].trim();
+      const weaponName = (attackMatch[2] || 'weapon').trim();
+      const roll = parseInt(attackMatch[3], 10);
+
+      const target = combatants.find(c =>
+        (c.name || '').toLowerCase().includes(targetName.toLowerCase())
+      );
+      if (!target) {
+        this.bus.dispatch('dm:whisper', {
+          text: `Combat parser: could not find target "${targetName}" in combat. Check spelling.`,
+          priority: 2, category: 'combat', source: 'comm-router'
+        });
+        return true;
+      }
+
+      const attackMod = this._getAttackModifier(character, weaponName);
+      const total = roll + attackMod;
+      const targetAC = target.ac || 10;
+      const hit = total >= targetAC;
+
+      this.bus.dispatch('dm:whisper', {
+        text: `${character.name} attacks ${target.name} with ${weaponName} — rolled ${roll} + ${attackMod} = ${total} vs AC ${targetAC} — ${hit ? 'HIT' : 'MISS'}`,
+        priority: 1, category: 'combat', source: 'comm-router'
+      });
+
+      if (hit) {
+        this.state.set('combat.pendingDamage', {
+          attackerId: playerId,
+          targetId: target.id || target.name,
+          weapon: weaponName,
+          timestamp: Date.now()
+        });
+        this.bus.dispatch('dm:whisper', {
+          text: `Roll damage for ${weaponName}.`,
+          priority: 1, category: 'combat', source: 'comm-router'
+        });
+      }
+      return true;
+    }
+
+    // ── DAMAGE ROLL ─────────────────────────────────────────────
+    // "I rolled 6 for damage" / "6 damage" / "damage 6"
+    const damageMatch = text.match(/(?:rolled?\s+(?:a\s+)?(\d+)\s+(?:for\s+)?damage|(\d+)\s+damage|damage\s+(\d+))/i);
+    const pending = this.state.get('combat.pendingDamage');
+    if (damageMatch && pending) {
+      const roll = parseInt(damageMatch[1] || damageMatch[2] || damageMatch[3], 10);
+      const damageBonus = this._getDamageModifier(character, pending.weapon);
+      const totalDamage = roll + damageBonus;
+
+      // Apply damage via combat-service directly (no combat:apply_damage event exists).
+      const combatSvc = this.orchestrator && this.orchestrator.getService('combat');
+      if (combatSvc && typeof combatSvc.modifyHp === 'function') {
+        combatSvc.modifyHp(pending.targetId, -Math.abs(totalDamage));
+      } else {
+        this.bus.dispatch('dm:whisper', {
+          text: `Combat parser: combat service unavailable — apply ${totalDamage} damage to ${pending.targetId} manually.`,
+          priority: 1, category: 'combat', source: 'comm-router'
+        });
+      }
+
+      this.state.set('combat.pendingDamage', null);
+
+      this.bus.dispatch('dm:whisper', {
+        text: `${totalDamage} damage applied to ${pending.targetId} (rolled ${roll} + ${damageBonus} ${pending.weapon || ''} modifier).`,
+        priority: 1, category: 'combat', source: 'comm-router'
+      });
+      return true;
+    }
+
+    // ── SPELL DECLARATION ──────────────────────────────────────
+    // "I cast fireball at the spawn" / "cast fireball"
+    const spellMatch = text.match(/cast\s+(.+?)(?:\s+(?:at|on)\s+(.+))?$/i);
+    if (spellMatch) {
+      const spellName = spellMatch[1].trim();
+      const targetName = spellMatch[2] ? spellMatch[2].trim() : null;
+
+      const spellData = this._findSpell(character, spellName);
+      if (!spellData) {
+        this.bus.dispatch('dm:whisper', {
+          text: `Combat parser: spell "${spellName}" not found on ${character.name}'s sheet. Resolve manually.`,
+          priority: 2, category: 'combat', source: 'comm-router'
+        });
+        return true;
+      }
+
+      const spellDC = this._getSpellDC(character);
+      const spellMod = this._getSpellMod(character);
+
+      this.bus.dispatch('dm:whisper', {
+        text:
+          `${character.name} casts ${spellData.name}. ` +
+          `${spellData.description || ''} ` +
+          `${spellData.requiresSave ? `DC ${spellDC} ${spellData.saveType || 'save'}.` : `Spell attack: +${spellMod}.`} ` +
+          `${targetName ? `Target: ${targetName}.` : ''}`.trim(),
+        priority: 1, category: 'combat', source: 'comm-router'
+      });
+
+      if (spellData.requiresSave) {
+        this.state.set('combat.pendingSpell', {
+          casterId: playerId,
+          spell: spellData,
+          dc: spellDC,
+          targetName,
+          timestamp: Date.now()
+        });
+      }
+      return true;
+    }
+
+    // ── SAVE RESULT ────────────────────────────────────────────
+    // Only if a spell save is pending: "they rolled 12" / "spawn rolled 12"
+    const pendingSpell = this.state.get('combat.pendingSpell');
+    const saveMatch = text.match(/(?:they|it|\w+)\s+rolled?\s+(?:a\s+)?(\d+)/i);
+    if (saveMatch && pendingSpell) {
+      const roll = parseInt(saveMatch[1], 10);
+      const saved = roll >= pendingSpell.dc;
+      const spell = pendingSpell.spell;
+
+      this.bus.dispatch('dm:whisper', {
+        text: `Save result: rolled ${roll} vs DC ${pendingSpell.dc} — ${saved ? 'SAVED' : 'FAILED'}. ${saved ? (spell.saveEffect || 'Half damage.') : (spell.failEffect || 'Full effect.')}`,
+        priority: 1, category: 'combat', source: 'comm-router'
+      });
+      this.state.set('combat.pendingSpell', null);
+      return true;
+    }
+
+    // ── MOVEMENT ───────────────────────────────────────────────
+    const moveMatch = text.match(/(?:i\s+)?move\s+(?:to\s+)?(.+)/i);
+    if (moveMatch) {
+      this.bus.dispatch('dm:whisper', {
+        text: `${character.name} moves to ${moveMatch[1].trim()}. Move token on map.`,
+        priority: 2, category: 'combat', source: 'comm-router'
+      });
+      return true;
+    }
+
+    // ── STANDARD ACTIONS ───────────────────────────────────────
+    const actionMap = {
+      dodge: 'Until next turn: attacks against them have disadvantage, Dex saves have advantage.',
+      disengage: 'Movement this turn does not provoke opportunity attacks.',
+      dash: 'Movement doubles this turn.',
+      help: 'Choose a creature — next attack roll against target by ally has advantage.',
+      hide: 'Dexterity (Stealth) check — if success, hidden until they attack or are spotted.',
+      ready: 'Describe the trigger and the action they are readying.'
+    };
+    for (const [action, description] of Object.entries(actionMap)) {
+      // Require word-boundary match so "dodgeball" etc. don't trigger
+      const re = new RegExp(`\\b${action}\\b`, 'i');
+      if (re.test(text)) {
+        this.bus.dispatch('dm:whisper', {
+          text: `${character.name} takes the ${action} action. ${description}`,
+          priority: 2, category: 'combat', source: 'comm-router'
+        });
+        return true;
+      }
+    }
+
+    return false; // Nothing matched — let normal routing continue
+  }
+
+  _getAttackModifier(character, weaponName) {
+    const wn = String(weaponName || '').toLowerCase();
+    // Try character attacks (DDB-synced shape)
+    const atkList = character.attacks || [];
+    for (const a of atkList) {
+      if (!a || !a.name) continue;
+      if (a.name.toLowerCase().includes(wn) && Number.isFinite(a.attackBonus)) {
+        return a.attackBonus;
+      }
+    }
+    // Fallback: ability mod + proficiency
+    const strMod = character.abilities?.str?.modifier ?? 0;
+    const dexMod = character.abilities?.dex?.modifier ?? 0;
+    const profBonus = character.proficiencyBonus ?? 2;
+    const usesDex = ['dagger', 'rapier', 'bow', 'crossbow', 'shortsword', 'scimitar'].some(w => wn.includes(w));
+    return (usesDex ? dexMod : strMod) + profBonus;
+  }
+
+  _getDamageModifier(character, weaponName) {
+    const wn = String(weaponName || '').toLowerCase();
+    // If the sheet has explicit damage bonus on an attack, use it
+    const atkList = character.attacks || [];
+    for (const a of atkList) {
+      if (!a || !a.name) continue;
+      if (a.name.toLowerCase().includes(wn)) {
+        // Parse "1d4+4" → +4 bonus
+        const m = typeof a.damage === 'string' ? a.damage.match(/\+(\d+)\s*$/) : null;
+        if (m) return parseInt(m[1], 10);
+      }
+    }
+    const strMod = character.abilities?.str?.modifier ?? 0;
+    const dexMod = character.abilities?.dex?.modifier ?? 0;
+    const usesDex = ['dagger', 'rapier', 'bow', 'crossbow', 'shortsword', 'scimitar'].some(w => wn.includes(w));
+    return usesDex ? dexMod : strMod;
+  }
+
+  _findSpell(character, spellName) {
+    const sn = String(spellName || '').toLowerCase();
+    const spells = character.spells || [];
+    return spells.find(s => s && s.name && s.name.toLowerCase().includes(sn)) || null;
+  }
+
+  _getSpellDC(character) {
+    const spellMod = this._getSpellMod(character);
+    const profBonus = character.proficiencyBonus ?? 2;
+    const explicit = character.spellSaveDC;
+    return Number.isFinite(explicit) ? explicit : (8 + profBonus + spellMod);
+  }
+
+  _getSpellMod(character) {
+    const cls = String(character.class || '').toLowerCase();
+    if (['wizard', 'artificer'].includes(cls)) return character.abilities?.int?.modifier ?? 0;
+    if (['cleric', 'druid', 'ranger'].includes(cls)) return character.abilities?.wis?.modifier ?? 0;
+    // Sorcerer, Warlock, Bard, Paladin, and the rest default to CHA
+    return character.abilities?.cha?.modifier ?? 0;
   }
 
   // ─── Helpers ───────────────────────────────────────────────────

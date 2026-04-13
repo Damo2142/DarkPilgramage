@@ -1105,6 +1105,27 @@ class CommRouter {
     const character = playerState.character;
     if (!character) return false;
 
+    // Addition 4 — if this player has just declared a combat action but
+    // is not yet in initiative order, roll initiative and dispatch
+    // combat:player_joins so combat-service inserts them at the right
+    // position. Do NOT return — they still declared an action; let the
+    // rest of _parseCombatSpeech handle the attack/spell/etc.
+    const alreadyIn = combatants.some(c => c && (c.id === playerId || c.playerId === playerId));
+    if (!alreadyIn) {
+      const dexMod = character.abilities?.dex?.modifier ?? 0;
+      const initiativeRoll = Math.floor(Math.random() * 20) + 1 + dexMod;
+      this.bus.dispatch('combat:player_joins', {
+        playerId,
+        playerName: character.name || playerId,
+        initiative: initiativeRoll
+      });
+      this.bus.dispatch('dm:whisper', {
+        text: `${character.name || playerId} joins combat — initiative ${initiativeRoll}. Inserting into turn order.`,
+        priority: 1, category: 'combat', source: 'comm-router'
+      });
+      // fall through and parse their declared action below
+    }
+
     // ── ATTACK DECLARATION ──────────────────────────────────────
     // "I attack the spawn with my dagger, I rolled a 17"
     // "attack spawn dagger 17"

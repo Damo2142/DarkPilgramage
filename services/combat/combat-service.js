@@ -1967,6 +1967,74 @@ Respond with JSON: { "items": [{ "name": "...", "description": "...", "type": "w
         timestamp: Date.now()
       });
     }, 'combat');
+
+    // Addition 4 — player joins active combat mid-fight. Comm-router
+    // dispatches this when a not-yet-in-combat player declares an action.
+    // Insert at correct initiative position (turn order is sorted high-
+    // to-low). No-op if combat isn't active or the player is somehow
+    // already there.
+    this.bus.subscribe('combat:player_joins', (env) => {
+      const data = env.data || {};
+      const combat = this._getCombatState();
+      if (!combat.active) return;
+      const { playerId, playerName, initiative } = data;
+      if (!playerId || !Number.isFinite(initiative)) return;
+
+      // Find this player's token (PC tokens are usually keyed by playerId)
+      const tokens = this.state.get('map.tokens') || {};
+      const tokenEntry = Object.entries(tokens).find(([tid, t]) =>
+        tid === playerId
+        || (t && (t.playerId === playerId || t.id === playerId || t.actorSlug === playerId))
+      );
+      if (!tokenEntry) {
+        this.bus.dispatch('dm:whisper', {
+          text: `Combat: ${playerName || playerId} wants to join but no map token found. Place a token first.`,
+          priority: 1, category: 'combat'
+        });
+        return;
+      }
+      const [tokenId, token] = tokenEntry;
+
+      // Already in combat? bail
+      if ((combat.turnOrder || []).some(c => c && (c.id === tokenId || c.playerId === playerId))) return;
+
+      const newCombatant = {
+        id: tokenId,
+        playerId,
+        name: token.name || playerName || playerId,
+        type: 'pc',
+        initiative,
+        initRoll: initiative,
+        initMod: 0,
+        hp: token.hp || { current: 10, max: 10 },
+        ac: token.ac || 10,
+        conditions: [],
+        deathSaves: { successes: 0, failures: 0 },
+        isAlive: true
+      };
+
+      // Insert at the right initiative position (turnOrder is sorted desc).
+      // findIndex returns first slot where existing initiative is LOWER —
+      // splice in there. If no such slot, push to end.
+      if (!combat.turnOrder) combat.turnOrder = [];
+      const insertAt = combat.turnOrder.findIndex(c => (c?.initiative ?? -Infinity) < initiative);
+      if (insertAt === -1) {
+        combat.turnOrder.push(newCombatant);
+      } else {
+        combat.turnOrder.splice(insertAt, 0, newCombatant);
+        // If we inserted at or before currentTurn, the pointer needs to move
+        // one slot right so it still references the same combatant.
+        if (insertAt <= combat.currentTurn) combat.currentTurn += 1;
+      }
+
+      this._setCombatState(combat);
+      this._broadcastCombat('combat:combatant_added', { combatant: newCombatant });
+
+      this.bus.dispatch('dm:whisper', {
+        text: `${newCombatant.name} inserted into turn order at initiative ${initiative}.`,
+        priority: 2, category: 'combat'
+      });
+    }, 'combat');
   }
 
   async stop() {

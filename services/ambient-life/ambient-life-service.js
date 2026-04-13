@@ -92,6 +92,20 @@ class AmbientLifeService {
     // ── CREATURE TOKEN REGISTRY ──────────────────────────────────
     // tokenId → { creature, location, placed }
     this._creatureTokens = new Map();
+
+    // ── NECRONOMICON PAGE (artifact NPC) ─────────────────────────
+    // Once a carrier is set, _tickNecronomiconPage runs each game-hour
+    // and attempts to escalate influence via passive Wisdom saves.
+    // Threshold effects fire at 25/50/75/100. Page config lives at
+    // config/npcs/necronomicon-page.json — loaded lazily on first need.
+    this._pageState = {
+      carrierId: null,
+      influence: 0,
+      lastHourTicked: -1,
+      thresholdsFired: new Set(),
+      dreamDelivered: false
+    };
+    this._pageConfig = null; // loaded on demand
   }
 
   async init(orchestrator) {
@@ -163,6 +177,51 @@ class AmbientLifeService {
           this._whisperDM(`Vampire Spawn (${spawn.id}) alerted — token placed hidden on upper floor. DC13 to hear movement.`, 2, 'story');
         }
       });
+    }, 'ambient-life');
+
+    // ── NECRONOMICON PAGE — carrier lifecycle ──
+    this.bus.subscribe('artifact:page_carrier_set', (env) => {
+      const playerId = env?.data?.playerId;
+      if (!playerId) return;
+      this._pageState.carrierId = playerId;
+      this._pageState.lastHourTicked = -1; // re-arm tick on next hour
+      this._whisperDM(`Necronomicon page carrier: ${playerId}. Influence tracking begins (current ${this._pageState.influence}).`, 3, 'story');
+    }, 'ambient-life');
+
+    this.bus.subscribe('artifact:page_dropped', () => {
+      this._whisperDM(`Necronomicon page dropped. Influence frozen at ${this._pageState.influence}.`, 3, 'story');
+      this._pageState.carrierId = null;
+    }, 'ambient-life');
+
+    // Long rest — surface an opportunity for the DM to prompt a save
+    // at the table (carrier rolls; +10 influence reduction on success).
+    this.bus.subscribe('session:long_rest', () => {
+      if (!this._pageState.carrierId) return;
+      this.bus.dispatch('artifact:page_save_opportunity', {
+        carrierId: this._pageState.carrierId,
+        currentInfluence: this._pageState.influence,
+        saveDC: this._currentPageSaveDC()
+      });
+      this._whisperDM(
+        `Long rest — Necronomicon page save opportunity for ${this._pageState.carrierId}. ` +
+        `Current influence ${this._pageState.influence}, DC ${this._currentPageSaveDC()} Wisdom. ` +
+        `On success: -10 influence.`,
+        2, 'story'
+      );
+      // First long rest with the page: deliver the library-with-no-walls dream.
+      if (!this._pageState.dreamDelivered) {
+        const cfg = this._loadPageConfig();
+        if (cfg?.dreamText) {
+          this.bus.dispatch('player:perception_flash', {
+            playerId: this._pageState.carrierId,
+            description: cfg.dreamText,
+            margin: 0,
+            waypoint: 'necronomicon-page:dream'
+          });
+          this._whisperDM(`Page dream delivered to ${this._pageState.carrierId}.`, 3, 'story');
+          this._pageState.dreamDelivered = true;
+        }
+      }
     }, 'ambient-life');
 
     // Encounter approval
@@ -272,6 +331,7 @@ class AmbientLifeService {
     this._encounterEngine.recentEncounters = [];
     this._encounterEngine.lastEvalMinute = -1;
     this._encounterEngine.cooldownUntil = 0;
+    this._pageState = { carrierId: null, influence: 0, lastHourTicked: -1, thresholdsFired: new Set(), dreamDelivered: false };
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -670,6 +730,7 @@ class AmbientLifeService {
     this._tickRatSwarms(h, m, totalMinutes);
     this._tickBats(h, m, totalMinutes);
     this._tickWolfPack(h, m, totalMinutes);
+    this._tickNecronomiconPage(h, m, totalMinutes);
     this._tickSpontaneousEncounters(h, m, totalMinutes, worldService);
   }
 
@@ -1052,6 +1113,103 @@ class AmbientLifeService {
     }
   }
 
+  // ─── NECRONOMICON PAGE ───────────────────────────────────────
+  //
+  // Influence escalates once per game-hour while a carrier is set.
+  // Each tick: the carrier makes a passive Wisdom save vs the current
+  // DC (13 / 15 at 50+ / 17 at 75+). Fail = +5 influence.
+  //
+  // When influence crosses a threshold (25/50/75/100), the matching
+  // effect fires: chromebook flash to the carrier, Max whisper to the
+  // DM, and a horror bump for the carrier. Each threshold fires at
+  // most once per session (tracked in thresholdsFired).
+  //
+  // Long-rest save opportunities are dispatched as
+  // `artifact:page_save_opportunity` for the DM to prompt at the table.
+
+  _loadPageConfig() {
+    if (this._pageConfig) return this._pageConfig;
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const p = path.join(__dirname, '..', '..', 'config', 'npcs', 'necronomicon-page.json');
+      if (fs.existsSync(p)) {
+        this._pageConfig = JSON.parse(fs.readFileSync(p, 'utf8'));
+      }
+    } catch (e) {
+      console.warn('[AmbientLife] Could not load necronomicon-page.json:', e.message);
+    }
+    return this._pageConfig;
+  }
+
+  _currentPageSaveDC() {
+    if (this._pageState.influence >= 75) return 17;
+    if (this._pageState.influence >= 50) return 15;
+    return 13;
+  }
+
+  _carrierWisModifier() {
+    const carrierId = this._pageState.carrierId;
+    if (!carrierId) return 0;
+    const ch = this.state.get(`players.${carrierId}.character`) || {};
+    const mod = ch.abilities?.wis?.modifier;
+    return Number.isFinite(mod) ? mod : 0;
+  }
+
+  _tickNecronomiconPage(h, m, totalMinutes) {
+    if (!this._pageState.carrierId) return;
+    if (h === this._pageState.lastHourTicked) return;
+    this._pageState.lastHourTicked = h;
+
+    const cfg = this._loadPageConfig();
+    if (!cfg) return; // can't tick without config
+
+    // Passive WIS save (10 + WIS mod) vs current DC
+    const dc = this._currentPageSaveDC();
+    const passive = 10 + this._carrierWisModifier();
+    const saved = passive >= dc;
+
+    if (!saved) {
+      this._pageState.influence = Math.min(100, this._pageState.influence + 5);
+    }
+
+    // Walk thresholds in order — fire any newly crossed
+    const thresholds = cfg.thresholdEffects || {};
+    const sorted = Object.keys(thresholds).map(Number).sort((a, b) => a - b);
+    for (const t of sorted) {
+      if (this._pageState.thresholdsFired.has(t)) continue;
+      if (this._pageState.influence < t) continue;
+      const effect = thresholds[t];
+
+      // Chromebook text → carrier only
+      if (effect.chromebookText) {
+        this.bus.dispatch('player:perception_flash', {
+          playerId: this._pageState.carrierId,
+          description: effect.chromebookText,
+          margin: 0,
+          waypoint: `necronomicon-page:${t}`
+        });
+      }
+
+      // Max whisper to DM
+      if (effect.maxWhisper) {
+        this._whisperDM(`PAGE @ ${t}: ${effect.maxWhisper}`, 1, 'story');
+      }
+
+      // Horror bump for carrier specifically
+      if (effect.horrorDelta && Number(effect.horrorDelta) !== 0) {
+        this.bus.dispatch('horror:trigger', {
+          playerId: this._pageState.carrierId,
+          triggerId: `necronomicon-page-${t}`,
+          amount: Number(effect.horrorDelta),
+          reason: `Necronomicon page threshold ${t}`
+        });
+      }
+
+      this._pageState.thresholdsFired.add(t);
+    }
+  }
+
   // ═══════════════════════════════════════════════════════════════
   // 6. SPONTANEOUS ENCOUNTER ENGINE
   // ═══════════════════════════════════════════════════════════════
@@ -1262,6 +1420,43 @@ Available: rat-swarm (1 token, CR 1/4), bat-swarm (1 token, CR 1/4), wolf (1 tok
     // List all active creature tokens
     app.get('/api/creature/tokens', (req, res) => {
       res.json(Array.from(this._creatureTokens.entries()).map(([id, data]) => ({ tokenId: id, ...data })));
+    });
+
+    // ── Necronomicon page state inspector ──
+    app.get('/api/artifact/necronomicon-page', (req, res) => {
+      res.json({
+        carrier: this._pageState.carrierId,
+        influence: this._pageState.influence,
+        thresholdsFired: Array.from(this._pageState.thresholdsFired),
+        currentSaveDC: this._currentPageSaveDC()
+      });
+    });
+
+    // ── Set the page carrier (e.g. when a player searches and finds it) ──
+    app.post('/api/artifact/page-carrier', (req, res) => {
+      const playerId = req.body?.playerId;
+      if (!playerId) return res.status(400).json({ error: 'playerId required' });
+      this.bus.dispatch('artifact:page_carrier_set', { playerId });
+      res.json({ ok: true, carrier: playerId, influence: this._pageState.influence });
+    });
+
+    // ── Drop the page (carrier puts it down, hands it off, etc.) ──
+    app.post('/api/artifact/page-drop', (req, res) => {
+      this.bus.dispatch('artifact:page_dropped', {});
+      res.json({ ok: true });
+    });
+
+    // ── Apply long-rest save result from the table ──
+    // Body: { saved: boolean }. On save: -10 influence (but not below 0).
+    app.post('/api/artifact/page-rest-save', (req, res) => {
+      const saved = req.body?.saved === true;
+      if (saved) {
+        this._pageState.influence = Math.max(0, this._pageState.influence - 10);
+        this._whisperDM(`Page save SUCCEEDED. Influence ${this._pageState.influence}.`, 2, 'story');
+      } else {
+        this._whisperDM(`Page save FAILED. Influence holds at ${this._pageState.influence}.`, 2, 'story');
+      }
+      res.json({ ok: true, influence: this._pageState.influence });
     });
 
     console.log('[AmbientLife] Routes registered');

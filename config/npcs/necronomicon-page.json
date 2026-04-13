@@ -1,0 +1,68 @@
+{
+  "id": "necronomicon-page",
+  "name": "A Page from the Necronomicon",
+  "type": "artifact-npc",
+  "cr": "special",
+  "personality": "Ancient. Patient. Does not experience morality. Wants one thing: reunion with the main book at Čachtice. Has been moving itself toward that goal for decades by finding carriers and using them.",
+  "goal": "Reach the main Necronomicon at Čachtice Castle.",
+  "methods": [
+    "Dreams — the library with no walls, the gap on the shelf",
+    "Directional compulsion — southeast, always southeast",
+    "Involuntary movement — the carrier's hand moves without deciding to",
+    "Voice — the carrier hears something in their own voice saying things they did not choose",
+    "Possession — full action control at high influence"
+  ],
+  "influenceTrack": {
+    "start": 0,
+    "max": 100,
+    "increasePerHour": 5,
+    "decreasePerLongRestSave": 10,
+    "saveDC": 13,
+    "saveType": "Wisdom",
+    "saveEscalation": {
+      "50": 15,
+      "75": 17
+    }
+  },
+  "thresholdEffects": {
+    "25": {
+      "name": "Directional Pull",
+      "description": "The carrier feels a persistent pull toward the southeast. Not urgently. Just persistently. Like a word they cannot stop thinking about.",
+      "chromebookText": "Something in you keeps pointing southeast. You cannot explain it. You have stopped trying.",
+      "maxWhisper": "Whoever carries the page feels a persistent directional pull southeast. DC 13 Wisdom or they mention it unprompted within the next hour.",
+      "horrorDelta": 5
+    },
+    "50": {
+      "name": "Involuntary Movement",
+      "description": "Once per session the carrier's hand moves to the page without them deciding to reach for it.",
+      "chromebookText": "Your hand moves to the page before you realize you are reaching for it. You pull it back. It took effort.",
+      "maxWhisper": "The page at influence 50 — carrier's hand just moved involuntarily. Horror DC 12.",
+      "horrorDelta": 10,
+      "saveDC": 15
+    },
+    "75": {
+      "name": "The Voice",
+      "description": "The carrier hears something in their own voice saying things they did not decide to say. Not aloud. Inside. But in their voice.",
+      "chromebookText": "You hear yourself say something. Except you did not say it. The voice is yours. The words are not. 'It needs to go home.'",
+      "maxWhisper": "Page at influence 75 — carrier is hearing the page in their own voice. Horror DC 14.",
+      "horrorDelta": 15,
+      "saveDC": 17
+    },
+    "100": {
+      "name": "Possession Attempt",
+      "description": "Full Wisdom save DC 17 or carrier acts on the page's behalf for one action. The page does not want violence — it wants to move southeast.",
+      "chromebookText": "Something moves through you completely for one moment. When it passes you are holding the page and facing the door. You do not remember deciding to stand up.",
+      "maxWhisper": "POSSESSION ATTEMPT — DC 17 Wisdom save. On fail: carrier stands, moves toward nearest exit with page. On success: resist but influence resets to 75 not 0.",
+      "horrorDelta": 20,
+      "saveDC": 17,
+      "onFailAction": "carrier moves toward nearest exit with page"
+    }
+  },
+  "vladislavReaction": {
+    "onSight": "Steps back. Will not touch it. Expression is the closest thing to fear a 500-year-old vampire shows.",
+    "onQuestion": "'Where did you find that.' Not a question. 'Put it away.' He will not say more without significant social combat leverage.",
+    "whatHeKnows": "He has seen this page before. He knows what it is. He knows what it wants. He said no to the entity in 1189 partly because of what this book did to the man who used it."
+  },
+  "dreamText": "You are in a library with no walls. Shelves extend in every direction beyond sight. The books have no titles. One shelf has a gap — the exact width and height of the page you found. Something in the library is aware of you. It does not move. It does not speak. It is simply present the way a very large thing in a very small room is present.",
+  "dmNotes": "The page is not evil. It is not malevolent. It simply wants to go home. The horror is that it will use whoever it needs to use to get there and feel nothing about any of it. It chose Pieter. Pieter lasted three weeks. It will choose someone in the party next."
+}

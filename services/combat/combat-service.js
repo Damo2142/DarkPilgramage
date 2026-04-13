@@ -1364,6 +1364,57 @@ class CombatService {
       res.json(combat);
     });
 
+    // Addition 3 — POST /api/combat/initiate
+    // DM confirms a player-initiated combat. Reads combat.pendingInitiation
+    // (set by combat:player_initiated subscriber when the comm-router
+    // detected an attack declaration), or accepts an explicit targetId
+    // in the body. Starts combat with: the initiating player + the
+    // target + any NPC whose config has combatJoins:true.
+    app.post('/api/combat/initiate', (req, res) => {
+      const pending = this.state.get('combat.pendingInitiation') || null;
+      const targetId = req.body?.targetId || pending?.targetId;
+      const initiatorId = req.body?.playerId || pending?.initiatedBy;
+      if (!targetId) return res.status(400).json({ error: 'targetId required (or call after combat:player_initiated)' });
+
+      const tokens = this.state.get('map.tokens') || {};
+      const combatantIds = [];
+
+      // Initiating player goes in first if known
+      if (initiatorId && tokens[initiatorId]) combatantIds.push(initiatorId);
+
+      // Target
+      if (tokens[targetId]) combatantIds.push(targetId);
+
+      // Auto-joiners — any NPC config with combatJoins:true. Tomas may
+      // gate further with combatJoinsCondition (only-when-transformed),
+      // checked via _tomasState if the actorSlug is tomas.
+      const sessionNpcs = (this.config && this.config.npcs) || {};
+      const ambient = this.orchestrator.getService('ambient-life');
+      for (const [npcId, npc] of Object.entries(sessionNpcs)) {
+        if (npc?.combatJoins !== true) continue;
+        if (npc.combatJoinsCondition === 'only-when-transformed') {
+          // Tomas-specific gate — only joins if his ambient state has him transformed
+          const tomasTransformed = ambient && ambient._tomasState && ambient._tomasState.transformed;
+          if (npcId === 'tomas' && !tomasTransformed) continue;
+        }
+        // Find a token for this NPC by actorSlug or id
+        const npcTokenId = Object.keys(tokens).find(tid =>
+          tokens[tid].actorSlug === npcId || tid === npcId
+        );
+        if (npcTokenId && !combatantIds.includes(npcTokenId)) combatantIds.push(npcTokenId);
+      }
+
+      // Clear staged initiation
+      this.state.set('combat.pendingInitiation', null);
+
+      if (!combatantIds.length) {
+        return res.status(400).json({ error: 'no resolvable combatants' });
+      }
+
+      const combat = this.startCombat(combatantIds, {});
+      res.json({ ok: true, targetId, initiatorId, combatantIds, combat });
+    });
+
     // PHASE 6 — POST /api/combat/start-scene — one-click combat start with
     // every visible token currently on the active map. NPC initiative is
     // rolled by combat-service; player initiative is left blank for the
@@ -1900,6 +1951,20 @@ Respond with JSON: { "items": [{ "name": "...", "description": "...", "type": "w
       this.bus.dispatch('dm:whisper', {
         text: `LOOT from ${c.name}: ${loot.gold}gp, ${loot.items.map(i => i.name).join(', ')}`,
         priority: 2, category: 'combat'
+      });
+    }, 'combat');
+
+    // Addition 3 — player-initiated combat. Stage the pending initiation
+    // for the DM to confirm via POST /api/combat/initiate. We do NOT
+    // start combat here — the comm-router has already asked the DM to
+    // confirm; the route handler in _setupRoutes does the actual start.
+    this.bus.subscribe('combat:player_initiated', (env) => {
+      const data = env.data || {};
+      this.state.set('combat.pendingInitiation', {
+        targetId: data.targetId,
+        targetName: data.targetName,
+        initiatedBy: data.playerId,
+        timestamp: Date.now()
       });
     }, 'combat');
   }

@@ -243,6 +243,20 @@ class CommRouter {
     if (!safeText) return;
     data = { ...data, text: safeText };
 
+    // Addition 3 — combat initiation detection (out-of-combat only).
+    // If the player declares an attack/charge/cast against a target on
+    // the map, prompt the DM to confirm rather than routing the line as
+    // dialogue to an NPC. Confirms via POST /api/combat/initiate.
+    try {
+      const combatNow = this.state.get('combat');
+      if (!combatNow || !combatNow.active) {
+        const initiated = this._detectCombatInitiation(safeText, playerId);
+        if (initiated) return;
+      }
+    } catch (e) {
+      console.warn('[CommRouter] combat initiation detector error:', e.message);
+    }
+
     // Combat action parsing — fires first during active combat. Attack
     // declarations, damage rolls, spell casting, saves, movement, and
     // the other standard actions are resolved here before they can be
@@ -981,6 +995,88 @@ class CommRouter {
       text
     });
     // Deliberate: no dm:whisper, no logging
+  }
+
+  // ─── Combat initiation detector (Addition 3) ──────────────────
+  //
+  // Fires BEFORE the rest of routing when combat.active is FALSE. If
+  // the player declares an attack/charge/cast against a target on the
+  // map, dispatches combat:player_initiated and a Max whisper asking
+  // the DM to confirm via POST /api/combat/initiate. Returns true if
+  // a combat-initiation utterance was consumed (so routing stops).
+  //
+  // Vladislav (CR13) gets an extra "this is not survivable" warning
+  // since the party is level 3.
+
+  _detectCombatInitiation(transcript, playerId) {
+    if (this.state.get('combat.active')) return false;
+
+    const text = String(transcript || '').toLowerCase().trim();
+    if (!text) return false;
+
+    const patterns = [
+      /(?:i\s+)?attack\s+(.+)/i,
+      /(?:i\s+)?draw\s+(?:my\s+)?(?:weapon|sword|dagger|axe|bow)\s+(?:on|at)\s+(.+)/i,
+      /(?:i\s+)?charge\s+(.+)/i,
+      /(?:i\s+)?cast\s+(?:fireball|thunderwave|magic\s+missile|hellish\s+rebuke|fire\s+bolt|vicious\s+mockery)\s+(?:at|on)\s+(.+)/i
+    ];
+
+    let targetName = null;
+    for (const re of patterns) {
+      const m = text.match(re);
+      if (m) {
+        targetName = m[1].trim()
+          .replace(/[.!?]+$/, '')          // strip trailing punctuation
+          .replace(/^(?:the|a|an)\s+/i, ''); // strip leading article so "the vampire spawn" matches "Vampire Spawn"
+        break;
+      }
+    }
+    if (!targetName) return false;
+
+    const tokens = this.state.get('map.tokens') || {};
+    const targetEntry = Object.entries(tokens).find(([, t]) =>
+      (t && t.name && t.name.toLowerCase().includes(targetName.toLowerCase())) ||
+      (t && t.publicName && t.publicName.toLowerCase().includes(targetName.toLowerCase()))
+    );
+
+    const playerState = this.state.get(`players.${playerId}`) || {};
+    const playerName = playerState.character?.name || playerId;
+
+    if (!targetEntry) {
+      this.bus.dispatch('dm:whisper', {
+        text: `${playerName} is initiating combat but target "${targetName}" not found on map. Resolve manually.`,
+        priority: 1, category: 'combat', source: 'comm-router'
+      });
+      // Still consume the utterance so it doesn't get routed as NPC dialogue
+      return true;
+    }
+
+    const [targetId, targetToken] = targetEntry;
+    const isVlad = targetId === 'hooded-stranger'
+      || targetToken.actorSlug === 'vladislav'
+      || (targetToken.name && targetToken.name.toLowerCase().includes('vladislav'));
+
+    if (isVlad) {
+      this.bus.dispatch('dm:whisper', {
+        text: `⚠️ VLADISLAV COMBAT INITIATED by ${playerName}. CR13 VAMPIRE. PARTY IS LEVEL 3. THIS IS NOT SURVIVABLE. Confirm via POST /api/combat/initiate {targetId:"${targetId}"} or ignore to cancel.`,
+        priority: 1, category: 'combat', source: 'comm-router'
+      });
+    } else {
+      this.bus.dispatch('dm:whisper', {
+        text: `⚠️ ${playerName} is initiating combat against ${targetToken.name}. Confirm via POST /api/combat/initiate {targetId:"${targetId}"} or ignore to cancel.`,
+        priority: 1, category: 'combat', source: 'comm-router'
+      });
+    }
+
+    this.bus.dispatch('combat:player_initiated', {
+      playerId,
+      playerName,
+      targetId,
+      targetName: targetToken.name,
+      transcript
+    });
+
+    return true;
   }
 
   // ─── Combat action parser ──────────────────────────────────────

@@ -2445,7 +2445,8 @@
         "when_confronted_about_silence": "'What was I supposed to do?! He's a MONSTER. You think I could fight that? I'm an innkeeper! I kept quiet because keeping quiet kept me alive!'",
         "when_piotr_found": "Wailing. 'That's not him. That's not my Piotr. Please... please help him. Or end it. I can't watch this anymore.'"
       },
-      "dialogueHistory": []
+      "dialogueHistory": [],
+      "combatJoins": false
     },
     "tomas": {
       "name": "Tomas Birkov",
@@ -2543,7 +2544,9 @@
         "Someone examines his wounds closely (DC 14 Medicine/Nature)",
         "Midnight approaches and he becomes desperate to reach the cellar"
       ],
-      "dialogueHistory": []
+      "dialogueHistory": [],
+      "combatJoins": true,
+      "combatJoinsCondition": "only-when-transformed"
     },
     "hooded-stranger": {
       "name": "Vladislav Dragan",
@@ -2713,7 +2716,8 @@
       "hydraAwareness": true,
       "penitentAversion": true,
       "bagmanAwareness": false,
-      "dialogueHistory": []
+      "dialogueHistory": [],
+      "combatJoins": false
     },
     "aldous-kern": {
       "id": "aldous-kern",
@@ -2795,7 +2799,8 @@
         "location": "corner-table-door",
         "moveable": false
       },
-      "dialogueHistory": []
+      "dialogueHistory": [],
+      "combatJoins": false
     },
     "piotr": {
       "name": "Piotr Kowalski",
@@ -2831,7 +2836,8 @@
         "fallbackEchoVoice": "Brian"
       },
       "voiceProfile": "spawn_piotr",
-      "dialogueHistory": []
+      "dialogueHistory": [],
+      "combatJoins": false
     },
     "gas-spore": {
       "id": "gas-spore",
@@ -2896,7 +2902,8 @@
         "initialOnInitiative": false,
         "combatTriggerRange": 5
       },
-      "dialogueHistory": []
+      "dialogueHistory": [],
+      "combatJoins": false
     }
   },
   "patron-farmer": {

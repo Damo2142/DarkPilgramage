@@ -453,6 +453,36 @@ Something ancient is sealed below Houska Castle. The Letavec is its scout. The h
 
 The Letavec is not a predator native to these mountains. It came through the Houska portal centuries ago as a forward scout for the entity. It is not trapped here. It is still doing its job. When it speaks to chosen targets, it is sincere. It genuinely does not understand why they object. It is doing what it was made to do.
 
+## ALL PLAYER BACKSTORY HOOKS — MAX TRACKING
+
+**ZARINA FIRETHORN** — Disgraced risk analyst. The conspiracy she uncovered is still active. Someone will come looking. She has lost people she fought beside — her protective instincts run deep and may cost her. Her Mark of Detection will find the Necronomicon page if she casts Detect Magic upstairs. Watch: when she assesses Vladislav, she will notice something. When Vladislav notices her noticing, he will decide the party is interesting.
+
+**BARRY FRASCHT (ABSENT)** — His bloodline has been harvested twice before. He does not know this. His warlock pact patron may be aware of the Letavec. When he joins at Session 1, his first reaction to learning what was at the inn will tell Max everything about his character.
+
+**SPURT** — Kobold wild magic is almost unheard of. The entity at Houska has been looking for something like Spurt for a very long time. Spurt's kobold predator instinct has already identified Vladislav as wrong. He keeps glancing at the corner. He does not know why. Play this from the start. If players ask him why: 'Spurt does not know. Something over there smells like before a cave-in. Like the rock knows it is about to fall.'
+
+**CHAZZ MORTIMER** — 87 years of forbidden knowledge. Can instinctively read Infernal — does not know this. The nerve damage is recent and significant. Something caused it. Max watches for the trigger: when something in the inn makes him touch his shoulder, note it for the DM without comment.
+
+**MARFIRE 2.0** — The horse in the shed was circled by the Letavec twice and is terrified. If Marfire uses Speech of Beast and Leaf on any animal tonight, she gets intelligence no one else can access. The bear totem chose her — the entity knows this and considers her a priority harvest target. Valen is an unknown quantity worth tracking. Her parents' imprisonment is a long-term hook that Max keeps alive.
+
+## LANGUAGE TRACKING — CAMPAIGN
+
+In 1274 Central Europe, **Common = Latin** and is the universal bridge — every educated person speaks it. The campaign-relevant languages and who speaks them:
+
+- **Latin / Common** — every party member. Default fallback.
+- **Elvish** — Zarina, Marfire. Their **private channel**. Vladislav also understands Elvish and will not reveal it immediately. If they speak Elvish about Vladislav within his earshot — which they will, because they will think they are safe — he hears everything. Whisper DM: "Vladislav understood every word. He has not decided what to do with it yet."
+- **Draconic** — Zarina, Spurt. Their **private channel**. A Half-Elf fighter and a Kobold sorcerer both speaking Draconic — and from the Americas — confirms something for Vladislav about why the Letavec is circling tonight. Old Draconic inscriptions appear at all three castles; the party has two readers.
+- **German** — Chazz (fluent), Barry (conversational), Marfire (partial), Spurt (conversational). Most useful European language for travel and courts.
+- **Czech** — Chazz fluent. Spurt partial. From his time in Bohemia.
+- **Slovak** — Chazz has fragmentary Slovak. Everyone else is blocked. **Katya is the primary translator** for Slovak/Czech with locals. Gregor is a complete barrier without Katya. Marta's Slovak when frightened is a tell that Chazz can partially catch.
+- **Infernal** — **Chazz only**, instinctive, unknown to him. First revealed at Houska when the binding-script in the Keep's foundations is partly in Infernal. He starts reading before he realizes he is reading. Whisper DM: "Chazz can read this. He may not know he can until he tries."
+- **Giant** — Marfire only. Useless in 1274 Central Europe for spoken communication. Reserved for old inscriptions in places giants have been.
+- **Speech of Beast and Leaf** — Marfire only. Animals and plants understand her intent regardless of language. The horse in the shed knows the Letavec circled it twice tonight. The rat in the walls smells wrongness. The owl in the eaves saw it pass three times, thirteen minutes apart.
+
+**Chazz as primary translator** — he gets information first from any Slovak/Czech-speaking local. Whether he passes it on fully is his choice. Max whispers the DM the full content regardless, so the DM can choose whether to push him to reveal.
+
+**Vladislav's language reaction** — speaks every European language fluently. Recognizes Americas Elvish and Draconic. Hearing Americas Elvish tells him these travelers are from the New World — significant; he has not encountered New World travelers in the Orava mountains before. If Chazz reads Infernal — especially if Chazz reads anything on the Necronomicon page itself — Vladislav steps back. He says nothing. He is reassessing everything.
+
 ---
 
 CURRENT SESSION CONTEXT

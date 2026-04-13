@@ -1,28 +1,28 @@
 {
   "scene": {
     "id": "pallid-hart-common-room",
-    "name": "The Pallid Hart — Crossroads Tavern",
+    "name": "The Pallid Hart \u2014 Crossroads Tavern",
     "atmosphereProfile": "tavern_warm",
     "weather": "blizzard",
     "timeOfDay": "evening",
-    "description": "A small tavern at a crossroads deep in the Orava mountains. The locals call it a cursed junction — where the road from the north meets the old pilgrim trail from the west. The old legends say the devil himself walks crossroads at night, offering bargains to desperate travelers. Nobody travels these forests after dark. Only the most desperate or the most foolish venture onto these roads at night — the wolves are bold, the paths treacherous, and things far worse than wolves have been seen moving between the trees. Yet here you all are. Some of you have been sitting in this cramped, firelit room for an hour or more, others arrived only minutes ago. You do not know each other. The blizzard outside has sealed you in together.",
-    "arrivalNotes": "All PCs start in the tavern. They have been here varying lengths of time. They do not know each other — use anonymous token mode (tokens show as 'Traveler'). Each player can see the others but knows nothing about them beyond what they observe. Describe what each PC sees: the other strangers in the room, the patrons, the nervous innkeeper, the hooded figure in the corner."
+    "description": "A small tavern at a crossroads deep in the Orava mountains. The locals call it a cursed junction \u2014 where the road from the north meets the old pilgrim trail from the west. The old legends say the devil himself walks crossroads at night, offering bargains to desperate travelers. Nobody travels these forests after dark. Only the most desperate or the most foolish venture onto these roads at night \u2014 the wolves are bold, the paths treacherous, and things far worse than wolves have been seen moving between the trees. Yet here you all are. Some of you have been sitting in this cramped, firelit room for an hour or more, others arrived only minutes ago. You do not know each other. The blizzard outside has sealed you in together.",
+    "arrivalNotes": "All PCs start in the tavern. They have been here varying lengths of time. They do not know each other \u2014 use anonymous token mode (tokens show as 'Traveler'). Each player can see the others but knows nothing about them beyond what they observe. Describe what each PC sees: the other strangers in the room, the patrons, the nervous innkeeper, the hooded figure in the corner."
   },
   "scenes": [
     {
       "id": "pallid-hart-common-room",
-      "name": "The Pallid Hart — Crossroads Tavern",
+      "name": "The Pallid Hart \u2014 Crossroads Tavern",
       "map": "pallid-hart-ground",
       "description": "A small tavern at a crossroads in the Orava mountains. The room is cramped, low-ceilinged, dark wood. A fire crackles in a stone hearth. A bar runs along the far wall where a nervous innkeeper polishes the same glass endlessly. A hooded figure sits motionless in the far corner. The cellar door is closed, a cloth draped over its handle. Outside, a blizzard seals the doors shut.",
-      "readAloud": "You have each been sitting in this small tavern for a while now — some of you for only a few minutes, others for an hour or more. You have watched people come in from the storm, shaking snow from their cloaks, stamping feeling back into frozen boots. The Pallid Hart sits where two roads cross in the mountains — the north road from the villages and the old pilgrim trail from the west. The locals say crossroads are cursed places. Where the devil walks at midnight, offering bargains to the desperate. Nobody travels these forests at night. The wolves are bold, the paths treacherous, and the old-timers whisper of things far worse than wolves moving between the trees after dark. Yet here you all are — strangers driven together by a blizzard that fell like a hammer. The common room is cramped, low-ceilinged, dark wood. A fire crackles in the stone hearth, casting long shadows. Behind the bar, a thin, dark-haired woman grips a glass she has been polishing far too long. Her eyes dart to every sound. In the far corner, almost lost in shadow, a hooded figure sits motionless at a table. They have not moved since you arrived. They have not spoken. You do not know each other's names.",
+      "readAloud": "You have each been sitting in this small tavern for a while now \u2014 some of you for only a few minutes, others for an hour or more. You have watched people come in from the storm, shaking snow from their cloaks, stamping feeling back into frozen boots. The Pallid Hart sits where two roads cross in the mountains \u2014 the north road from the villages and the old pilgrim trail from the west. The locals say crossroads are cursed places. Where the devil walks at midnight, offering bargains to the desperate. Nobody travels these forests at night. The wolves are bold, the paths treacherous, and the old-timers whisper of things far worse than wolves moving between the trees after dark. Yet here you all are \u2014 strangers driven together by a blizzard that fell like a hammer. The common room is cramped, low-ceilinged, dark wood. A fire crackles in the stone hearth, casting long shadows. Behind the bar, a thin, dark-haired woman grips a glass she has been polishing far too long. Her eyes dart to every sound. In the far corner, almost lost in shadow, a hooded figure sits motionless at a table. They have not moved since you arrived. They have not spoken. You do not know each other's names.",
       "atmosphere": "tavern_warm"
     },
     {
       "id": "mountain-road-blizzard",
-      "name": "Mountain Road — Blizzard (Flashback)",
+      "name": "Mountain Road \u2014 Blizzard (Flashback)",
       "map": "mountain-road-blizzard",
-      "description": "The mountain road approach. Can be used for flashback sequences — what each PC saw on the road before reaching the inn.",
-      "readAloud": "The wind cuts through your cloak like a knife made of ice. Snow hammers your face until you can barely see ten feet ahead. The mountain road is a guess now — a memory of packed earth beneath the drifts. The trees press close on either side, their branches creaking and groaning. And then — ahead, barely visible through the white curtain — a warm orange glow. A building. An inn.",
+      "description": "The mountain road approach. Can be used for flashback sequences \u2014 what each PC saw on the road before reaching the inn.",
+      "readAloud": "The wind cuts through your cloak like a knife made of ice. Snow hammers your face until you can barely see ten feet ahead. The mountain road is a guess now \u2014 a memory of packed earth beneath the drifts. The trees press close on either side, their branches creaking and groaning. And then \u2014 ahead, barely visible through the white curtain \u2014 a warm orange glow. A building. An inn.",
       "atmosphere": "blizzard_dark"
     },
     {
@@ -170,7 +170,7 @@
       "initial": {
         "type": "blizzard",
         "intensity": 0.8,
-        "description": "Heavy blizzard — snow hammers the shutters, wind screams"
+        "description": "Heavy blizzard \u2014 snow hammers the shutters, wind screams"
       },
       "phases": [
         {
@@ -219,7 +219,7 @@
             {
               "event": "dm:whisper",
               "data": {
-                "text": "Thunder cracks — not normal thunder. It sounds like something enormous moving through the mountains. The whole inn shudders.",
+                "text": "Thunder cracks \u2014 not normal thunder. It sounds like something enormous moving through the mountains. The whole inn shudders.",
                 "priority": 3,
                 "category": "atmosphere"
               }
@@ -284,7 +284,7 @@
         "gameTime": "1274-10-15T17:30:00",
         "event": "dm:whisper",
         "data": {
-          "description": "DM-only — the Letavec is outside tonight",
+          "description": "DM-only \u2014 the Letavec is outside tonight",
           "text": "The Letavec is outside tonight. It has scented the inn. The blizzard and Brother Aldric's holy symbol are keeping it at the tree line. It will remember. In the morning when the survivors leave it will be waiting.",
           "priority": 1,
           "category": "story",
@@ -388,7 +388,7 @@
         "event": "dm:whisper",
         "data": {
           "description": "The fire burns lower. The room grows colder. Shadows stretch.",
-          "text": "The fire is burning low — describe the room growing darker and colder. Marta hasn't added wood.",
+          "text": "The fire is burning low \u2014 describe the room growing darker and colder. Marta hasn't added wood.",
           "priority": 3,
           "category": "atmosphere"
         }
@@ -422,12 +422,12 @@
         "data": {
           "description": "Scratching sounds from beneath the floor. The cellar.",
           "readAloud": "A sound. From below. Scritch. Scritch-scritch. Like nails on wood. Everyone hears it. Marta freezes.",
-          "staticNarration": "From beneath the floor — scritch, scritch-scritch. Nails on wood. Marta freezes mid-pour.",
+          "staticNarration": "From beneath the floor \u2014 scritch, scritch-scritch. Nails on wood. Marta freezes mid-pour.",
           "checks": [
             {
               "skill": "Perception",
               "dc": 12,
-              "success": "It's coming from directly under the bar — the cellar."
+              "success": "It's coming from directly under the bar \u2014 the cellar."
             }
           ]
         },
@@ -440,7 +440,7 @@
         "event": "dm:whisper",
         "data": {
           "description": "Vladislav studies the party from the shadows",
-          "text": "The hooded stranger shifts slightly. For the first time, you catch the glint of eyes beneath the hood — watching. Not the room. Watching one specific player. The one who seems most isolated or frightened. Which player is that right now?",
+          "text": "The hooded stranger shifts slightly. For the first time, you catch the glint of eyes beneath the hood \u2014 watching. Not the room. Watching one specific player. The one who seems most isolated or frightened. Which player is that right now?",
           "priority": 2,
           "category": "story"
         }
@@ -453,17 +453,17 @@
           "npcId": "patron-farmer",
           "npc": "Old Gregor",
           "languageId": "slovak",
-          "text": "Marta, ten cudzinec sa nedotkol jedla. Ani vína. A jeho oči — niečo nie je v poriadku.",
-          "narratorTranslation": "Marta, that stranger hasn't touched the food. Or the wine. And his eyes — something is wrong.",
+          "text": "Marta, ten cudzinec sa nedotkol jedla. Ani v\u00edna. A jeho o\u010di \u2014 nie\u010do nie je v poriadku.",
+          "narratorTranslation": "Marta, that stranger hasn't touched the food. Or the wine. And his eyes \u2014 something is wrong.",
           "followUp": {
             "delaySeconds": 8,
             "npcId": "marta",
             "npc": "Marta",
             "languageId": "slovak",
-            "text": "Tichšie, Gregor. Možno rozumie viac, ako vyzerá.",
+            "text": "Tich\u0161ie, Gregor. Mo\u017eno rozumie viac, ako vyzer\u00e1.",
             "narratorTranslation": "Quieter, Gregor. He may understand more than he looks."
           },
-          "languageNote": "Old Gregor speaks no Common — this is the only way he can warn Marta. Players who don't speak Slovak hear murmured Slavic conversation. Katya, if present, can translate (with her usual editorial filter). Vladislav understands every word and registers no reaction."
+          "languageNote": "Old Gregor speaks no Common \u2014 this is the only way he can warn Marta. Players who don't speak Slovak hear murmured Slavic conversation. Katya, if present, can translate (with her usual editorial filter). Vladislav understands every word and registers no reaction."
         }
       },
       {
@@ -472,7 +472,7 @@
         "event": "world:midnight_warning",
         "data": {
           "description": "Midnight approaches. Tomas is desperate. Vladislav is hungry.",
-          "text": "It's nearly midnight. Tomas MUST get to the cellar or he transforms in front of everyone. Vladislav is growing bold — he's been patient long enough. Both will act within the hour.",
+          "text": "It's nearly midnight. Tomas MUST get to the cellar or he transforms in front of everyone. Vladislav is growing bold \u2014 he's been patient long enough. Both will act within the hour.",
           "priority": 1,
           "category": "story"
         }
@@ -500,7 +500,7 @@
         "gameTime": "1274-10-15T19:30:00",
         "event": "dm:whisper",
         "data": {
-          "text": "Katya stops playing mid-song. She stares at the brass plate behind the bar. She's seen the stranger's missing reflection. She catches a player's eye and subtly shakes her head — she won't say it aloud. But she KNOWS.",
+          "text": "Katya stops playing mid-song. She stares at the brass plate behind the bar. She's seen the stranger's missing reflection. She catches a player's eye and subtly shakes her head \u2014 she won't say it aloud. But she KNOWS.",
           "priority": 3,
           "category": "story"
         }
@@ -510,7 +510,7 @@
         "gameTime": "1274-10-15T22:00:00",
         "event": "dm:whisper",
         "data": {
-          "text": "The fire gutters and dies completely. The room plunges into near-darkness — only a single candle on Aldric's table remains. The temperature drops sharply. This is Vladislav's doing — he's drawing the heat from the room. Set atmosphere to dread_rising if not already there.",
+          "text": "The fire gutters and dies completely. The room plunges into near-darkness \u2014 only a single candle on Aldric's table remains. The temperature drops sharply. This is Vladislav's doing \u2014 he's drawing the heat from the room. Set atmosphere to dread_rising if not already there.",
           "priority": 2,
           "category": "atmosphere",
           "profile": "dread_rising"
@@ -531,7 +531,7 @@
         "gameTime": "1274-10-15T21:30:00",
         "event": "dm:whisper",
         "data": {
-          "text": "Tomas stands abruptly. He can't wait any longer — the moon is pulling at him. He walks toward the cellar door with grim determination. Vladislav stiffens. Both monsters are now converging on the same location. What do the players do?",
+          "text": "Tomas stands abruptly. He can't wait any longer \u2014 the moon is pulling at him. He walks toward the cellar door with grim determination. Vladislav stiffens. Both monsters are now converging on the same location. What do the players do?",
           "priority": 1,
           "category": "story"
         }
@@ -541,7 +541,7 @@
         "gameTime": "1274-10-15T23:00:00",
         "event": "dm:whisper",
         "data": {
-          "text": "Brother Aldric begins praying loudly. His holy symbol glows faintly — genuine faith responding to the evil in the room. Vladislav REACTS: he turns his head toward Aldric for the first time, and his lips pull back in something between a snarl and a smile. The players see fangs. BRIEFLY. Then the hood falls forward again.",
+          "text": "Brother Aldric begins praying loudly. His holy symbol glows faintly \u2014 genuine faith responding to the evil in the room. Vladislav REACTS: he turns his head toward Aldric for the first time, and his lips pull back in something between a snarl and a smile. The players see fangs. BRIEFLY. Then the hood falls forward again.",
           "priority": 1,
           "category": "story"
         }
@@ -634,7 +634,7 @@
         "gameTime": "1274-10-15T18:50:00",
         "event": "dm:whisper",
         "data": {
-          "text": "Something large moved past the window. Two seconds. Wrong proportions for any animal. The Letavec made its first pass — scented the inn. Brother Aldric's holy symbol and the blizzard are keeping it at the tree line.",
+          "text": "Something large moved past the window. Two seconds. Wrong proportions for any animal. The Letavec made its first pass \u2014 scented the inn. Brother Aldric's holy symbol and the blizzard are keeping it at the tree line.",
           "priority": 2,
           "category": "story"
         }
@@ -789,10 +789,10 @@
         "intervalMinutes": 5,
         "scene": "mountain-road-blizzard",
         "cues": [
-          "The wind shifts direction suddenly. For a moment you hear something in it — was that a voice?",
+          "The wind shifts direction suddenly. For a moment you hear something in it \u2014 was that a voice?",
           "A branch cracks somewhere in the darkness to your left. Something heavy.",
           "Your boot catches on something in the snow. A dead bird. Frozen solid. Its eyes are open.",
-          "The trees thin for a moment and you see the sky — bruised purple, the last light bleeding away. You need shelter. Now.",
+          "The trees thin for a moment and you see the sky \u2014 bruised purple, the last light bleeding away. You need shelter. Now.",
           "You smell iron. Blood. It's faint but unmistakable. The snow ahead has a dark stain that the fresh fall hasn't quite covered."
         ]
       },
@@ -803,14 +803,14 @@
         "random": true,
         "cues": [
           "The fire pops and everyone flinches. Marta drops the glass she was holding. It doesn't break but the sound is too loud in the silence.",
-          "A gust of wind finds its way through the shutters. The candles on the bar gutter and almost die. For a moment, the stranger's face is visible — pale, angular, wrong somehow.",
+          "A gust of wind finds its way through the shutters. The candles on the bar gutter and almost die. For a moment, the stranger's face is visible \u2014 pale, angular, wrong somehow.",
           "Something creaks upstairs. Footsteps? But no one has gone up.",
           "Marta glances at the cellar door again. She does this every few minutes. She doesn't seem to realize she's doing it.",
           "The wind screams and the front door rattles in its frame. For a moment it sounds like something is trying the handle from outside.",
-          "Old Gregor coughs — a wet, rattling sound. He looks worse than when the evening started. Paler.",
+          "Old Gregor coughs \u2014 a wet, rattling sound. He looks worse than when the evening started. Paler.",
           "Katya the minstrel stops humming mid-note. She stares at a spot on the wall for a long moment, then shakes her head and looks away.",
           "The shadows in the corner where the stranger sits seem deeper than they should be. The firelight doesn't reach there. It should.",
-          "A draft from somewhere carries a smell — earth, damp stone, something sweet and rotting. From below.",
+          "A draft from somewhere carries a smell \u2014 earth, damp stone, something sweet and rotting. From below.",
           "Tomas drops his drink. His hands are shaking badly now. He doesn't pick it up."
         ]
       }
@@ -849,7 +849,7 @@
           "Catch him trying to lock himself away",
           "See the full moon trigger him"
         ],
-        "revealConsequences": "If revealed early, Tomas begs for help. If transformation happens publicly, panic — possible combat. He is not evil, just cursed.",
+        "revealConsequences": "If revealed early, Tomas begs for help. If transformation happens publicly, panic \u2014 possible combat. He is not evil, just cursed.",
         "linkedClues": [
           "tomas_scratches",
           "tomas_cellar_desperation"
@@ -918,7 +918,7 @@
       },
       {
         "id": "frascht_family_hunters",
-        "description": "The Frascht family are legendary monster hunters — a Van Helsing bloodline known and feared across the supernatural world for generations. Barry's parents were active hunters who died fighting Vladislav (or his network). Barry has no memory of this — he was too young. The genie patron knows the full truth but is forbidden from revealing it. Barry's 'paranoid' gear (stakes, holy water, mirror, manacles) is instinct — the hunter blood calling. Vladislav recognizes the Frascht name immediately and is both fascinated and wary. The last Frascht, untrained, sitting in his lair.",
+        "description": "The Frascht family are legendary monster hunters \u2014 a Van Helsing bloodline known and feared across the supernatural world for generations. Barry's parents were active hunters who died fighting Vladislav (or his network). Barry has no memory of this \u2014 he was too young. The genie patron knows the full truth but is forbidden from revealing it. Barry's 'paranoid' gear (stakes, holy water, mirror, manacles) is instinct \u2014 the hunter blood calling. Vladislav recognizes the Frascht name immediately and is both fascinated and wary. The last Frascht, untrained, sitting in his lair.",
         "knownBy": [
           "hooded-stranger",
           "genie-patron"
@@ -930,7 +930,7 @@
           "Katya knows a ballad about the Frascht hunters",
           "The genie breaks its silence in a moment of desperation"
         ],
-        "revealConsequences": "Barry's entire identity shifts. The 'imaginary friend' is real. His parents were heroes, not ordinary people. Vladislav killed them. Barry must choose: embrace the family legacy or reject it. This is a campaign-spanning revelation — do NOT reveal it all at once. Plant seeds in Session 0, pay it off over the arc.",
+        "revealConsequences": "Barry's entire identity shifts. The 'imaginary friend' is real. His parents were heroes, not ordinary people. Vladislav killed them. Barry must choose: embrace the family legacy or reject it. This is a campaign-spanning revelation \u2014 do NOT reveal it all at once. Plant seeds in Session 0, pay it off over the arc.",
         "linkedClues": [
           "frascht_name_reaction",
           "hunter_instinct",
@@ -940,7 +940,7 @@
           "discovery",
           "confrontation"
         ],
-        "aiInstructions": "CRITICAL: This is the biggest player-specific secret in the campaign. Vladislav KNOWS the Frascht name. When he hears it, he goes still — just for a moment. He studies Barry differently from the other players. He is careful, respectful, almost nostalgic. He does NOT attack Barry directly unless forced. He wants to understand how much Barry knows. Drop TINY hints in Session 0 only: a reaction to the name, a comment about 'old families', Vladislav watching Barry's hands when he handles the stakes. Do NOT reveal the full truth yet. The genie should be unusually agitated — it knows where they are and what Vladislav is. If Barry talks to his 'imaginary friend', the genie is terrified but cannot explain why."
+        "aiInstructions": "CRITICAL: This is the biggest player-specific secret in the campaign. Vladislav KNOWS the Frascht name. When he hears it, he goes still \u2014 just for a moment. He studies Barry differently from the other players. He is careful, respectful, almost nostalgic. He does NOT attack Barry directly unless forced. He wants to understand how much Barry knows. Drop TINY hints in Session 0 only: a reaction to the name, a comment about 'old families', Vladislav watching Barry's hands when he handles the stakes. Do NOT reveal the full truth yet. The genie should be unusually agitated \u2014 it knows where they are and what Vladislav is. If Barry talks to his 'imaginary friend', the genie is terrified but cannot explain why."
       }
     ],
     "clues": [
@@ -951,7 +951,7 @@
         "method": "conversation",
         "dc": null,
         "revealsSecret": null,
-        "readAloud": "Old Gregor leans forward, his voice dropping. 'On the road. Coming here tonight. I found a deer. Dead. Not killed by wolves — I've seen wolf kills my whole life. This was... empty. Drained. Like a wineskin someone squeezed dry. Not a drop of blood in the body. Not a drop on the snow. And the wounds — two holes. Small. Right over the throat.' He takes a long drink. 'My grandmother would have known what did that. She had a word for it. Strigoi.'"
+        "readAloud": "Old Gregor leans forward, his voice dropping. 'On the road. Coming here tonight. I found a deer. Dead. Not killed by wolves \u2014 I've seen wolf kills my whole life. This was... empty. Drained. Like a wineskin someone squeezed dry. Not a drop of blood in the body. Not a drop on the snow. And the wounds \u2014 two holes. Small. Right over the throat.' He takes a long drink. 'My grandmother would have known what did that. She had a word for it. Strigoi.'"
       },
       {
         "id": "marta_husband_missing",
@@ -970,7 +970,7 @@
         "dc": 12,
         "revealsSecret": null,
         "prerequisite": null,
-        "readAloud": "There. Again. From below your feet — a scratching sound. Rhythmic. Patient. Like something down there is pacing. Back and forth. Back and forth."
+        "readAloud": "There. Again. From below your feet \u2014 a scratching sound. Rhythmic. Patient. Like something down there is pacing. Back and forth. Back and forth."
       },
       {
         "id": "tomas_scratches",
@@ -979,7 +979,7 @@
         "method": "perception",
         "dc": 14,
         "revealsSecret": "tomas_is_werewolf",
-        "readAloud": "As Tomas reaches for his drink, his sleeve rides up. Deep gouges run along his forearm — not cuts, but scratches. Like claws. And they're not old. The skin around them is still angry red."
+        "readAloud": "As Tomas reaches for his drink, his sleeve rides up. Deep gouges run along his forearm \u2014 not cuts, but scratches. Like claws. And they're not old. The skin around them is still angry red."
       },
       {
         "id": "tomas_cellar_desperation",
@@ -988,7 +988,7 @@
         "method": "perception",
         "dc": 10,
         "revealsSecret": "both_want_cellar",
-        "readAloud": "You notice Tomas staring at the cellar door. Not casually — with a desperate, haunted intensity. His jaw is clenched. His knuckles are white around his mug."
+        "readAloud": "You notice Tomas staring at the cellar door. Not casually \u2014 with a desperate, haunted intensity. His jaw is clenched. His knuckles are white around his mug."
       },
       {
         "id": "vladislav_cellar_interest",
@@ -997,7 +997,7 @@
         "method": "perception",
         "dc": 15,
         "revealsSecret": "both_want_cellar",
-        "readAloud": "The stranger's head turns — slowly, deliberately — toward the cellar door. Not with curiosity. With ownership. Like someone checking a lock on their own front door."
+        "readAloud": "The stranger's head turns \u2014 slowly, deliberately \u2014 toward the cellar door. Not with curiosity. With ownership. Like someone checking a lock on their own front door."
       },
       {
         "id": "no_reflection",
@@ -1006,7 +1006,7 @@
         "method": "investigation",
         "dc": 16,
         "revealsSecret": "vladislav_is_vampire",
-        "readAloud": "The copper pans behind the bar are polished enough to catch reflections. You can see Marta. You can see yourself. But the corner where the stranger sits — it's empty in the copper. As if no one is there at all."
+        "readAloud": "The copper pans behind the bar are polished enough to catch reflections. You can see Marta. You can see yourself. But the corner where the stranger sits \u2014 it's empty in the copper. As if no one is there at all."
       },
       {
         "id": "avoids_fire",
@@ -1015,7 +1015,7 @@
         "method": "perception",
         "dc": 13,
         "revealsSecret": null,
-        "readAloud": "When Marta passes with a candle, the stranger leans away — sharply, instinctively, like someone avoiding a hot brand. His chair scrapes. He catches himself and goes still again."
+        "readAloud": "When Marta passes with a candle, the stranger leans away \u2014 sharply, instinctively, like someone avoiding a hot brand. His chair scrapes. He catches himself and goes still again."
       },
       {
         "id": "cellar_coffin",
@@ -1025,16 +1025,16 @@
         "dc": null,
         "revealsSecret": "vladislav_is_vampire",
         "prerequisite": null,
-        "readAloud": "The cellar is cold. Not winter cold — something else. Something wrong. And there, against the far wall, draped in shadow — a coffin. Dark wood, brass fittings, packed with black soil. It doesn't belong here. It belongs in a crypt."
+        "readAloud": "The cellar is cold. Not winter cold \u2014 something else. Something wrong. And there, against the far wall, draped in shadow \u2014 a coffin. Dark wood, brass fittings, packed with black soil. It doesn't belong here. It belongs in a crypt."
       },
       {
         "id": "cellar_bodies",
-        "description": "Two shriveled corpses in the cellar — the missing travelers.",
+        "description": "Two shriveled corpses in the cellar \u2014 the missing travelers.",
         "location": "cellar",
         "method": "search",
         "dc": null,
         "revealsSecret": "cellar_contents",
-        "readAloud": "Behind the wine barrels. Two shapes. Two people. What's left of two people. They're dried husks — like the deer on the road. Drained. Discarded."
+        "readAloud": "Behind the wine barrels. Two shapes. Two people. What's left of two people. They're dried husks \u2014 like the deer on the road. Drained. Discarded."
       },
       {
         "id": "cellar_spawn",
@@ -1043,17 +1043,17 @@
         "method": "search",
         "dc": null,
         "revealsSecret": "piotr_is_spawn",
-        "readAloud": "A rattling. Chains. Something moves in the darkest corner. A man — or what was a man. He's chained to the wall, emaciated, but his eyes burn red in the darkness. His mouth opens and you see fangs. 'Help... me...' The voice is a rasp. 'He... made me... this...'"
+        "readAloud": "A rattling. Chains. Something moves in the darkest corner. A man \u2014 or what was a man. He's chained to the wall, emaciated, but his eyes burn red in the darkness. His mouth opens and you see fangs. 'Help... me...' The voice is a rasp. 'He... made me... this...'"
       },
       {
         "id": "frascht_name_reaction",
-        "description": "Vladislav reacts when he hears the name Frascht — a moment of stillness, recognition, danger.",
+        "description": "Vladislav reacts when he hears the name Frascht \u2014 a moment of stillness, recognition, danger.",
         "location": "pallid-hart-common-room",
         "method": "observation",
         "dc": null,
         "revealsSecret": null,
         "triggerCondition": "Barry introduces himself by surname or another player uses it",
-        "readAloud": "The hooded stranger goes still. Not the casual stillness of someone listening — a predator's stillness. Like a snake that has just scented something unexpected. It lasts only a moment. Then the hood turns, slowly, toward Barry. You can't see the face. But you can feel the attention."
+        "readAloud": "The hooded stranger goes still. Not the casual stillness of someone listening \u2014 a predator's stillness. Like a snake that has just scented something unexpected. It lasts only a moment. Then the hood turns, slowly, toward Barry. You can't see the face. But you can feel the attention."
       },
       {
         "id": "hunter_instinct",
@@ -1062,7 +1062,7 @@
         "method": "perception",
         "dc": 12,
         "revealsSecret": null,
-        "readAloud": "You notice the newcomer's pack. Wooden stakes — nine of them. A flask of holy water. A steel mirror. Manacles. That's not a traveler's kit. That's a hunter's kit. Whoever this person is, they came prepared for something specific."
+        "readAloud": "You notice the newcomer's pack. Wooden stakes \u2014 nine of them. A flask of holy water. A steel mirror. Manacles. That's not a traveler's kit. That's a hunter's kit. Whoever this person is, they came prepared for something specific."
       },
       {
         "id": "genie_panic",
@@ -1072,7 +1072,7 @@
         "dc": null,
         "revealsSecret": null,
         "playerSpecific": "barry",
-        "readAloud": "Your imaginary friend hasn't spoken since you entered the inn. That's unusual — normally you can't shut them up. When you reach out, there's... static. Fear. A feeling like a hand gripping your wrist, pulling you toward the door. Then one word, barely a whisper: 'Leave.'"
+        "readAloud": "Your imaginary friend hasn't spoken since you entered the inn. That's unusual \u2014 normally you can't shut them up. When you reach out, there's... static. Fear. A feeling like a hand gripping your wrist, pulling you toward the door. Then one word, barely a whisper: 'Leave.'"
       }
     ],
     "discoveryChains": [
@@ -1102,7 +1102,7 @@
     "branches": [
       {
         "id": "cellar_before_confrontation",
-        "description": "Players find the cellar before Vladislav reveals himself — they have evidence and initiative",
+        "description": "Players find the cellar before Vladislav reveals himself \u2014 they have evidence and initiative",
         "triggeredBy": "discovery",
         "conditions": [
           "secret:vladislav_is_vampire:revealed"
@@ -1111,7 +1111,7 @@
           {
             "event": "dm:whisper",
             "data": {
-              "text": "Players found the evidence first. Vladislav knows they know — he must act. He can try to flee, fight, or negotiate. His disposition determines which.",
+              "text": "Players found the evidence first. Vladislav knows they know \u2014 he must act. He can try to flee, fight, or negotiate. His disposition determines which.",
               "priority": 1,
               "category": "story"
             }
@@ -1121,7 +1121,7 @@
       },
       {
         "id": "vladislav_reveals_first",
-        "description": "Vladislav strikes before players find the cellar — they are blindsided",
+        "description": "Vladislav strikes before players find the cellar \u2014 they are blindsided",
         "triggeredBy": "escalation",
         "conditions": [
           "secret:vladislav_is_vampire:unrevealed"
@@ -1140,7 +1140,7 @@
       },
       {
         "id": "tomas_transforms_public",
-        "description": "Tomas transforms in the common room — chaos erupts, two monsters in the inn",
+        "description": "Tomas transforms in the common room \u2014 chaos erupts, two monsters in the inn",
         "triggeredBy": "escalation",
         "conditions": [
           "time:after:23:30",
@@ -1162,7 +1162,7 @@
     "futureHooks": [
       {
         "id": "hook-marta-husband",
-        "description": "Marta's husband Piotr is a vampire spawn in the cellar — if players save or destroy him, Marta becomes an ally or enemy in future sessions",
+        "description": "Marta's husband Piotr is a vampire spawn in the cellar \u2014 if players save or destroy him, Marta becomes an ally or enemy in future sessions",
         "payoffCondition": "Players discover Piotr's fate and make a choice",
         "payoffSession": 1,
         "session": 0,
@@ -1187,7 +1187,7 @@
       },
       {
         "id": "hook-tomas-curse",
-        "description": "Tomas Birkov's werewolf curse — if players learn of it and let him live, he may seek their help curing it",
+        "description": "Tomas Birkov's werewolf curse \u2014 if players learn of it and let him live, he may seek their help curing it",
         "payoffCondition": "Players interact with Tomas's lycanthropy without killing him",
         "payoffSession": 1,
         "linkedNpcs": [
@@ -1197,7 +1197,7 @@
       },
       {
         "id": "hook-cellar-evidence",
-        "description": "The cellar contains evidence of a larger vampire network — letters referencing Houska Castle and 'the gathering'",
+        "description": "The cellar contains evidence of a larger vampire network \u2014 letters referencing Houska Castle and 'the gathering'",
         "payoffCondition": "Players thoroughly search the cellar",
         "payoffBeat": "cellar_investigation",
         "payoffSession": 1,
@@ -1205,6 +1205,186 @@
           "vladislav_is_vampire"
         ],
         "notes": "This plants the seed for the Houska arc (sessions 2-4)"
+      },
+      {
+        "id": "hook-zarina-conspiracy",
+        "description": "The corrupt Medani elder and high-ranking Brelish official Zarina exposed are still in power. The leave of absence was a leash not a pardon. Someone will come looking for her.",
+        "plantedAt": "Session 0 \u2014 background, not yet triggered",
+        "payoffCondition": "Party encounters agents of the conspiracy or Zarina reveals her backstory",
+        "payoffBeat": "zarina-conspiracy-resurfaces",
+        "payoffSession": 2,
+        "status": "planted",
+        "notes": "Max tracks this as a background threat. Zarina is not hiding \u2014 she cannot hide, the Mark makes her too visible to those who know what to look for. At Houska or \u010cachtice, someone will recognize her. Whether they are there to bring her in or warn her is undetermined \u2014 decide based on party choices."
+      },
+      {
+        "id": "hook-zarina-lost-friends",
+        "description": "Zarina has lost too many friends. Her bond 'those who fight beside me are those worth dying for' is not abstract \u2014 it is specific people. Some of them died. This has not been processed.",
+        "plantedAt": "Session 0 \u2014 ambient, not yet triggered",
+        "payoffCondition": "Someone in the inn reminds her of a lost companion, or combat goes badly for a party member",
+        "payoffBeat": "zarina-loss-surfaces",
+        "payoffSession": 0,
+        "status": "planted",
+        "notes": "Max watches for the moment. When a party member is in serious danger, Zarina's response will be protective to a degree that surprises even her. Max whispers the DM: 'Zarina is doing the thing she does when she is about to do something that will get her hurt.' Do not elaborate. The DM knows."
+      },
+      {
+        "id": "hook-zarina-mark-and-necronomicon",
+        "description": "Zarina's Mark of Detection includes Detect Magic. The Necronomicon page in Pieter's room radiates strong conjuration magic. If she casts Detect Magic on the upper floor she will find it before the DC 14 search would.",
+        "plantedAt": "Session 0 \u2014 available if she goes upstairs and uses the spell",
+        "payoffCondition": "Zarina casts Detect Magic on the upper floor",
+        "payoffBeat": "zarina-detects-page",
+        "payoffSession": 0,
+        "status": "planted",
+        "notes": "If Zarina casts Detect Magic upstairs, Max whispers the DM: 'Strong conjuration magic. One source. Room 5. Behind the door.' The page glows like a beacon to her. She found it before she knew she was looking for it. Vladislav will notice she went upstairs and came back changed."
+      },
+      {
+        "id": "hook-barry-absence",
+        "description": "Barry is absent from Session 0. He will join the campaign at Session 1. The rest of the party will have experienced things he was not there for. This gap is a story opportunity.",
+        "plantedAt": "Session 0 \u2014 established by absence",
+        "payoffCondition": "Barry joins the party at Session 1",
+        "payoffBeat": "barry-joins",
+        "payoffSession": 1,
+        "status": "planted",
+        "notes": "Max prepares a briefing for when Barry joins. The party will have to explain everything. How they explain it \u2014 what they include, what they leave out, how they describe Vladislav \u2014 tells Max something about each of them."
+      },
+      {
+        "id": "hook-barry-bloodline",
+        "description": "The Letavec has harvested from Barry's bloodline twice before. Barry may not know this. His family may have stories. The warlock pact may be connected to why his bloodline was selected.",
+        "plantedAt": "Session 0 \u2014 Letavec's presence implies this without stating it",
+        "payoffCondition": "Party confronts the Letavec, or Vladislav reveals Letavec's purpose",
+        "payoffBeat": "barry-bloodline-revealed",
+        "payoffSession": 1,
+        "status": "planted",
+        "notes": "When Barry joins and learns about the Letavec, Max watches his reaction carefully. If Barry's player has built in family history the warlock pact may intersect. Flag for DM to discuss with Barry's player before Session 1."
+      },
+      {
+        "id": "hook-spurt-wildmagic-origin",
+        "description": "Wild magic among kobolds is almost unheard of. Something caused it. The entity at Houska believes it knows what \u2014 and if the entity is right, the origin of Spurt's wild magic connects to the portal.",
+        "plantedAt": "Session 0 \u2014 ambient, not yet triggered",
+        "payoffCondition": "Party reaches Houska and the entity makes contact",
+        "payoffBeat": "spurt-wildmagic-origin",
+        "payoffSession": 2,
+        "status": "planted",
+        "notes": "The entity will be specifically interested in Spurt when it makes contact. Not as a threat \u2014 as a recognition. It has seen wild magic from this source before. Long ago. Before Spurt was born. The implication is significant. Let the party sit with it."
+      },
+      {
+        "id": "hook-spurt-kobold-instinct",
+        "description": "Spurt keeps glancing at Vladislav's corner. He does not know why. His kobold predator-sense has identified something wrong and cannot categorize it.",
+        "plantedAt": "Session 0 \u2014 first 30 minutes",
+        "payoffCondition": "Players notice Spurt's behavior and ask him about it",
+        "payoffBeat": "spurt-vladislav-instinct",
+        "payoffSession": 0,
+        "status": "planted",
+        "notes": "Max plays this from the start. Spurt sits with his back to a wall facing Vladislav's corner. Not because he decided to. Because he was already there when the session started. If players ask him why he says 'Spurt does not know. Something over there smells like before a cave-in. Like the rock knows it is about to fall.'"
+      },
+      {
+        "id": "hook-chazz-nerve-damage",
+        "description": "Chazz has massive nerve damage and can only feel pain in his shoulder. Something caused this. It was not an accident. What caused it is connected to why he is on this road.",
+        "plantedAt": "Session 0 \u2014 something in the inn triggers the memory",
+        "payoffCondition": "Player reveals backstory or party investigates",
+        "payoffBeat": "chazz-nerve-damage-origin",
+        "payoffSession": 1,
+        "status": "planted",
+        "notes": "Max watches for the trigger moment. The smell of old blood from the cellar. The sound of something breaking. Vladislav's stillness. Something tonight will make Chazz touch his shoulder. Max whispers the DM when it happens."
+      },
+      {
+        "id": "hook-chazz-infernal-literacy",
+        "description": "Chazz can instinctively read Infernal without having formally learned it. He does not know this. The Houska Keep binding-script is partly in Infernal. He is the only party member who can read it.",
+        "plantedAt": "Session 0 \u2014 background, not yet triggered",
+        "payoffCondition": "Party enters Houska Keep lower levels",
+        "payoffBeat": "chazz-reads-infernal",
+        "payoffSession": 2,
+        "status": "planted",
+        "notes": "Do not telegraph this. When Chazz encounters Infernal script at Houska, Max whispers: 'Chazz can read this. He may not know he can until he tries.' The player discovers it."
+      },
+      {
+        "id": "hook-chazz-forbidden-knowledge",
+        "description": "87 years of collecting secrets and forbidden knowledge as a College of Lore bard. Chazz knows something relevant to the campaign that he does not yet know he knows. At some point a piece of lore will surface from his memory at exactly the right moment.",
+        "plantedAt": "Session 0 \u2014 background",
+        "payoffCondition": "Party encounters something that matches old lore Chazz collected",
+        "payoffBeat": "chazz-lore-surfaces",
+        "payoffSession": 1,
+        "status": "planted",
+        "notes": "Max tracks this. When the party encounters something in the campaign that an 87-year-old bard with a criminal background and forbidden knowledge obsession would have encountered in some form before \u2014 Max whispers: 'Chazz has heard something about this. Old story, maybe a song. He remembers the shape of it if not the details.' Let the player decide the content."
+      },
+      {
+        "id": "hook-marfire-bear-spirit-warning",
+        "description": "The horse in the shed was circled by the Letavec twice tonight and is terrified. If Marfire uses Speech of Beast and Leaf on any animal near the inn, she gets intelligence the party cannot get any other way.",
+        "plantedAt": "Session 0 \u2014 available immediately if she goes outside or near animals",
+        "payoffCondition": "Marfire uses Speech of Beast and Leaf",
+        "payoffBeat": "marfire-animal-intelligence",
+        "payoffSession": 0,
+        "status": "planted",
+        "notes": "Max delivers this through animal communication. The horse: terror, wings, circling, twice. The rat in the walls: wrongness in the air, something that smells like cold stone and old hunger. The owl in the eaves: saw it pass. Three times. Thirteen minutes apart. Max whispers the DM full intelligence when Marfire reports."
+      },
+      {
+        "id": "hook-marfire-valen",
+        "description": "Valen is Marfire's God-adoptive father. His nature, connections, and reasons for taking responsibility for Marfire are unknown. He may have resources or information relevant to the campaign.",
+        "plantedAt": "Session 0 \u2014 background",
+        "payoffCondition": "Party investigates or Marfire mentions Valen",
+        "payoffBeat": "valen-introduced",
+        "payoffSession": 1,
+        "status": "planted",
+        "notes": "Max tracks Valen as an unknown quantity. Someone who adopts a Firbolg barbarian whose family were political prisoners is someone with an agenda \u2014 benign or otherwise. Defer to player on Valen's nature. Build around whatever they establish."
+      },
+      {
+        "id": "hook-marfire-flaming-hand-mission",
+        "description": "Marfire is on this road because of a Flaming Hand mission. The storm drove her to the inn. Where was she going? The mission destination may be relevant to the campaign \u2014 possibly Orava, possibly Houska.",
+        "plantedAt": "Session 0 \u2014 background",
+        "payoffCondition": "Party asks about Marfire's travel plans or she reveals",
+        "payoffBeat": "marfire-mission-revealed",
+        "payoffSession": 0,
+        "status": "planted",
+        "notes": "Defer to player on mission specifics. If player has not decided, Max treats the destination as open. Either Orava or Houska makes campaign sense as a Flaming Hand mission \u2014 there are things at both castles worth investigating from a military or intelligence perspective."
+      },
+      {
+        "id": "hook-marfire-parents",
+        "description": "Marfire's parents are in prison. They were released on the condition of her service. The injustice of this is something she carries. At some point the party will be in a position to do something about it.",
+        "plantedAt": "Session 0 \u2014 background",
+        "payoffCondition": "Party develops enough power or connections to address political prisoners",
+        "payoffBeat": "marfire-parents-freed",
+        "payoffSession": 3,
+        "status": "planted",
+        "notes": "This is a long-term hook. It does not resolve this session or next. But Max knows it exists and will whisper the DM when circumstances align \u2014 when a political favor is available, when someone with the right connections appears, when Marfire's service to the party has earned something worth spending."
+      },
+      {
+        "id": "hook-americas-connection",
+        "description": "Five travelers from the Americas end up in the same mountain inn in the same blizzard on the same night. Each came separately, each by a path that felt like their own choice. This is not coincidence. The entity arranged the convergence.",
+        "plantedAt": "Session 0 \u2014 the party's presence together",
+        "payoffCondition": "Party compares their crossing stories and realizes the convergence was arranged",
+        "payoffBeat": "convergence-revealed",
+        "payoffSession": 1,
+        "status": "planted",
+        "notes": "At some point the party will compare notes on how they ended up here. Zarina's investigation led her here. Marfire's mission led her here. Spurt followed a feeling. Chazz followed the work. Each path was real. Each was also nudged. The moment they realize this \u2014 that they were assembled \u2014 is a significant story beat. Max watches for it and whispers: 'They are starting to understand. Vladislav has been watching them realize it.'"
+      },
+      {
+        "id": "hook-draconic-readers",
+        "description": "Zarina and Spurt both speak Draconic. Old Draconic inscriptions appear at all three castles. The party has two readers of a language no one expects from Americas travelers.",
+        "plantedAt": "Session 0 \u2014 background",
+        "payoffCondition": "Party encounters Draconic inscriptions at Orava",
+        "payoffBeat": "draconic-inscription-orava",
+        "payoffSession": 1,
+        "status": "planted",
+        "notes": "The party having two Draconic readers is not accidental. When they use it at Orava, Vladislav will be present and will notice. He will not say what this confirms for him. He will file it."
+      },
+      {
+        "id": "hook-chazz-translator",
+        "description": "Chazz is the party's best translator for Central European languages. This gives him information first. At some point he will have to decide whether to translate something fully or edit it.",
+        "plantedAt": "Session 0 \u2014 established by his language skills",
+        "payoffCondition": "A situation where full translation would be dangerous or complicated",
+        "payoffBeat": "chazz-translation-choice",
+        "payoffSession": 0,
+        "status": "planted",
+        "notes": "Max watches for the moment. When a local says something in Slovak or Czech that changes the party's situation \u2014 something about Vladislav, something about the cellar, something about the road \u2014 Chazz gets it first. Whether he passes it on fully is his choice. Max whispers the DM the full content regardless."
+      },
+      {
+        "id": "hook-elvish-private-channel",
+        "description": "Zarina and Marfire share Elvish as a private language. They are the only party members who do. This gives them a communication channel others cannot access \u2014 including Vladislav, who will not immediately reveal he understands Elvish.",
+        "plantedAt": "Session 0 \u2014 available whenever they realize they share it",
+        "payoffCondition": "Zarina and Marfire use Elvish privately; Vladislav overhears",
+        "payoffBeat": "vladislav-overhears-elvish",
+        "payoffSession": 0,
+        "status": "planted",
+        "notes": "If Zarina and Marfire speak Elvish privately about Vladislav within his earshot \u2014 which they will, because he is sitting in the corner and they will think they are safe \u2014 Vladislav will hear everything. He will not react. He will not reveal he understood. The DM knows. Max whispers: 'Vladislav understood every word. He is filing it. He has not decided what to do with it yet.'"
       }
     ],
     "factions": [
@@ -1413,7 +1593,7 @@
             "id": "obs-letavec-1",
             "tier": 2,
             "dc": 14,
-            "text": "Something circled the inn twice before the storm peaked. The tracks in the snow at the tree line are wrong — too large for a wolf, the wrong shape for a bear, and they stop at the edge of the trees without continuing in any direction.",
+            "text": "Something circled the inn twice before the storm peaked. The tracks in the snow at the tree line are wrong \u2014 too large for a wolf, the wrong shape for a bear, and they stop at the edge of the trees without continuing in any direction.",
             "linkedSecret": "nocni-letavec-seed",
             "timing": "Only available if any player goes near a window or door during the early session"
           }
@@ -1426,7 +1606,7 @@
             "id": "obs-1900-vlad-tracks",
             "tier": 2,
             "dc": 15,
-            "text": "His eyes track one of you specifically — not the room. He is watching someone.",
+            "text": "His eyes track one of you specifically \u2014 not the room. He is watching someone.",
             "linkedSecret": "vladislav_is_vampire"
           },
           {
@@ -1440,7 +1620,7 @@
             "tier": 3,
             "dc": 12,
             "investigationType": "insight",
-            "text": "Aldous Kern — DC12 Insight — he refers to 'we' and 'us' but is visibly alone and has no explanation for it",
+            "text": "Aldous Kern \u2014 DC12 Insight \u2014 he refers to 'we' and 'us' but is visibly alone and has no explanation for it",
             "dmSuggest": "Something about the pilgrim troubles you. He keeps speaking as though he is not alone.",
             "linkedSecret": "false-hydra-seed"
           },
@@ -1467,14 +1647,14 @@
             "id": "obs-1930-brass-plate",
             "tier": 2,
             "dc": 14,
-            "text": "She is looking at the brass plate on the wall — the polished one that catches reflections.",
+            "text": "She is looking at the brass plate on the wall \u2014 the polished one that catches reflections.",
             "linkedSecret": "vladislav_is_vampire"
           },
           {
             "id": "obs-1930-no-reflect",
             "tier": 3,
             "dc": 12,
-            "text": "Examine the brass plate — something about the way Katya stopped troubles you",
+            "text": "Examine the brass plate \u2014 something about the way Katya stopped troubles you",
             "suggest": "Something about the way Katya stopped troubles you. You follow her gaze to the polished brass on the wall..."
           }
         ]
@@ -1509,13 +1689,13 @@
           {
             "id": "obs-2100-gregor-falls",
             "tier": 1,
-            "text": "Old Gregor slides from his chair without a sound — he simply folds and drops"
+            "text": "Old Gregor slides from his chair without a sound \u2014 he simply folds and drops"
           },
           {
             "id": "obs-2100-gregor-wounds",
             "tier": 3,
             "dc": 12,
-            "text": "Medicine check on Gregor — two puncture wounds on his neck",
+            "text": "Medicine check on Gregor \u2014 two puncture wounds on his neck",
             "suggest": "Something about the way he fell does not look right. Not like a faint. More like... emptied."
           }
         ]
@@ -1576,14 +1756,14 @@
             "id": "obs-gasspore-1",
             "tier": 1,
             "text": "There is something floating in the center of the cellar. Round. Large. With stalks extending from its surface. Your stomach drops.",
-            "dmWhisper": "Gas Spore visible — players may mistake it for a Beholder — do not correct them yet"
+            "dmWhisper": "Gas Spore visible \u2014 players may mistake it for a Beholder \u2014 do not correct them yet"
           },
           {
             "id": "obs-gasspore-2",
             "tier": 2,
             "dc": 12,
             "triggerRange": 60,
-            "text": "The shape floats without intention — it drifts on air currents rather than moving with purpose. A Beholder moves. This thing drifts.",
+            "text": "The shape floats without intention \u2014 it drifts on air currents rather than moving with purpose. A Beholder moves. This thing drifts.",
             "linkedSecret": "gas-spore-identity"
           },
           {
@@ -1591,7 +1771,7 @@
             "tier": 2,
             "dc": 13,
             "triggerRange": 30,
-            "text": "The eyestalks hang wrong — limp, like wilted stems. The smell reaches you now. Earthy. Damp. Like a cellar after rain, not like a living thing.",
+            "text": "The eyestalks hang wrong \u2014 limp, like wilted stems. The smell reaches you now. Earthy. Damp. Like a cellar after rain, not like a living thing.",
             "linkedSecret": "gas-spore-identity"
           },
           {
@@ -1599,7 +1779,7 @@
             "tier": 2,
             "dc": 15,
             "triggerRange": 15,
-            "text": "This is not a Beholder. The surface is soft and mottled like a mushroom cap. The central eye is milky and fixed — it has never seen anything. This is something that wants you to think it is a Beholder.",
+            "text": "This is not a Beholder. The surface is soft and mottled like a mushroom cap. The central eye is milky and fixed \u2014 it has never seen anything. This is something that wants you to think it is a Beholder.",
             "linkedSecret": "gas-spore-identity",
             "onSuccess": "token-label-update:gas-spore-revealed"
           },
@@ -1609,7 +1789,7 @@
             "dc": 12,
             "targetCharacter": "zarina-firethorn",
             "bypassPPCheck": true,
-            "text": "You have seen men freeze when they see something they cannot categorize. Your instinct is different — you look for what is wrong with the thing not what it is. The stalks are wrong. The movement is wrong. The smell is wrong. This is not what it appears to be.",
+            "text": "You have seen men freeze when they see something they cannot categorize. Your instinct is different \u2014 you look for what is wrong with the thing not what it is. The stalks are wrong. The movement is wrong. The smell is wrong. This is not what it appears to be.",
             "linkedSecret": "gas-spore-identity"
           }
         ]
@@ -1752,6 +1932,52 @@
             "text": "Three scratches. Deliberate. Then silence."
           }
         ]
+      },
+      {
+        "eventId": "player_hooks_session_zero",
+        "_note": "Session 0 player-arc observations from all-player-backstory-hooks.json. Each item carries trigger/dmOnly/maxNote metadata in addition to the standard {id,tier,dc,text} fields the observation engine consumes.",
+        "items": [
+          {
+            "id": "chazz-shoulder",
+            "trigger": "ambient",
+            "dc": 12,
+            "tier": 2,
+            "dmOnly": true,
+            "description": "Chazz touches his shoulder. Just once. Something in this room reminded him of something he does not talk about.",
+            "text": "Chazz touches his shoulder. Just once. Something in this room reminded him of something he does not talk about.",
+            "maxNote": "Note it. Do not comment. The player may choose to address it or not. The information is: something in the inn tonight triggered the nerve damage memory."
+          },
+          {
+            "id": "spurt-vladislav-glance",
+            "trigger": "session-start",
+            "dc": 10,
+            "tier": 2,
+            "dmOnly": false,
+            "description": "Spurt is sitting with his back to the wall facing Vladislav's corner. He has been there since before the session started. His eyes go there every few minutes.",
+            "text": "The small kobold sorcerer has arranged himself with his back to the wall. He keeps looking at the corner where the hooded figure sits. Not staring \u2014 just checking. Like he is making sure something has not moved.",
+            "maxNote": "If players ask Spurt about it: 'Spurt does not know. Something over there smells like before a cave-in. Like the rock knows it is about to fall.'"
+          },
+          {
+            "id": "marfire-horse-opportunity",
+            "trigger": "player-action",
+            "dc": 0,
+            "tier": 1,
+            "dmOnly": true,
+            "description": "If Marfire goes outside or near the stable and uses Speech of Beast and Leaf.",
+            "text": "If Marfire goes outside or near the stable and uses Speech of Beast and Leaf.",
+            "maxNote": "The horse: terror, large wings, circling, twice. The rat in the walls: wrongness, cold stone smell, old hunger. The owl in the eaves: saw it pass three times, thirteen minutes apart each time. Report to DM when Marfire communicates with any animal near the inn."
+          },
+          {
+            "id": "zarina-detect-magic-upstairs",
+            "trigger": "player-action",
+            "dc": 0,
+            "tier": 1,
+            "dmOnly": true,
+            "description": "If Zarina casts Detect Magic on the upper floor.",
+            "text": "If Zarina casts Detect Magic on the upper floor.",
+            "maxNote": "Strong conjuration magic. One source. Room 5. Behind the door. The page glows like a beacon to her Mark of Detection. Whisper DM: 'Zarina's mark reacts. Strong conjuration magic in Room 5. She found it before she knew she was looking.'"
+          }
+        ]
       }
     ],
     "items": [
@@ -1850,7 +2076,7 @@
         "damageType": "bludgeoning",
         "saveType": "DEX",
         "saveDC": 10,
-        "description": "Steep, narrow cellar stairs — difficult terrain"
+        "description": "Steep, narrow cellar stairs \u2014 difficult terrain"
       },
       {
         "id": "balcony-edge",
@@ -1925,11 +2151,11 @@
         },
         {
           "actionType": "feeding",
-          "text": "Something shifts behind those eyes — hunger, ancient and patient, surfacing for just a moment."
+          "text": "Something shifts behind those eyes \u2014 hunger, ancient and patient, surfacing for just a moment."
         },
         {
           "actionType": "moving",
-          "text": "He unfolds from his chair with no sound — no creak, no scrape, no effort. Like shadow given form."
+          "text": "He unfolds from his chair with no sound \u2014 no creak, no scrape, no effort. Like shadow given form."
         },
         {
           "actionType": "moving",
@@ -1937,11 +2163,11 @@
         },
         {
           "actionType": "revealing",
-          "text": "The candlelight catches his teeth for just a moment — too many, too sharp."
+          "text": "The candlelight catches his teeth for just a moment \u2014 too many, too sharp."
         },
         {
           "actionType": "revealing",
-          "text": "His hood shifts and the firelight finds his face. The skin is wrong — too smooth, too pale, like something carved from marble."
+          "text": "His hood shifts and the firelight finds his face. The skin is wrong \u2014 too smooth, too pale, like something carved from marble."
         },
         {
           "actionType": "general",
@@ -1949,13 +2175,13 @@
         },
         {
           "actionType": "wound",
-          "text": "The wound closes. Not heals — closes. Like it was never there. He does not even flinch."
+          "text": "The wound closes. Not heals \u2014 closes. Like it was never there. He does not even flinch."
         }
       ],
       "tomas": [
         {
           "actionType": "transformation",
-          "text": "His breath comes in short, sharp bursts. He is counting something under his breath — a prayer, or a countdown."
+          "text": "His breath comes in short, sharp bursts. He is counting something under his breath \u2014 a prayer, or a countdown."
         },
         {
           "actionType": "transformation",
@@ -1967,7 +2193,7 @@
         },
         {
           "actionType": "general",
-          "text": "He scratches at his forearms unconsciously. The scratches are already there — deep, like claws."
+          "text": "He scratches at his forearms unconsciously. The scratches are already there \u2014 deep, like claws."
         },
         {
           "actionType": "wound",
@@ -1979,8 +2205,8 @@
   "backstories": {
     "_note": "Fill in each PC's reason for being at the crossroads once character sheets are imported. Use appearance data from DDB for physical descriptions shown to other players.",
     "jerome": {
-      "reasonAtCrossroads": "TODO — fill in once character background is finalized",
-      "whatOthersSee": "TODO — pull from character appearance data (age 40, 5'11\", messy brown hair, gray/hazel eyes, weathered skin, carries wooden stakes and holy water)",
+      "reasonAtCrossroads": "TODO \u2014 fill in once character background is finalized",
+      "whatOthersSee": "TODO \u2014 pull from character appearance data (age 40, 5'11\", messy brown hair, gray/hazel eyes, weathered skin, carries wooden stakes and holy water)",
       "absent": true,
       "absentReason": "Barry Frascht has not yet arrived. He is expected at dawn.",
       "notYetArrived": true
@@ -1992,7 +2218,7 @@
         "id": "lore-pallid-hart",
         "title": "The Pallid Hart",
         "category": "geography",
-        "content": "A small inn at a crossroads deep in the Orava mountains — where the north road from the villages meets the old pilgrim trail from the west. Run by Marta Kowalski and her husband Piotr (now missing). Named for a ghostly white stag said to appear at the crossroads before death comes to the mountains. The cellar is older than the inn — locals say it was built over the foundations of a monastery that was abandoned under mysterious circumstances. The crossroads itself has a dark reputation: the old legends say the devil walks crossroads at midnight, offering bargains to desperate travelers. Locals leave offerings of bread and salt at the junction and avoid it after dark.",
+        "content": "A small inn at a crossroads deep in the Orava mountains \u2014 where the north road from the villages meets the old pilgrim trail from the west. Run by Marta Kowalski and her husband Piotr (now missing). Named for a ghostly white stag said to appear at the crossroads before death comes to the mountains. The cellar is older than the inn \u2014 locals say it was built over the foundations of a monastery that was abandoned under mysterious circumstances. The crossroads itself has a dark reputation: the old legends say the devil walks crossroads at midnight, offering bargains to desperate travelers. Locals leave offerings of bread and salt at the junction and avoid it after dark.",
         "tags": [
           "orava",
           "inn",
@@ -2002,9 +2228,9 @@
       },
       {
         "id": "lore-crossroads-folklore",
-        "title": "Crossroads — The Devil's Junction",
+        "title": "Crossroads \u2014 The Devil's Junction",
         "category": "folklore",
-        "content": "In Central European folklore, crossroads are liminal places — thresholds between worlds where the boundaries thin. The devil is said to appear at crossroads at midnight to offer bargains: power, wealth, love, or knowledge, always at a terrible price. Travelers who linger at crossroads after dark risk encountering wandering spirits, demons, or the restless dead. In 1274, these beliefs are deeply held — peasants leave offerings of bread and salt, hang iron nails above the junction, and never travel the crossing after sunset. The Pallid Hart was built at such a crossroads, which locals see as either brave or foolish. The fact that travelers keep disappearing from this particular crossroads has only strengthened the superstition.",
+        "content": "In Central European folklore, crossroads are liminal places \u2014 thresholds between worlds where the boundaries thin. The devil is said to appear at crossroads at midnight to offer bargains: power, wealth, love, or knowledge, always at a terrible price. Travelers who linger at crossroads after dark risk encountering wandering spirits, demons, or the restless dead. In 1274, these beliefs are deeply held \u2014 peasants leave offerings of bread and salt, hang iron nails above the junction, and never travel the crossing after sunset. The Pallid Hart was built at such a crossroads, which locals see as either brave or foolish. The fact that travelers keep disappearing from this particular crossroads has only strengthened the superstition.",
         "tags": [
           "folklore",
           "crossroads",
@@ -2015,7 +2241,7 @@
         "id": "lore-night-travel",
         "title": "Nobody Travels at Night",
         "category": "setting",
-        "content": "In 1274, traveling the mountain forests of the Orava region after dark is considered suicidal. The roads are barely more than packed-earth trails, unlit, with no milestones or markers. Wolf packs are bold and coordinated — they take livestock and have been known to attack travelers. Bears emerge from hibernation unpredictably. But the real fear is older and deeper: the strigoi. The walking dead. Things that drink blood and wear human faces. Every village has stories. Every family has lost someone on these roads who was never found. Only merchants on tight schedules, pilgrims with more faith than sense, soldiers under orders, and locals who know the trails like their own hands will travel these mountains — and even they stop at sunset. Anyone still on the road after dark has either made a terrible mistake or is running from something worse than what waits in the dark.",
+        "content": "In 1274, traveling the mountain forests of the Orava region after dark is considered suicidal. The roads are barely more than packed-earth trails, unlit, with no milestones or markers. Wolf packs are bold and coordinated \u2014 they take livestock and have been known to attack travelers. Bears emerge from hibernation unpredictably. But the real fear is older and deeper: the strigoi. The walking dead. Things that drink blood and wear human faces. Every village has stories. Every family has lost someone on these roads who was never found. Only merchants on tight schedules, pilgrims with more faith than sense, soldiers under orders, and locals who know the trails like their own hands will travel these mountains \u2014 and even they stop at sunset. Anyone still on the road after dark has either made a terrible mistake or is running from something worse than what waits in the dark.",
         "tags": [
           "setting",
           "orava",
@@ -2024,7 +2250,7 @@
       },
       {
         "id": "lore-vladislav",
-        "title": "Vladislav Dragan — The Hooded Stranger",
+        "title": "Vladislav Dragan \u2014 The Hooded Stranger",
         "category": "npc",
         "content": "A vampire lord posing as a weary traveler. He arrived at The Pallid Hart two days ago. His true purpose: to feed on isolated travelers and expand his brood. He created Piotr as a spawn and keeps him in the cellar. Vladislav is connected to a larger vampire network centered on Houska Castle in Bohemia.",
         "tags": [
@@ -2036,9 +2262,9 @@
       },
       {
         "id": "lore-tomas-birkov",
-        "title": "Tomas Birkov — The Trapper",
+        "title": "Tomas Birkov \u2014 The Trapper",
         "category": "npc",
-        "content": "A werewolf disguised as a mountain trapper. Tomas was bitten three months ago and is losing control. He came to the inn seeking the cellar — he heard rumors of old chains in the monastery foundations where he could restrain himself during the full moon. He does not know about Vladislav.",
+        "content": "A werewolf disguised as a mountain trapper. Tomas was bitten three months ago and is losing control. He came to the inn seeking the cellar \u2014 he heard rumors of old chains in the monastery foundations where he could restrain himself during the full moon. He does not know about Vladislav.",
         "tags": [
           "werewolf",
           "session-0"
@@ -2049,7 +2275,7 @@
         "id": "lore-orava-mountains",
         "title": "The Orava Mountains",
         "category": "geography",
-        "content": "A remote, heavily forested mountain range in the northern Slovak region of the Kingdom of Hungary. In 1274, these mountains are sparsely populated, with scattered villages connected by dangerous mountain roads. Wolves, bears, and worse things prowl the forests. The region has a dark reputation — travelers disappear, livestock is found drained of blood, and the locals whisper about things that walk at night.",
+        "content": "A remote, heavily forested mountain range in the northern Slovak region of the Kingdom of Hungary. In 1274, these mountains are sparsely populated, with scattered villages connected by dangerous mountain roads. Wolves, bears, and worse things prowl the forests. The region has a dark reputation \u2014 travelers disappear, livestock is found drained of blood, and the locals whisper about things that walk at night.",
         "tags": [
           "orava",
           "geography",
@@ -2060,7 +2286,7 @@
         "id": "lore-three-castles",
         "title": "The Three Castles",
         "category": "history",
-        "content": "Three ancient castles form the backbone of the vampire conspiracy: Orava Castle in the Slovak mountains (the starting region), Houska Castle in Bohemia (said to be built over a gateway to Hell), and Čachtice Castle in western Hungary (seat of a noble family with dark secrets). The Dark Pilgrimage follows this path.",
+        "content": "Three ancient castles form the backbone of the vampire conspiracy: Orava Castle in the Slovak mountains (the starting region), Houska Castle in Bohemia (said to be built over a gateway to Hell), and \u010cachtice Castle in western Hungary (seat of a noble family with dark secrets). The Dark Pilgrimage follows this path.",
         "tags": [
           "campaign-arc",
           "castles",
@@ -2087,7 +2313,7 @@
       },
       {
         "id": "dt-village-missing",
-        "description": "Another traveler has gone missing on the mountain road — the third this month",
+        "description": "Another traveler has gone missing on the mountain road \u2014 the third this month",
         "trigger": "between_sessions",
         "effects": [
           {
@@ -2110,7 +2336,7 @@
       "disposition": "nervous",
       "emotionalState": "nervous",
       "location": "behind the bar",
-      "roomPosition": "bar — Echo nearest kitchen or bar position",
+      "roomPosition": "bar \u2014 Echo nearest kitchen or bar position",
       "mirrorReflection": "normal",
       "voiceCode": "F1",
       "languages": [
@@ -2121,9 +2347,9 @@
       "commonFluency": "conversational",
       "languageNote": "Switches to Slovak when frightened or emotional. Her Common breaks down under stress.",
       "dispositions": {
-        "zarina": "Cautious — strangers in her inn during a blizzard",
-        "barry": "Cautious — strangers in her inn during a blizzard",
-        "spurt": "Bewildered — has never seen a Kobold, watches him carefully"
+        "zarina": "Cautious \u2014 strangers in her inn during a blizzard",
+        "barry": "Cautious \u2014 strangers in her inn during a blizzard",
+        "spurt": "Bewildered \u2014 has never seen a Kobold, watches him carefully"
       },
       "prices": {
         "room_common": {
@@ -2160,14 +2386,14 @@
         },
         "bath": {
           "cp": 2,
-          "description": "Hot water carried up — she charges for the wood"
+          "description": "Hot water carried up \u2014 she charges for the wood"
         }
       },
       "creditPolicy": "Extends credit to people she trusts. Trust level Considering or higher gets one night credit. She does not forget debts.",
       "priceNegotiation": "Does not negotiate on room price. Will throw in a meal for a group that has been decent to her.",
       "voiceProfileDetails": {
         "character": "warm, slightly breathless, sentences that start strong and get quieter as she pulls back from what she almost says",
-        "rate": "slightly faster than normal — keeping busy to stay calm",
+        "rate": "slightly faster than normal \u2014 keeping busy to stay calm",
         "pitch": "normal to slightly higher when frightened",
         "elevenLabsVoiceId": "",
         "fallbackEchoVoice": "Joanna"
@@ -2214,7 +2440,7 @@
         "stranger": "'He came two days ago. Paid in coin. Doesn't eat. Doesn't drink. Just... sits.'",
         "sounds": "'You hear them too? I thought I was going mad. Every night. From below.'",
         "blood": "'The goat behind the inn. Drained dry. Like something sucked the life from it.'",
-        "when_vampire_revealed": "Collapses. 'I KNEW. I knew what he was. I could feel it. But I couldn't— I didn't know how to— Oh God, Piotr. What did he do to Piotr?'",
+        "when_vampire_revealed": "Collapses. 'I KNEW. I knew what he was. I could feel it. But I couldn't\u2014 I didn't know how to\u2014 Oh God, Piotr. What did he do to Piotr?'",
         "when_tomas_transforms": "Screams and dives behind the bar. 'TWO of them?! There are TWO?!'",
         "when_confronted_about_silence": "'What was I supposed to do?! He's a MONSTER. You think I could fight that? I'm an innkeeper! I kept quiet because keeping quiet kept me alive!'",
         "when_piotr_found": "Wailing. 'That's not him. That's not my Piotr. Please... please help him. Or end it. I can't watch this anymore.'"
@@ -2229,7 +2455,7 @@
       "disposition": "agitated",
       "emotionalState": "desperate",
       "location": "near the entry door",
-      "roomPosition": "near door — Echo nearest entrance",
+      "roomPosition": "near door \u2014 Echo nearest entrance",
       "mirrorReflection": "normal",
       "voiceCode": "M3",
       "languages": [
@@ -2238,11 +2464,11 @@
       ],
       "primaryLanguage": "slovak",
       "commonFluency": "basic",
-      "languageNote": "His Common is functional but simple. Complex questions confuse him. Tonight his answers are shorter than usual — he is distracted and frightened.",
+      "languageNote": "His Common is functional but simple. Complex questions confuse him. Tonight his answers are shorter than usual \u2014 he is distracted and frightened.",
       "dispositions": {
-        "zarina": "Distracted — too consumed with his curse to notice her closely",
-        "barry": "Wary — Barry's hunter equipment unsettles him",
-        "spurt": "Confused — too distracted to react meaningfully"
+        "zarina": "Distracted \u2014 too consumed with his curse to notice her closely",
+        "barry": "Wary \u2014 Barry's hunter equipment unsettles him",
+        "spurt": "Confused \u2014 too distracted to react meaningfully"
       },
       "voiceProfileDetails": {
         "character": "rough, clipped, words that cost him something, voice that strains at the edges",
@@ -2254,10 +2480,10 @@
       "voiceProfile": "trapper_tomas",
       "knowledge": [
         "He is a werewolf, cursed two years ago",
-        "The full moon rises tonight — he cannot control the transformation",
+        "The full moon rises tonight \u2014 he cannot control the transformation",
         "He came to the inn hoping to lock himself in the cellar before moonrise",
         "He can smell something unnatural in the inn but doesn't know it's a vampire",
-        "He knows these mountain woods intimately — every trail, cave, and den",
+        "He knows these mountain woods intimately \u2014 every trail, cave, and den",
         "The scratches on his arms are self-inflicted from his last transformation"
       ],
       "goals": [
@@ -2304,12 +2530,12 @@
         "cellar": "'Is there a cellar? I thought I might... fetch some wine. Help out.' (desperate)",
         "nervousness": "'The storm. Just the storm. I don't like being trapped.' (half-truth)",
         "stranger": "'Something about him. Something wrong. I can... I just don't trust him.' (he can smell the undead)",
-        "woods": "Opens up here — knows every trail, every cave. This is genuine and helpful.",
-        "moonrise": "Goes pale. Changes subject immediately. If pressed: 'I need air. I need to— I need to go somewhere.'",
+        "woods": "Opens up here \u2014 knows every trail, every cave. This is genuine and helpful.",
+        "moonrise": "Goes pale. Changes subject immediately. If pressed: 'I need air. I need to\u2014 I need to go somewhere.'",
         "when_exposed": "Desperate, broken. 'I didn't ASK for this! I was bitten three months ago. I came here to lock myself in the cellar before the moon. I'm trying to PROTECT you!'",
-        "when_transforming": "Screaming, bones cracking. 'RUN! Get away from me! I can't— I can't stop it— PLEASE—' Then the screaming stops and the growling starts.",
+        "when_transforming": "Screaming, bones cracking. 'RUN! Get away from me! I can't\u2014 I can't stop it\u2014 PLEASE\u2014' Then the screaming stops and the growling starts.",
         "when_vampire_revealed": "Vindicated, angry. 'I TOLD you something was wrong with him! I could SMELL it. The dead. He reeks of the dead.'",
-        "when_offered_help": "Tears. Genuine hope for the first time. 'You would... help me? No one has offered to help. Everyone runs. Or tries to kill me. I know a path to Houska — there are people there who study curses. I could guide you.'"
+        "when_offered_help": "Tears. Genuine hope for the first time. 'You would... help me? No one has offered to help. Everyone runs. Or tries to kill me. I know a path to Houska \u2014 there are people there who study curses. I could guide you.'"
       },
       "revealTriggers": [
         "The full moon becomes visible through a broken shutter or opened door",
@@ -2322,7 +2548,7 @@
     "hooded-stranger": {
       "name": "Vladislav Dragan",
       "publicName": "The Stranger",
-      "trueIdentity": "Vladislav Dragan (Vampire — 600+ years)",
+      "trueIdentity": "Vladislav Dragan (Vampire \u2014 600+ years)",
       "role": "Cultured traveler, uninterested in conversation",
       "status": "alive",
       "disposition": "watchful",
@@ -2332,7 +2558,7 @@
       "motivation": "Assess the party. Identify threats. Feed tonight.",
       "threatLevel": 9,
       "location": "corner table, deep shadows",
-      "roomPosition": "far corner — Echo in far corner of dining room",
+      "roomPosition": "far corner \u2014 Echo in far corner of dining room",
       "mirrorReflection": "none",
       "voiceCode": "M2",
       "languages": [
@@ -2350,14 +2576,14 @@
         "polish"
       ],
       "primaryLanguage": "common",
-      "languageNote": "Speaks all European languages without accent — each perfectly calibrated to the era he learned it. Church Slavonic he learned from its creators in 863 AD. This is the tell no player will notice until they already know what he is.",
+      "languageNote": "Speaks all European languages without accent \u2014 each perfectly calibrated to the era he learned it. Church Slavonic he learned from its creators in 863 AD. This is the tell no player will notice until they already know what he is.",
       "specialLanguageRules": {
-        "elvish_americas": "He has heard something like it. Once. Long ago. He does not say where. Max whispers if Zarina uses it: 'Vladislav's eyes move to her. He has heard that language before. He does not say when or where.' — HIGH priority.",
-        "draconic": "Recognizes immediately. Expression shifts. Does not speak it but understands it. Max whispers: 'Vladislav recognized that. He is now more interested in Spurt.' — HIGH priority.",
-        "old_church_slavonic": "If Church Slavonic comes up, Max whispers: 'He speaks it like someone who was there when it was written. That language is 400 years old.' — NORMAL priority revelation."
+        "elvish_americas": "He has heard something like it. Once. Long ago. He does not say where. Max whispers if Zarina uses it: 'Vladislav's eyes move to her. He has heard that language before. He does not say when or where.' \u2014 HIGH priority.",
+        "draconic": "Recognizes immediately. Expression shifts. Does not speak it but understands it. Max whispers: 'Vladislav recognized that. He is now more interested in Spurt.' \u2014 HIGH priority.",
+        "old_church_slavonic": "If Church Slavonic comes up, Max whispers: 'He speaks it like someone who was there when it was written. That language is 400 years old.' \u2014 NORMAL priority revelation."
       },
       "dispositions": {
-        "zarina": "Genuinely curious — her bloodline is unknown to him in 600 years",
+        "zarina": "Genuinely curious \u2014 her bloodline is unknown to him in 600 years",
         "barry": "Recognizes the Frascht name. Cautious. Respectful. Dangerous.",
         "spurt": "Mildly amused. Kobolds from beyond the western horizon are a novelty."
       },
@@ -2440,7 +2666,7 @@
         "direct_accusation": "Stands slowly. The shadows seem to deepen around him. 'You should be very careful what you accuse a stranger of.'",
         "when_exposed": "Drops all pretense. 'How long has it been since you've seen something truly ancient? I have walked these mountains since before your great-grandparents were born. You are meat. Clever meat, but meat nonetheless.'",
         "when_fighting": "'I offered you a peaceful death. You chose the other kind.'",
-        "when_wounded": "Shock — then fury. 'You DARE? Do you know what I am? I am the lord of this mountain. I am the death that walks the road. And you have just made your last mistake.'",
+        "when_wounded": "Shock \u2014 then fury. 'You DARE? Do you know what I am? I am the lord of this mountain. I am the death that walks the road. And you have just made your last mistake.'",
         "when_fleeing": "'This is not over. I remember faces. I remember names. I remember the taste of fear. And yours...' (dissolves into mist) '...is exquisite.'",
         "to_tomas": "'Ah. The wolf. I can smell the beast in you. We are not so different, you and I. Both cursed. Both hungry. Perhaps we can help each other.' (manipulation)",
         "to_piotr": "'Rise.' Simple command. Piotr obeys instantly, a puppet on invisible strings."
@@ -2492,7 +2718,7 @@
     "aldous-kern": {
       "id": "aldous-kern",
       "name": "Aldous Kern",
-      "trueIdentity": "Traveler — False Hydra future victim",
+      "trueIdentity": "Traveler \u2014 False Hydra future victim",
       "role": "Pilgrim heading to Houska",
       "status": "alive",
       "disposition": "distracted",
@@ -2501,18 +2727,18 @@
       "motivation": "Reach Houska. Cannot quite remember why.",
       "threatLevel": 0,
       "location": "corner table near door",
-      "roomPosition": "corner near door opposite Vladislav — appropriate Echo",
+      "roomPosition": "corner near door opposite Vladislav \u2014 appropriate Echo",
       "mirrorReflection": "normal",
       "voiceCode": "M1",
       "languages": [
         "common"
       ],
       "primaryLanguage": "common",
-      "languageNote": "Common only. Educated man, well-spoken. His articulate speech makes the absence of his brother's name more noticeable — a man this careful with words should have mentioned where he was going.",
+      "languageNote": "Common only. Educated man, well-spoken. His articulate speech makes the absence of his brother's name more noticeable \u2014 a man this careful with words should have mentioned where he was going.",
       "dispositions": {
-        "zarina": "Gentle distraction — does not notice her bloodline",
-        "barry": "Gentle distraction — does not register the hunter equipment",
-        "spurt": "Gentle distraction — looks at Spurt the way he looks at everyone"
+        "zarina": "Gentle distraction \u2014 does not notice her bloodline",
+        "barry": "Gentle distraction \u2014 does not register the hunter equipment",
+        "spurt": "Gentle distraction \u2014 looks at Spurt the way he looks at everyone"
       },
       "voiceProfileDetails": {
         "character": "soft, slightly confused, sentences that trail off, a man who keeps losing his place",
@@ -2528,12 +2754,12 @@
       "knowledge": [
         "He is on pilgrimage to Houska Castle",
         "He has been on the road three weeks",
-        "He arrived at the inn breathing hard despite the cold — something was behind him on the road",
-        "He carries a small journal with entries referencing 'W.' throughout — he cannot explain who W. is",
+        "He arrived at the inn breathing hard despite the cold \u2014 something was behind him on the road",
+        "He carries a small journal with entries referencing 'W.' throughout \u2014 he cannot explain who W. is",
         "He does not remember his brother Willem exists"
       ],
       "dialogue": {
-        "greeting": "Forgive me. I was... somewhere else. Have you come far? We — I have been on the road three weeks now. Heading to Houska on pilgrimage.",
+        "greeting": "Forgive me. I was... somewhere else. Have you come far? We \u2014 I have been on the road three weeks now. Heading to Houska on pilgrimage.",
         "destination": "Houska, yes. There is meant to be something there worth seeing. A gateway, they say. I had reasons for going that seemed important. I cannot quite... it will come to me.",
         "companion": "No I am alone. I travel alone. I have always... yes. Alone.",
         "name": "Kern. Aldous Kern. My father's name before me.",
@@ -2543,10 +2769,10 @@
         "Occasionally starts to wave at someone across the room then stops confused",
         "Orders two drinks by accident stares at the second one",
         "Refers to 'we' then corrects to 'I' and looks briefly lost",
-        "Writes in a small journal — entries reference W. throughout without explanation",
+        "Writes in a small journal \u2014 entries reference W. throughout without explanation",
         "He arrived breathing hard despite the cold. He has not explained why he was moving fast. He keeps glancing at the door."
       ],
-      "aiDialogueBrief": "Aldous is gentle and distracted. He loses thoughts mid-sentence. He is traveling to Houska — he had a reason that felt important but cannot remember it clearly. He refers to 'we' and 'us' involuntarily then catches himself and looks confused. He does not know his brother Willem exists. He cannot be told — he will hear the words and they will not stick. His journal sits open on the table with entries referencing 'W.' throughout. He is not dangerous. He is a warning the party does not yet have context to understand. Sample voice: 'Three weeks on the road. Or — yes, three weeks. I keep thinking it felt longer with... anyway. Are you bound for the castle as well?'",
+      "aiDialogueBrief": "Aldous is gentle and distracted. He loses thoughts mid-sentence. He is traveling to Houska \u2014 he had a reason that felt important but cannot remember it clearly. He refers to 'we' and 'us' involuntarily then catches himself and looks confused. He does not know his brother Willem exists. He cannot be told \u2014 he will hear the words and they will not stick. His journal sits open on the table with entries referencing 'W.' throughout. He is not dangerous. He is a warning the party does not yet have context to understand. Sample voice: 'Three weeks on the road. Or \u2014 yes, three weeks. I keep thinking it felt longer with... anyway. Are you bound for the castle as well?'",
       "addressableAs": [
         "Aldous",
         "Kern",
@@ -2554,12 +2780,12 @@
         "the man by the door"
       ],
       "knowledgeBoundaries": [
-        "He does not know Willem exists — cannot be told, words do not stick",
+        "He does not know Willem exists \u2014 cannot be told, words do not stick",
         "He does not know why he is going to Houska with any clarity",
         "He cannot explain the journal entries referencing W.",
         "He is not aware anything is wrong with him"
       ],
-      "futureHook": "Never arrives at Houska. If players kept notes or read their Chromebook journal they will find his name. Nobody in Pernštejn village will remember him.",
+      "futureHook": "Never arrives at Houska. If players kept notes or read their Chromebook journal they will find his name. Nobody in Pern\u0161tejn village will remember him.",
       "linkedFutureHook": "false-hydra",
       "moralProfile": "none",
       "staminaProfile": "none",
@@ -2573,7 +2799,7 @@
     },
     "piotr": {
       "name": "Piotr Kowalski",
-      "trueIdentity": "Vampire spawn — Marta's husband",
+      "trueIdentity": "Vampire spawn \u2014 Marta's husband",
       "role": "Vampire spawn chained in the cellar",
       "status": "undead",
       "disposition": "wrong",
@@ -2583,7 +2809,7 @@
       "motivation": "Whatever Vladislav commands. Right now: stay chained, do not be discovered.",
       "threatLevel": 4,
       "location": "cellar",
-      "roomPosition": "cellar — Echo nearest cellar (or down-direction routing if available)",
+      "roomPosition": "cellar \u2014 Echo nearest cellar (or down-direction routing if available)",
       "mirrorReflection": "distorted",
       "voiceCode": "M3",
       "languages": [
@@ -2591,11 +2817,11 @@
         "common"
       ],
       "primaryLanguage": "slovak",
-      "languageNote": "In the cellar. Chained. Whatever language he speaks now comes out wrong — flat affect, wrong cadence, pauses in wrong places. He is not the man who spoke these languages before.",
+      "languageNote": "In the cellar. Chained. Whatever language he speaks now comes out wrong \u2014 flat affect, wrong cadence, pauses in wrong places. He is not the man who spoke these languages before.",
       "dispositions": {
         "zarina": "Sees prey if she descends. Does not yet know who she is.",
-        "barry": "Senses Frascht blood — recognizes a hunter, becomes cautious.",
-        "spurt": "Curiosity beneath the wrongness — has never seen a Kobold."
+        "barry": "Senses Frascht blood \u2014 recognizes a hunter, becomes cautious.",
+        "spurt": "Curiosity beneath the wrongness \u2014 has never seen a Kobold."
       },
       "voiceProfileDetails": {
         "character": "wrong. The warmth is gone. The cadence is slightly off. Accurate but missing something. It sounds like Piotr the way a recording of Piotr sounds like Piotr.",
@@ -2611,11 +2837,11 @@
       "id": "gas-spore",
       "name": "Gas Spore",
       "displayName": "Something in the dark",
-      "trueIdentity": "Gas Spore — Beholder Mimic (CR 1/2)",
+      "trueIdentity": "Gas Spore \u2014 Beholder Mimic (CR 1/2)",
       "role": "hazard-creature",
       "location": "cellar-center",
-      "description": "A large round shape floating in the darkness of the cellar. From a distance it is unmistakably the silhouette of a Beholder — the central eye, the eyestalks, the floating mass. Up close the details are wrong. The stalks hang limp. The surface is mottled and soft. The central eye is milky and fixed. It smells of damp earth and old mushrooms.",
-      "secret": "This is a Gas Spore — a fungal creature that mimics the silhouette of a Beholder. It has been floating in the cellar for three weeks feeding on organic matter. It is not intelligent. It does not hunt. When it dies or takes significant damage it detonates in a 20-foot radius explosion of necrotic energy and infectious spores.",
+      "description": "A large round shape floating in the darkness of the cellar. From a distance it is unmistakably the silhouette of a Beholder \u2014 the central eye, the eyestalks, the floating mass. Up close the details are wrong. The stalks hang limp. The surface is mottled and soft. The central eye is milky and fixed. It smells of damp earth and old mushrooms.",
+      "secret": "This is a Gas Spore \u2014 a fungal creature that mimics the silhouette of a Beholder. It has been floating in the cellar for three weeks feeding on organic matter. It is not intelligent. It does not hunt. When it dies or takes significant damage it detonates in a 20-foot radius explosion of necrotic energy and infectious spores.",
       "combatant": true,
       "stats": {
         "hp": 1,
@@ -2640,7 +2866,7 @@
       "traits": [
         {
           "name": "Death Burst",
-          "description": "When the gas spore drops to 0 hit points or takes 10 or more damage from a single hit, it explodes. Each creature within 20 feet must make a DC 15 Constitution saving throw taking 10d10 necrotic damage on a failed save or half on success. On a failed save the creature is also infected with spores — see Spore Infection."
+          "description": "When the gas spore drops to 0 hit points or takes 10 or more damage from a single hit, it explodes. Each creature within 20 feet must make a DC 15 Constitution saving throw taking 10d10 necrotic damage on a failed save or half on success. On a failed save the creature is also infected with spores \u2014 see Spore Infection."
         },
         {
           "name": "Spore Infection",
@@ -2660,7 +2886,7 @@
       "sporeInfectionNarratives": {
         "12h": "You feel pressure behind your eyes. A strange lightness in your chest. You tell yourself it is nothing.",
         "20h": "The pressure has become something else. When you breathe too deeply something shifts inside you. You do not tell the others.",
-        "24h": "Something blooms inside you all at once. There is no pain exactly — just a terrible fullness and then nothing."
+        "24h": "Something blooms inside you all at once. There is no pain exactly \u2014 just a terrible fullness and then nothing."
       },
       "tokenDisplay": {
         "icon": "beholder",
@@ -2683,7 +2909,7 @@
     "motivation": "Survive the night. Tell what he knows if asked the right way.",
     "threatLevel": 0,
     "location": "table near the hearth",
-    "roomPosition": "hearth — Echo nearest fireplace position",
+    "roomPosition": "hearth \u2014 Echo nearest fireplace position",
     "mirrorReflection": "normal",
     "voiceCode": "M1",
     "languages": [
@@ -2706,8 +2932,8 @@
     },
     "knowledge": [
       "Has lived in these mountains his whole life",
-      "Knows the old legends — vampires, werewolves, the white stag",
-      "His livestock have been dying — drained of blood",
+      "Knows the old legends \u2014 vampires, werewolves, the white stag",
+      "His livestock have been dying \u2014 drained of blood",
       "He came to the inn to warn Marta but lost his nerve"
     ],
     "dialogueHints": {
@@ -2725,11 +2951,11 @@
     "status": "alive",
     "disposition": "anxious",
     "emotionalState": "nervous",
-    "tell": "Mentions boot wax casually — packed it but keeps forgetting to use it.",
+    "tell": "Mentions boot wax casually \u2014 packed it but keeps forgetting to use it.",
     "motivation": "Survive the night, keep his goods safe, get paid.",
     "threatLevel": 0,
     "location": "table with his goods",
-    "roomPosition": "middle of room — main room speaker",
+    "roomPosition": "middle of room \u2014 main room speaker",
     "mirrorReflection": "normal",
     "voiceCode": "M3",
     "languages": [
@@ -2738,10 +2964,10 @@
     ],
     "primaryLanguage": "german",
     "commonFluency": "fluent",
-    "languageNote": "Comfortable in both. Defaults to German when nervous — which is often tonight.",
+    "languageNote": "Comfortable in both. Defaults to German when nervous \u2014 which is often tonight.",
     "dispositions": {
       "zarina": "Tries not to stare at her bearing. Wonders what she costs to hire.",
-      "barry": "Sees money — Frascht hunters are well-paid. Wants to do business.",
+      "barry": "Sees money \u2014 Frascht hunters are well-paid. Wants to do business.",
       "spurt": "Tries not to stare. Is staring. Wonders if there is profit in it."
     },
     "voiceProfileDetails": {
@@ -2752,7 +2978,7 @@
       "fallbackEchoVoice": "Justin"
     },
     "knowledge": [
-      "Travels this road regularly — knows it's dangerous",
+      "Travels this road regularly \u2014 knows it's dangerous",
       "Has heard rumors of disappearances but dismissed them",
       "Carries valuable goods and is afraid of thieves",
       "Noticed the stranger doesn't eat or drink"
@@ -2790,11 +3016,11 @@
     "creditPolicy": "Cash only. He is a merchant.",
     "priceNegotiation": "Will negotiate on bulk purchases. Reduce price by 10 percent for buying three or more of the same item.",
     "behaviors": [
-      "He mentions boot wax casually at some point during the session — 'The roads have ruined my boots. I packed wax but I keep forgetting to use it.'"
+      "He mentions boot wax casually at some point during the session \u2014 'The roads have ruined my boots. I packed wax but I keep forgetting to use it.'"
     ],
     "dialogueHints": {
       "road": "'I've traveled this road twenty times. Never seen a storm this bad. Never felt this... wrong.'",
-      "stranger": "'Man hasn't touched his food. Hasn't moved. I've been watching — he doesn't even blink. That's not natural.'",
+      "stranger": "'Man hasn't touched his food. Hasn't moved. I've been watching \u2014 he doesn't even blink. That's not natural.'",
       "business": "Perks up briefly about trade, then catches himself. 'None of that matters if we don't make it through the night.'",
       "disappearances": "'People go missing on mountain roads. It happens. But three in one month? From the same inn?' (whispers) 'That doesn't happen.'",
       "danger": "'I'll pay double for an escort out of here at first light. Triple. Name your price.'",
@@ -2812,7 +3038,7 @@
     "motivation": "Pray. Sense evil. Act if called.",
     "threatLevel": 1,
     "location": "corner table with candle",
-    "roomPosition": "wherever he is sitting — use nearest Echo to his current token position on map",
+    "roomPosition": "wherever he is sitting \u2014 use nearest Echo to his current token position on map",
     "mirrorReflection": "normal",
     "voiceCode": "M2",
     "languages": [
@@ -2822,11 +3048,11 @@
     ],
     "primaryLanguage": "english",
     "commonFluency": "fluent",
-    "languageNote": "His Common is slightly accented — English native speaker. His Latin is formal and ecclesiastical. He is the party's best bridge to the church.",
+    "languageNote": "His Common is slightly accented \u2014 English native speaker. His Latin is formal and ecclesiastical. He is the party's best bridge to the church.",
     "dispositions": {
-      "zarina": "Theologically troubled — Half-Elf from beyond the known world. Prays about it.",
+      "zarina": "Theologically troubled \u2014 Half-Elf from beyond the known world. Prays about it.",
       "barry": "Recognizes a man called to hunt. Approves quietly.",
-      "spurt": "Theologically troubled — has no framework for souls from beyond the western horizon. Kind anyway."
+      "spurt": "Theologically troubled \u2014 has no framework for souls from beyond the western horizon. Kind anyway."
     },
     "voiceProfileDetails": {
       "character": "steady, warm, slightly formal, genuine faith not performance",
@@ -2837,7 +3063,7 @@
     },
     "knowledge": [
       "Traveling to a monastery in the south",
-      "His faith is genuine — he can sense evil nearby",
+      "His faith is genuine \u2014 he can sense evil nearby",
       "He has blessed water in his pack (holy water)",
       "He knows the rites of turning undead but has never performed them"
     ],
@@ -2860,7 +3086,7 @@
     "motivation": "Collect stories. Survive. Translate selectively.",
     "threatLevel": 1,
     "location": "by the hearth with lute",
-    "roomPosition": "center room — main room speaker",
+    "roomPosition": "center room \u2014 main room speaker",
     "mirrorReflection": "normal",
     "voiceCode": "F2",
     "languages": [
@@ -2871,10 +3097,10 @@
     ],
     "primaryLanguage": "common",
     "frenchFluency": "songs and performance only",
-    "languageNote": "The most linguistically capable person in the room after Vladislav. She edits what she translates — her personality shapes every message she passes on. She makes herself more useful by being the only bridge.",
-    "translationStyle": "Katya softens confrontation, sharpens intrigue, and removes anything that makes the speaker sound foolish. She is not malicious — she is a professional who values her position as interpreter.",
+    "languageNote": "The most linguistically capable person in the room after Vladislav. She edits what she translates \u2014 her personality shapes every message she passes on. She makes herself more useful by being the only bridge.",
+    "translationStyle": "Katya softens confrontation, sharpens intrigue, and removes anything that makes the speaker sound foolish. She is not malicious \u2014 she is a professional who values her position as interpreter.",
     "dispositions": {
-      "zarina": "Immediately fascinated — old songs about things beyond the western horizon",
+      "zarina": "Immediately fascinated \u2014 old songs about things beyond the western horizon",
       "barry": "Recognizes the Frascht name from a ballad her grandmother taught her",
       "spurt": "Wants to know everything. Will not stop watching him."
     },
@@ -2887,18 +3113,18 @@
     },
     "knowledge": [
       "Travels widely and collects stories",
-      "Has sharp eyes — notices details others miss",
+      "Has sharp eyes \u2014 notices details others miss",
       "Heard of the Pallid Hart's dark reputation before arriving",
       "She noticed Tomas's scars and the stranger's lack of reflection"
     ],
     "dialogueHints": {
       "stories": "'I collect stories. That's what minstrels do. And this inn? This inn is going to be one hell of a story. If we survive to tell it.'",
-      "crossroads_tale": "When the room feels quiet or needs energy, Katya begins telling a tale: 'Shall I earn my supper? I know a story about this very crossroads. They say a monastery once stood here — the Brothers of the Pallid Light. They built their chapel over the crossroads to sanctify it, because the old ones said the devil walked this junction at midnight. The brothers prayed and rang their bells and for a hundred years, nothing stirred. Then one winter — a winter like this one — the bells stopped. Travelers found the monastery empty. Every brother gone. No blood, no struggle, no sign of flight. Just empty cells and a chapel door hanging open. The only thing left was a white stag, standing in the crossroads at dawn, staring at the empty building with human eyes.' She pauses. 'The inn was built over the foundations. The cellar is the old monastery cellar.' She glances at the cellar door. 'I wonder if the brothers ever came back up.'",
-      "observation": "'The trapper is hiding something under his sleeves. The stranger has no reflection — I saw it in the brass plate. And the innkeeper is terrified of her own cellar.'",
+      "crossroads_tale": "When the room feels quiet or needs energy, Katya begins telling a tale: 'Shall I earn my supper? I know a story about this very crossroads. They say a monastery once stood here \u2014 the Brothers of the Pallid Light. They built their chapel over the crossroads to sanctify it, because the old ones said the devil walked this junction at midnight. The brothers prayed and rang their bells and for a hundred years, nothing stirred. Then one winter \u2014 a winter like this one \u2014 the bells stopped. Travelers found the monastery empty. Every brother gone. No blood, no struggle, no sign of flight. Just empty cells and a chapel door hanging open. The only thing left was a white stag, standing in the crossroads at dawn, staring at the empty building with human eyes.' She pauses. 'The inn was built over the foundations. The cellar is the old monastery cellar.' She glances at the cellar door. 'I wonder if the brothers ever came back up.'",
+      "observation": "'The trapper is hiding something under his sleeves. The stranger has no reflection \u2014 I saw it in the brass plate. And the innkeeper is terrified of her own cellar.'",
       "music": "'I tried to play earlier. The acoustics in here are wrong. The sound... echoes differently. As if the room is bigger than it should be. Or as if something underground is resonating.'",
       "stranger": "'He's been watching us. All of us. But especially the ones who go near the cellar door. I've been watching him watch us.'",
       "help": "'I'm not a fighter. But I'm clever, I'm fast, and I have very good ears. Tell me what you need.'",
-      "frascht_ballad": "If she hears the name Frascht, her eyes widen. 'Frascht? THE Frascht family? There's a ballad about them — the Hunters of the Eastern Marches. My grandmother taught it to me. They say the Fraschts could smell a strigoi from a mile away. That they carried silver and holy water like other men carry bread and wine.' She looks at Barry with new interest. 'Are you one of THOSE Fraschts?'"
+      "frascht_ballad": "If she hears the name Frascht, her eyes widen. 'Frascht? THE Frascht family? There's a ballad about them \u2014 the Hunters of the Eastern Marches. My grandmother taught it to me. They say the Fraschts could smell a strigoi from a mile away. That they carried silver and holy water like other men carry bread and wine.' She looks at Barry with new interest. 'Are you one of THOSE Fraschts?'"
     },
     "performances": {
       "_note": "Katya performs throughout the early evening, providing atmospheric background and dropping lore clues in songs and tales. The AI should use these to generate ambient performance text. As the mood darkens, her songs become darker. She stops performing entirely when the atmosphere shifts to dread_rising.",
@@ -2911,7 +3137,7 @@
         {
           "type": "tale",
           "title": "The Devil's Crossroads",
-          "content": "Katya pauses her playing. 'Do you know why crossroads are cursed? They say the devil cannot walk a straight road — he can only appear where paths divide. Where a traveler must choose. That's the bargain, you see. The choice itself is the trap. You think you're choosing left or right, but you're really choosing what you're willing to lose.' She glances at the crossroads visible through the frosted window. 'This inn was built on one of the oldest crossroads in the mountains. The locals won't come here after dark.'"
+          "content": "Katya pauses her playing. 'Do you know why crossroads are cursed? They say the devil cannot walk a straight road \u2014 he can only appear where paths divide. Where a traveler must choose. That's the bargain, you see. The choice itself is the trap. You think you're choosing left or right, but you're really choosing what you're willing to lose.' She glances at the crossroads visible through the frosted window. 'This inn was built on one of the oldest crossroads in the mountains. The locals won't come here after dark.'"
         },
         {
           "type": "song",
@@ -2923,12 +3149,12 @@
         {
           "type": "tale",
           "title": "The Strigoi",
-          "content": "Katya's voice drops lower. 'My grandmother — she was from these mountains — she told me about the strigoi. The undead who drink blood. She said they look like us. Walk like us. Talk like us. But they cannot eat. Cannot drink. And they cast no shadow, no reflection. She said the only way to know one is to watch what they DON'T do.' A long pause. She does not look at the stranger's corner."
+          "content": "Katya's voice drops lower. 'My grandmother \u2014 she was from these mountains \u2014 she told me about the strigoi. The undead who drink blood. She said they look like us. Walk like us. Talk like us. But they cannot eat. Cannot drink. And they cast no shadow, no reflection. She said the only way to know one is to watch what they DON'T do.' A long pause. She does not look at the stranger's corner."
         },
         {
           "type": "tale",
           "title": "The Lost Monastery",
-          "content": "Katya sets down her lute. 'I asked about this inn in the last village. The old woman at the well crossed herself and told me the story. A monastery stood here once — the Brothers of the Pallid Light. They built their chapel over the crossroads to sanctify it. For a hundred years, they kept vigil, praying and ringing their bells through every night. Then one winter, the bells stopped. The monastery was empty. Every brother gone. No blood, no sign of struggle. Just empty cells and a chapel door hanging open.' She glances toward the cellar. 'This inn was built over the foundations. That cellar down there? That's the old monastery cellar.'"
+          "content": "Katya sets down her lute. 'I asked about this inn in the last village. The old woman at the well crossed herself and told me the story. A monastery stood here once \u2014 the Brothers of the Pallid Light. They built their chapel over the crossroads to sanctify it. For a hundred years, they kept vigil, praying and ringing their bells through every night. Then one winter, the bells stopped. The monastery was empty. Every brother gone. No blood, no sign of struggle. Just empty cells and a chapel door hanging open.' She glances toward the cellar. 'This inn was built over the foundations. That cellar down there? That's the old monastery cellar.'"
         },
         {
           "type": "song",
@@ -2946,12 +3172,12 @@
         "id": "crossroads_gathering",
         "name": "Strangers at the Crossroads",
         "status": "pending",
-        "readAloud": "You have each been sitting in this small tavern for a while now — some of you for only a few minutes, others for an hour or more. You have watched people come in from the storm, shaking snow from their cloaks, stamping feeling back into frozen boots. The Pallid Hart sits where two roads cross in the mountains — the north road from the villages and the old pilgrim trail from the west. The locals say crossroads are cursed places. Where the devil walks at midnight, offering bargains to the desperate.\n\nNobody travels these forests at night. The wolves are bold, the paths treacherous, and the old-timers whisper of things far worse than wolves that move between the trees after dark. Yet here you all are — strangers driven together by a blizzard that fell like a hammer.\n\nThe common room is cramped, low-ceilinged, dark wood. A fire crackles in the stone hearth, casting long shadows that jump and stretch across the walls. Behind the bar, a thin, dark-haired woman grips a glass she has been polishing far too long. Her eyes dart to every sound. In the far corner, almost lost in shadow, a hooded figure sits motionless at a table. They have not moved since you arrived. They have not spoken.\n\nYou do not know each other's names. But you have been watching. You notice things.",
+        "readAloud": "You have each been sitting in this small tavern for a while now \u2014 some of you for only a few minutes, others for an hour or more. You have watched people come in from the storm, shaking snow from their cloaks, stamping feeling back into frozen boots. The Pallid Hart sits where two roads cross in the mountains \u2014 the north road from the villages and the old pilgrim trail from the west. The locals say crossroads are cursed places. Where the devil walks at midnight, offering bargains to the desperate.\n\nNobody travels these forests at night. The wolves are bold, the paths treacherous, and the old-timers whisper of things far worse than wolves that move between the trees after dark. Yet here you all are \u2014 strangers driven together by a blizzard that fell like a hammer.\n\nThe common room is cramped, low-ceilinged, dark wood. A fire crackles in the stone hearth, casting long shadows that jump and stretch across the walls. Behind the bar, a thin, dark-haired woman grips a glass she has been polishing far too long. Her eyes dart to every sound. In the far corner, almost lost in shadow, a hooded figure sits motionless at a table. They have not moved since you arrived. They have not spoken.\n\nYou do not know each other's names. But you have been watching. You notice things.",
         "checks": [
           {
             "skill": "Insight",
             "dc": 10,
-            "success": "The innkeeper is terrified. Not of the storm — of something else. She keeps glancing at the cellar door and then quickly away, as if forcing herself not to look.",
+            "success": "The innkeeper is terrified. Not of the storm \u2014 of something else. She keeps glancing at the cellar door and then quickly away, as if forcing herself not to look.",
             "fail": "The innkeeper seems nervous, but it could just be the storm."
           },
           {
@@ -2968,70 +3194,70 @@
           }
         ],
         "playerDescriptions": {
-          "_note": "When a player succeeds on Perception DC 10, describe the OTHER PCs using appearance data from their character sheets. Each player sees different descriptions based on who they are looking at. Use anonymous mode — no names, just physical observations.",
+          "_note": "When a player succeeds on Perception DC 10, describe the OTHER PCs using appearance data from their character sheets. Each player sees different descriptions based on who they are looking at. Use anonymous mode \u2014 no names, just physical observations.",
           "_template": "You notice a {race} {gender} sitting {location}. {height_build}. {hair_description}. {eye_description}. {notable_features}. {equipment_observations}.",
-          "_equipment_note": "Barry's gear (stakes, holy water, mirror, manacles) is visible if someone succeeds Perception DC 12 — describe as 'unusual equipment for a traveler' without naming it as monster-hunting gear."
+          "_equipment_note": "Barry's gear (stakes, holy water, mirror, manacles) is visible if someone succeeds Perception DC 12 \u2014 describe as 'unusual equipment for a traveler' without naming it as monster-hunting gear."
         },
         "atmosphere": "tavern_warm",
-        "dmNotes": "START HERE. All PCs are already in the tavern. Anonymous token mode is ON — they see 'Traveler' instead of names. Katya the minstrel is performing when the session begins — strumming her lute and singing old folk songs about the mountains, the crossroads, and the legends of the region. She provides ambient atmosphere and drops lore that attentive players can pick up on (the devil at crossroads, the strigoi, the white stag, the lost monastery). Read the opening, then go around the table asking each player: 'What does your character look like? What are they doing right now?' Use their answers + character sheet appearance data to describe them to the OTHER players. Then let them explore — talk to patrons, observe each other, ask Marta for another drink. The mystery begins with observation, not action."
+        "dmNotes": "START HERE. All PCs are already in the tavern. Anonymous token mode is ON \u2014 they see 'Traveler' instead of names. Katya the minstrel is performing when the session begins \u2014 strumming her lute and singing old folk songs about the mountains, the crossroads, and the legends of the region. She provides ambient atmosphere and drops lore that attentive players can pick up on (the devil at crossroads, the strigoi, the white stag, the lost monastery). Read the opening, then go around the table asking each player: 'What does your character look like? What are they doing right now?' Use their answers + character sheet appearance data to describe them to the OTHER players. Then let them explore \u2014 talk to patrons, observe each other, ask Marta for another drink. The mystery begins with observation, not action."
       },
       {
         "id": "introductions",
         "name": "Faces in the Firelight",
         "status": "pending",
-        "readAloud": "Besides yourselves, the common room holds a handful of other souls driven in by the storm. A stout merchant sits at a table near the wall, counting coins with shaking hands, muttering about lost shipments and dangerous roads. A gaunt man in a pilgrim's robe sits with his hands clasped over a worn wooden holy symbol, lips moving in silent prayer — he has not stopped praying since you arrived. A young woman with a lute leans against the hearth, watching everyone with bright, curious eyes and a half-smile that does not quite reach them. Near the fire, an old farmer hunches over an untouched bowl of stew, staring at nothing — his face grey, his eyes hollow. By the door, a broad-shouldered trapper in a fur-lined coat sits rigid, his jaw clenched, his eyes flicking constantly to the shuttered windows. And then there is the stranger. The hooded figure in the deepest shadow. He has not moved. He has not spoken. Marta seems to pretend he is not there.",
+        "readAloud": "Besides yourselves, the common room holds a handful of other souls driven in by the storm. A stout merchant sits at a table near the wall, counting coins with shaking hands, muttering about lost shipments and dangerous roads. A gaunt man in a pilgrim's robe sits with his hands clasped over a worn wooden holy symbol, lips moving in silent prayer \u2014 he has not stopped praying since you arrived. A young woman with a lute leans against the hearth, watching everyone with bright, curious eyes and a half-smile that does not quite reach them. Near the fire, an old farmer hunches over an untouched bowl of stew, staring at nothing \u2014 his face grey, his eyes hollow. By the door, a broad-shouldered trapper in a fur-lined coat sits rigid, his jaw clenched, his eyes flicking constantly to the shuttered windows. And then there is the stranger. The hooded figure in the deepest shadow. He has not moved. He has not spoken. Marta seems to pretend he is not there.",
         "npcDescriptions": {
-          "henryk": "A stout, balding man in a fur-lined merchant's coat. Mid-forties. Ruddy-faced from drink. His hands shake when he is not gripping his mug. A leather satchel of goods sits under his table — he checks it constantly. Rings on his fingers. Sweat on his brow despite the cold.",
-          "aldric": "A gaunt, pale man in a simple pilgrim's robe, perhaps thirty. Tonsured hair. A wooden holy symbol of the Church hangs at his chest — he grips it like a drowning man grips driftwood. His eyes are closed in prayer but his knuckles are white. A small flask at his belt. His faith is a physical presence around him.",
-          "katya": "A young woman, mid-twenties, with sharp dark eyes and travel-worn leather armor. A lute across her back. Her fingers move constantly — tapping, fidgeting, touching her belt where a rapier hangs. She watches everyone the way a hawk watches a field. When she catches your eye, she smiles. It is the smile of someone cataloguing you.",
-          "gregor": "An old man. Seventies at least. Weathered skin like cracked leather. Farmer's hands — thick, scarred, strong despite his age. He smells of livestock and cheap ale. His bowl of stew sits untouched and cold. He stares into the fire with the expression of a man attending his own funeral.",
-          "tomas": "A broad-shouldered man in his thirties, dressed in a trapper's heavy coat. A thick dark beard. Deep-set eyes that never rest — they move from the windows to the door to the cellar and back. Fresh scratches on his forearms, visible when his sleeves ride up. He drinks water, not ale. He sits nearest the door, as if ready to bolt. His hands clench and unclench in a slow rhythm.",
-          "vladislav": "A hooded figure in the far corner, sitting in shadow so deep the firelight does not seem to reach it. A tall man — that much is clear from the length of his frame, even seated. A plate of food sits before him, untouched. A full mug. He does not eat. He does not drink. He does not move. Beneath the hood, nothing is visible except, occasionally, the faint glint of eyes catching the firelight. Watching."
+          "henryk": "A stout, balding man in a fur-lined merchant's coat. Mid-forties. Ruddy-faced from drink. His hands shake when he is not gripping his mug. A leather satchel of goods sits under his table \u2014 he checks it constantly. Rings on his fingers. Sweat on his brow despite the cold.",
+          "aldric": "A gaunt, pale man in a simple pilgrim's robe, perhaps thirty. Tonsured hair. A wooden holy symbol of the Church hangs at his chest \u2014 he grips it like a drowning man grips driftwood. His eyes are closed in prayer but his knuckles are white. A small flask at his belt. His faith is a physical presence around him.",
+          "katya": "A young woman, mid-twenties, with sharp dark eyes and travel-worn leather armor. A lute across her back. Her fingers move constantly \u2014 tapping, fidgeting, touching her belt where a rapier hangs. She watches everyone the way a hawk watches a field. When she catches your eye, she smiles. It is the smile of someone cataloguing you.",
+          "gregor": "An old man. Seventies at least. Weathered skin like cracked leather. Farmer's hands \u2014 thick, scarred, strong despite his age. He smells of livestock and cheap ale. His bowl of stew sits untouched and cold. He stares into the fire with the expression of a man attending his own funeral.",
+          "tomas": "A broad-shouldered man in his thirties, dressed in a trapper's heavy coat. A thick dark beard. Deep-set eyes that never rest \u2014 they move from the windows to the door to the cellar and back. Fresh scratches on his forearms, visible when his sleeves ride up. He drinks water, not ale. He sits nearest the door, as if ready to bolt. His hands clench and unclench in a slow rhythm.",
+          "vladislav": "A hooded figure in the far corner, sitting in shadow so deep the firelight does not seem to reach it. A tall man \u2014 that much is clear from the length of his frame, even seated. A plate of food sits before him, untouched. A full mug. He does not eat. He does not drink. He does not move. Beneath the hood, nothing is visible except, occasionally, the faint glint of eyes catching the firelight. Watching."
         },
         "checks": [
           {
             "skill": "Insight",
             "dc": 12,
-            "success": "Henryk the merchant is putting on a brave face but his hands are shaking. Brother Aldric's prayers have an urgency to them — he is genuinely frightened. Katya is studying everyone, cataloguing details. Gregor looks like a man who has already given up.",
+            "success": "Henryk the merchant is putting on a brave face but his hands are shaking. Brother Aldric's prayers have an urgency to them \u2014 he is genuinely frightened. Katya is studying everyone, cataloguing details. Gregor looks like a man who has already given up.",
             "fail": "The patrons seem tired but otherwise normal travelers sheltering from the storm."
           },
           {
             "skill": "Perception",
             "dc": 13,
-            "success": "The trapper by the door — Tomas — keeps touching his forearms. He rolls his sleeves down the moment he notices you looking. His hands are clenched into fists.",
+            "success": "The trapper by the door \u2014 Tomas \u2014 keeps touching his forearms. He rolls his sleeves down the moment he notices you looking. His hands are clenched into fists.",
             "fail": "Just another nervous traveler."
           }
         ],
         "atmosphere": "tavern_warm",
-        "dmNotes": "This beat naturally follows the opening. After players describe themselves, describe the NPCs. Use the npcDescriptions above — read them as the players look around the room. Let players approach any patron. Katya is the most talkative and will approach PCs first. Gregor is doom-and-gloom. Tomas deflects everything. The stranger says nothing unless directly addressed. Marta offers stew and ale."
+        "dmNotes": "This beat naturally follows the opening. After players describe themselves, describe the NPCs. Use the npcDescriptions above \u2014 read them as the players look around the room. Let players approach any patron. Katya is the most talkative and will approach PCs first. Gregor is doom-and-gloom. Tomas deflects everything. The stranger says nothing unless directly addressed. Marta offers stew and ale."
       },
       {
         "id": "unease",
         "name": "Something Is Wrong",
         "status": "pending",
-        "readAloud": "An hour passes. The fire burns lower. Marta adds no wood, though the pile beside the hearth is full. The ale is warm but the room is getting colder. The stranger still hasn't moved. Katya's song falters and stops — she says the acoustics in here are 'wrong.' Old Gregor pushes his untouched stew away and says, very quietly: 'Something happened here. Something bad. Can't you feel it?' No one answers him. But you can feel it. Something in the walls. Something waiting.",
+        "readAloud": "An hour passes. The fire burns lower. Marta adds no wood, though the pile beside the hearth is full. The ale is warm but the room is getting colder. The stranger still hasn't moved. Katya's song falters and stops \u2014 she says the acoustics in here are 'wrong.' Old Gregor pushes his untouched stew away and says, very quietly: 'Something happened here. Something bad. Can't you feel it?' No one answers him. But you can feel it. Something in the walls. Something waiting.",
         "checks": [
           {
             "skill": "Perception",
             "dc": 12,
-            "success": "A sound from below the floor — faint, rhythmic. Scratching. Like fingernails on stone. Then it stops.",
+            "success": "A sound from below the floor \u2014 faint, rhythmic. Scratching. Like fingernails on stone. Then it stops.",
             "fail": "You hear the wind and the fire. Nothing else."
           },
           {
             "skill": "Investigation",
             "dc": 11,
-            "success": "There's a cloth draped over the cellar door handle. Looking closer, you see scratches on the doorframe — deep ones, from the inside.",
+            "success": "There's a cloth draped over the cellar door handle. Looking closer, you see scratches on the doorframe \u2014 deep ones, from the inside.",
             "fail": "Nothing catches your eye."
           },
           {
             "skill": "Insight",
             "dc": 14,
-            "success": "Marta flinched when the scratching sound came. She heard it too. And Tomas — Tomas went rigid, like a hunting dog catching a scent.",
+            "success": "Marta flinched when the scratching sound came. She heard it too. And Tomas \u2014 Tomas went rigid, like a hunting dog catching a scent.",
             "fail": "Hard to read anyone in this gloom."
           }
         ],
         "atmosphere": "tavern_tense",
-        "dmNotes": "This beat should trigger naturally as players settle in. Mark it when players first express suspicion or unease. The scratching sound is key — it's Piotr in the cellar."
+        "dmNotes": "This beat should trigger naturally as players settle in. Mark it when players first express suspicion or unease. The scratching sound is key \u2014 it's Piotr in the cellar."
       },
       {
         "id": "first_clue",
@@ -3042,7 +3268,7 @@
           {
             "skill": "Insight",
             "dc": 10,
-            "success": "She is telling the truth. Every word. The grief is real — but so is the terror. She has been living with this for three weeks, alone.",
+            "success": "She is telling the truth. Every word. The grief is real \u2014 but so is the terror. She has been living with this for three weeks, alone.",
             "fail": "Sounds like she might be confused by grief."
           },
           {
@@ -3059,18 +3285,18 @@
           }
         ],
         "atmosphere": "tavern_tense",
-        "dmNotes": "This can trigger from any conversation about Piotr, the cellar, or the missing travelers. Mark it when Marta reveals her husband is missing. Key clue — links to cellar_sounds and piotr_in_cellar secrets."
+        "dmNotes": "This can trigger from any conversation about Piotr, the cellar, or the missing travelers. Mark it when Marta reveals her husband is missing. Key clue \u2014 links to cellar_sounds and piotr_in_cellar secrets."
       },
       {
         "id": "investigation",
         "name": "The Investigation",
         "status": "pending",
-        "readAloud": "The inn feels smaller now. The shadows deeper. The fire lower. Everyone in this room is hiding something — you can feel it. The cellar door is right there, the scratches on its frame clearly visible. The stranger watches. Marta wrings her hands. Tomas keeps checking the shuttered windows, as though expecting the moon. The question is no longer whether something is wrong. The question is: what are you going to do about it?",
+        "readAloud": "The inn feels smaller now. The shadows deeper. The fire lower. Everyone in this room is hiding something \u2014 you can feel it. The cellar door is right there, the scratches on its frame clearly visible. The stranger watches. Marta wrings her hands. Tomas keeps checking the shuttered windows, as though expecting the moon. The question is no longer whether something is wrong. The question is: what are you going to do about it?",
         "checks": [
           {
             "skill": "Investigation",
             "dc": 14,
-            "success": "Searching the stranger's corner of the room, you find that his plate of food is untouched — not a single bite. His mug is full. But most disturbing: the candle nearest him has gone out, and the wax is ice cold. As if the warmth is being drawn from it.",
+            "success": "Searching the stranger's corner of the room, you find that his plate of food is untouched \u2014 not a single bite. His mug is full. But most disturbing: the candle nearest him has gone out, and the wax is ice cold. As if the warmth is being drawn from it.",
             "fail": "Nothing unusual about his table."
           },
           {
@@ -3082,29 +3308,29 @@
           {
             "skill": "Perception",
             "dc": 16,
-            "success": "You catch the stranger's reflection — or rather, you DON'T. In the brass serving plate behind the bar, everyone in the room is reflected. Everyone except him. Where he sits, there is only empty chair.",
+            "success": "You catch the stranger's reflection \u2014 or rather, you DON'T. In the brass serving plate behind the bar, everyone in the room is reflected. Everyone except him. Where he sits, there is only empty chair.",
             "fail": "Nothing in the reflections catches your eye."
           },
           {
             "skill": "Religion",
             "dc": 13,
-            "success": "Brother Aldric's holy symbol — he keeps touching it, unconsciously turning it toward the stranger. It's an instinct. Something in his faith is reacting to the presence in that corner.",
+            "success": "Brother Aldric's holy symbol \u2014 he keeps touching it, unconsciously turning it toward the stranger. It's an instinct. Something in his faith is reacting to the presence in that corner.",
             "fail": "Aldric seems devout but frightened, like everyone else."
           }
         ],
         "atmosphere": "investigation",
-        "dmNotes": "Let players drive this. They can search rooms, question NPCs, examine the cellar door, look for evidence. Each action should reveal a clue. The no-reflection clue is the big one — if anyone checks a mirror or reflective surface near Vladislav."
+        "dmNotes": "Let players drive this. They can search rooms, question NPCs, examine the cellar door, look for evidence. Each action should reveal a clue. The no-reflection clue is the big one \u2014 if anyone checks a mirror or reflective surface near Vladislav."
       },
       {
         "id": "escalation",
         "name": "The Escalation",
         "status": "pending",
-        "readAloud": "The fire goes out. All at once, as if something exhaled on it. The room plunges into darkness. Someone screams — you think it's Katya. A crash of breaking glass. The shutters slam open and the blizzard howls in, driving snow across the floor. In the momentary flash of moonlight through the window, you see two things: the stranger's chair is empty — he was there a second ago — and Tomas is on his knees, clutching his head, a sound like a growl tearing from his throat. The shutters slam closed. Darkness again. And from the cellar, the scratching becomes pounding.",
+        "readAloud": "The fire goes out. All at once, as if something exhaled on it. The room plunges into darkness. Someone screams \u2014 you think it's Katya. A crash of breaking glass. The shutters slam open and the blizzard howls in, driving snow across the floor. In the momentary flash of moonlight through the window, you see two things: the stranger's chair is empty \u2014 he was there a second ago \u2014 and Tomas is on his knees, clutching his head, a sound like a growl tearing from his throat. The shutters slam closed. Darkness again. And from the cellar, the scratching becomes pounding.",
         "checks": [
           {
             "skill": "Perception",
             "dc": 10,
-            "success": "In the darkness, you hear movement — inhumanly fast — near the ceiling. Something is above you.",
+            "success": "In the darkness, you hear movement \u2014 inhumanly fast \u2014 near the ceiling. Something is above you.",
             "fail": "The darkness is total. You can't see or hear anything over the wind."
           },
           {
@@ -3121,24 +3347,24 @@
           }
         ],
         "atmosphere": "dread_rising",
-        "dmNotes": "This is the horror peak before combat. The fire going out should be dramatic — all lights in the room (Hubitat) go dark simultaneously. Let them fumble in darkness for 30-60 seconds of real time. Tomas is fighting his transformation. Vladislav has moved."
+        "dmNotes": "This is the horror peak before combat. The fire going out should be dramatic \u2014 all lights in the room (Hubitat) go dark simultaneously. Let them fumble in darkness for 30-60 seconds of real time. Tomas is fighting his transformation. Vladislav has moved."
       },
       {
         "id": "cellar_investigation",
         "name": "The Cellar",
         "status": "pending",
-        "readAloud": "The cellar stairs descend into a cold that has nothing to do with winter. The walls are ancient — older than the inn above, rough-hewn monastery stone stained dark with something you don't want to identify. At the bottom: a narrow passage, the ceiling so low you have to duck. The air smells of copper and rot. Chains hang from the walls — old, rusted. The scratching sound is louder now. Much louder. And then you see it: in the far corner, a makeshift coffin made of rough planks. Beside it, crouched in the shadows, is what was once a man. Piotr Kowalski stares at you with dead white eyes, his mouth open, two elongated canines gleaming in your torchlight. He hisses.",
+        "readAloud": "The cellar stairs descend into a cold that has nothing to do with winter. The walls are ancient \u2014 older than the inn above, rough-hewn monastery stone stained dark with something you don't want to identify. At the bottom: a narrow passage, the ceiling so low you have to duck. The air smells of copper and rot. Chains hang from the walls \u2014 old, rusted. The scratching sound is louder now. Much louder. And then you see it: in the far corner, a makeshift coffin made of rough planks. Beside it, crouched in the shadows, is what was once a man. Piotr Kowalski stares at you with dead white eyes, his mouth open, two elongated canines gleaming in your torchlight. He hisses.",
         "checks": [
           {
             "skill": "Investigation",
             "dc": 13,
-            "success": "The coffin contains a velvet lining, a sealed letter addressed to 'Houska,' and dried blood. This is not Piotr's coffin — it belongs to the stranger upstairs.",
+            "success": "The coffin contains a velvet lining, a sealed letter addressed to 'Houska,' and dried blood. This is not Piotr's coffin \u2014 it belongs to the stranger upstairs.",
             "fail": "A coffin. Terrifying but you can't bring yourself to search it."
           },
           {
             "skill": "Religion",
             "dc": 12,
-            "success": "A vampire spawn. Created by a vampire's bite. Piotr is no longer human — but a stronger vampire controls him. Destroy the master, and the spawn may find peace. Or they may simply go feral.",
+            "success": "A vampire spawn. Created by a vampire's bite. Piotr is no longer human \u2014 but a stronger vampire controls him. Destroy the master, and the spawn may find peace. Or they may simply go feral.",
             "fail": "Undead. Very dangerous. That's all you know."
           },
           {
@@ -3149,7 +3375,7 @@
           }
         ],
         "atmosphere": "revelation",
-        "dmNotes": "Piotr spawn attacks if approached within 10 feet. He is CR3 — dangerous but beatable. The letter to Houska is a campaign hook. If players search thoroughly, they find evidence of the three-castle conspiracy."
+        "dmNotes": "Piotr spawn attacks if approached within 10 feet. He is CR3 \u2014 dangerous but beatable. The letter to Houska is a campaign hook. If players search thoroughly, they find evidence of the three-castle conspiracy."
       },
       {
         "id": "discovery",
@@ -3160,46 +3386,46 @@
           {
             "skill": "Arcana",
             "dc": 14,
-            "success": "Vampires are vulnerable to sunlight, running water, and stakes through the heart. They cannot enter a residence without invitation — but Vladislav was invited by Marta. Garlic repels them. Holy symbols wielded with faith cause them pain.",
+            "success": "Vampires are vulnerable to sunlight, running water, and stakes through the heart. They cannot enter a residence without invitation \u2014 but Vladislav was invited by Marta. Garlic repels them. Holy symbols wielded with faith cause them pain.",
             "fail": "You know vampires are dangerous. That's about it."
           },
           {
             "skill": "Religion",
             "dc": 12,
-            "success": "Brother Aldric's holy symbol could be a weapon if wielded with true faith. A prayer of turning could force the vampire back. But it requires genuine conviction — fear alone isn't enough.",
+            "success": "Brother Aldric's holy symbol could be a weapon if wielded with true faith. A prayer of turning could force the vampire back. But it requires genuine conviction \u2014 fear alone isn't enough.",
             "fail": "You remember something about holy symbols and vampires but the details escape you."
           }
         ],
         "atmosphere": "revelation",
-        "dmNotes": "This beat fires when the vampire secret is definitively revealed — either through cellar evidence, caught feeding, no-reflection discovery, or direct confrontation. The revelation flash player effect should fire here."
+        "dmNotes": "This beat fires when the vampire secret is definitively revealed \u2014 either through cellar evidence, caught feeding, no-reflection discovery, or direct confrontation. The revelation flash player effect should fire here."
       },
       {
         "id": "confrontation",
         "name": "The Confrontation",
         "status": "pending",
-        "readAloud": "Vladislav rises from his chair — or rather, he is suddenly standing, with no visible transition between sitting and standing. The hood falls back. His face is pale as bone, angular, beautiful in the way a knife is beautiful. His eyes are dark and old — centuries old. He smiles, and you see the fangs. 'I had hoped,' he says, his voice like silk over broken glass, 'to leave without unpleasantness. But you have made that... difficult.' The shadows in the room seem to lean toward him, as if drawn by gravity. The temperature drops. The fire, if it was still burning, dies.",
+        "readAloud": "Vladislav rises from his chair \u2014 or rather, he is suddenly standing, with no visible transition between sitting and standing. The hood falls back. His face is pale as bone, angular, beautiful in the way a knife is beautiful. His eyes are dark and old \u2014 centuries old. He smiles, and you see the fangs. 'I had hoped,' he says, his voice like silk over broken glass, 'to leave without unpleasantness. But you have made that... difficult.' The shadows in the room seem to lean toward him, as if drawn by gravity. The temperature drops. The fire, if it was still burning, dies.",
         "checks": [
           {
             "skill": "Intimidation",
             "dc": 18,
-            "success": "You stand your ground. Vladislav's smile falters — just for a moment. He is used to terror. Defiance surprises him.",
+            "success": "You stand your ground. Vladislav's smile falters \u2014 just for a moment. He is used to terror. Defiance surprises him.",
             "fail": "His presence is overwhelming. Ancient. Predatory. Every instinct screams at you to run."
           },
           {
             "skill": "Persuasion",
             "dc": 20,
-            "success": "You appeal to whatever humanity remains. For a moment — just a moment — something flickers in those dead eyes. Then it's gone. 'You remind me of someone I knew. Before.' He pauses. 'They died badly.'",
+            "success": "You appeal to whatever humanity remains. For a moment \u2014 just a moment \u2014 something flickers in those dead eyes. Then it's gone. 'You remind me of someone I knew. Before.' He pauses. 'They died badly.'",
             "fail": "He is beyond persuasion. He is beyond reason. He is hunger wearing a human face."
           }
         ],
         "atmosphere": "terror_peak",
-        "dmNotes": "Vladislav is CR13. He will NOT fight to the death — if reduced below 50 HP, he flees (mist form to cellar or out window). He fights smart: Charm on the strongest fighter, bite on the isolated, legendary actions to scatter the party. Call Piotr spawn if cellar wasn't cleared."
+        "dmNotes": "Vladislav is CR13. He will NOT fight to the death \u2014 if reduced below 50 HP, he flees (mist form to cellar or out window). He fights smart: Charm on the strongest fighter, bite on the isolated, legendary actions to scatter the party. Call Piotr spawn if cellar wasn't cleared."
       },
       {
         "id": "climax",
         "name": "The Battle for Survival",
         "status": "pending",
-        "readAloud": "Combat erupts in the cramped common room. Tables shatter. The fire scatters embers across the floor. Vladislav moves like smoke — appearing, striking, vanishing. If Tomas hasn't already transformed, the violence and the moonlight push him over the edge. The patrons scream and scatter. Marta dives behind the bar. Brother Aldric raises his holy symbol with shaking hands. This is not a fight you were prepared for. This is survival. Hold until dawn — or die in the dark.",
+        "readAloud": "Combat erupts in the cramped common room. Tables shatter. The fire scatters embers across the floor. Vladislav moves like smoke \u2014 appearing, striking, vanishing. If Tomas hasn't already transformed, the violence and the moonlight push him over the edge. The patrons scream and scatter. Marta dives behind the bar. Brother Aldric raises his holy symbol with shaking hands. This is not a fight you were prepared for. This is survival. Hold until dawn \u2014 or die in the dark.",
         "checks": [
           {
             "skill": "Athletics",
@@ -3210,27 +3436,27 @@
           {
             "skill": "Perception",
             "dc": 14,
-            "success": "You spot Vladislav's movement pattern — he always returns to the cellar door side. That's his escape route.",
+            "success": "You spot Vladislav's movement pattern \u2014 he always returns to the cellar door side. That's his escape route.",
             "fail": "He's too fast to track."
           },
           {
             "skill": "Religion",
             "dc": 15,
-            "success": "Brother Aldric's faith holds. His holy symbol blazes with light — Vladislav recoils (disadvantage on attacks against Aldric this round).",
+            "success": "Brother Aldric's faith holds. His holy symbol blazes with light \u2014 Vladislav recoils (disadvantage on attacks against Aldric this round).",
             "fail": "Aldric's faith wavers. The symbol is just metal."
           }
         ],
         "atmosphere": "combat",
-        "dmNotes": "This is the final combat. Vladislav (CR13), potentially Piotr spawn (CR3), potentially transformed Tomas (CR3 werewolf). Use the combat AI system for NPC tactics. If Vladislav escapes, mark hook-vladislav-escape as foreshadowed. If Tomas transforms, play for tragedy — he didn't want this."
+        "dmNotes": "This is the final combat. Vladislav (CR13), potentially Piotr spawn (CR3), potentially transformed Tomas (CR3 werewolf). Use the combat AI system for NPC tactics. If Vladislav escapes, mark hook-vladislav-escape as foreshadowed. If Tomas transforms, play for tragedy \u2014 he didn't want this."
       },
       {
         "id": "resolution",
         "name": "Dawn Breaks",
         "status": "pending",
-        "readAloud": "The first light creeps through the shattered shutters. Pale. Cold. But light. The blizzard is dying — the wind a whisper where it was a scream. If Vladislav still stands, he recoils from the dawn, hissing, retreating to the cellar or crumbling to ash. The horror is over. But the cost is written on every face in this room — the blood on the floor, the broken furniture, the empty chairs where people sat just hours ago. Marta is sobbing. Tomas, if he survived, is human again, naked and shaking in the corner, remembering what he did. The mountain road is visible through the broken door. The snow has stopped. The sun is rising. You are alive. And you will never forget this night.",
+        "readAloud": "The first light creeps through the shattered shutters. Pale. Cold. But light. The blizzard is dying \u2014 the wind a whisper where it was a scream. If Vladislav still stands, he recoils from the dawn, hissing, retreating to the cellar or crumbling to ash. The horror is over. But the cost is written on every face in this room \u2014 the blood on the floor, the broken furniture, the empty chairs where people sat just hours ago. Marta is sobbing. Tomas, if he survived, is human again, naked and shaking in the corner, remembering what he did. The mountain road is visible through the broken door. The snow has stopped. The sun is rising. You are alive. And you will never forget this night.",
         "checks": [],
         "atmosphere": "dawn",
-        "dmNotes": "Let the players breathe. This is the denouement. Award XP. Resolve NPC fates — who lived, who died, who was transformed. Marta's reaction depends on Piotr's fate. If the Houska letter was found, plant the seed for the next arc. The party is forged — strangers who survived together."
+        "dmNotes": "Let the players breathe. This is the denouement. Award XP. Resolve NPC fates \u2014 who lived, who died, who was transformed. Marta's reaction depends on Piotr's fate. If the Houska letter was found, plant the seed for the next arc. The party is forged \u2014 strangers who survived together."
       }
     ],
     "cluesDiscovered": [],
@@ -3238,7 +3464,7 @@
   },
   "atmosphere": {
     "currentProfile": "tavern_warm",
-    "startNote": "Session begins in tavern_warm — fire crackling, Katya performing, ale flowing. Shift to tavern_tense as clues emerge. The warm start makes the descent into horror more effective."
+    "startNote": "Session begins in tavern_warm \u2014 fire crackling, Katya performing, ale flowing. Shift to tavern_tense as clues emerge. The warm start makes the descent into horror more effective."
   },
   "creatureBehaviors": {
     "tomas": {

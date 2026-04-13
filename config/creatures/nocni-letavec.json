@@ -1,6 +1,6 @@
 {
   "id": "nocni-letavec",
-  "name": "Noční Letavec",
+  "name": "No\u010dn\u00ed Letavec",
   "commonName": "The Night Flier",
   "type": "monstrosity",
   "size": "large",
@@ -30,19 +30,32 @@
     "stealth": 8,
     "survival": 7
   },
-  "damageImmunities": ["poison", "psychic"],
-  "damageResistances": ["bludgeoning", "piercing", "slashing from nonmagical weapons"],
-  "conditionImmunities": ["charmed", "exhaustion", "frightened", "paralyzed", "poisoned"],
+  "damageImmunities": [
+    "poison",
+    "psychic"
+  ],
+  "damageResistances": [
+    "bludgeoning",
+    "piercing",
+    "slashing from nonmagical weapons"
+  ],
+  "conditionImmunities": [
+    "charmed",
+    "exhaustion",
+    "frightened",
+    "paralyzed",
+    "poisoned"
+  ],
   "senses": {
     "darkvision": 120,
     "blindsight": 60,
     "passivePerception": 21
   },
-  "languages": "All languages — speaks rarely and only to chosen targets, always in their native tongue with no accent",
+  "languages": "All languages \u2014 speaks rarely and only to chosen targets, always in their native tongue with no accent",
   "traits": [
     {
       "name": "Regeneration",
-      "description": "The Letavec regains 15 HP at the start of each of its turns unless it took fire or radiant damage since its last turn. If reduced to 0 HP it drops unconscious but does not die — it regenerates to 1 HP after 1 minute and resumes its hunt. It can only be permanently killed by destroying its dormant basin."
+      "description": "The Letavec regains 15 HP at the start of each of its turns unless it took fire or radiant damage since its last turn. If reduced to 0 HP it drops unconscious but does not die \u2014 it regenerates to 1 HP after 1 minute and resumes its hunt. It can only be permanently killed by destroying its dormant basin."
     },
     {
       "name": "Legendary Resistance",
@@ -55,21 +68,21 @@
     },
     {
       "name": "Patient Hunter",
-      "description": "The Letavec will not enter consecrated ground. Not because it cannot — because it does not need to. It circles and waits. Chosen targets must leave eventually. When not actively hunting it perches in darkness within sensing range and observes."
+      "description": "The Letavec will not enter consecrated ground. Not because it cannot \u2014 because it does not need to. It circles and waits. Chosen targets must leave eventually. When not actively hunting it perches in darkness within sensing range and observes."
     },
     {
       "name": "Targeted Restraint",
-      "description": "Against chosen targets the Letavec fights to incapacitate not kill — it wants specific parts intact. It will reduce a chosen target to 0 HP rather than kill them outright. Against non-chosen targets it has no such restraint."
+      "description": "Against chosen targets the Letavec fights to incapacitate not kill \u2014 it wants specific parts intact. It will reduce a chosen target to 0 HP rather than kill them outright. Against non-chosen targets it has no such restraint."
     },
     {
       "name": "Dormant Cycle",
-      "description": "The Letavec is active for 13 nights every 13 years. During dormancy it submerges in a stone basin in its underground den in the Roman-era survey tunnels of the Orava mountains. While dormant it is effectively dead. Destroying the basin permanently ends its cycle — the creature dissolves. Without the basin it cannot return from 0 HP."
+      "description": "The Letavec is active for 13 nights every 13 years. During dormancy it submerges in a stone basin in its underground den in the Roman-era survey tunnels of the Orava mountains. While dormant it is effectively dead. Destroying the basin permanently ends its cycle \u2014 the creature dissolves. Without the basin it cannot return from 0 HP."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The Letavec makes three attacks — two Talon attacks and one Wing Buffet."
+      "description": "The Letavec makes three attacks \u2014 two Talon attacks and one Wing Buffet."
     },
     {
       "name": "Talons",
@@ -92,11 +105,11 @@
     {
       "name": "Harvest",
       "recharge": "5-6",
-      "description": "One grappled chosen target must make a DC 17 Constitution saving throw. On a failed save the Letavec extracts something from them — see Harvest Table per character. On a success the target takes 4d10 necrotic damage but retains what was taken. Non-chosen targets are immune to this action."
+      "description": "One grappled chosen target must make a DC 17 Constitution saving throw. On a failed save the Letavec extracts something from them \u2014 see Harvest Table per character. On a success the target takes 4d10 necrotic damage but retains what was taken. Non-chosen targets are immune to this action."
     },
     {
       "name": "Speak",
-      "description": "The Letavec addresses one chosen target it can see in that target's native language. It explains what it wants with complete sincerity and no malice. This is not a game mechanic — it is a roleplay moment. The DM delivers the Letavec's words. See Speech Templates."
+      "description": "The Letavec addresses one chosen target it can see in that target's native language. It explains what it wants with complete sincerity and no malice. This is not a game mechanic \u2014 it is a roleplay moment. The DM delivers the Letavec's words. See Speech Templates."
     }
   ],
   "legendaryActions": {
@@ -128,74 +141,125 @@
     "barry-frascht": [
       {
         "harvest": 1,
-        "effect": "Disadvantage on all Perception checks involving sight. His hunter's vision is partially consumed.",
-        "narrative": "Something leaves your eye that you cannot name. Colors seem slightly wrong. Distances are harder to judge."
+        "effect": "Disadvantage on all Perception checks involving sight. The bloodline hunter instinct is partially consumed.",
+        "narrative": "Something leaves your eye that you cannot name. Colors seem slightly wrong. Distances are harder to judge.",
+        "entityPurpose": "Testing the bloodline. Eleven generations of selection means this harvest is not random \u2014 it is the culmination of a long project."
       },
       {
         "harvest": 2,
-        "effect": "Loses ability to instinctively sense undead — the bloodline sense that made his hand reach for stakes before his mind understood why.",
-        "narrative": "The instinct is gone. You reach for a stake and realize you are reaching out of habit not knowing."
+        "effect": "Loses the instinct that made his hand reach for stakes before his mind understood why. The bloodline hunter sense goes dark.",
+        "narrative": "The instinct is gone. You reach for a stake and realize you are reaching out of habit not knowing.",
+        "entityPurpose": "The hunter instinct itself. The entity wants to understand why this particular human bloodline kept producing people who could sense the undead before conscious thought engaged."
       },
       {
         "harvest": 3,
         "effect": "Permanently blinded in one eye. The Letavec has what it came for and will not target Barry again.",
-        "narrative": "It takes the eye. Not painfully. Almost gently. It has what it came for."
+        "narrative": "It takes the eye. Not painfully. Almost gently. It has what it came for.",
+        "entityPurpose": "Complete. Whatever the entity was building from eleven generations of this bloodline is now finished. What it built is unknown until Houska."
       }
     ],
     "zarina-firethorn": [
       {
         "harvest": 1,
-        "effect": "Disadvantage on all Insight checks. Her pattern recognition is disrupted.",
-        "narrative": "Faces look the same to you for a moment. You cannot read what is behind them. It passes — mostly."
+        "effect": "Deductive Intuition dims. The d4 bonus to Investigation and Insight checks is gone \u2014 the mark still functions but the pattern-recognition that elevated it is inaccessible.",
+        "narrative": "You look at the room and the patterns that were always there are not there. You can still see. You can still think. But the thing that connected what you saw to what it meant \u2014 that extra step \u2014 is missing. You feel it the way you feel a word on the tip of your tongue that will not come.",
+        "entityPurpose": "Sampling. The entity has never had access to a dragonmark before. The Medani Mark of Detection is fundamentally an information-gathering tool. The entity wants to understand how it works from the inside."
       },
       {
         "harvest": 2,
-        "effect": "Cannot benefit from Deductive Intuition — the Mark of Detection dims.",
-        "narrative": "The extra sense your bloodline gave you is quiet. Not gone. Just unreachable."
+        "effect": "Magical Detection is gone. Zarina can no longer cast Detect Magic, Detect Poison and Disease, or See Invisibility through the Mark. The spells are gone not the mark itself.",
+        "narrative": "The mark is still there. You can feel it. But when you reach for what it used to give you there is nothing. Like a door with no handle on this side.",
+        "entityPurpose": "The detection spells themselves. The entity is sealed and cannot perceive the world outside the Keep clearly. Zarina's detection capabilities give it a window it did not have."
       },
       {
         "harvest": 3,
-        "effect": "The Letavec has what it came for and will not target Zarina again.",
-        "narrative": "Something analytical and irreplaceable leaves with it. You will never quite think the same way again."
+        "effect": "The Mark of Detection fades entirely. Deductive Intuition, Magical Detection, all dragonmark spells \u2014 gone. The birthmark itself is still visible but inert. The Letavec will not target Zarina again.",
+        "narrative": "The mark on your skin has not changed. But whatever lived in it is gone. You reach for it and find skin. Just skin. You have been many things. Risk analyst. Soldier. Inquisitive. The thing that made you different from other people at all of those is gone.",
+        "entityPurpose": "Full access to the dragonmark's pattern-recognition capability. The entity can now perceive hidden connections and risk in ways it could not before. It does not know why this is useful yet. It will."
       }
     ],
     "spurt": [
       {
         "harvest": 1,
-        "effect": "Wild Magic surge table shifts — all results are one step more catastrophic.",
-        "narrative": "Spurt feels something leave. His magic feels looser. More dangerous. He is not sure this is bad."
+        "effect": "Wild Magic surge table shifts \u2014 all results are one step more catastrophic. The chaos is still there but the edges are sharper.",
+        "narrative": "Spurt feels something leave. His magic feels looser. More dangerous. He is not sure this is bad.",
+        "entityPurpose": "Sampling the chaos. The entity has never had access to true wild magic before. It is learning how it works."
       },
       {
         "harvest": 2,
-        "effect": "Sorcery points cannot be recovered on short rest — only long rest.",
-        "narrative": "The well is slower to refill. Something that was quick and easy is now an effort."
+        "effect": "Sorcery points cannot be recovered on short rest \u2014 only long rest.",
+        "narrative": "The well is slower to refill. Something that was quick and easy is now an effort.",
+        "entityPurpose": "The source of the wild magic. The entity is not just sampling \u2014 it is trying to understand where Spurt's chaos comes from. Kobold wild magic sorcerers are rare enough that the entity has no reference point."
       },
       {
         "harvest": 3,
-        "effect": "The Letavec has what it came for and will not target Spurt again.",
-        "narrative": "Whatever made his magic wild and unpredictable is gone. His spells still work. They are just less interesting now."
+        "effect": "Whatever made Spurt's magic wild and unpredictable is taken. His spells still work. They are just less interesting now. The Letavec will not target Spurt again.",
+        "narrative": "Whatever made his magic wild and unpredictable is gone. His spells still work. They are just less interesting now. Spurt is quieter after this. Not sad exactly. Just quieter.",
+        "entityPurpose": "The wild magic itself. The entity now has access to genuine chaos \u2014 the one force that does not follow the rules of its seal. Whether it can use this is the question the party must answer before it does."
+      }
+    ],
+    "chazz-mortimer": [
+      {
+        "harvest": 1,
+        "effect": "The infernal thread dims. Chazz loses his instinctive understanding of Infernal \u2014 the one he never knew he had until it was gone. Arcana checks involving infernal magic at disadvantage.",
+        "narrative": "Something leaves that you did not know was there. You look at a piece of old script on the wall and realize you have been reading it without noticing. Then you try to read it deliberately. The characters mean nothing.",
+        "entityPurpose": "Testing the connection. Seeing how much of the infernal bloodline is accessible at the surface layer."
+      },
+      {
+        "harvest": 2,
+        "effect": "The bardic memory \u2014 specifically the 87 years of collected secrets and forbidden knowledge \u2014 is partially accessed. Chazz retains his knowledge but loses access to it under pressure. In high-stakes moments, History and Arcana checks fail on rolls of 1-5 as the relevant memory simply is not there when needed.",
+        "narrative": "You reach for something you know you know. Your 87 years. All of it should be there. Some of it is not anymore. You cannot tell which parts are missing until you need them.",
+        "entityPurpose": "The knowledge itself. Not taking it \u2014 reading it. The entity has been in these mountains for centuries. It does not have an 87-year window into the wider world. Chazz does."
+      },
+      {
+        "harvest": 3,
+        "effect": "The infernal bloodline connection is fully accessed. Chazz's Fire resistance is gone. His Hellish Rebuke no longer functions. The planar thread the entity wanted has been taken. The Letavec will not target Chazz again.",
+        "narrative": "Something in you that was always warm goes cold. Not the room \u2014 you. The fire inside that was always there. Gone. You reach for it and find nothing where it used to be.",
+        "entityPurpose": "The infernal thread gives the entity a connection to the Nine Hells it did not previously have. It does not know what it will do with this yet. It is collecting."
+      }
+    ],
+    "marfire": [
+      {
+        "harvest": 1,
+        "effect": "The totem bond weakens. While raging, Marfire's Bear Totem resistance is unreliable \u2014 on a d6 roll of 1-2, a given damage type is not resisted that round. She can feel the spirit pulling away slightly. Not gone. Just further.",
+        "narrative": "When you rage the bear is still there. But further back than it was. Like a fire seen through fog instead of directly. You are still you. The connection is still there. But something has been between you and it.",
+        "entityPurpose": "Probing the totem spirit. The entity has never had access to a primordial animal spirit before. It is not taking it \u2014 it is learning its shape."
+      },
+      {
+        "harvest": 2,
+        "effect": "Speech of Beast and Leaf is gone. Plants and animals no longer respond to her. She can still speak \u2014 they no longer understand or answer. This is more disorienting than it sounds for a Firbolg.",
+        "narrative": "The horse in the stable looks at you. You say something to it. It looks away. You say it again. It flicks its ear. Not understanding. Just an animal being an animal. The thing that made you different from other people is gone.",
+        "entityPurpose": "The fey connection. Firbolgs are giant-kin with fey ancestry. The ability to speak to beasts and plants is a fey gift, not a natural one. The entity has been sealed away from fey magic entirely. This is a sample."
+      },
+      {
+        "harvest": 3,
+        "effect": "The Bear Totem spirit bond is fully taken. Marfire can still rage. She no longer has resistance to damage types while raging \u2014 the Bear's protection is gone. The Letavec will not target Marfire again.",
+        "narrative": "You reach for the bear when you rage and it is not there. The rage is still there \u2014 that is yours, that is old and deep and nothing can take it. But the protection is gone. You are alone in the rage in a way you have never been before.",
+        "entityPurpose": "The entity now has a living primordial spirit bond. It does not know what to do with it yet. The bear spirit is not happy about this. Things in the forest near Houska will know something is wrong."
       }
     ]
   },
   "speechTemplates": {
-    "barry": "Your family has produced this quality for eleven generations. I have tasted it twice before — your grandfather's grandfather, and the one before him. You will not miss what I take. You have more than enough of it. I have been patient.",
+    "barry": "Your family has produced this quality for eleven generations. I have tasted it twice before \u2014 your grandfather's grandfather, and the one before him. You will not miss what I take. You have more than enough of it. I have been patient.",
     "zarina": "I have collected soldiers for three hundred years. What you do is different. I want to understand what you do. I will not take much.",
     "spurt": "The small chaotic ones are rare. I have not had one in a very long time. I will be gentle.",
     "general": "I only want what you have. You will not need it.",
-    "dmNote": "The Letavec speaks rarely and only when alone with a target. Never in combat. Always calm. Always sincere. It genuinely does not understand why its targets object. Deliver its words quietly and without theatrical menace — the absence of malice is the horror."
+    "dmNote": "The Letavec speaks rarely and only when alone with a target. Never in combat. Always calm. Always sincere. It genuinely does not understand why its targets object. Deliver its words quietly and without theatrical menace \u2014 the absence of malice is the horror.",
+    "chazz": "Eighty-seven years. I have not encountered your bloodline in this active cycle. Your grandfather was not a musician. Your great-grandmother was not either. Somewhere in your line someone made a choice that resulted in you. I want the thread that choice created. Not your music. Not your secrets. The thread underneath.",
+    "marfire": "The bear chose you. Not the other way. I know because the bond is clean \u2014 no deliberate action on your part, just recognition. I have been collecting spirit bonds for longer than your civilization has kept records. I have never had a bear. I will be careful with you. I am always careful with the ones the spirits choose."
   },
   "den": {
     "location": "Roman-era survey tunnels in the Orava mountains between Orava and Houska",
     "description": "A worked stone doorway half-collapsed into a hillside. Roman construction. A single chamber inside containing a stone basin filled with dark liquid. The Letavec submerges in the basin during dormancy.",
     "findingTheDen": [
-      "Information from Vladislav — he watched it once in 1251 and knows the approximate location. Requires social combat to extract.",
+      "Information from Vladislav \u2014 he watched it once in 1251 and knows the approximate location. Requires social combat to extract.",
       "Roman-era library documents at Houska Castle referencing mountain survey tunnels.",
-      "Aldous Kern's voice from inside the False Hydra — he traveled these roads and saw the entrance without knowing what it was.",
-      "Tracking the Letavec on foot after it lands — it walks the last miles leaving ground tracks. DC 18 Survival to follow without losing the trail."
+      "Aldous Kern's voice from inside the False Hydra \u2014 he traveled these roads and saw the entrance without knowing what it was.",
+      "Tracking the Letavec on foot after it lands \u2014 it walks the last miles leaving ground tracks. DC 18 Survival to follow without losing the trail."
     ],
     "destroyingTheBasin": "The basin is AC 17, HP 50, immune to poison and psychic. Destroyed by fire, radiant, or force damage. When destroyed the Letavec dissolves permanently if currently at 0 HP or will dissolve the next time it reaches 0 HP."
   },
-  "lore": "The Noční Letavec has been in these mountains since before the castles. The castles were built partly to give travelers somewhere defensible to shelter during its active cycles. Local people do not speak its full name. They say Letavec and make a specific gesture and change the subject. It has been doing this for longer than anyone can trace. It will be doing this long after everyone who encountered it is gone.",
+  "lore": "The No\u010dn\u00ed Letavec has been in these mountains since before the castles. The castles were built partly to give travelers somewhere defensible to shelter during its active cycles. Local people do not speak its full name. They say Letavec and make a specific gesture and change the subject. It has been doing this for longer than anyone can trace. It will be doing this long after everyone who encountered it is gone.",
   "vladislavKnowledge": {
     "encountered": 1251,
     "knows": [
@@ -208,13 +272,13 @@
     "leverage": "This information is valuable. He will trade pieces of it for something he wants from the party.",
     "directQuestion": "There are older things than me in these mountains. That should concern you considerably.",
     "socialCombatRequired": true,
-    "socialCombatNote": "Each piece of information requires positive momentum in a social combat encounter. He releases information one piece at a time — never everything at once."
+    "socialCombatNote": "Each piece of information requires positive momentum in a social combat encounter. He releases information one piece at a time \u2014 never everything at once."
   },
   "campaignNotes": {
-    "session0": "Tracks around the inn. Observation only. Aldous Kern was moving fast when he arrived — he was on the road after dark.",
+    "session0": "Tracks around the inn. Observation only. Aldous Kern was moving fast when he arrived \u2014 he was on the road after dark.",
     "session0to1": "Follows the party. Chosen targets feel watched. DC 13 Perception at night to hear wings.",
     "session1to2": "First direct encounter at camp. Driven off after damage. Returns next night for 13 nights total.",
-    "session2": "Followed party to Houska. Vladislav aware of it — considers it a nuisance and useful deterrent. Will not help party against it.",
+    "session2": "Followed party to Houska. Vladislav aware of it \u2014 considers it a nuisance and useful deterrent. Will not help party against it.",
     "session3": "Party finds den location. First opportunity to permanently end the cycle."
   }
 }

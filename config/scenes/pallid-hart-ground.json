@@ -1,0 +1,58 @@
+{
+  "id": "pallid-hart-ground",
+  "name": "Pallid Hart — Ground Floor + Cellar",
+  "map": "pallidhearfloor1",
+  "_mapNotes": "Grid 140px, 4900×2800. There is no separate cellar map in this build — the cellar entities (Piotr chained, Gas Spore) are placed at the cellar-access zone on the ground-floor map. Max treats this as the cellar scene when players interact with the cellar-access zone. If a dedicated cellar map is added later, split this scene in two.",
+  "tokens": [
+    {
+      "id": "piotr-kowalski",
+      "name": "Piotr Kowalski",
+      "actorSlug": "piotr-kowalski",
+      "type": "npc",
+      "x": 1140,
+      "y": 810,
+      "hidden": false,
+      "hp": { "current": 82, "max": 82 },
+      "ac": 15,
+      "image": "vampire-spawn.webp",
+      "publicName": "Chained Figure",
+      "nameRevealedToPlayers": false
+    },
+    {
+      "id": "gas-spore-cellar",
+      "name": "Something in the Dark",
+      "actorSlug": "gas-spore",
+      "type": "creature",
+      "x": 1300,
+      "y": 810,
+      "hidden": false,
+      "hp": { "current": 1, "max": 1 },
+      "ac": 5,
+      "image": "beholder-silhouette.webp",
+      "publicName": "Something in the Dark",
+      "nameRevealedToPlayers": true
+    }
+  ],
+  "items": [],
+  "encounters": [
+    {
+      "id": "gas-spore-detonation",
+      "trigger": "condition",
+      "condition": "gas-spore-cellar hp <= 0 OR gas-spore-cellar takes 10+ damage single hit",
+      "automatic": true,
+      "maxWhisper": "GAS SPORE DETONATION — DC 15 Constitution save all within 20 feet. 10d10 necrotic on fail, half on success. Failed save also causes spore infection — DC 15 Con save after 24 hours or die. Combat-service already handles the 10+ damage single-hit branch via _triggerGasSporeDeathBurst."
+    },
+    {
+      "id": "piotr-chain-break-scene",
+      "trigger": "condition",
+      "condition": "creature:piotr_chain_break fired",
+      "automatic": true,
+      "maxWhisper": "Piotr is loose in the cellar. He will not hurt Marta. Everyone else is in danger."
+    }
+  ],
+  "onEnter": {
+    "maxWhisper": "Players on the ground floor. Cellar-access zone populated with Piotr (as 'Chained Figure', pressed east away from the Gas Spore) and Gas Spore (visible as 'Something in the Dark'). Piotr calls it 'the eye' and believes Vladislav sent it to watch him. If players enter cellar-access Max should swap atmosphere to dread_cellar and fire observation cellar-entry.",
+    "atmosphereProfile": "tavern_warm",
+    "observationId": "ground-floor-entry"
+  }
+}

@@ -1411,6 +1411,11 @@ function handle(m){
       if(m.data&&m.data.combat) renderCombatTracker(m.data.combat);
       showAttackNotification(m.data);
       break;
+    // Build 6 — narrative-only combat updates (no numbers on player screen)
+    case 'combat:wound_update':     displayWoundUpdate(m.description); break;
+    case 'combat:save_required':    displaySaveRequired(m.saveType, m.cause); break;
+    case 'combat:condition_update': displayConditionUpdate(m.condition, m.narrative, m.active); break;
+    case 'combat:your_turn':        displayYourTurn(m.spellStatus, m.movementFeet); break;
     // Audio streaming for remote players
     case 'audio:play':
       if(m.url) { const a=new Audio(m.url); a.volume=m.volume||0.5; a.play().catch(()=>{}); }
@@ -3107,6 +3112,97 @@ function showPerceptionFlash(text) {
     f.style.opacity = '0';
     setTimeout(function() { f.remove(); }, 5500);
   }, 15000);
+}
+
+// ── Build 6 — narrative-only combat UI for players ──
+// No HP numbers. No DCs. No slot counts. Everything is gothic description.
+// Red border = perception flash (above). Gold border = save / your-turn.
+
+function _installSavePulseStyle() {
+  if (document.getElementById('save-pulse-style')) return;
+  var style = document.createElement('style');
+  style.id = 'save-pulse-style';
+  style.textContent = '@keyframes save-pulse{0%,100%{opacity:1}50%{opacity:0.4}}';
+  document.head.appendChild(style);
+}
+
+function displayWoundUpdate(description) {
+  if (!description) return;
+  // Find the CONDITION tab content (fall back to body if absent)
+  var conditionTab = document.querySelector('[data-tab="condition"]') || document.body;
+  var woundEl = document.getElementById('wound-status');
+  if (!woundEl) {
+    woundEl = document.createElement('div');
+    woundEl.id = 'wound-status';
+    woundEl.style.cssText = 'font-style:italic;color:#c41e1e;margin:8px 0;opacity:0;' +
+      'transition:opacity 1s;font-size:14px;';
+    if (conditionTab.firstChild) conditionTab.insertBefore(woundEl, conditionTab.firstChild);
+    else conditionTab.appendChild(woundEl);
+  }
+  woundEl.textContent = description;
+  woundEl.style.opacity = '0';
+  requestAnimationFrame(function() { woundEl.style.opacity = '1'; });
+}
+
+function displaySaveRequired(saveType, cause) {
+  _installSavePulseStyle();
+  var flash = document.createElement('div');
+  flash.style.cssText = 'position:fixed;inset:0;border:22px solid #c8a820;' +
+    'pointer-events:none;z-index:9999;box-sizing:border-box;' +
+    'animation:save-pulse 0.9s ease-in-out 3;';
+  document.body.appendChild(flash);
+
+  var label = document.createElement('div');
+  label.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);' +
+    'background:rgba(0,0,0,0.85);color:#c8a820;font-size:18px;font-weight:bold;' +
+    'padding:20px 32px;border:2px solid #c8a820;z-index:10000;text-align:center;' +
+    'font-family:Georgia,serif;max-width:80%;';
+  label.innerHTML = String(saveType || 'Save').toUpperCase() + ' SAVE<br>' +
+    '<span style="font-size:13px;font-weight:normal;color:#aaa;">' +
+    (cause || '') + '</span>';
+  document.body.appendChild(label);
+
+  setTimeout(function() { flash.remove(); label.remove(); }, 15000);
+}
+
+function displayConditionUpdate(condition, narrative, active) {
+  if (!condition) return;
+  var conditionTab = document.querySelector('[data-tab="condition"]') || document.body;
+  var condId = 'condition-' + String(condition).replace(/\s+/g, '-');
+  var condEl = document.getElementById(condId);
+  if (active) {
+    if (!condEl) {
+      condEl = document.createElement('div');
+      condEl.id = condId;
+      condEl.style.cssText = 'font-style:italic;color:#8b0000;margin:6px 0;font-size:13px;' +
+        'border-left:2px solid #8b0000;padding-left:8px;';
+      conditionTab.appendChild(condEl);
+    }
+    condEl.textContent = narrative || ('You are ' + condition + '.');
+  } else if (condEl) {
+    condEl.remove();
+  }
+}
+
+function displayYourTurn(spellStatus, movementFeet) {
+  _installSavePulseStyle();
+  var flash = document.createElement('div');
+  flash.style.cssText = 'position:fixed;inset:0;border:22px solid #c8a820;' +
+    'pointer-events:none;z-index:9999;box-sizing:border-box;' +
+    'animation:save-pulse 0.9s ease-in-out 3;';
+  document.body.appendChild(flash);
+
+  var label = document.createElement('div');
+  label.style.cssText = 'position:fixed;top:40%;left:50%;transform:translate(-50%,-50%);' +
+    'background:rgba(0,0,0,0.9);color:#c8a820;font-size:28px;font-weight:bold;' +
+    'padding:24px 40px;border:2px solid #c8a820;z-index:10000;text-align:center;' +
+    'font-family:Georgia,serif;';
+  var content = 'YOUR TURN';
+  if (spellStatus) content += '<br><span style="font-size:13px;font-weight:normal;color:#aaa;">' + spellStatus + '</span>';
+  label.innerHTML = content;
+  document.body.appendChild(label);
+
+  setTimeout(function() { flash.remove(); label.remove(); }, 30000);
 }
 
 // ── QUEST JOURNAL (Feature 47) ──────────────────────────────────────

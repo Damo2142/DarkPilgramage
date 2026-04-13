@@ -579,6 +579,77 @@ class PlayerBridgeService {
       }
     }, 'player-bridge');
 
+    // ── Build 6 — narrative-only combat updates for player Chromebooks ──
+    //
+    // Players never see HP numbers, DCs, or condition labels standing alone.
+    // They see gothic description text, a colored border flash for
+    // "your turn" and "save required", and nothing else. The DM screen is
+    // where the numbers live.
+
+    // Wound narrative on HP change — only pushed to the affected PC
+    this.bus.subscribe('combat:hp_changed', (env) => {
+      const { combat, combatantId, newHp } = env.data || {};
+      if (!combat || !combatantId) return;
+      const combatant = (combat.turnOrder || []).find(c => c && c.id === combatantId);
+      if (!combatant || combatant.type !== 'pc') return;
+      const maxHp = combatant.hp?.max ?? 1;
+      const description = this._getWoundDescription(newHp, maxHp);
+      if (!description) return;
+      this._sendToPlayer(combatantId, {
+        type: 'combat:wound_update',
+        description
+      });
+    }, 'player-bridge');
+
+    // Save required — whoever must save gets a gold-border flash + save
+    // type + narrative cause. DC is deliberately NOT included.
+    this.bus.subscribe('combat:save_required', (env) => {
+      const d = env.data || {};
+      if (!d.playerId) return;
+      this._sendToPlayer(d.playerId, {
+        type: 'combat:save_required',
+        saveType: d.saveType || 'Constitution',
+        cause: d.cause || 'Something is happening to you.'
+        // intentionally: no DC
+      });
+    }, 'player-bridge');
+
+    // Condition narrative on add/remove — only for PC combatants.
+    // combat-service sends { combatantId, conditions, toggled } —
+    // whether the toggle added or removed is determined by whether
+    // `toggled` is currently in `conditions`.
+    this.bus.subscribe('combat:condition_changed', (env) => {
+      const d = env.data || {};
+      const { combat, combatantId, conditions, toggled } = d;
+      if (!combat || !combatantId || !toggled) return;
+      const combatant = (combat.turnOrder || []).find(c => c && c.id === combatantId);
+      if (!combatant || combatant.type !== 'pc') return;
+      const active = Array.isArray(conditions) && conditions.includes(toggled);
+      this._sendToPlayer(combatantId, {
+        type: 'combat:condition_update',
+        condition: toggled,
+        narrative: this._getConditionNarrative(toggled),
+        active
+      });
+    }, 'player-bridge');
+
+    // Your-turn flash — only for PC combatants. Spell status is a
+    // narrative summary of magic remaining; no counts/slot numbers.
+    this.bus.subscribe('combat:next_turn', (env) => {
+      const d = env.data || {};
+      const combatant = d.combatant
+        || (d.combat && d.combat.turnOrder && d.combat.turnOrder[d.combat.currentTurn]);
+      if (!combatant || combatant.type !== 'pc') return;
+      const playerId = combatant.id;
+      const pState = this.state.get(`players.${playerId}`) || {};
+      const spellStatus = this._getSpellSlotDescription(pState.character);
+      this._sendToPlayer(playerId, {
+        type: 'combat:your_turn',
+        spellStatus,
+        movementFeet: pState.character?.speed || 30
+      });
+    }, 'player-bridge');
+
     this.bus.subscribe('dm:private_message', (env) => {
       const { playerId, text, durationMs } = env.data;
       if (playerId === 'all') {
@@ -1298,6 +1369,61 @@ class PlayerBridgeService {
     if (player && player.ws.readyState === 1) {
       player.ws.send(JSON.stringify(data));
     }
+  }
+
+  // ── Build 6 — narrative helpers for player-facing combat ──
+  // These produce gothic description text only. No numbers ever appear in
+  // the returned strings — HP brackets, DCs, and slot counts are never
+  // exposed to the player Chromebook.
+
+  _getWoundDescription(currentHp, maxHp) {
+    const max = Number(maxHp);
+    if (!Number.isFinite(max) || max <= 0) return null;
+    const pct = Number(currentHp) / max;
+    if (pct > 0.75) return null; // feels fine — no update
+    if (pct > 0.50) return 'You are bleeding. Not badly. But you feel it.';
+    if (pct > 0.25) return 'Something is wrong. Your body is failing you. Every movement costs.';
+    if (pct > 0.10) return 'You are badly hurt. You do not know how much longer you can continue.';
+    if (pct > 0)    return 'You are dying. Something in you knows it.';
+    return 'You are down.';
+  }
+
+  _getSpellSlotDescription(character) {
+    const slots = character && character.spellSlots;
+    if (!slots || typeof slots !== 'object') return null;
+    // spellSlots on DDB-synced characters is {levelN: {total, used, remaining}}
+    // On hand-authored locals it may be {levelN: {total, used, remaining}} too
+    // or even null. Only fire when we can read remaining vs total.
+    let total = 0, remaining = 0, hasAny = false;
+    for (const k of Object.keys(slots)) {
+      const v = slots[k];
+      if (!v || typeof v !== 'object') continue;
+      if (Number.isFinite(v.total))     { total     += v.total;     hasAny = true; }
+      if (Number.isFinite(v.remaining)) { remaining += v.remaining; }
+    }
+    if (!hasAny || total <= 0) return null;
+    const pct = remaining / total;
+    if (pct >= 1.0) return 'Your magic feels full.';
+    if (pct >= 0.5) return 'Your magic feels strained.';
+    if (pct >= 0.1) return 'You have very little left.';
+    return 'Your magic is spent.';
+  }
+
+  _getConditionNarrative(condition) {
+    const narratives = {
+      poisoned:    'Your blood burns. Something wrong moves through you.',
+      grappled:    'You cannot break free.',
+      prone:       'You are on the ground.',
+      frightened:  'Your body will not obey. Everything in you says run.',
+      paralyzed:   'You cannot move. You cannot speak. You are completely aware.',
+      charmed:     'Something about them feels different. More reasonable. More right.',
+      blinded:     'Darkness. Complete and immediate.',
+      stunned:     'The world does not make sense for a moment.',
+      exhaustion:  'You are running out of something that does not come back easily.',
+      unconscious: 'You are down. Make your death saves.'
+    };
+    const key = String(condition || '').toLowerCase();
+    return narratives[key] || `You are ${condition}.`;
   }
 
   _broadcast(data) {

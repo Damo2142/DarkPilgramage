@@ -431,6 +431,20 @@ class CombatService {
       });
     }
 
+    // Build 6 — notify any PC target they must make a Constitution save.
+    // Player-bridge turns this into a gold-border flash + "CONSTITUTION SAVE"
+    // label on their Chromebook. DC is NOT sent — only the save type and
+    // a narrative cause.
+    const playersState = this.state.get('players') || {};
+    for (const t of targets) {
+      if (!playersState[t.id]) continue; // only PCs
+      this.bus.dispatch('combat:save_required', {
+        playerId: t.id,
+        saveType: 'Constitution',
+        cause: 'Something in the dark ruptures. A cloud of dust and spore billows outward.'
+      });
+    }
+
     this.bus.dispatch('dm:whisper', {
       text: `Gas Spore Death Burst — ${targets.length} targets in blast (${targets.map(t => t.name).join(', ')}) — CON save DC15 — failure = 10d10 necrotic AND spore infection`,
       priority: 1, category: 'combat'

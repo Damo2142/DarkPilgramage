@@ -326,7 +326,8 @@
       ],
       "range": "5/5ft",
       "modifiers": {},
-      "magical": true
+      "magical": true,
+      "id": "inv-scorpion-staff-mnys8jqrqof4"
     },
     {
       "name": "Dagger",
@@ -346,7 +347,8 @@
         "nick"
       ],
       "range": "20/60ft",
-      "magical": false
+      "magical": false,
+      "id": "inv-dagger-mnys8jqr8l5s"
     },
     {
       "name": "Alchemist's Supplies",
@@ -355,7 +357,8 @@
       "type": "Other Gear",
       "weight": 8,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-alchemist-s-supplies-mnys8jqrd2n9"
     },
     {
       "name": "Backpack",
@@ -364,7 +367,8 @@
       "type": "Other Gear",
       "weight": 5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-backpack-mnys8jqrb5je"
     },
     {
       "name": "Carpenter's Tools",
@@ -373,7 +377,8 @@
       "type": "Other Gear",
       "weight": 6,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-carpenter-s-tools-mnys8jqreooq"
     },
     {
       "name": "Tinker's Tools",
@@ -382,7 +387,8 @@
       "type": "Other Gear",
       "weight": 10,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-tinker-s-tools-mnys8jqr2lfb"
     },
     {
       "name": "Weaver's Tools",
@@ -391,7 +397,8 @@
       "type": "Other Gear",
       "weight": 5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-weaver-s-tools-mnys8jqrmo5s"
     },
     {
       "name": "Acid",
@@ -400,7 +407,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-acid-mnys8jqr82s5"
     },
     {
       "name": "Alchemist's Fire",
@@ -409,7 +417,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-alchemist-s-fire-mnys8jqrars6"
     },
     {
       "name": "Crystal",
@@ -418,7 +427,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-crystal-mnys8jqruwtp"
     },
     {
       "name": "Bedroll",
@@ -427,7 +437,8 @@
       "type": "Other Gear",
       "weight": 7,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-bedroll-mnys8jqre6hr"
     },
     {
       "name": "Mess Kit",
@@ -436,7 +447,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-mess-kit-mnys8jqrmv8l"
     },
     {
       "name": "Rations (1 day)",
@@ -445,7 +457,8 @@
       "type": "Other Gear",
       "weight": 2,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-rations-1-day--mnys8jqrfery"
     },
     {
       "name": "Rope, Hempen (50 feet)",
@@ -454,7 +467,8 @@
       "type": "Other Gear",
       "weight": 10,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-rope-hempen-50-feet--mnys8jqrvdbu"
     },
     {
       "name": "Tinderbox",
@@ -463,7 +477,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-tinderbox-mnys8jqrbwp4"
     },
     {
       "name": "Torch",
@@ -472,7 +487,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-torch-mnys8jqrqxfc"
     },
     {
       "name": "Waterskin",
@@ -481,7 +497,8 @@
       "type": "Other Gear",
       "weight": 5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-waterskin-mnys8jqrvtpm"
     },
     {
       "name": "Oil",
@@ -490,7 +507,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-oil-mnys8jqrb565"
     },
     {
       "name": "Rations",
@@ -499,7 +517,8 @@
       "type": "Other Gear",
       "weight": 2,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-rations-mnys8jqrcooc"
     },
     {
       "name": "Rope",
@@ -508,7 +527,8 @@
       "type": "Other Gear",
       "weight": 5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-rope-mnys8jqrn6gx"
     },
     {
       "name": "Tinderbox",
@@ -517,7 +537,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-tinderbox-mnys8jqrx98p"
     },
     {
       "name": "Torch",
@@ -526,7 +547,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-torch-mnys8jqrj7ej"
     },
     {
       "name": "Waterskin",
@@ -535,7 +557,8 @@
       "type": "Other Gear",
       "weight": 5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-waterskin-mnys8jqrrao6"
     },
     {
       "name": "Caltrops",
@@ -544,7 +567,8 @@
       "type": "Other Gear",
       "weight": 2,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-caltrops-mnys8jqrzrsl"
     },
     {
       "name": "Crowbar",
@@ -553,7 +577,8 @@
       "type": "Other Gear",
       "weight": 5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-crowbar-mnys8jqrxz73"
     }
   ],
   "conditions": [],
@@ -592,7 +617,7 @@
     "description": "Spurt is a russet-colored kobold who collects critters and has several on her person, including a skunk in a wooden cage, several wasps in a bag, and centipedes in a basket. Although she can aggravate enemies by releasing these critters, she has no control over their behavior."
   },
   "patron": "Wild Magic Sorcery",
-  "_syncedAt": "2026-04-14T14:14:17.554Z",
+  "_syncedAt": "2026-04-14T15:34:41.907Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/162472191"
 }

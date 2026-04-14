@@ -1186,8 +1186,25 @@ function openPlayerSheet(pid) {
       html += '<div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">(no items)</div>';
     }
 
+    // Count items missing ids and warn — should be zero after the server
+    // migration runs on startup. If the DM ever sees this banner the server
+    // failed to persist ids (usually a file write permission issue).
+    var missingIds = allItems.filter(function(i) { return i && !i.id; }).length;
+    if (missingIds > 0) {
+      html += '<div style="background:rgba(200,80,32,0.15);color:#ffb088;border:1px solid #a05030;padding:6px 8px;margin-bottom:6px;border-radius:3px;font-size:11px;">' +
+              '⚠ ' + missingIds + ' item(s) without id — DM edit disabled for those rows. ' +
+              'Restart the container to trigger id migration.</div>';
+    }
+
     allItems.forEach(function(item, idx) {
-      if (!item || !item.id) return;
+      if (!item) return;
+      if (!item.id) {
+        // Graceful fallback — show the name + qty so the DM knows it exists.
+        var qn = item.quantity > 1 ? ' ×' + item.quantity : '';
+        html += '<div style="border:1px dashed var(--border);background:rgba(0,0,0,0.2);padding:6px 8px;margin-bottom:6px;border-radius:3px;color:var(--text-dim);font-size:12px;">' +
+                esc(item.name || '?') + qn + ' <span style="color:#ff9060;font-size:10px;">(no id — not editable)</span></div>';
+        return;
+      }
       var iid = esc(item.id);
       var nm = esc(item.name || '?');
       var qty = item.quantity > 1 ? ' ×' + item.quantity : '';

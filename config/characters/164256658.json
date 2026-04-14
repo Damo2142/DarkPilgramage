@@ -240,7 +240,8 @@
       "weight": 8,
       "rarity": "Common",
       "magic": true,
-      "ac": 11
+      "ac": 11,
+      "id": "inv-cast-off-armor-padded-mnys8ji6u7yg"
     },
     {
       "name": "Handaxe",
@@ -260,7 +261,8 @@
       ],
       "range": "20/60ft",
       "magical": false,
-      "silver": false
+      "silver": false,
+      "id": "inv-handaxe-mnys8ji61byg"
     },
     {
       "name": "Javelin",
@@ -279,7 +281,8 @@
       ],
       "range": "30/120ft",
       "magical": false,
-      "silver": false
+      "silver": false,
+      "id": "inv-javelin-mnys8ji6gk5z"
     },
     {
       "name": "Quarterstaff",
@@ -298,7 +301,8 @@
       ],
       "range": "5/5ft",
       "magical": false,
-      "silver": false
+      "silver": false,
+      "id": "inv-quarterstaff-mnys8ji6u2k5"
     },
     {
       "name": "War Pick",
@@ -317,7 +321,8 @@
       ],
       "range": "5/5ft",
       "magical": false,
-      "silver": false
+      "silver": false,
+      "id": "inv-war-pick-mnys8ji6o1zs"
     },
     {
       "name": "Backpack",
@@ -326,7 +331,8 @@
       "type": "Other Gear",
       "weight": 5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-backpack-mnys8ji67eam"
     },
     {
       "name": "Clothes, Traveler's",
@@ -335,7 +341,8 @@
       "type": "Other Gear",
       "weight": 4,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-clothes-traveler-s-mnys8ji63kc3"
     },
     {
       "name": "Hunting Trap",
@@ -344,7 +351,8 @@
       "type": "Other Gear",
       "weight": 25,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-hunting-trap-mnys8ji6vjn2"
     },
     {
       "name": "Pouch",
@@ -353,7 +361,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-pouch-mnys8ji6e6gp"
     },
     {
       "name": "Alchemist's Supplies",
@@ -362,7 +371,8 @@
       "type": "Other Gear",
       "weight": 8,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-alchemist-s-supplies-mnys8ji6zys6"
     },
     {
       "name": "Bedroll",
@@ -371,7 +381,8 @@
       "type": "Other Gear",
       "weight": 7,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-bedroll-mnys8ji61qon"
     },
     {
       "name": "Mess Kit",
@@ -380,7 +391,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-mess-kit-mnys8ji6hdb9"
     },
     {
       "name": "Rations (1 day)",
@@ -389,7 +401,8 @@
       "type": "Other Gear",
       "weight": 2,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-rations-1-day--mnys8ji6pb3f"
     },
     {
       "name": "Rope, Hempen (50 feet)",
@@ -398,7 +411,8 @@
       "type": "Other Gear",
       "weight": 10,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-rope-hempen-50-feet--mnys8ji6jpo9"
     },
     {
       "name": "Tinderbox",
@@ -407,7 +421,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-tinderbox-mnys8ji659wy"
     },
     {
       "name": "Torch",
@@ -416,7 +431,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-torch-mnys8ji6d8cd"
     },
     {
       "name": "Waterskin",
@@ -425,7 +441,8 @@
       "type": "Other Gear",
       "weight": 5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-waterskin-mnys8ji6bu68"
     }
   ],
   "conditions": [],
@@ -465,7 +482,7 @@
     "description": null
   },
   "patron": "Path of the Totem Warrior",
-  "_syncedAt": "2026-04-14T14:14:17.802Z",
+  "_syncedAt": "2026-04-14T15:34:42.143Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/164256658"
 }

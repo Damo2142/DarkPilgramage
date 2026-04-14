@@ -50,6 +50,10 @@ class CharacterService {
   async start() {
     const loaded = this._loadAll();
     console.log('[Characters] Loaded ' + loaded + ' character(s) into game state');
+    // Addition 10 — one-shot migration: ensure every inventory item across
+    // every loaded character has a stable id. DDB-synced items don't have
+    // ids, and without them the DM inventory editor can't address an item.
+    this._migrateInventoryIds();
     // Auto-sync from DDB if configured
     const ddbConf = this._readDdbConfig();
     const cookie = process.env.COBALT_COOKIE || process.env.DDB_COBALT_TOKEN;
@@ -1029,6 +1033,58 @@ class CharacterService {
     this.saveCharacter(String(id), charData);
   }
 
+  /**
+   * Addition 10 follow-up — assign stable ids to inventory items that don't
+   * have one. DDB-synced items arrive without ids; without this the DM edit
+   * UI skips them entirely (and the /inventory update action can't address
+   * them). Returns true if any id was assigned so callers can decide whether
+   * to persist.
+   */
+  _ensureInventoryIds(character) {
+    if (!character || !Array.isArray(character.inventory)) return false;
+    let dirty = false;
+    const seen = new Set();
+    for (const it of character.inventory) {
+      if (!it) continue;
+      if (it.id && !seen.has(it.id)) { seen.add(it.id); continue; }
+      // Missing OR duplicate (e.g. two Daggers both with no id) — generate.
+      const seed = (it.name || 'item').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24);
+      let candidate;
+      do {
+        candidate = 'inv-' + seed + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      } while (seen.has(candidate));
+      it.id = candidate;
+      seen.add(candidate);
+      dirty = true;
+    }
+    return dirty;
+  }
+
+  /**
+   * Run _ensureInventoryIds across every loaded player character and
+   * persist any file that changed. Called once on start() after _loadAll.
+   */
+  _migrateInventoryIds() {
+    const players = this.state.get('players') || {};
+    let migratedCount = 0;
+    for (const [pid, p] of Object.entries(players)) {
+      if (!p || !p.character) continue;
+      const dirty = this._ensureInventoryIds(p.character);
+      if (dirty) {
+        migratedCount++;
+        const charId = p.character.ddbId || p.character.foundryId;
+        if (charId) {
+          try { this.saveCharacter(String(charId), p.character); } catch (e) {
+            console.warn('[Characters] Inventory id migration write failed for ' + pid + ': ' + e.message);
+          }
+        }
+      }
+    }
+    if (migratedCount > 0) {
+      console.log('[Characters] Assigned inventory ids across ' + migratedCount + ' character file(s) — DM editor now addressable');
+    }
+  }
+
   // ══════════════════════════════════════════════════════════════════════════
   // DDB SYNC — Pull from D&D Beyond
   // ══════════════════════════════════════════════════════════════════════════
@@ -1265,6 +1321,10 @@ class CharacterService {
 
     // Recalculate AC based on current equipped items
     char.ac = this._calcAC(char);
+
+    // Addition 10 — ensure every inventory item has a stable id before
+    // writing so the DM editor can address it. DDB items arrive without ids.
+    this._ensureInventoryIds(char);
 
     this.saveCharacter(String(ddbId), char);
     console.log('[DDB] Synced: ' + char.name + ' (' + char.race + ' ' + char.class + ' ' + char.level + ')');

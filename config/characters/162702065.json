@@ -18,7 +18,7 @@
     "max": 18,
     "temp": 0
   },
-  "ac": 11,
+  "ac": 12,
   "speed": 30,
   "initiative": 1,
   "proficiencyBonus": 2,
@@ -272,7 +272,9 @@
       "weight": 10,
       "rarity": "Common",
       "magic": false,
-      "ac": 11
+      "ac": 11,
+      "acType": "light",
+      "id": "inv-leather-mnys8ji6npbi"
     },
     {
       "name": "Dagger",
@@ -292,7 +294,8 @@
         "nick"
       ],
       "range": "20/60ft",
-      "magical": false
+      "magical": false,
+      "id": "inv-dagger-mnys8ji6kxkc"
     },
     {
       "name": "Dagger",
@@ -312,7 +315,8 @@
         "nick"
       ],
       "range": "20/60ft",
-      "magical": false
+      "magical": false,
+      "id": "inv-dagger-mnys8jszb2ud"
     },
     {
       "name": "Sickle",
@@ -330,7 +334,8 @@
         "nick"
       ],
       "range": "5/5ft",
-      "magical": false
+      "magical": false,
+      "id": "inv-sickle-mnys8ji62244"
     },
     {
       "name": "Chest",
@@ -339,7 +344,8 @@
       "type": "Other Gear",
       "weight": 25,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-chest-mnys8ji60iei"
     },
     {
       "name": "Clothes, Common",
@@ -348,7 +354,8 @@
       "type": "Other Gear",
       "weight": 3,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-clothes-common-mnys8ji60f49"
     },
     {
       "name": "Backpack",
@@ -357,7 +364,8 @@
       "type": "Other Gear",
       "weight": 5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-backpack-mnys8ji6qa1i"
     },
     {
       "name": "Book",
@@ -366,7 +374,8 @@
       "type": "Other Gear",
       "weight": 5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-book-mnys8ji621g9"
     },
     {
       "name": "Orb",
@@ -375,7 +384,8 @@
       "type": "Other Gear",
       "weight": 3,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-orb-mnys8ji60ldt"
     },
     {
       "name": "Crowbar",
@@ -384,7 +394,8 @@
       "type": "Other Gear",
       "weight": 5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-crowbar-mnys8ji6qmsq"
     },
     {
       "name": "Hammer",
@@ -393,7 +404,8 @@
       "type": "Other Gear",
       "weight": 3,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-hammer-mnys8ji6sja2"
     },
     {
       "name": "Holy Water (flask)",
@@ -402,7 +414,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-holy-water-flask--mnys8ji6to0j"
     },
     {
       "name": "Manacles",
@@ -411,7 +424,8 @@
       "type": "Other Gear",
       "weight": 6,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-manacles-mnys8ji6jkct"
     },
     {
       "name": "Mirror, Steel",
@@ -420,7 +434,8 @@
       "type": "Other Gear",
       "weight": 0.5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-mirror-steel-mnys8ji6uyqd"
     },
     {
       "name": "Oil (flask)",
@@ -429,7 +444,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-oil-flask--mnys8ji6kq6r"
     },
     {
       "name": "Tinderbox",
@@ -438,7 +454,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-tinderbox-mnys8ji6bm3l"
     },
     {
       "name": "Torch",
@@ -447,7 +464,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-torch-mnys8ji6r8yh"
     },
     {
       "name": "Stake (Wooden)",
@@ -456,7 +474,8 @@
       "type": "Other Gear",
       "weight": 0,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-stake-wooden--mnys8ji67nmz"
     },
     {
       "name": "Holy Symbol",
@@ -465,7 +484,8 @@
       "type": "Other Gear",
       "weight": 0,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-holy-symbol-mnys8ji65276"
     },
     {
       "name": "Oil",
@@ -474,7 +494,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-oil-mnys8ji6iheb"
     },
     {
       "name": "Parchment",
@@ -483,7 +504,8 @@
       "type": "Other Gear",
       "weight": 0,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-parchment-mnys8ji6f861"
     },
     {
       "name": "Tinderbox",
@@ -492,7 +514,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-tinderbox-mnys8jsz595w"
     },
     {
       "name": "Book",
@@ -501,7 +524,8 @@
       "type": "Other Gear",
       "weight": 5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-book-mnys8jsz9nnz"
     },
     {
       "name": "Lamp",
@@ -510,7 +534,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-lamp-mnys8ji6ij15"
     },
     {
       "name": "Ink Pen",
@@ -519,7 +544,8 @@
       "type": "Other Gear",
       "weight": 0,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-ink-pen-mnys8ji719wx"
     },
     {
       "name": "Ink",
@@ -528,7 +554,8 @@
       "type": "Other Gear",
       "weight": 0,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-ink-mnys8ji7qw2z"
     }
   ],
   "conditions": [],
@@ -570,7 +597,7 @@
     "description": null
   },
   "patron": "Fiend Patron",
-  "_syncedAt": "2026-04-14T14:14:17.636Z",
+  "_syncedAt": "2026-04-14T15:34:41.987Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/162702065"
 }

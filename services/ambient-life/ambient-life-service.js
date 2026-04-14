@@ -774,7 +774,7 @@ class AmbientLifeService {
       } else {
         this._whisperDM('⚠️ TOMAS TRANSFORMS IN THE ROOM. CR3 werewolf. He will run for the door.', 1, 'story');
         this.bus.dispatch('creature:tomas_transform', { location: this.state.get('npcs.tomas.location') || 'common-room' });
-        this.bus.dispatch('atmo:change', { profile: 'combat_chaos', reason: 'Tomas transforms', auto: true });
+        this.bus.dispatch('atmo:change', { profile: 'terror_peak', reason: 'Tomas transforms', auto: true });
         // Place werewolf token where Tomas was
         const tomasToken = this._findNpcToken('tomas');
         if (tomasToken) {
@@ -802,7 +802,7 @@ class AmbientLifeService {
         this._whisperDM(`⚠️ PIOTR CHAIN BREAK — ${Math.round(this._piotrState.breakChance)}% chance, rolled ${Math.round(roll)}. Loose in the cellar.`, 1, 'story');
         this.bus.dispatch('creature:piotr_chain_break', { gameTime: `${h}:${m}` });
         this.bus.dispatch('ambient:environment', { text: 'A chain snaps below the floor. The silence that follows is complete.', tier: 'terror', timestamp: Date.now() });
-        this.bus.dispatch('atmo:change', { profile: 'terror_mounting', reason: 'Piotr chain breaks', auto: true });
+        this.bus.dispatch('atmo:change', { profile: 'dread_rising', reason: 'Piotr chain breaks', auto: true });
         // Place Piotr token near cellar door
         this._placeCreatureToken('token-piotr-loose', {
           name: 'Piotr', actorSlug: 'vampire-spawn', location: 'near-cellar-door',
@@ -942,7 +942,7 @@ class AmbientLifeService {
         text: 'Something slams through the shutters with an explosion of wood. A wolf — dead, broken — skids across the floor and stops against a table. Cold air and snow pour through the ruined window. Outside, for just a moment, something enormous pulls away into the dark.',
         tier: 'terror', timestamp: Date.now()
       });
-      this.bus.dispatch('atmo:change', { profile: 'terror_revelation', reason: 'Letavec throws wolf through window', auto: true });
+      this.bus.dispatch('atmo:change', { profile: 'revelation', reason: 'Letavec throws wolf through window', auto: true });
       this.bus.dispatch('horror:trigger', { triggerId: 'wolf-through-window', amount: 15, reason: 'Dead wolf through the shutters' });
       this.bus.dispatch('horror:floor_raise', { amount: 15, reason: 'Broken window — Letavec' });
       this.bus.dispatch('creature:letavec_wolf_event', { wolfId: victim.id, gameTime: `${h}:${m}`, windowBroken: true });
@@ -966,7 +966,7 @@ class AmbientLifeService {
     this._whisperDM(`⚠️ CORPSE CANDLE — Midnight. Drifts toward ${target}. Even Vladislav watches. DO NOT let players attack it.`, 1, 'story');
     this.bus.dispatch('creature:corpse_candle_appear', { target, gameTime: '00:00' });
     this.bus.dispatch('ambient:environment', { text: 'A pale light drifts through the wall. No one moves. No one speaks. It bobs gently, moving toward one of you.', tier: 'terror', timestamp: Date.now() });
-    this.bus.dispatch('atmo:change', { profile: 'revelation_horror', reason: 'Corpse Candle appears', auto: true });
+    this.bus.dispatch('atmo:change', { profile: 'revelation', reason: 'Corpse Candle appears', auto: true });
     this.bus.dispatch('horror:trigger', { triggerId: 'corpse-candle', amount: 20, reason: 'Corpse Candle appears at midnight' });
 
     // Place Corpse Candle token — visible, near target

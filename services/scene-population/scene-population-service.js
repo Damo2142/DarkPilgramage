@@ -21,7 +21,7 @@
  *
  * Events dispatched:
  *   map:token_added      — { tokenId, token } (matches map-service shape)
- *   atmosphere:set       — { profile }
+ *   atmo:change          — { profile, reason, auto, source }
  *   observation:trigger  — { id, ... }
  *   horror:trigger       — { triggerId, amount, reason } (verified — fans out to all players)
  *   dm:whisper           — Max summary
@@ -180,7 +180,12 @@ class ScenePopulationService {
     // onEnter side effects
     if (onEnter.maxWhisper) this._whisper(onEnter.maxWhisper, 2, 'story');
     if (onEnter.atmosphereProfile) {
-      this.bus.dispatch('atmosphere:set', { profile: onEnter.atmosphereProfile });
+      this.bus.dispatch('atmo:change', {
+        profile: onEnter.atmosphereProfile,
+        reason: `Scene onEnter: ${scene.id}`,
+        auto: true,
+        source: 'scene-population'
+      });
     }
     if (onEnter.observationId) {
       this.bus.dispatch('observation:trigger', { id: onEnter.observationId });

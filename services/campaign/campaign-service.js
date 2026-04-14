@@ -1239,7 +1239,12 @@ Keep each event to 1-2 sentences. Format as JSON array: [{"title": "...", "descr
       }
       // Auto-snapshot
       this._autoSnapshot();
-      this.bus.dispatch('atmosphere:set', { profile: 'tavern_warm' });
+      this.bus.dispatch('atmo:change', {
+        profile: 'tavern_warm',
+        reason: 'Session start',
+        auto: true,
+        source: 'campaign-service'
+      });
       this.bus.dispatch('audio:enable', { enabled: true });
       this.bus.dispatch('voice:enable', { enabled: true });
       this.bus.dispatch('combat:enable', { enabled: true });
@@ -1268,7 +1273,12 @@ Keep each event to 1-2 sentences. Format as JSON array: [{"title": "...", "descr
 
     app.post('/api/session/stop', async (req, res) => {
       this.sessionMode = 'between-session';
-      this.bus.dispatch('atmosphere:set', { profile: 'home_normal' });
+      this.bus.dispatch('atmo:change', {
+        profile: 'home_normal',
+        reason: 'Session stop',
+        auto: true,
+        source: 'campaign-service'
+      });
       this.bus.dispatch('audio:enable', { enabled: false });
       this.bus.dispatch('voice:enable', { enabled: false });
       this.bus.dispatch('combat:enable', { enabled: false });

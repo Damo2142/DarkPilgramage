@@ -943,7 +943,7 @@ class AmbientLifeService {
         tier: 'terror', timestamp: Date.now()
       });
       this.bus.dispatch('atmo:change', { profile: 'terror_revelation', reason: 'Letavec throws wolf through window', auto: true });
-      this.bus.dispatch('horror:check', { trigger: 'wolf-through-window', dc: 12, description: 'A dead wolf crashes through the shutters at impossible speed.', targetAll: true });
+      this.bus.dispatch('horror:trigger', { triggerId: 'wolf-through-window', amount: 15, reason: 'Dead wolf through the shutters' });
       this.bus.dispatch('horror:floor_raise', { amount: 15, reason: 'Broken window — Letavec' });
       this.bus.dispatch('creature:letavec_wolf_event', { wolfId: victim.id, gameTime: `${h}:${m}`, windowBroken: true });
       this._whisperDM('Window broken and stays open. Cold, storm noise, snow drifting in all session. Vladislav did not flinch.', 1, 'story');
@@ -967,7 +967,7 @@ class AmbientLifeService {
     this.bus.dispatch('creature:corpse_candle_appear', { target, gameTime: '00:00' });
     this.bus.dispatch('ambient:environment', { text: 'A pale light drifts through the wall. No one moves. No one speaks. It bobs gently, moving toward one of you.', tier: 'terror', timestamp: Date.now() });
     this.bus.dispatch('atmo:change', { profile: 'revelation_horror', reason: 'Corpse Candle appears', auto: true });
-    this.bus.dispatch('horror:check', { trigger: 'corpse-candle', dc: 10, description: 'A deathlight circles the room.', targetAll: true });
+    this.bus.dispatch('horror:trigger', { triggerId: 'corpse-candle', amount: 20, reason: 'Corpse Candle appears at midnight' });
 
     // Place Corpse Candle token — visible, near target
     this._placeCreatureToken('token-corpse-candle', {
@@ -1119,7 +1119,7 @@ class AmbientLifeService {
       hidden: false, hp: { current: 22, max: 22 }, ac: 12, image: 'swarm-of-bats.webp'
     });
 
-    this.bus.dispatch('horror:check', { trigger: 'bat-swarm', dc: 8, description: 'A swarm of bats erupts through the room.', targetAll: false });
+    this.bus.dispatch('horror:trigger', { triggerId: 'bat-swarm', amount: 5, reason: 'Bat swarm erupts' });
 
     // Bats gone in 1 minute real time
     setTimeout(() => {

@@ -19,7 +19,7 @@
     "atmoTint": "rgba(40,40,80,.15)"
   },
   "audio": {
-    "ambient": "blizzard_wind",
+    "ambient": "storm",
     "music": "isolation_drone",
     "volume": {
       "ambient": 0.7,

@@ -112,6 +112,49 @@ class AudioService {
         if (this._whisperDebugCounters) delete this._whisperDebugCounters[pid];
       }
     }, 'audio');
+
+    this._setupDebugRoutes();
+  }
+
+  _setupDebugRoutes() {
+    const app = this.orchestrator.getService('dashboard')?.app;
+    if (!app) return;
+
+    // POST /api/debug/stt-test — body: { base64Wav }
+    // Sends a base64-encoded WAV straight through the Gemini transcribe
+    // path so we can isolate PTT STT issues from the WS/chunking layer.
+    app.post('/api/debug/stt-test', async (req, res) => {
+      try {
+        const { base64Wav } = req.body || {};
+        if (!base64Wav) return res.status(400).json({ error: 'base64Wav required' });
+        const result = await this._debugTranscribeWav(base64Wav);
+        res.json({ ok: true, ...result });
+      } catch (err) {
+        res.status(500).json({ error: err.message });
+      }
+    });
+
+    // GET /api/debug/stt-status — expose buffer state + readiness
+    app.get('/api/debug/stt-status', (req, res) => {
+      const buffers = {};
+      for (const [pid, buf] of Object.entries(this._audioBuffers || {})) {
+        buffers[pid] = {
+          chunks: buf.chunks.length,
+          totalSamples: buf.totalSamples,
+          durationMs: Math.round((buf.totalSamples / this._sampleRate) * 1000),
+          msSinceLastChunk: Date.now() - (buf.lastChunkTime || 0)
+        };
+      }
+      res.json({
+        backend: this._useGemini ? 'gemini' : 'whisper',
+        sttReady: this._sttReady,
+        whisperReady: this.whisperReady,
+        bufferDurationMs: this._bufferDurationMs,
+        sampleRate: this._sampleRate,
+        activeStreams: [...this._playerStreaming],
+        buffers
+      });
+    });
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -208,14 +251,25 @@ class AudioService {
 
     // Skip very short audio (< 500ms)
     const durationMs = (allSamples.length / this._sampleRate) * 1000;
-    if (durationMs < 500) return;
+    if (durationMs < 500) {
+      console.log(`[Audio/Gemini] _flushPlayer ${playerId} — skipped (${Math.round(durationMs)}ms < 500ms minimum)`);
+      return;
+    }
 
     // Convert to WAV bytes
     const wavBuffer = this._createWav(allSamples, this._sampleRate);
 
     // Send to Gemini
     try {
+      const t0 = Date.now();
       const text = await this._geminiTranscribe(wavBuffer, durationMs);
+      const latency = Date.now() - t0;
+      const trimmedResp = (text || '').trim();
+      // Always log flush outcome — previously only logged on non-empty text,
+      // which made it impossible to distinguish "Gemini returned empty" from
+      // "flush never ran." An empty transcript is a legitimate Gemini
+      // response for silent / unintelligible audio; we now say so explicitly.
+      console.log(`[Audio/Gemini] _flushPlayer ${playerId} — ${Math.round(durationMs)}ms audio, ${allSamples.length} samples, gemini ${latency}ms, ${trimmedResp.length ? 'text=' + JSON.stringify(trimmedResp.slice(0, 100)) : 'EMPTY (silent/unintelligible)'}`);
       if (text && text.trim().length > 0) {
         const speaker = playerId === 'dm' ? 'dm' : playerId;
         const trimmed = text.trim();
@@ -230,8 +284,6 @@ class AudioService {
           return;
         }
         this._lastTranscripts[speaker] = { text: trimmed, at: now };
-
-        console.log(`[Audio/Gemini] [${speaker}] (${Math.round(durationMs)}ms) ${text}`);
 
         this.bus.dispatch('transcript:segment', {
           speaker,
@@ -499,6 +551,19 @@ class AudioService {
       streamingPlayers: [...this._playerStreaming],
       model: this._useGemini ? 'gemini-2.0-flash' : (process.env.WHISPER_MODEL || this.config.audio?.whisperModel || 'base.en')
     };
+  }
+
+  // Debug: transcribe a base64-encoded WAV directly via Gemini. Used by
+  // /api/debug/stt-test to isolate the Gemini path from the WS+chunking
+  // layer when PTT transcription goes silent.
+  async _debugTranscribeWav(base64Wav) {
+    if (!this._useGemini) throw new Error('Gemini STT disabled');
+    const buf = Buffer.from(base64Wav, 'base64');
+    // Rough duration hint for logging — not actually used by Gemini.
+    const approxMs = Math.round((buf.length - 44) / (this._sampleRate * 2) * 1000);
+    const t0 = Date.now();
+    const text = await this._geminiTranscribe(buf, approxMs);
+    return { text: text || '', latencyMs: Date.now() - t0, bytes: buf.length, approxMs };
   }
 }
 

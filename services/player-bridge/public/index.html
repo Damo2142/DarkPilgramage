@@ -1279,6 +1279,9 @@ const PlayerMic = {
       source.connect(this._processor);
       this._processor.connect(this._context.destination);
       this._active = true;
+      // Signal start so audio-service can track the active stream and
+      // flush explicitly on stop rather than waiting for a silence-timer.
+      try { send({ type: 'audio:start', playerId: PID, sampleRate: 16000 }); } catch (e) {}
       console.log('[PlayerMic] Streaming as', PID);
     } catch (e) {
       console.warn('[PlayerMic] Mic access denied:', e.message);
@@ -1286,10 +1289,17 @@ const PlayerMic = {
   },
 
   stop() {
+    const wasActive = this._active;
     this._active = false;
     if (this._processor) { this._processor.disconnect(); this._processor = null; }
     if (this._context) { this._context.close(); this._context = null; }
     if (this._stream) { this._stream.getTracks().forEach(t => t.stop()); this._stream = null; }
+    // Tell the server to flush immediately. Without this, audio-service
+    // waits up to ~1.3 s for its silence-timer before transcribing, which
+    // makes PTT feel broken even when transcription is working.
+    if (wasActive) {
+      try { send({ type: 'audio:stop', playerId: PID }); } catch (e) {}
+    }
   }
 };
 

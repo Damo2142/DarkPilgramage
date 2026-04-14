@@ -532,6 +532,7 @@
   <div id="max-controls" style="flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:10px 24px;background:#1e1a14;border-bottom:1px solid var(--border);">
     <button id="btn-max-pause" class="session-btn danger large" onclick="MaxControls.togglePause()" style="min-width:160px;">⏸ PAUSE MAX (5m)</button>
     <button class="session-btn muted" onclick="ackMaxDelivery()" style="padding:10px 18px;font-size:14px;" title="SPACEBAR also works">→ MAX NEXT</button>
+    <button class="session-btn muted" onclick="MaxControls.testAudio()" style="padding:10px 14px;font-size:12px;" title="Dispatch a test Max audio event through the full browser path">🔊 TEST MAX</button>
     <span id="max-queue-count" style="font-family:monospace;font-size:11px;color:var(--text-dim);min-width:24px;text-align:center;" title="Max queue depth">0</span>
     <span id="max-pause-countdown" style="font-family:monospace;font-size:12px;color:var(--text-dim);min-width:90px;"></span>
     <!-- PHASE 6 — combat start button -->
@@ -996,6 +997,11 @@ var MaxControls = {
       var saved = JSON.parse(localStorage.getItem('codm.audioDevices.v1') || '{}');
       MaxControls._earbudSinkId = saved.earbud || localStorage.getItem('dp_earbud_output') || null;
     } catch (e) {}
+    if (!MaxControls._earbudSinkId) {
+      try {
+        addWhisper({ tag: 'AUDIO', text: '⚠ No DM earbud saved — go to /dm/ref → Audio Devices → pick earbud → click "Save Audio Config" → then reload /dm. Max will play on the system default until then.' });
+      } catch (x) {}
+    }
     // Restore saved volume
     try {
       var v = parseFloat(localStorage.getItem('codm.maxVolume'));
@@ -1074,10 +1080,31 @@ var MaxControls = {
       if (cd) cd.textContent = '';
     }
   },
+  // Re-read the earbud sink id from localStorage every time we need it. The
+  // DM may save a new device in /dm/ref AUDIO DEVICES after /dm was already
+  // open; without this MaxControls would play to the stale sink (often the
+  // default speaker) and the DM hears nothing. Low cost — just a JSON parse.
+  _reloadEarbudSink: function() {
+    try {
+      var saved = JSON.parse(localStorage.getItem('codm.audioDevices.v1') || '{}');
+      var next = saved.earbud || localStorage.getItem('dp_earbud_output') || null;
+      if (next !== MaxControls._earbudSinkId) {
+        console.log('[MaxControls] earbud sink updated:', String(next || 'null').slice(0, 12));
+        MaxControls._earbudSinkId = next;
+      }
+    } catch (e) {}
+  },
   // FIX-C1 — handle max:audio events from voice-service
   handleMaxAudio: function(d) {
-    if (!d || !d.url) return;
+    if (!d || !d.url) {
+      try { addWhisper({ tag: 'AUDIO', text: 'Max audio event ignored: no url in payload' }); } catch (x) {}
+      return;
+    }
     if (MaxControls.paused) { console.log('[MaxControls] paused — dropping audio'); return; }
+
+    // Always re-read the earbud sink id in case it changed since page load.
+    MaxControls._reloadEarbudSink();
+
     // Stop any previously-queued Max audio so successive whispers don't overlap
     if (MaxControls._audio) {
       try { MaxControls._audio.pause(); MaxControls._audio.src = ''; } catch (e) {}
@@ -1085,35 +1112,62 @@ var MaxControls = {
     var audio = new Audio(d.url);
     audio.volume = MaxControls.volume;
     var text = d.text || '';
+    var url = d.url;
     var sinkUsed = 'default';
+    var configuredSink = MaxControls._earbudSinkId;
+    // Surface arrival in the whisper log so the DM can see the pipeline
+    // reached the browser at all. AUDIO tag = browser audio diagnostics.
+    try {
+      addWhisper({
+        tag: 'AUDIO',
+        text: 'Max audio received: ' + (text ? '"' + text.slice(0, 40) + '" ' : '') +
+              '→ ' + (configuredSink ? 'earbud ' + String(configuredSink).slice(0, 8) + '…' : 'DEFAULT (no earbud configured — save in /dm/ref Audio Devices + reload)')
+      });
+    } catch (x) {}
+
     var play = function() {
       audio.play().then(function() {
         console.log('[MaxControls] playing on', sinkUsed, '—', text.slice(0, 60));
+        try { addWhisper({ tag: 'AUDIO', text: 'Max audio playing on ' + sinkUsed }); } catch (x) {}
       }).catch(function(e) {
         // Autoplay blocked, device gone, or other playback failure.
         // Fall back to speechSynthesis so Max stays audible rather than
         // silently vanishing. Surface in the whisper log so the DM sees it.
         console.warn('[MaxControls] audio play failed on', sinkUsed, ':', e.message, '— falling back to browser TTS');
         try {
-          addWhisper({ tag: 'AUDIO', text: 'Max audio play failed on ' + sinkUsed + ' (' + e.message + ') — speechSynthesis fallback' });
+          addWhisper({ tag: 'AUDIO', text: '⚠ Max audio play FAILED on ' + sinkUsed + ' — ' + e.message + ' — speechSynthesis fallback' });
         } catch (x) {}
         if (text) MaxControls.handleMaxFallback({ text: text });
       });
     };
-    if (MaxControls._earbudSinkId && audio.setSinkId) {
-      audio.setSinkId(MaxControls._earbudSinkId).then(function() {
-        sinkUsed = 'earbud (' + String(MaxControls._earbudSinkId).slice(0, 8) + '…)';
+    if (configuredSink && audio.setSinkId) {
+      audio.setSinkId(configuredSink).then(function() {
+        sinkUsed = 'earbud (' + String(configuredSink).slice(0, 8) + '…)';
         play();
       }).catch(function(err) {
         console.warn('[MaxControls] setSinkId failed (' + err.message + ') — using default sink');
-        sinkUsed = 'default (setSinkId rejected: ' + err.message + ')';
+        sinkUsed = 'default (setSinkId REJECTED: ' + err.message + ')';
+        try {
+          addWhisper({ tag: 'AUDIO', text: '⚠ Max earbud setSinkId rejected: ' + err.message + ' — falling through to default device' });
+        } catch (x) {}
         play();
       });
     } else {
-      sinkUsed = MaxControls._earbudSinkId ? 'default (no setSinkId support)' : 'default (no earbud configured)';
+      sinkUsed = configuredSink ? 'default (browser has no setSinkId support)' : 'default (no earbud configured)';
       play();
     }
     MaxControls._audio = audio;
+  },
+  // Diagnostic — fire a test Max audio event using a pre-existing MP3 file
+  // so the DM can verify the browser-side audio path independently of
+  // ElevenLabs. Hits the server, which dispatches the normal max:audio WS
+  // event back. Bypasses the max-director queue + throttle.
+  testAudio: function() {
+    MaxControls._reloadEarbudSink();
+    try { addWhisper({ tag: 'AUDIO', text: 'Max test — reading earbud sink: ' + (MaxControls._earbudSinkId ? String(MaxControls._earbudSinkId).slice(0, 12) + '…' : 'NONE — configure in /dm/ref Audio Devices') }); } catch (x) {}
+    fetch('/api/max/test-audio', { method: 'POST' }).then(function(r){return r.json();}).then(function(d) {
+      if (!d.ok) addWhisper({ tag: 'AUDIO', text: 'Max test dispatch failed: ' + (d.error || 'unknown') });
+    }).catch(function(e) { addWhisper({ tag: 'AUDIO', text: 'Max test request failed: ' + e.message }); });
   },
   // FIX-C1 — browser-TTS fallback when ElevenLabs is unavailable
   handleMaxFallback: function(d) {

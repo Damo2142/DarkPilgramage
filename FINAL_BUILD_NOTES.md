@@ -630,8 +630,10 @@ EventBus                 → dedup active, real duplicates caught on boot
 - Session lifecycle (start campaign → start session → stop → reset) working
 
 **Pre-game-night checklist (Dave):**
-1. SSH key: add the public key from OVERNIGHT_DIAGNOSTIC.md to GitHub
-2. Browser config: /dm/ref → Tools → Audio Devices → set Room Speaker + DM Earbud
-3. ElevenLabs: verify green on Tools tab
-4. Test mode: Start Campaign → Start Session → verify Katya sings at 17:45
-5. Kill any stale `node server.js` on the host before starting Docker
+1. Kill any stale bare-metal `node server.js` on the host (from old `start.sh`-era processes) — they hold port 3200 and block the container: `ss -tlnp | grep 3200` then `kill <pid>` if found.
+2. Start the stack: `cd ~/dark-pilgrimage/co-dm && docker compose up -d`. This is the canonical start for game night. The legacy `~/dark-pilgrimage/start.sh` path (bare-metal node) is NOT used — do not run it.
+3. Verify startup: `docker compose logs co-dm | grep "Co-DM ready"` should appear within ~10s of `up -d`.
+4. SSH key: add the public key from OVERNIGHT_DIAGNOSTIC.md to GitHub (one-time, only if not already done).
+5. Browser config: /dm/ref → Tools → Audio Devices → set Room Speaker + DM Earbud.
+6. ElevenLabs: verify green on Tools tab.
+7. Test mode: Start Campaign → Start Session → verify Katya sings at 17:45.

@@ -2816,7 +2816,7 @@
       "location": "cellar",
       "roomPosition": "cellar \u2014 Echo nearest cellar (or down-direction routing if available)",
       "mirrorReflection": "distorted",
-      "voiceCode": "M3",
+      "voiceCode": "M1",
       "languages": [
         "slovak",
         "common"

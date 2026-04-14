@@ -163,7 +163,8 @@
       "ritual": false,
       "concentration": true,
       "prepared": false,
-      "description": "You place a curse on a creature that you can see within range. Until the spell ends, you deal an extra 1d6 Necrotic damage to the target whenever you hit it with an attack roll. Also, choose one abili"
+      "description": "You place a curse on a creature that you can see within range. Until the spell ends, you deal an extra 1d6 Necrotic damage to the target whenever you hit it with an attack roll. Also, choose one abili",
+      "magical": true
     },
     {
       "name": "Eldritch Blast",
@@ -172,7 +173,8 @@
       "ritual": false,
       "concentration": false,
       "prepared": true,
-      "description": "You hurl a beam of crackling energy. Make a ranged spell attack against one creature or object in range. On a hit, the target takes 1d10 Force damage.\r\nCantrip Upgrade. The spell creates two beams at "
+      "description": "You hurl a beam of crackling energy. Make a ranged spell attack against one creature or object in range. On a hit, the target takes 1d10 Force damage.\r\nCantrip Upgrade. The spell creates two beams at ",
+      "magical": true
     },
     {
       "name": "Prestidigitation",
@@ -181,7 +183,8 @@
       "ritual": false,
       "concentration": false,
       "prepared": true,
-      "description": "You create a magical effect within range. Choose the effect from the options below. If you cast this spell multiple times, you can have up to three of its non-instantaneous effects active at a time.\r\n"
+      "description": "You create a magical effect within range. Choose the effect from the options below. If you cast this spell multiple times, you can have up to three of its non-instantaneous effects active at a time.\r\n",
+      "magical": true
     },
     {
       "name": "Hellish Rebuke",
@@ -190,7 +193,8 @@
       "ritual": false,
       "concentration": false,
       "prepared": false,
-      "description": "The creature that damaged you is momentarily surrounded by green flames. It makes a Dexterity saving throw, taking 2d10 Fire damage on a failed save or half as much damage on a successful one.\r\nUsing "
+      "description": "The creature that damaged you is momentarily surrounded by green flames. It makes a Dexterity saving throw, taking 2d10 Fire damage on a failed save or half as much damage on a successful one.\r\nUsing ",
+      "magical": true
     },
     {
       "name": "Misty Step",
@@ -199,7 +203,8 @@
       "ritual": false,
       "concentration": false,
       "prepared": false,
-      "description": "Briefly surrounded by silvery mist, you teleport up to 30 feet to an unoccupied space you can see."
+      "description": "Briefly surrounded by silvery mist, you teleport up to 30 feet to an unoccupied space you can see.",
+      "magical": true
     },
     {
       "name": "Mirror Image",
@@ -208,7 +213,8 @@
       "ritual": false,
       "concentration": false,
       "prepared": false,
-      "description": "Three illusory duplicates of yourself appear in your space. Until the spell ends, the duplicates move with you and mimic your actions, shifting position so it’s impossible to track which image is real"
+      "description": "Three illusory duplicates of yourself appear in your space. Until the spell ends, the duplicates move with you and mimic your actions, shifting position so it\u2019s impossible to track which image is real",
+      "magical": true
     }
   ],
   "attacks": [],
@@ -285,7 +291,8 @@
         "thrown",
         "nick"
       ],
-      "range": "20/60ft"
+      "range": "20/60ft",
+      "magical": false
     },
     {
       "name": "Dagger",
@@ -304,7 +311,8 @@
         "thrown",
         "nick"
       ],
-      "range": "20/60ft"
+      "range": "20/60ft",
+      "magical": false
     },
     {
       "name": "Sickle",
@@ -321,7 +329,8 @@
         "light",
         "nick"
       ],
-      "range": "5/5ft"
+      "range": "5/5ft",
+      "magical": false
     },
     {
       "name": "Chest",
@@ -538,13 +547,13 @@
     "Elvish"
   ],
   "backstory": {
-    "personalityTraits": "I don’t run from evil. Evil runs from me.\nI put no trust in divine beings.",
+    "personalityTraits": "I don\u2019t run from evil. Evil runs from me.\nI put no trust in divine beings.",
     "ideals": "I have a dark calling that puts me above the law. (Chaotic)",
     "bonds": "A terrible guilt consumes me. I hope that I can find redemption through my actions.",
     "flaws": "I talk to spirits that no one else can see.",
-    "backstoryText": "Barry Frascht comes from a family that has assisted supernatural beings for generations, many times unknowingly. Sometimes through kindness, sometimes through stubbornness or bad decisions, the Fraschts repeatedly interfered with events that shaped the balance of the cosmos.\n\nOver time, many powerful entities came to owe the family favors.\n\nBarry’s parents understood this strange legacy, but they died when Barry was young. Barry grew up believing the supernatural was nonsense.\n\nUnknown to him, cosmic forces assigned a genie to watch over him and keep him from accidentally causing catastrophic events. Barry believes the genie is an imaginary friend.",
-    "allies": "The Genie (Barry’s “Imaginary Friend”)\nA genie assigned by cosmic powers to watch over Barry.\nActs as Barry’s exhausted best friend, babysitter, and reluctant guardian.\nBarry believes the genie is imaginary.",
-    "organizations": "“The Frascht Family Debt”\nA loose supernatural understanding that Barry’s family is owed favors by many powerful beings across the planes.",
+    "backstoryText": "Barry Frascht comes from a family that has assisted supernatural beings for generations, many times unknowingly. Sometimes through kindness, sometimes through stubbornness or bad decisions, the Fraschts repeatedly interfered with events that shaped the balance of the cosmos.\n\nOver time, many powerful entities came to owe the family favors.\n\nBarry\u2019s parents understood this strange legacy, but they died when Barry was young. Barry grew up believing the supernatural was nonsense.\n\nUnknown to him, cosmic forces assigned a genie to watch over him and keep him from accidentally causing catastrophic events. Barry believes the genie is an imaginary friend.",
+    "allies": "The Genie (Barry\u2019s \u201cImaginary Friend\u201d)\nA genie assigned by cosmic powers to watch over Barry.\nActs as Barry\u2019s exhausted best friend, babysitter, and reluctant guardian.\nBarry believes the genie is imaginary.",
+    "organizations": "\u201cThe Frascht Family Debt\u201d\nA loose supernatural understanding that Barry\u2019s family is owed favors by many powerful beings across the planes.",
     "enemies": "Unknown",
     "otherNotes": null
   },

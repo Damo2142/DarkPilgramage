@@ -208,7 +208,7 @@
       "ritual": false,
       "concentration": false,
       "prepared": false,
-      "description": "You touch a creature. The target’s Speed increases by 10 feet until the spell ends.\r\nUsing a Higher-Level Spell Slot. You can target one additional creature for each spell slot level above 1."
+      "description": "You touch a creature. The target\u2019s Speed increases by 10 feet until the spell ends.\r\nUsing a Higher-Level Spell Slot. You can target one additional creature for each spell slot level above 1."
     },
     {
       "name": "Identify",
@@ -217,7 +217,7 @@
       "ritual": true,
       "concentration": false,
       "prepared": false,
-      "description": "You touch an object throughout the spell’s casting. If the object is a magic item or some other magical object, you learn its properties and how to use them, whether it requires Attunement, and how ma"
+      "description": "You touch an object throughout the spell\u2019s casting. If the object is a magic item or some other magical object, you learn its properties and how to use them, whether it requires Attunement, and how ma"
     },
     {
       "name": "Enhance Ability",
@@ -302,7 +302,9 @@
         "nick"
       ],
       "range": "20/60ft",
-      "modifiers": {}
+      "modifiers": {},
+      "magical": true,
+      "silver": false
     },
     {
       "name": "Dagger, +1",
@@ -322,7 +324,9 @@
         "nick"
       ],
       "range": "20/60ft",
-      "modifiers": {}
+      "modifiers": {},
+      "magical": true,
+      "silver": false
     },
     {
       "name": "Nine Lives Stealer Dagger",
@@ -333,6 +337,61 @@
       "rarity": "Very Rare",
       "magic": true,
       "damage": "1d4",
+      "damageType": "piercing",
+      "subtype": "melee",
+      "properties": [
+        "Finesse",
+        "Light",
+        "Thrown"
+      ],
+      "range": "20/60ft",
+      "attunement": true,
+      "attuned": false,
+      "modifiers": {},
+      "attackBonus": 7,
+      "damageBonus": 5,
+      "magical": true,
+      "silver": false,
+      "special_effect": {
+        "name": "Nine Lives Stealer",
+        "trigger": "target_reduced_to_0_hp",
+        "condition": "target_has_souls_remaining",
+        "effect": "DC 15 Constitution save or die outright",
+        "souls_max": 9,
+        "dmWhisper": "Nine Lives Stealer triggered \u2014 target at 0 HP. DC 15 CON save or die. Track souls remaining on this weapon."
+      }
+    },
+    {
+      "name": "Leather",
+      "quantity": 1,
+      "equipped": true,
+      "type": "Armor",
+      "weight": 10,
+      "rarity": "Common",
+      "magic": false,
+      "ac": 11,
+      "acType": "light"
+    },
+    {
+      "name": "Leather",
+      "quantity": 1,
+      "equipped": true,
+      "type": "Armor",
+      "weight": 10,
+      "rarity": "Common",
+      "magic": false,
+      "ac": 11,
+      "acType": "light"
+    },
+    {
+      "name": "Dagger",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Weapon",
+      "weight": 1,
+      "rarity": "Common",
+      "magic": false,
+      "damage": "1d4",
       "damageType": "Piercing",
       "subtype": "melee",
       "properties": [
@@ -342,31 +401,8 @@
         "nick"
       ],
       "range": "20/60ft",
-      "attunement": true,
-      "attuned": false,
-      "modifiers": {}
-    },
-    {
-      "name": "Leather",
-      "quantity": 1,
-      "equipped": true,
-      "type": "Armor",
-      "weight": 10,
-      "rarity": "Common",
-      "magic": false,
-      "ac": 11,
-      "acType": "light"
-    },
-    {
-      "name": "Leather",
-      "quantity": 1,
-      "equipped": true,
-      "type": "Armor",
-      "weight": 10,
-      "rarity": "Common",
-      "magic": false,
-      "ac": 11,
-      "acType": "light"
+      "magical": false,
+      "silver": false
     },
     {
       "name": "Dagger",
@@ -385,7 +421,9 @@
         "thrown",
         "nick"
       ],
-      "range": "20/60ft"
+      "range": "20/60ft",
+      "magical": false,
+      "silver": false
     },
     {
       "name": "Dagger",
@@ -404,7 +442,9 @@
         "thrown",
         "nick"
       ],
-      "range": "20/60ft"
+      "range": "20/60ft",
+      "magical": false,
+      "silver": false
     },
     {
       "name": "Dagger",
@@ -423,7 +463,9 @@
         "thrown",
         "nick"
       ],
-      "range": "20/60ft"
+      "range": "20/60ft",
+      "magical": false,
+      "silver": false
     },
     {
       "name": "Dagger",
@@ -442,7 +484,9 @@
         "thrown",
         "nick"
       ],
-      "range": "20/60ft"
+      "range": "20/60ft",
+      "magical": false,
+      "silver": false
     },
     {
       "name": "Dagger",
@@ -461,26 +505,9 @@
         "thrown",
         "nick"
       ],
-      "range": "20/60ft"
-    },
-    {
-      "name": "Dagger",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Weapon",
-      "weight": 1,
-      "rarity": "Common",
-      "magic": false,
-      "damage": "1d4",
-      "damageType": "Piercing",
-      "subtype": "melee",
-      "properties": [
-        "finesse",
-        "light",
-        "thrown",
-        "nick"
-      ],
-      "range": "20/60ft"
+      "range": "20/60ft",
+      "magical": false,
+      "silver": false
     },
     {
       "name": "Backpack",
@@ -813,9 +840,9 @@
   ],
   "backstory": {
     "personalityTraits": "Acts like a cat, at one moment could be your friend, the next could be completely unpredictable. He wants to do good most of the time, just can be persuaded into sowing chaos",
-    "ideals": "He used to be a musician, the heart of a party. The sex icon. All the warm bodies and good drinks he could want, but he’s well past his prime. Most people wouldn’t recognize him now adays. But he doesn’t hold ill will, he just wants some of that money and glory back",
-    "bonds": "His cat Juno, his dog Cleo, and his niece Jane. Her bother Chet is accepted by James but he’s not fond of his carefree lifestyle",
-    "flaws": "He has massive nerve damage. He can only feel pain in his shoulder. Able to do a lot if you are able to direct or focus him, as he’s not able to resist temptations",
+    "ideals": "He used to be a musician, the heart of a party. The sex icon. All the warm bodies and good drinks he could want, but he\u2019s well past his prime. Most people wouldn\u2019t recognize him now adays. But he doesn\u2019t hold ill will, he just wants some of that money and glory back",
+    "bonds": "His cat Juno, his dog Cleo, and his niece Jane. Her bother Chet is accepted by James but he\u2019s not fond of his carefree lifestyle",
+    "flaws": "He has massive nerve damage. He can only feel pain in his shoulder. Able to do a lot if you are able to direct or focus him, as he\u2019s not able to resist temptations",
     "backstoryText": null,
     "allies": null,
     "organizations": null,
@@ -825,7 +852,7 @@
   "appearance": {
     "gender": "Male",
     "age": 87,
-    "height": "4’11”",
+    "height": "4\u201911\u201d",
     "weight": 135,
     "size": null,
     "eyes": "Yellow",

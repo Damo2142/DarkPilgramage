@@ -1016,8 +1016,11 @@
   <div class="panel" id="panel-features"><div id="featlist"></div><button class="add-btn" onclick="openAddFeat()">+ Add Feature / Trait</button></div>
   <!-- Notes -->
   <div class="panel" id="panel-notes">
-    <textarea id="notes-area" placeholder="Session notes..."></textarea>
-    <button class="hbtn" style="width:100%;padding:8px;margin-top:6px;" onclick="saveNotes()">Save Notes</button>
+    <textarea id="notes-area" placeholder="Session notes..." oninput="scheduleNotesSave()"></textarea>
+    <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
+      <button class="hbtn" style="flex:1;padding:8px;" onclick="saveNotes()">Save Now</button>
+      <span id="notes-save-indicator" style="font-size:11px;color:#6a5a48;font-style:italic;">Auto-saves 1.5s after typing stops.</span>
+    </div>
   </div>
 </div>
 
@@ -1534,7 +1537,8 @@ function loadChar(c){
   // Rebuild weapon attacks and AC from equipped items, then render
   rebuildWeaponAtks();
   recalcEquipAC();
-  $('notes-area').value=localStorage.getItem('dpnotes_'+PID)||'';
+  // Addition 5 — prefer server-saved notes; fall back to local.
+  $('notes-area').value = (c && typeof c.notes === 'string' && c.notes) || localStorage.getItem('dpnotes_'+PID) || '';
   // Enrich spells with SRD data (damage, save, AOE, etc.)
   enrichSpellsFromSRD();
 }
@@ -2490,6 +2494,13 @@ function renderInv(){
         if(it.modifiers.saveBonus) badges+='<span style="font-size:9px;color:var(--green);background:rgba(48,160,80,.15);border-radius:2px;padding:0 3px;">+'+it.modifiers.saveBonus+' saves</span> ';
       }
       if(it.properties&&it.properties.length) badges+='<span style="font-size:9px;color:var(--text-dim);">['+it.properties.join(', ')+']</span> ';
+      // Addition 5 — cursed flag, notes badge, note-edit button
+      if (it.cursed) badges+='<span style="font-size:9px;color:#e86060;background:rgba(232,96,96,.15);border-radius:2px;padding:0 3px;" title="Cursed — cannot be removed">⚠ CURSED</span> ';
+      if (it.magical && !it.cursed) badges+='<span style="font-size:9px;color:#c8a820;background:rgba(200,168,32,.12);border-radius:2px;padding:0 3px;" title="Magical">✨ MAGICAL</span> ';
+      const itemId = it.id || ('inv-idx-' + ii);
+      const noteHtml = it.notes
+        ? '<div class="inote" style="font-size:11px;color:#8a7a60;padding:2px 24px 6px 28px;font-style:italic;">'+esc(it.notes)+'</div>'
+        : '';
       return '<div class="inv-item">'
         +'<div class="eqdot '+eqClass+'" onclick="togEq('+ii+')" title="'+(it.equipped?'Equipped':'Unequipped')+'"></div>'
         +(needsAttune?'<div class="attdot '+attClass+'" onclick="togAttune('+ii+')" title="'+(it.attuned?'Attuned':'Not attuned')+'">◆</div>':'')
@@ -2497,8 +2508,11 @@ function renderInv(){
         +badges
         +'<span class="iqty">×'+(it.quantity||1)+'</span>'
         +'<span style="font-size:9px;color:var(--text-dim);margin-left:2px;">'+(it.weight?(it.weight*(it.quantity||1))+'lb':'')+'</span>'
-        +'<span style="cursor:pointer;color:var(--red);font-size:12px;margin-left:4px;" onclick="rmItem('+ii+')" title="Remove">✕</span>'
-        +'</div>';
+        +'<span style="cursor:pointer;color:#c8a820;font-size:12px;margin-left:4px;" onclick="editItemNote('+ii+')" title="Edit note">📝</span>'
+        +(it.cursed
+          ? '<span style="color:#6a5a48;font-size:12px;margin-left:4px;" title="Cursed — cannot be removed">🔒</span>'
+          : '<span style="cursor:pointer;color:var(--red);font-size:12px;margin-left:4px;" onclick="rmItem('+ii+')" title="Remove">✕</span>')
+        +'</div>'+noteHtml;
     }).join('');
   }
   $('invlist').innerHTML=h||'<div style="color:var(--text-dim);font-size:11px;">No items</div>';
@@ -2564,11 +2578,48 @@ function togAttune(idx){
 function rmItem(idx){
   const inv=char.inventory||[];
   if(idx<0||idx>=inv.length)return;
-  const name=inv[idx].name;
+  const it=inv[idx];
+  const name=it.name;
+  if (it.cursed) { alert(name + ' is cursed and cannot be removed.'); return; }
   if(!confirm('Remove '+name+'?'))return;
-  inv.splice(idx,1);
+  // Addition 5 — route removal through server. Server performs the same
+  // cursed check server-side as a safeguard, removes by id or by index.
+  const itemId = it.id;
+  if (itemId) {
+    fetch('/api/characters/'+PID+'/inventory',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ action:'remove', itemId })
+    }).then(r=>r.json()).then(d=>{
+      if (d.ok && Array.isArray(d.inventory)) { char.inventory = d.inventory; renderInv(); }
+      else if (d.error) { showToast('System', d.error, 3000); }
+    }).catch(()=>{
+      inv.splice(idx,1); renderInv(); syncInventory();
+    });
+  } else {
+    inv.splice(idx,1); renderInv(); syncInventory();
+  }
+}
+
+// Addition 5 — edit notes on an inventory item.
+function editItemNote(idx) {
+  const inv = char.inventory || [];
+  const it = inv[idx]; if (!it) return;
+  const current = it.notes || '';
+  const next = prompt('Notes for ' + it.name + ':', current);
+  if (next === null) return; // cancelled
+  it.notes = next;
   renderInv();
-  syncInventory();
+  const itemId = it.id;
+  if (itemId) {
+    fetch('/api/characters/'+PID+'/inventory',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ action:'note', itemId, note: next })
+    }).then(r=>r.json()).then(d=>{
+      if (d.ok && Array.isArray(d.inventory)) { char.inventory = d.inventory; renderInv(); }
+    }).catch(()=>{ syncInventory(); });
+  } else {
+    syncInventory();
+  }
 }
 
 function editCurrency(k){
@@ -2611,11 +2662,44 @@ function recalcEquipAC(){
 }
 
 function openAddItem(){
+  // Addition 5 — richer add-item form with description + magical flag.
+  // Players cannot mark items as cursed themselves — cursed is DM-only (Addition 6).
   openEdit('Add Item',[
     {id:'name',lbl:'Item Name',val:''},
+    {id:'description',lbl:'Description (optional)',val:''},
     {id:'quantity',lbl:'Quantity',val:'1',type:'number'},
-    {id:'type',lbl:'Type (weapon/armor/gear/consumable)',val:'gear'}
-  ],()=>{const v=getEV();if(!v.name)return;if(!char.inventory)char.inventory=[];char.inventory.push({name:v.name,quantity:+v.quantity,type:v.type,equipped:false});renderInv();syncInventory();});
+    {id:'type',lbl:'Type (weapon/armor/gear/consumable)',val:'gear'},
+    {id:'magical',lbl:'Magical? (yes/no)',val:'no'},
+    {id:'notes',lbl:'Notes (optional)',val:''}
+  ],()=>{
+    const v=getEV();
+    if(!v.name)return;
+    const newItem={
+      name:v.name,
+      description:v.description||'',
+      quantity:+v.quantity||1,
+      type:v.type||'gear',
+      magical:/^y/i.test(v.magical||''),
+      equipped:false,
+      attuned:false,
+      cursed:false,
+      notes:v.notes||''
+    };
+    fetch('/api/characters/'+PID+'/inventory',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ action:'add', item:newItem })
+    }).then(r=>r.json()).then(d=>{
+      if (d.ok && Array.isArray(d.inventory)) { char.inventory = d.inventory; renderInv(); }
+      else if (d.error) { showToast('System', d.error, 3000); }
+    }).catch(()=>{
+      // Fallback — local-only add
+      if(!char.inventory)char.inventory=[];
+      newItem.id='item-'+Date.now();
+      char.inventory.push(newItem);
+      renderInv();
+      syncInventory();
+    });
+  });
 }
 
 function openSrdItemSearch(){
@@ -2943,7 +3027,33 @@ function cycleSk(sk){
 }
 
 // ── NOTES / CHAT ────────────────────────────────────────────────────
-function saveNotes(){try{localStorage.setItem('dpnotes_'+PID,$('notes-area').value);}catch(e){}showToast('System','Notes saved',2000);}
+// Addition 5 — debounced server auto-save for player notes.
+var _notesSaveTimer = null;
+function scheduleNotesSave() {
+  const ind = document.getElementById('notes-save-indicator');
+  if (ind) { ind.textContent = 'Saving…'; ind.style.color = '#c8a820'; }
+  clearTimeout(_notesSaveTimer);
+  _notesSaveTimer = setTimeout(_doSaveNotes, 1500);
+}
+function _doSaveNotes() {
+  const notes = ($('notes-area') && $('notes-area').value) || '';
+  try { localStorage.setItem('dpnotes_'+PID, notes); } catch (e) {}
+  fetch('/api/characters/'+PID+'/notes', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ notes })
+  }).then(r=>r.json()).then(()=>{
+    const ind = document.getElementById('notes-save-indicator');
+    if (ind) { ind.textContent = 'Saved.'; ind.style.color = '#6a5a48'; }
+  }).catch(()=>{
+    const ind = document.getElementById('notes-save-indicator');
+    if (ind) { ind.textContent = 'Saved locally (server offline)'; ind.style.color = '#e86060'; }
+  });
+}
+function saveNotes(){
+  clearTimeout(_notesSaveTimer);
+  _doSaveNotes();
+  showToast('System','Notes saved',2000);
+}
 
 function updatePlayerList(players){
   var sel=$('chat-ch-player');

@@ -342,6 +342,77 @@ class CharacterService {
         }
       });
 
+      // Addition 5 — player inventory editing (add / remove / note).
+      // body: { action: 'add'|'remove'|'note', item?, itemId?, note? }
+      app.post('/api/characters/:playerId/inventory', (req, res) => {
+        const playerId = req.params.playerId;
+        const b = req.body || {};
+        const action = b.action;
+        if (!action) return res.status(400).json({ error: 'action required' });
+        const playerState = this.state.get('players.' + playerId);
+        if (!playerState || !playerState.character) return res.status(404).json({ error: 'player character not found' });
+        let inventory = Array.isArray(playerState.character.inventory) ? [...playerState.character.inventory] : [];
+
+        if (action === 'add') {
+          const item = b.item || {};
+          if (!item.name) return res.status(400).json({ error: 'item.name required' });
+          const newItem = {
+            id: item.id || ('item-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6)),
+            name: item.name,
+            description: item.description || '',
+            quantity: typeof item.quantity === 'number' ? item.quantity : 1,
+            type: item.type || 'gear',
+            equipped: !!item.equipped,
+            attuned: !!item.attuned,
+            magical: !!item.magical,
+            cursed: !!item.cursed,
+            notes: item.notes || '',
+            ...(item.damage ? { damage: item.damage } : {}),
+            ...(item.damageType ? { damageType: item.damageType } : {}),
+            ...(item.attackBonus !== undefined ? { attackBonus: item.attackBonus } : {}),
+            ...(item.damageBonus !== undefined ? { damageBonus: item.damageBonus } : {}),
+            ...(item.silver !== undefined ? { silver: item.silver } : {}),
+            ...(item.mechanical ? { mechanical: item.mechanical } : {}),
+            ...(item.awardedByDM ? { awardedByDM: true } : {})
+          };
+          inventory.push(newItem);
+        } else if (action === 'remove') {
+          const itemId = b.itemId;
+          const target = inventory.find(i => i.id === itemId);
+          if (!target) return res.status(404).json({ error: 'item not found' });
+          if (target.cursed) return res.status(400).json({ error: 'Cannot remove cursed item' });
+          inventory = inventory.filter(i => i.id !== itemId);
+        } else if (action === 'note') {
+          const itemId = b.itemId;
+          const note = typeof b.note === 'string' ? b.note : '';
+          let matched = false;
+          inventory = inventory.map(i => {
+            if (i.id === itemId) { matched = true; return { ...i, notes: note }; }
+            return i;
+          });
+          if (!matched) return res.status(404).json({ error: 'item not found' });
+        } else {
+          return res.status(400).json({ error: 'unknown action — expect add/remove/note' });
+        }
+
+        this.state.set('players.' + playerId + '.character.inventory', inventory);
+        try { this._persistPlayerCharacter(playerId); } catch (e) {}
+        this.bus.dispatch('character:update', { playerId });
+        this.bus.dispatch('player:inventory_update', { playerId });
+        return res.json({ ok: true, inventory });
+      });
+
+      // Addition 5 — player notes persistence (server-side, debounced client).
+      app.post('/api/characters/:playerId/notes', (req, res) => {
+        const playerId = req.params.playerId;
+        const notes = (req.body && typeof req.body.notes === 'string') ? req.body.notes : '';
+        const playerState = this.state.get('players.' + playerId);
+        if (!playerState || !playerState.character) return res.status(404).json({ error: 'player character not found' });
+        this.state.set('players.' + playerId + '.character.notes', notes);
+        try { this._persistPlayerCharacter(playerId); } catch (e) {}
+        return res.json({ ok: true });
+      });
+
       // Addition 4 — spell slot use/restore persistence.
       // body: { level: 'level1' | 1, action: 'use' | 'restore' }
       app.post('/api/characters/:playerId/spell-slot', (req, res) => {
@@ -997,8 +1068,11 @@ class CharacterService {
       // DDB doesn't expose these — they are the Co-DM's combat metadata, keyed
       // by item name. Do not overwrite them on re-sync.
       if (existing.inventory && existing.inventory.length > 0) {
-        const PRESERVE_KEYS = ['magical', 'silver', 'attackBonus', 'damageBonus', 'damageType', 'properties', 'special_effect'];
+        const PRESERVE_KEYS = ['magical', 'silver', 'attackBonus', 'damageBonus', 'damageType', 'properties', 'special_effect',
+          // Addition 5 — preserve player-authored inventory metadata.
+          'notes', 'description', 'cursed', 'awardedByDM', 'mechanical', 'id'];
         const localState = {};
+        const localExtras = []; // player-added items not present in DDB
         for (const item of existing.inventory) {
           if (!item.name) continue;
           const keep = {};
@@ -1010,6 +1084,10 @@ class CharacterService {
             if (item[k] !== undefined) keep[k] = item[k];
           }
           if (Object.keys(keep).length) localState[item.name] = keep;
+          // Player-added item: has an id but is not present in DDB inventory.
+          if (item.id && !char.inventory.some(d => d.name === item.name)) {
+            localExtras.push(item);
+          }
         }
         for (const item of char.inventory) {
           const saved = localState[item.name];
@@ -1020,6 +1098,12 @@ class CharacterService {
             if (saved[k] !== undefined) item[k] = saved[k];
           }
         }
+        // Append player-added items that DDB doesn't know about.
+        if (localExtras.length) char.inventory.push(...localExtras);
+      }
+      // Addition 5 — preserve top-level player notes.
+      if (typeof existing.notes === 'string') {
+        char.notes = existing.notes;
       }
       // Preserve Addition-1 spell-level magical flag (warlock spells etc).
       if (existing.spells && existing.spells.length > 0 && Array.isArray(char.spells)) {

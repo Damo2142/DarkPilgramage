@@ -203,16 +203,24 @@ class CampaignService {
       });
     }, 'campaign');
 
-    // Track deaths on timeline
+    // Track deaths on timeline. combat-service dispatches
+    // combat:hp_changed with { combatantId, oldHp, newHp, delta, combat }
+    // — no combatantName, no hp object. Derive the name from the
+    // turnOrder snapshot attached by _broadcastCombat, and only log on
+    // the transition from alive to 0 HP so repeated 0-HP updates
+    // (death saves etc.) don't spam the timeline.
     this.bus.subscribe('combat:hp_changed', (env) => {
-      if (env.data?.hp?.current <= 0 && env.data?.combatantName) {
-        this.addTimelineEntry({
-          title: `${env.data.combatantName} falls`,
-          description: `${env.data.combatantName} dropped to 0 HP`,
-          type: 'combat',
-          tags: ['death']
-        });
-      }
+      const d = env.data || {};
+      if (d.newHp !== 0 || !(d.oldHp > 0)) return;
+      const combatant = (d.combat?.turnOrder || []).find(c => c && c.id === d.combatantId);
+      const name = combatant?.name || d.combatantId;
+      if (!name) return;
+      this.addTimelineEntry({
+        title: `${name} falls`,
+        description: `${name} dropped to 0 HP`,
+        type: 'combat',
+        tags: ['death']
+      });
     }, 'campaign');
 
     console.log(`[Campaign] Ready — ${this.timeline.length} timeline entries, ${this.lore.size} lore entries, ${this.downtimeEvents.length} downtime events`);

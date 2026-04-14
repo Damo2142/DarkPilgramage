@@ -1203,23 +1203,46 @@ var RoomAudio = {
   // FIX-D — handle npc:audio events and play on the configured room sink
   handleNpcAudio: function(d) {
     if (!d || !d.url) return;
+    // Stop any previously-playing NPC line so rapid dialogue doesn't overlap
+    if (RoomAudio._audio) {
+      try { RoomAudio._audio.pause(); RoomAudio._audio.src = ''; } catch (e) {}
+    }
     var audio = new Audio(d.url);
     audio.volume = RoomAudio._volume;
+    var npcLabel = d.npc || 'NPC';
+    var text = d.text || '';
+    var sinkUsed = 'default';
     var play = function() {
-      audio.play().catch(function(e) {
-        console.warn('[RoomAudio] play failed:', e.message);
+      audio.play().then(function() {
+        console.log('[RoomAudio] NPC playing on', sinkUsed, '—', npcLabel, ':', text.slice(0, 60));
+      }).catch(function(e) {
+        // Autoplay blocked or sink gone. Fall back to speechSynthesis so
+        // the line is still audible, surface it in the whisper log so
+        // the DM sees the fallback happened.
+        console.warn('[RoomAudio] play failed on', sinkUsed, ':', e.message, '— speechSynthesis fallback');
+        try { addWhisper({ tag: 'AUDIO', text: 'NPC audio (' + npcLabel + ') play failed on ' + sinkUsed + ' (' + e.message + ') — speechSynthesis fallback' }); } catch (x) {}
+        if (text && 'speechSynthesis' in window) {
+          var u = new SpeechSynthesisUtterance(text);
+          u.volume = RoomAudio._volume;
+          window.speechSynthesis.speak(u);
+        }
       });
     };
     if (RoomAudio._roomSinkId && audio.setSinkId) {
-      audio.setSinkId(RoomAudio._roomSinkId).then(play).catch(function(e) {
+      audio.setSinkId(RoomAudio._roomSinkId).then(function() {
+        sinkUsed = 'room (' + String(RoomAudio._roomSinkId).slice(0, 8) + '…)';
+        play();
+      }).catch(function(e) {
         console.warn('[RoomAudio] setSinkId failed:', e.message);
+        sinkUsed = 'default (setSinkId rejected: ' + e.message + ')';
         play();
       });
     } else {
+      sinkUsed = RoomAudio._roomSinkId ? 'default (no setSinkId support)' : 'default (no room sink configured)';
       play();
     }
     RoomAudio._audio = audio;
-    addWhisper({ tag: 'NPC', text: '[' + (d.npc || 'NPC') + '] ' + (d.text || '').slice(0, 80) });
+    addWhisper({ tag: 'NPC', text: '[' + npcLabel + '] ' + text.slice(0, 80) });
   },
   // FIX-D — silent text-only fallback when ElevenLabs is unavailable
   handleNpcFallback: function(d) {

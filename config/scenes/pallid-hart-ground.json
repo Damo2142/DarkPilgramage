@@ -12,8 +12,8 @@
       "x": 1140,
       "y": 810,
       "hidden": false,
-      "hp": { "current": 82, "max": 82 },
-      "ac": 15,
+      "hp": { "current": 52, "max": 52 },
+      "ac": 14,
       "image": "vampire-spawn.webp",
       "publicName": "Chained Figure",
       "nameRevealedToPlayers": false

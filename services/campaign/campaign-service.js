@@ -471,7 +471,7 @@ class CampaignService {
     const creatures = [
       { n: 'Vladislav Dragan', cr: 13, hp: '144', ac: 16, key: 'Bite (charm + drain), mist form, legendary actions, Frascht awareness', weak: 'Sunlight, fire, holy water, holy symbol with faith', morale: 'Flees at 50% HP', want: 'Feed, then escape to Houska' },
       { n: 'Tomas Birkov', cr: 3, hp: '58', ac: 11, key: 'Werewolf form: bite curse, multiattack, regen', weak: 'Silver, fire', morale: 'Berserk in beast form, no morale check', want: 'Lock himself in cellar before moonrise' },
-      { n: 'Piotr (vampire spawn)', cr: 3, hp: '82', ac: 15, key: 'Bite drain, claws, charm, regeneration', weak: 'Sunlight, stake to heart while incapacitated, Vladislav controls him', morale: 'Loyal to Vladislav', want: 'Whatever Vladislav commands' },
+      { n: 'Piotr (vampire spawn)', cr: 3, hp: '52', ac: 14, key: 'Bite drain, claws, charm, regeneration', weak: 'Sunlight, stake to heart while incapacitated, Vladislav controls him', morale: 'Loyal to Vladislav', want: 'Whatever Vladislav commands' },
       { n: 'Gas Spore', cr: 0.5, hp: 1, ac: 5, key: 'Death Burst 20ft 10d10 necrotic + spore infection (DC15 CON)', weak: 'Anything that hits it for 10+ damage', morale: 'Mindless', want: 'Nothing — fungal' },
       { n: 'Kamenný', cr: 6, hp: '95', ac: 17, key: 'Stone hide, geological memory, places stones at chosen feet', weak: 'Magical bludgeoning, fire (slightly)', morale: 'Patient — rarely combats', want: 'Communicate, observe' },
       { n: 'Corpse Candle', cr: 0, hp: '—', ac: '—', key: 'Floating death-omen, predicts death within 24h', weak: 'Cannot be harmed — fades when prediction averted', morale: 'No combat', want: 'Mark the doomed' }

@@ -1020,25 +1020,72 @@ function openPlayerSheet(pid) {
   var init = ch.initiative;
   var profBonus = ch.proficiencyBonus;
 
+  var editMode = !!(window.__sheetEditMode && window.__sheetEditMode[pid]);
+  window.__currentSheetPid = pid;
+
   var html = '<div class="ov-title">' + esc(ch.name || pid) + '</div>' +
     '<div class="ov-subtitle"><span>' + esc(ch.race || '—') + ' ' + esc(ch.class || '—') + ' ' + dash(ch.level) + '</span><span>' + esc(ch.background || '') + '</span></div>';
 
+  // Addition 6 — DM tools strip (edit mode + award item)
+  html += '<div class="ov-section" style="background:rgba(200,168,32,0.06);border-left:3px solid var(--gold);">' +
+    '<h3 style="margin-bottom:6px;">DM Tools</h3>' +
+    '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
+      '<button class="tool-btn" onclick="DmCharEdit.toggleEdit(\'' + pid + '\')">' + (editMode ? '💾 DONE EDITING' : '✏️ EDIT MODE') + '</button>' +
+      '<button class="tool-btn" onclick="DmCharEdit.openAwardForm(\'' + pid + '\')">🎁 AWARD ITEM</button>' +
+    '</div>' +
+    '<div id="dm-award-form-' + pid + '" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px;margin-top:6px;">' +
+      '<input id="dm-award-name-' + pid + '"   placeholder="Item name"                     style="width:100%;margin-bottom:4px;padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />' +
+      '<input id="dm-award-desc-' + pid + '"   placeholder="Description (player-facing)"  style="width:100%;margin-bottom:4px;padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />' +
+      '<input id="dm-award-effect-' + pid + '" placeholder="Mechanical effect (DM notes)" style="width:100%;margin-bottom:4px;padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />' +
+      '<div style="display:flex;gap:12px;align-items:center;font-size:12px;color:var(--text-dim);margin:4px 0 8px;">' +
+        '<label><input type="checkbox" id="dm-award-magical-' + pid + '" /> Magical</label>' +
+        '<label><input type="checkbox" id="dm-award-cursed-'  + pid + '" /> Cursed (hidden flavor)</label>' +
+        '<label>Qty <input type="number" id="dm-award-qty-' + pid + '" value="1" min="1" style="width:60px;margin-left:4px;padding:2px 4px;" /></label>' +
+      '</div>' +
+      '<button class="tool-btn" onclick="DmCharEdit.award(\'' + pid + '\')">Grant to ' + esc(ch.name || pid) + '</button>' +
+      '<button class="tool-btn" onclick="DmCharEdit.closeAwardForm(\'' + pid + '\')" style="margin-left:6px;">Cancel</button>' +
+    '</div>' +
+  '</div>';
+
+  function editableNum(label, path, value, suffix) {
+    if (!editMode) {
+      return '<div class="ov-stat-block"><div class="lab">' + label + '</div><div class="num">' + dash(value) + (suffix || '') + '</div></div>';
+    }
+    return '<div class="ov-stat-block"><div class="lab">' + label + '</div>' +
+      '<input type="number" value="' + (value == null ? '' : value) + '" ' +
+      'onblur="DmCharEdit.saveField(\'' + pid + '\',\'' + path + '\',this.value,\'number\')" ' +
+      'style="width:100%;text-align:center;background:var(--bg);color:var(--gold);border:1px solid var(--border);font-size:18px;font-weight:700;padding:4px;" /></div>';
+  }
+
   // Combat stats
   html += '<div class="ov-section"><h3>Combat</h3><div class="ov-grid-3">';
-  html += '<div class="ov-stat-block"><div class="lab">HP</div><div class="num">' + dash(hp.current) + '/' + dash(hp.max) + '</div></div>';
-  html += '<div class="ov-stat-block"><div class="lab">AC</div><div class="num">' + dash(ac) + '</div></div>';
-  html += '<div class="ov-stat-block"><div class="lab">Speed</div><div class="num">' + dash(speed) + '</div></div>';
-  html += '<div class="ov-stat-block"><div class="lab">Initiative</div><div class="num">' + dash(init >= 0 ? '+' + init : init) + '</div></div>';
-  html += '<div class="ov-stat-block"><div class="lab">Prof Bonus</div><div class="num">' + dash(profBonus >= 0 ? '+' + profBonus : profBonus) + '</div></div>';
+  if (editMode) {
+    html += editableNum('HP Current', 'hp.current', hp.current);
+    html += editableNum('HP Max',     'hp.max',     hp.max);
+  } else {
+    html += '<div class="ov-stat-block"><div class="lab">HP</div><div class="num">' + dash(hp.current) + '/' + dash(hp.max) + '</div></div>';
+  }
+  html += editableNum('AC', 'ac', ac);
+  html += editableNum('Speed', 'speed', speed);
+  html += editableNum('Initiative', 'initiative', init);
+  html += editableNum('Prof Bonus', 'proficiencyBonus', profBonus);
   var ppGet = ch.passivePerception || (ch.senses && ch.senses.passivePerception) || '—';
-  html += '<div class="ov-stat-block"><div class="lab">Passive PP</div><div class="num">' + ppGet + '</div></div>';
+  html += editableNum('Passive PP', 'passivePerception', ppGet);
   html += '</div></div>';
 
   // Abilities
-  html += '<div class="ov-section"><h3>Abilities</h3><div class="ov-grid-3">';
+  html += '<div class="ov-section"><h3>Abilities' + (editMode ? ' <span style="font-size:11px;color:var(--text-dim);font-weight:normal;">— score changes auto-recalculate modifier + save DC + passive perception</span>' : '') + '</h3><div class="ov-grid-3">';
   ['str','dex','con','int','wis','cha'].forEach(function(k) {
     var a = getAb(k);
-    html += '<div class="ov-stat-block"><div class="lab">' + k.toUpperCase() + '</div><div class="num">' + a.score + '</div><div class="mod">' + a.mod + '</div></div>';
+    if (editMode) {
+      html += '<div class="ov-stat-block"><div class="lab">' + k.toUpperCase() + '</div>' +
+        '<input type="number" value="' + (a.score === '—' ? '' : a.score) + '" ' +
+        'onblur="DmCharEdit.saveField(\'' + pid + '\',\'abilities.' + k + '.score\',this.value,\'number\')" ' +
+        'style="width:100%;text-align:center;background:var(--bg);color:var(--gold);border:1px solid var(--border);font-size:18px;font-weight:700;padding:4px;" />' +
+        '<div class="mod">' + a.mod + '</div></div>';
+    } else {
+      html += '<div class="ov-stat-block"><div class="lab">' + k.toUpperCase() + '</div><div class="num">' + a.score + '</div><div class="mod">' + a.mod + '</div></div>';
+    }
   });
   html += '</div></div>';
 
@@ -1223,6 +1270,104 @@ function closeOverlay() {
   $('overlay').classList.remove('open');
   $('overlay-body').innerHTML = '';
 }
+
+// ═══════════════════════════════════════════════════════════════
+// ADDITION 6 — DM character edit + item award
+// ═══════════════════════════════════════════════════════════════
+window.__sheetEditMode = window.__sheetEditMode || {};
+var DmCharEdit = {
+  toggleEdit: function(pid) {
+    window.__sheetEditMode[pid] = !window.__sheetEditMode[pid];
+    openPlayerSheet(pid);
+  },
+  saveField: function(pid, path, rawVal, kind) {
+    var value = rawVal;
+    if (kind === 'number') {
+      var n = parseInt(rawVal, 10);
+      if (isNaN(n)) { alert('Value must be a number'); return; }
+      value = n;
+    }
+    fetch('/api/characters/' + pid + '/field', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: path, value: value })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (!d.ok) { alert('Save failed: ' + (d.error || 'unknown')); return; }
+      // Mirror into local state so re-render reflects new value without full refetch.
+      if (!stateData.players[pid]) stateData.players[pid] = {};
+      if (!stateData.players[pid].character) stateData.players[pid].character = {};
+      DmCharEdit._setNested(stateData.players[pid].character, path, value);
+      if (path.indexOf('abilities.') === 0 && path.indexOf('.score') !== -1) {
+        // Server auto-recalcs derived stats — re-open to fetch full state.
+        fetch('/api/state').then(function(r){return r.json();}).then(function(s){
+          if (s && s.players && s.players[pid]) {
+            stateData.players[pid] = s.players[pid];
+            openPlayerSheet(pid);
+          }
+        });
+      } else {
+        openPlayerSheet(pid);
+      }
+    }).catch(function(e) { alert('Save failed: ' + e.message); });
+  },
+  _setNested: function(obj, path, value) {
+    var parts = path.split('.');
+    for (var i = 0; i < parts.length - 1; i++) {
+      if (obj[parts[i]] == null || typeof obj[parts[i]] !== 'object') obj[parts[i]] = {};
+      obj = obj[parts[i]];
+    }
+    obj[parts[parts.length - 1]] = value;
+  },
+  openAwardForm: function(pid) {
+    var form = document.getElementById('dm-award-form-' + pid);
+    if (form) form.style.display = 'block';
+  },
+  closeAwardForm: function(pid) {
+    var form = document.getElementById('dm-award-form-' + pid);
+    if (form) form.style.display = 'none';
+  },
+  award: function(pid) {
+    var nameEl = document.getElementById('dm-award-name-' + pid);
+    if (!nameEl || !nameEl.value.trim()) { alert('Item name required'); return; }
+    var payload = {
+      playerId: pid,
+      item: {
+        name: nameEl.value.trim(),
+        description: (document.getElementById('dm-award-desc-' + pid) || {}).value || '',
+        mechanical:  (document.getElementById('dm-award-effect-' + pid) || {}).value || '',
+        quantity: parseInt((document.getElementById('dm-award-qty-' + pid) || {}).value || '1', 10) || 1,
+        magical: !!(document.getElementById('dm-award-magical-' + pid) || {}).checked,
+        cursed:  !!(document.getElementById('dm-award-cursed-'  + pid) || {}).checked,
+        equipped: false, attuned: false,
+        notes: 'Awarded by DM'
+      }
+    };
+    fetch('/api/characters/award-item', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function(r){return r.json();}).then(function(d){
+      if (d.ok) {
+        DmCharEdit.closeAwardForm(pid);
+        // Clear form for next award
+        nameEl.value = '';
+        var desc = document.getElementById('dm-award-desc-' + pid);   if (desc) desc.value = '';
+        var eff  = document.getElementById('dm-award-effect-' + pid); if (eff)  eff.value = '';
+        var mc   = document.getElementById('dm-award-magical-' + pid); if (mc) mc.checked = false;
+        var cu   = document.getElementById('dm-award-cursed-' + pid);  if (cu) cu.checked = false;
+        // Refresh the sheet to show the new item.
+        fetch('/api/state').then(function(r){return r.json();}).then(function(s){
+          if (s && s.players && s.players[pid]) {
+            stateData.players[pid] = s.players[pid];
+            openPlayerSheet(pid);
+          }
+        });
+      } else {
+        alert('Award failed: ' + (d.error || 'unknown'));
+      }
+    }).catch(function(e){ alert('Award failed: ' + e.message); });
+  }
+};
+window.DmCharEdit = DmCharEdit;
 
 // ═══════════════════════════════════════════════════════════════
 // ENCOUNTER PROPOSAL — ambient-life-service

@@ -1443,6 +1443,7 @@ function handle(m){
       break;
     case 'inspiration:gain': showInspiration(m); break;
     case 'ability:bardic_inspiration': showBardicInspirationFlash(m.die || 'd6', m.from); break;
+    case 'item:received': showItemReceivedFlash(m.itemName, m.description); break;
     case 'character:abilities_update':
       if (m.playerId === PID && m.abilities) {
         _abilityState = _abilityState || {}; _abilityState[PID] = m.abilities;
@@ -1747,6 +1748,14 @@ function showBardicInspirationFlash(die, fromName) {
   flash.innerHTML = '<div style="font-size:14px;color:#888;">FROM ' + (fromName || 'ALLY').toUpperCase() + '</div><div style="font-size:22px;font-weight:bold;margin:8px 0;">✨ Bardic Inspiration</div><div style="font-size:16px;">1' + (die || 'd6') + ' — use within 10 minutes</div>';
   document.body.appendChild(flash);
   setTimeout(function() { if (flash) flash.remove(); }, 10000);
+}
+
+function showItemReceivedFlash(name, description) {
+  var flash = document.createElement('div');
+  flash.style.cssText = 'position:fixed;top:20%;left:50%;transform:translateX(-50%);background:rgba(26,20,18,0.95);color:#c8a820;border:2px solid #c8a820;padding:28px 40px;z-index:10000;text-align:center;font-family:Georgia,serif;box-shadow:0 0 30px rgba(200,168,32,0.6);max-width:80%;';
+  flash.innerHTML = '<div style="font-size:14px;color:#888;">ITEM RECEIVED</div><div style="font-size:20px;font-weight:bold;margin:8px 0;">' + (name || '?') + '</div>' + (description ? '<div style="font-size:13px;color:#aaa;margin-top:4px;">' + description + '</div>' : '');
+  document.body.appendChild(flash);
+  setTimeout(function() { if (flash) flash.remove(); }, 8000);
 }
 
 // ── HP ──────────────────────────────────────────────────────────────

@@ -446,6 +446,20 @@
       "weight": 5,
       "rarity": "Common",
       "magic": false
+    },
+    {
+      "id": "item-1776175635883-1425",
+      "name": "Smoke Test Potion",
+      "description": "For testing only",
+      "mechanical": "",
+      "quantity": 1,
+      "type": "gear",
+      "equipped": false,
+      "attuned": false,
+      "magical": false,
+      "cursed": false,
+      "notes": "Awarded by DM",
+      "awardedByDM": true
     }
   ],
   "conditions": [],
@@ -457,8 +471,8 @@
     "cp": 0
   },
   "languages": [
-    "Common",
-    "Elvish",
+    "Common (Latin)",
+    "Elvish (Americas dialect)",
     "Draconic"
   ],
   "backstory": {
@@ -485,7 +499,51 @@
     "description": null
   },
   "patron": "Eldritch Knight",
-  "_syncedAt": "2026-04-14T13:30:00.962Z",
+  "_syncedAt": "2026-04-14T14:07:15.885Z",
   "_source": "ddb",
-  "_ddbUrl": "https://www.dndbeyond.com/characters/164126673"
+  "_ddbUrl": "https://www.dndbeyond.com/characters/164126673",
+  "americasOrigin": {
+    "confirmed": true,
+    "continent": "Her mother's people are elves of the Americas — western forests of a continent with no European name",
+    "fatherBackstory": "English sailor lost at sea, washed ashore in the Americas, taken in and nursed to health by elves, fell in love, married, stayed for many years. Zarina grew up hearing his stories of Europe — a place he idealized in memory the way people idealize homes they cannot return to. She decided to make the journey he never made back.",
+    "howArrivedInEurope": "Zarina made the crossing herself. It took longer than her father's stories suggested and was nothing like what he described.",
+    "europeanReaction": "Half-Elf is already strange in Central Europe. Half-Elf from somewhere no European has a name for is stranger still. Her magic is recognized as magical but its specific character is unfamiliar — calibrated for a different world.",
+    "vladislavReaction": "He cannot categorize what she is carrying in her blood. He has encountered many things in his centuries. This is not one of them. He finds this interesting in the specific way very old things find genuine novelty — with something close to delight, carefully suppressed.",
+    "kamennyReaction": "The Kamenný has geological memory. It remembers the shape of the continent she comes from. When communication is established it places a stone at her feet specifically — from the other side of the world, carried for longer than her mother's people have existed.",
+    "elvishNote": "Her Elvish is from her mother's people — elves of the Americas. It may not be mutually intelligible with any European elf dialect. Flag for DM review when she attempts Elvish with a European elf."
+  },
+  "purse": {
+    "cp": 0,
+    "sp": 0,
+    "gp": 10,
+    "pp": 0,
+    "transactions": []
+  },
+  "languageValidation": {
+    "Common": "approved",
+    "Elvish": "approved",
+    "Draconic": "pending"
+  },
+  "languageStructured": [
+    {
+      "id": "common",
+      "displayName": "Common (Latin)",
+      "fluency": "fluent",
+      "note": null
+    },
+    {
+      "id": "elvish_americas",
+      "displayName": "Elvish (Americas dialect)",
+      "fluency": "fluent",
+      "note": "Unknown to all Europeans. Her mother's language."
+    },
+    {
+      "id": "draconic",
+      "displayName": "Draconic",
+      "fluency": "fluent",
+      "note": "Universal dragon tongue — understood everywhere."
+    }
+  ],
+  "languageNote": "Zarina's Elvish is from the Americas — completely unknown to any European NPC. To them it sounds like no language they have encountered. Her Draconic will be useful at all three castles — old records kept in Draconic at Orava, binding-script elements at Houska.",
+  "notes": "smoke test note"
 }

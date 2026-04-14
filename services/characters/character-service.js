@@ -342,6 +342,97 @@ class CharacterService {
         }
       });
 
+      // Addition 6 — DM item award. Append-only path that dispatches
+      // both a DM whisper and a player:notification so the target player
+      // Chromebook flashes a "Item Received" overlay.
+      app.post('/api/characters/award-item', (req, res) => {
+        const b = req.body || {};
+        const playerId = b.playerId;
+        const item = b.item || {};
+        if (!playerId || !item.name) return res.status(400).json({ error: 'playerId and item.name required' });
+        const playerState = this.state.get('players.' + playerId);
+        if (!playerState || !playerState.character) return res.status(404).json({ error: 'player character not found' });
+        const newItem = {
+          id: item.id || ('item-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6)),
+          name: item.name,
+          description: item.description || '',
+          mechanical: item.mechanical || '',
+          quantity: typeof item.quantity === 'number' ? item.quantity : 1,
+          type: item.type || 'gear',
+          equipped: !!item.equipped,
+          attuned: !!item.attuned,
+          magical: !!item.magical,
+          cursed: !!item.cursed,
+          notes: item.notes || 'Awarded by DM',
+          awardedByDM: true
+        };
+        const inventory = [...(playerState.character.inventory || []), newItem];
+        this.state.set('players.' + playerId + '.character.inventory', inventory);
+        try { this._persistPlayerCharacter(playerId); } catch (e) {}
+        this.bus.dispatch('character:update', { playerId });
+        this.bus.dispatch('player:inventory_update', { playerId });
+
+        const charName = playerState.character.name || playerId;
+        this.bus.dispatch('dm:whisper', {
+          text: `${newItem.name} awarded to ${charName}.` + (newItem.cursed ? ' ⚠ CURSED — hidden from player description text.' : ''),
+          priority: 2, category: 'story'
+        });
+        // Notify player Chromebook — player-bridge subscriber translates to WS msg.
+        this.bus.dispatch('player:notification', {
+          playerId,
+          type: 'item:received',
+          itemName: newItem.name,
+          // Hide the flavor description for cursed items — just a name/flash.
+          description: newItem.cursed ? '' : (newItem.description || ''),
+          magical: newItem.magical,
+          cursed: newItem.cursed
+        });
+        return res.json({ ok: true, item: newItem });
+      });
+
+      // Addition 6 — DM per-field character edit via PATCH dot-path.
+      // body: { path: 'abilities.str.score', value: 18 }
+      // Auto-recalculates derived stats when an ability score changes.
+      const BLOCKED_FIELD_PREFIXES = ['ddbId', 'id', 'foundryId', '_syncedAt'];
+      app.patch('/api/characters/:playerId/field', (req, res) => {
+        const playerId = req.params.playerId;
+        const b = req.body || {};
+        const path = b.path;
+        if (!path || typeof path !== 'string') return res.status(400).json({ error: 'path required' });
+        if (BLOCKED_FIELD_PREFIXES.some(p => path === p || path.startsWith(p + '.'))) {
+          return res.status(403).json({ error: 'Field is read-only' });
+        }
+        const playerState = this.state.get('players.' + playerId);
+        if (!playerState || !playerState.character) return res.status(404).json({ error: 'player character not found' });
+        const character = playerState.character;
+        // Traverse the dot path; create intermediate objects where needed.
+        const parts = path.split('.');
+        let obj = character;
+        for (let i = 0; i < parts.length - 1; i++) {
+          if (obj[parts[i]] === null || obj[parts[i]] === undefined) obj[parts[i]] = {};
+          else if (typeof obj[parts[i]] !== 'object') return res.status(400).json({ error: 'path segment is not an object: ' + parts.slice(0, i + 1).join('.') });
+          obj = obj[parts[i]];
+        }
+        obj[parts[parts.length - 1]] = b.value;
+
+        // Auto-recalculate derived stats when an ability score changes.
+        if (path.startsWith('abilities.') && path.endsWith('.score')) {
+          const abilityName = parts[1];
+          const score = parseInt(b.value, 10);
+          if (!Number.isNaN(score) && character.abilities && character.abilities[abilityName]) {
+            const modifier = Math.floor((score - 10) / 2);
+            character.abilities[abilityName].modifier = modifier;
+            character.abilities[abilityName].modifierStr = (modifier >= 0 ? '+' : '') + modifier;
+          }
+          this._recalculateDerivedStats(character);
+        }
+
+        this.state.set('players.' + playerId + '.character', character);
+        try { this._persistPlayerCharacter(playerId); } catch (e) {}
+        this.bus.dispatch('character:update', { playerId });
+        return res.json({ ok: true, path, value: b.value });
+      });
+
       // Addition 5 — player inventory editing (add / remove / note).
       // body: { action: 'add'|'remove'|'note', item?, itemId?, note? }
       app.post('/api/characters/:playerId/inventory', (req, res) => {
@@ -526,6 +617,33 @@ class CharacterService {
 
   _defaultWounds() {
     return { head: 0, torso: 0, leftArm: 0, rightArm: 0, leftLeg: 0, rightLeg: 0 };
+  }
+
+  // Addition 6 — recompute derived stats from ability scores after an
+  // ability score edit. Pure data transform on the character object.
+  _recalculateDerivedStats(character) {
+    if (!character || !character.abilities) return;
+    const dexMod = (character.abilities.dex && character.abilities.dex.modifier) || 0;
+    const wisMod = (character.abilities.wis && character.abilities.wis.modifier) || 0;
+    const profBonus = character.proficiencyBonus || 2;
+    // Initiative = DEX mod (unless overridden by a feat, which we preserve if set explicitly)
+    if (typeof character.initiative !== 'number' || character.initiative === dexMod) {
+      character.initiative = dexMod;
+    } else {
+      // Leave manual override alone
+    }
+    // Passive perception
+    const percSkill = (character.skills && (character.skills.perception || character.skills.Perception)) || null;
+    const percProf = percSkill && (percSkill.proficiency === 'proficiency' || percSkill.proficiency === 'expertise');
+    character.passivePerception = 10 + wisMod + (percProf ? profBonus : 0);
+    // Spell save DC (if spellcasting ability set)
+    if (character.spellcastingAbility && character.abilities[character.spellcastingAbility]) {
+      const spellMod = character.abilities[character.spellcastingAbility].modifier || 0;
+      character.spellSaveDC = 8 + profBonus + spellMod;
+      character.spellAttackBonus = profBonus + spellMod;
+    }
+    // Recalculate AC for armor-based characters (handled by _calcAC on persist)
+    try { character.ac = this._calcAC(character); } catch (e) {}
   }
 
   _computeWounds(playerId, current, max) {

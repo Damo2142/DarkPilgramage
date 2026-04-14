@@ -1200,15 +1200,39 @@ function openPlayerSheet(pid) {
       if (item.awardedByDM) badges += '<span style="background:#2a3a5a;color:#a0c0ff;padding:1px 6px;border-radius:3px;font-size:10px;margin-left:4px;">DM</span>';
 
       html += '<div style="border:1px solid var(--border);background:var(--bg);padding:8px;margin-bottom:6px;border-radius:3px;">';
-      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">';
+
+      // Header row — name/qty/badges + Remove
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
       html += '<div style="color:var(--text);font-weight:600;font-size:13px;">' + nm + qty + badges + '</div>';
       html += '<button class="tool-btn" style="background:#4a2020;color:#ffaaaa;font-size:11px;padding:3px 8px;" ' +
               'onclick="DmCharEdit.removeItem(\'' + pid + '\',\'' + iid + '\',' + (item.cursed ? 'true' : 'false') + ')">Remove</button>';
       html += '</div>';
 
-      if (item.description) {
-        html += '<div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;font-style:italic;">' + esc(item.description) + '</div>';
-      }
+      // Text fields — name, description, type, mechanical (all click-to-edit)
+      html += '<div style="display:grid;grid-template-columns:2fr 3fr;gap:4px;margin-bottom:4px;">';
+      html += '<div><div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Name</div>' +
+              '<input type="text" value="' + esc(item.name || '') + '" ' +
+              'onblur="DmCharEdit.saveWeaponField(\'' + pid + '\',\'' + iid + '\',\'name\',this.value)" ' +
+              'style="width:100%;padding:4px 6px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:12px;" /></div>';
+      html += '<div><div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Type</div>' +
+              '<input type="text" value="' + esc(item.type || '') + '" placeholder="gear / weapon / armor / consumable" ' +
+              'onblur="DmCharEdit.saveWeaponField(\'' + pid + '\',\'' + iid + '\',\'type\',this.value)" ' +
+              'style="width:100%;padding:4px 6px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:12px;" /></div>';
+      html += '</div>';
+
+      html += '<div style="margin-bottom:4px;">';
+      html += '<div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Description (player-facing)</div>' +
+              '<input type="text" value="' + esc(item.description || '') + '" ' +
+              'onblur="DmCharEdit.saveWeaponField(\'' + pid + '\',\'' + iid + '\',\'description\',this.value)" ' +
+              'style="width:100%;padding:4px 6px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:11px;" />';
+      html += '</div>';
+
+      html += '<div style="margin-bottom:4px;">';
+      html += '<div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Mechanical (DM notes)</div>' +
+              '<input type="text" value="' + esc(item.mechanical || '') + '" ' +
+              'onblur="DmCharEdit.saveWeaponField(\'' + pid + '\',\'' + iid + '\',\'mechanical\',this.value)" ' +
+              'style="width:100%;padding:4px 6px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:11px;" />';
+      html += '</div>';
 
       // Flag toggles row
       html += '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:11px;color:var(--text-dim);margin:4px 0 6px;">';
@@ -1225,7 +1249,7 @@ function openPlayerSheet(pid) {
               '<input type="text" value="' + esc(item.damage || '') + '" placeholder="e.g. 1d8" ' +
               'onblur="DmCharEdit.saveWeaponField(\'' + pid + '\',\'' + iid + '\',\'damage\',this.value)" ' +
               'style="width:100%;padding:3px 5px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:11px;" /></div>';
-      html += '<div><div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Type</div>' +
+      html += '<div><div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Dmg Type</div>' +
               '<input type="text" value="' + esc(item.damageType || '') + '" placeholder="e.g. slashing" ' +
               'onblur="DmCharEdit.saveWeaponField(\'' + pid + '\',\'' + iid + '\',\'damageType\',this.value)" ' +
               'style="width:100%;padding:3px 5px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:11px;" /></div>';
@@ -1245,7 +1269,7 @@ function openPlayerSheet(pid) {
               '<input type="number" value="' + (item.quantity != null ? item.quantity : 1) + '" min="0" ' +
               'onblur="DmCharEdit.saveWeaponField(\'' + pid + '\',\'' + iid + '\',\'quantity\',this.value,\'number\')" ' +
               'style="width:60px;padding:3px 5px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:11px;" />';
-      html += '<input type="text" value="' + esc(item.notes || '') + '" placeholder="Notes (secret or mechanical)" ' +
+      html += '<input type="text" value="' + esc(item.notes || '') + '" placeholder="Notes (player-visible)" ' +
               'onblur="DmCharEdit.saveItemNote(\'' + pid + '\',\'' + iid + '\',this.value)" ' +
               'style="flex:1;padding:3px 5px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:11px;" />';
       html += '</div>';
@@ -1487,7 +1511,8 @@ var DmCharEdit = {
       }
     });
   },
-  _invPost: function(pid, body, onOk) {
+  _invPost: function(pid, body, opts) {
+    opts = opts || {};
     fetch('/api/characters/' + pid + '/inventory', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
@@ -1496,8 +1521,11 @@ var DmCharEdit = {
         if (Array.isArray(d.inventory) && stateData.players[pid] && stateData.players[pid].character) {
           stateData.players[pid].character.inventory = d.inventory;
         }
-        if (typeof onOk === 'function') onOk(d);
-        openPlayerSheet(pid);
+        if (typeof opts.onOk === 'function') opts.onOk(d);
+        // skipRerender lets text-field onblur saves keep the user's focus/
+        // cursor position. Re-render when a flag/badge/count would visually
+        // change, or when items are added/removed.
+        if (!opts.skipRerender) openPlayerSheet(pid);
       } else {
         alert('Inventory ' + (body.action || '') + ' failed: ' + (d.error || 'unknown'));
       }
@@ -1511,11 +1539,12 @@ var DmCharEdit = {
     DmCharEdit._invPost(pid, { action: 'remove', itemId: itemId, dmOverride: !!isCursed });
   },
   saveItemNote: function(pid, itemId, note) {
-    DmCharEdit._invPost(pid, { action: 'note', itemId: itemId, note: String(note == null ? '' : note) });
+    DmCharEdit._invPost(pid, { action: 'note', itemId: itemId, note: String(note == null ? '' : note) }, { skipRerender: true });
   },
   toggleItemFlag: function(pid, itemId, flag, value) {
     var patch = {};
     patch[flag] = !!value;
+    // Flag changes update badges, so do re-render.
     DmCharEdit._invPost(pid, { action: 'update', itemId: itemId, patch: patch });
   },
   saveWeaponField: function(pid, itemId, field, rawVal, kind) {
@@ -1531,7 +1560,9 @@ var DmCharEdit = {
     }
     var patch = {};
     patch[field] = value;
-    DmCharEdit._invPost(pid, { action: 'update', itemId: itemId, patch: patch });
+    // Text/number fields save quietly — user may be tabbing to the next
+    // input; re-rendering would steal focus. State is mirrored in _invPost.
+    DmCharEdit._invPost(pid, { action: 'update', itemId: itemId, patch: patch }, { skipRerender: true });
   },
   openInvAdd: function(pid) {
     var box = document.getElementById('dm-inv-add-' + pid);
@@ -1569,9 +1600,9 @@ var DmCharEdit = {
     if (!item.damage) delete item.damage;
     if (!item.damageType) delete item.damageType;
     if (!item.mechanical) delete item.mechanical;
-    DmCharEdit._invPost(pid, { action: 'add', item: item }, function() {
+    DmCharEdit._invPost(pid, { action: 'add', item: item }, { onOk: function() {
       DmCharEdit.closeInvAdd(pid);
-    });
+    }});
   }
 };
 window.DmCharEdit = DmCharEdit;

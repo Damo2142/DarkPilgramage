@@ -2517,7 +2517,8 @@ function renderInv(){
         +badges
         +'<span class="iqty">×'+(it.quantity||1)+'</span>'
         +'<span style="font-size:9px;color:var(--text-dim);margin-left:2px;">'+(it.weight?(it.weight*(it.quantity||1))+'lb':'')+'</span>'
-        +'<span style="cursor:pointer;color:#c8a820;font-size:12px;margin-left:4px;" onclick="editItemNote('+ii+')" title="Edit note">📝</span>'
+        +'<span style="cursor:pointer;color:#c8a820;font-size:12px;margin-left:4px;" onclick="editItem('+ii+')" title="Edit all fields">✏️</span>'
+        +'<span style="cursor:pointer;color:#c8a820;font-size:12px;margin-left:4px;" onclick="editItemNote('+ii+')" title="Edit note only">📝</span>'
         +(it.cursed
           ? '<span style="color:#6a5a48;font-size:12px;margin-left:4px;" title="Cursed — cannot be removed">🔒</span>'
           : '<span style="cursor:pointer;color:var(--red);font-size:12px;margin-left:4px;" onclick="rmItem('+ii+')" title="Remove">✕</span>')
@@ -2629,6 +2630,65 @@ function editItemNote(idx) {
   } else {
     syncInventory();
   }
+}
+
+// Addition 10 — full inventory item editor (player side). Opens the edit
+// modal populated with every field the player is allowed to edit. Cursed
+// is DM-only — not exposed here. Saves via the /inventory update action
+// with the whitelisted field patch.
+function editItem(idx) {
+  const inv = char.inventory || [];
+  const it = inv[idx]; if (!it) return;
+  if (!it.id) { showToast('System', 'This item has no id — save the sheet first.', 3000); return; }
+  openEdit('Edit ' + (it.name || 'Item'), [
+    { id:'name',         lbl:'Name',                 val: it.name || '' },
+    { id:'description',  lbl:'Description',          val: it.description || '', area:true },
+    { id:'type',         lbl:'Type (gear/weapon/armor/consumable)', val: it.type || 'gear' },
+    { id:'quantity',     lbl:'Quantity',             val: it.quantity != null ? it.quantity : 1, type:'number' },
+    { id:'notes',        lbl:'Notes',                val: it.notes || '' },
+    { id:'damage',       lbl:'Damage (e.g. 1d8, weapons only)', val: it.damage || '' },
+    { id:'damageType',   lbl:'Damage Type (e.g. slashing)',     val: it.damageType || '' },
+    { id:'attackBonus',  lbl:'Attack Bonus (+N)',    val: it.attackBonus != null ? it.attackBonus : '', type:'number' },
+    { id:'damageBonus',  lbl:'Damage Bonus (+N)',    val: it.damageBonus != null ? it.damageBonus : '', type:'number' },
+    { id:'equipped',     lbl:'Equipped',             val: !!it.equipped, type:'checkbox' },
+    { id:'attuned',      lbl:'Attuned',              val: !!it.attuned,  type:'checkbox' },
+    { id:'magical',      lbl:'Magical',              val: !!it.magical,  type:'checkbox' },
+    { id:'silver',       lbl:'Silver',               val: !!it.silver,   type:'checkbox' }
+  ], () => {
+    const v = getEV();
+    if (!v.name || !String(v.name).trim()) { showToast('System', 'Name required', 3000); return; }
+    const patch = {
+      name: String(v.name).trim(),
+      description: v.description || '',
+      type: v.type || 'gear',
+      quantity: parseInt(v.quantity, 10) || 1,
+      notes: v.notes || '',
+      equipped: !!v.equipped,
+      attuned: !!v.attuned,
+      magical: !!v.magical,
+      silver: !!v.silver
+    };
+    // Weapon mechanical fields — only send when set so empties don't clobber
+    // pre-existing non-weapon items unintentionally.
+    if (v.damage !== '')      patch.damage     = v.damage;
+    if (v.damageType !== '')  patch.damageType = v.damageType;
+    if (v.attackBonus !== '' && !isNaN(parseInt(v.attackBonus,10))) patch.attackBonus = parseInt(v.attackBonus,10);
+    if (v.damageBonus !== '' && !isNaN(parseInt(v.damageBonus,10))) patch.damageBonus = parseInt(v.damageBonus,10);
+
+    fetch('/api/characters/'+PID+'/inventory', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'update', itemId: it.id, patch })
+    }).then(r => r.json()).then(d => {
+      if (d.ok && Array.isArray(d.inventory)) {
+        char.inventory = d.inventory;
+        renderInv();
+        // If equipped status or weapon stats changed on a weapon, rebuild attacks.
+        rebuildWeaponAtks();
+      } else if (d.error) {
+        showToast('System', d.error, 3000);
+      }
+    }).catch(e => showToast('System', 'Update failed: ' + e.message, 3000));
+  });
 }
 
 function editCurrency(k){
@@ -2988,11 +3048,22 @@ function _finishRollCheck(label, modifier, type, d20){
 // ── EDIT MODAL ──────────────────────────────────────────────────────
 function openEdit(title,fields,cb){
   $('etitle').textContent=title;
-  $('efields').innerHTML=fields.map(f=>'<div class="ef"><label>'+f.lbl+'</label>'+(f.area?'<textarea id="ef_'+f.id+'" rows="3">'+esc(f.val||'')+'</textarea>':'<input id="ef_'+f.id+'" type="'+(f.type||'text')+'" value="'+esc(f.val||'')+'">')+'</div>').join('');
+  $('efields').innerHTML=fields.map(f=>{
+    if(f.area)  return '<div class="ef"><label>'+f.lbl+'</label><textarea id="ef_'+f.id+'" rows="3">'+esc(f.val||'')+'</textarea></div>';
+    if(f.type==='checkbox') return '<div class="ef" style="display:flex;align-items:center;gap:8px;"><input id="ef_'+f.id+'" type="checkbox"'+(f.val?' checked':'')+'><label for="ef_'+f.id+'" style="margin:0;cursor:pointer;">'+f.lbl+'</label></div>';
+    return '<div class="ef"><label>'+f.lbl+'</label><input id="ef_'+f.id+'" type="'+(f.type||'text')+'" value="'+esc(f.val==null?'':String(f.val))+'"></div>';
+  }).join('');
   editCb=cb; $('emodal').classList.add('open');
-  const fi=$('emodal').querySelector('input,textarea');if(fi)setTimeout(()=>fi.focus(),80);
+  const fi=$('emodal').querySelector('input:not([type=checkbox]),textarea');if(fi)setTimeout(()=>fi.focus(),80);
 }
-function getEV(){const v={};$('efields').querySelectorAll('input,textarea').forEach(i=>{v[i.id.replace('ef_','')]=i.value;});return v;}
+function getEV(){
+  const v={};
+  $('efields').querySelectorAll('input,textarea').forEach(i=>{
+    const k=i.id.replace('ef_','');
+    v[k] = (i.type==='checkbox') ? !!i.checked : i.value;
+  });
+  return v;
+}
 function saveEdit(){if(editCb)editCb();closeEdit();}
 function closeEdit(){$('emodal').classList.remove('open');editCb=null;}
 

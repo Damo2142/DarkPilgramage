@@ -1173,6 +1173,117 @@ function openPlayerSheet(pid) {
     html += '</div></div>';
   }
 
+  // Addition 9 — DM INVENTORY MANAGEMENT (edit mode only). Full superset of
+  // the player inventory panel: per-item note, flag toggles (equipped,
+  // magical, cursed, silver, attuned), weapon mechanical fields, and remove.
+  if (editMode) {
+    var allItems = ch.inventory || [];
+    html += '<div class="ov-section" style="background:rgba(200,168,32,0.04);border-left:3px solid var(--gold);">';
+    html += '<h3 style="margin-bottom:6px;">DM Inventory Mgmt (' + allItems.length + ')</h3>';
+    html += '<div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">Toggle flags, edit notes, set weapon mechanics. Changes save on blur / click.</div>';
+
+    if (!allItems.length) {
+      html += '<div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">(no items)</div>';
+    }
+
+    allItems.forEach(function(item, idx) {
+      if (!item || !item.id) return;
+      var iid = esc(item.id);
+      var nm = esc(item.name || '?');
+      var qty = item.quantity > 1 ? ' ×' + item.quantity : '';
+      var badges = '';
+      if (item.equipped) badges += '<span style="background:#2a5a2a;color:#aaffaa;padding:1px 6px;border-radius:3px;font-size:10px;margin-left:4px;">EQUIPPED</span>';
+      if (item.magical)  badges += '<span style="background:#5a3a2a;color:#ffd088;padding:1px 6px;border-radius:3px;font-size:10px;margin-left:4px;">MAGICAL</span>';
+      if (item.cursed)   badges += '<span style="background:#5a2a2a;color:#ff8888;padding:1px 6px;border-radius:3px;font-size:10px;margin-left:4px;">CURSED</span>';
+      if (item.silver)   badges += '<span style="background:#3a4a5a;color:#c0d0e0;padding:1px 6px;border-radius:3px;font-size:10px;margin-left:4px;">SILVER</span>';
+      if (item.attuned)  badges += '<span style="background:#3a2a5a;color:#d0b0ff;padding:1px 6px;border-radius:3px;font-size:10px;margin-left:4px;">ATTUNED</span>';
+      if (item.awardedByDM) badges += '<span style="background:#2a3a5a;color:#a0c0ff;padding:1px 6px;border-radius:3px;font-size:10px;margin-left:4px;">DM</span>';
+
+      html += '<div style="border:1px solid var(--border);background:var(--bg);padding:8px;margin-bottom:6px;border-radius:3px;">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">';
+      html += '<div style="color:var(--text);font-weight:600;font-size:13px;">' + nm + qty + badges + '</div>';
+      html += '<button class="tool-btn" style="background:#4a2020;color:#ffaaaa;font-size:11px;padding:3px 8px;" ' +
+              'onclick="DmCharEdit.removeItem(\'' + pid + '\',\'' + iid + '\',' + (item.cursed ? 'true' : 'false') + ')">Remove</button>';
+      html += '</div>';
+
+      if (item.description) {
+        html += '<div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;font-style:italic;">' + esc(item.description) + '</div>';
+      }
+
+      // Flag toggles row
+      html += '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:11px;color:var(--text-dim);margin:4px 0 6px;">';
+      ['equipped','attuned','magical','cursed','silver'].forEach(function(flag) {
+        var checked = item[flag] ? 'checked' : '';
+        html += '<label style="cursor:pointer;"><input type="checkbox" ' + checked +
+                ' onchange="DmCharEdit.toggleItemFlag(\'' + pid + '\',\'' + iid + '\',\'' + flag + '\',this.checked)" /> ' + flag + '</label>';
+      });
+      html += '</div>';
+
+      // Weapon mechanical fields (damage, damageType, attackBonus, damageBonus)
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;margin-bottom:4px;">';
+      html += '<div><div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Damage</div>' +
+              '<input type="text" value="' + esc(item.damage || '') + '" placeholder="e.g. 1d8" ' +
+              'onblur="DmCharEdit.saveWeaponField(\'' + pid + '\',\'' + iid + '\',\'damage\',this.value)" ' +
+              'style="width:100%;padding:3px 5px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:11px;" /></div>';
+      html += '<div><div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Type</div>' +
+              '<input type="text" value="' + esc(item.damageType || '') + '" placeholder="e.g. slashing" ' +
+              'onblur="DmCharEdit.saveWeaponField(\'' + pid + '\',\'' + iid + '\',\'damageType\',this.value)" ' +
+              'style="width:100%;padding:3px 5px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:11px;" /></div>';
+      html += '<div><div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Atk Bonus</div>' +
+              '<input type="number" value="' + (item.attackBonus != null ? item.attackBonus : '') + '" ' +
+              'onblur="DmCharEdit.saveWeaponField(\'' + pid + '\',\'' + iid + '\',\'attackBonus\',this.value,\'number\')" ' +
+              'style="width:100%;padding:3px 5px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:11px;" /></div>';
+      html += '<div><div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Dmg Bonus</div>' +
+              '<input type="number" value="' + (item.damageBonus != null ? item.damageBonus : '') + '" ' +
+              'onblur="DmCharEdit.saveWeaponField(\'' + pid + '\',\'' + iid + '\',\'damageBonus\',this.value,\'number\')" ' +
+              'style="width:100%;padding:3px 5px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:11px;" /></div>';
+      html += '</div>';
+
+      // Quantity + notes
+      html += '<div style="display:flex;gap:6px;align-items:center;">';
+      html += '<label style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Qty</label>' +
+              '<input type="number" value="' + (item.quantity != null ? item.quantity : 1) + '" min="0" ' +
+              'onblur="DmCharEdit.saveWeaponField(\'' + pid + '\',\'' + iid + '\',\'quantity\',this.value,\'number\')" ' +
+              'style="width:60px;padding:3px 5px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:11px;" />';
+      html += '<input type="text" value="' + esc(item.notes || '') + '" placeholder="Notes (secret or mechanical)" ' +
+              'onblur="DmCharEdit.saveItemNote(\'' + pid + '\',\'' + iid + '\',this.value)" ' +
+              'style="flex:1;padding:3px 5px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:11px;" />';
+      html += '</div>';
+      html += '</div>'; // end item card
+    });
+
+    // Add Item form (full fields) — collapsible
+    html += '<div style="margin-top:10px;">';
+    html += '<button class="tool-btn" onclick="DmCharEdit.openInvAdd(\'' + pid + '\')">+ Add Item</button>';
+    html += '<div id="dm-inv-add-' + pid + '" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px;margin-top:6px;">';
+    html += '<div style="font-size:11px;color:var(--gold);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.08em;">Add Item — full DM fields</div>';
+    html += '<input id="dm-inv-add-name-' + pid + '"        placeholder="Item name (required)"                   style="width:100%;margin-bottom:4px;padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />';
+    html += '<input id="dm-inv-add-desc-' + pid + '"        placeholder="Description (player-facing)"            style="width:100%;margin-bottom:4px;padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />';
+    html += '<input id="dm-inv-add-notes-' + pid + '"       placeholder="Notes (secret / mechanical)"            style="width:100%;margin-bottom:4px;padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:4px;">';
+    html += '<input id="dm-inv-add-type-'    + pid + '" placeholder="Type (gear/weapon/armor)" value="gear" style="padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />';
+    html += '<input id="dm-inv-add-qty-'     + pid + '" type="number" placeholder="Qty" value="1" min="1"   style="padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />';
+    html += '<input id="dm-inv-add-mech-'    + pid + '" placeholder="Mechanical (short)"                    style="padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />';
+    html += '</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;margin-bottom:4px;">';
+    html += '<input id="dm-inv-add-damage-' + pid + '"  placeholder="Damage (e.g. 1d8)"  style="padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />';
+    html += '<input id="dm-inv-add-dtype-'  + pid + '"  placeholder="Damage type"        style="padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />';
+    html += '<input id="dm-inv-add-atk-'    + pid + '"  type="number" placeholder="Atk bonus"   style="padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />';
+    html += '<input id="dm-inv-add-dmg-'    + pid + '"  type="number" placeholder="Dmg bonus"   style="padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />';
+    html += '</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:12px;color:var(--text-dim);margin:6px 0 8px;">';
+    ['equipped','attuned','magical','cursed','silver'].forEach(function(flag) {
+      html += '<label><input type="checkbox" id="dm-inv-add-' + flag + '-' + pid + '" /> ' + flag + '</label>';
+    });
+    html += '</div>';
+    html += '<button class="tool-btn" onclick="DmCharEdit.addInvItem(\'' + pid + '\')">Add to Inventory</button>';
+    html += '<button class="tool-btn" onclick="DmCharEdit.closeInvAdd(\'' + pid + '\')" style="margin-left:6px;">Cancel</button>';
+    html += '</div>';
+    html += '</div>';
+
+    html += '</div>'; // end DM Inventory section
+  }
+
   // Features and traits
   if (ch.features && ch.features.length) {
     html += '<div class="ov-section"><h3>Features &amp; Traits</h3><div class="ov-list">';
@@ -1365,6 +1476,102 @@ var DmCharEdit = {
         alert('Award failed: ' + (d.error || 'unknown'));
       }
     }).catch(function(e){ alert('Award failed: ' + e.message); });
+  },
+
+  // ─── Addition 9 — DM inventory management ────────────────────────
+  _refreshSheet: function(pid) {
+    fetch('/api/state').then(function(r){return r.json();}).then(function(s) {
+      if (s && s.players && s.players[pid]) {
+        stateData.players[pid] = s.players[pid];
+        openPlayerSheet(pid);
+      }
+    });
+  },
+  _invPost: function(pid, body, onOk) {
+    fetch('/api/characters/' + pid + '/inventory', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function(r){return r.json();}).then(function(d) {
+      if (d.ok) {
+        if (Array.isArray(d.inventory) && stateData.players[pid] && stateData.players[pid].character) {
+          stateData.players[pid].character.inventory = d.inventory;
+        }
+        if (typeof onOk === 'function') onOk(d);
+        openPlayerSheet(pid);
+      } else {
+        alert('Inventory ' + (body.action || '') + ' failed: ' + (d.error || 'unknown'));
+      }
+    }).catch(function(e) { alert('Inventory ' + (body.action || '') + ' failed: ' + e.message); });
+  },
+  removeItem: function(pid, itemId, isCursed) {
+    var msg = isCursed
+      ? 'This item is CURSED. Remove anyway with DM override?'
+      : 'Remove this item from inventory?';
+    if (!confirm(msg)) return;
+    DmCharEdit._invPost(pid, { action: 'remove', itemId: itemId, dmOverride: !!isCursed });
+  },
+  saveItemNote: function(pid, itemId, note) {
+    DmCharEdit._invPost(pid, { action: 'note', itemId: itemId, note: String(note == null ? '' : note) });
+  },
+  toggleItemFlag: function(pid, itemId, flag, value) {
+    var patch = {};
+    patch[flag] = !!value;
+    DmCharEdit._invPost(pid, { action: 'update', itemId: itemId, patch: patch });
+  },
+  saveWeaponField: function(pid, itemId, field, rawVal, kind) {
+    var value = rawVal;
+    if (kind === 'number') {
+      if (rawVal === '' || rawVal == null) {
+        value = null;
+      } else {
+        var n = parseInt(rawVal, 10);
+        if (isNaN(n)) { alert('Value must be a number'); return; }
+        value = n;
+      }
+    }
+    var patch = {};
+    patch[field] = value;
+    DmCharEdit._invPost(pid, { action: 'update', itemId: itemId, patch: patch });
+  },
+  openInvAdd: function(pid) {
+    var box = document.getElementById('dm-inv-add-' + pid);
+    if (box) box.style.display = 'block';
+  },
+  closeInvAdd: function(pid) {
+    var box = document.getElementById('dm-inv-add-' + pid);
+    if (box) box.style.display = 'none';
+  },
+  addInvItem: function(pid) {
+    function val(id) { var e = document.getElementById(id); return e ? e.value : ''; }
+    function chk(id) { var e = document.getElementById(id); return !!(e && e.checked); }
+    var name = (val('dm-inv-add-name-' + pid) || '').trim();
+    if (!name) { alert('Item name required'); return; }
+    var atkRaw = val('dm-inv-add-atk-' + pid);
+    var dmgRaw = val('dm-inv-add-dmg-' + pid);
+    var item = {
+      name: name,
+      description: val('dm-inv-add-desc-' + pid),
+      notes: val('dm-inv-add-notes-' + pid),
+      type: val('dm-inv-add-type-' + pid) || 'gear',
+      mechanical: val('dm-inv-add-mech-' + pid),
+      quantity: parseInt(val('dm-inv-add-qty-' + pid), 10) || 1,
+      damage: val('dm-inv-add-damage-' + pid),
+      damageType: val('dm-inv-add-dtype-' + pid),
+      equipped: chk('dm-inv-add-equipped-' + pid),
+      attuned:  chk('dm-inv-add-attuned-'  + pid),
+      magical:  chk('dm-inv-add-magical-'  + pid),
+      cursed:   chk('dm-inv-add-cursed-'   + pid),
+      silver:   chk('dm-inv-add-silver-'   + pid)
+    };
+    if (atkRaw !== '') { var na = parseInt(atkRaw, 10); if (!isNaN(na)) item.attackBonus = na; }
+    if (dmgRaw !== '') { var nd = parseInt(dmgRaw, 10); if (!isNaN(nd)) item.damageBonus = nd; }
+    // Strip empty-string optionals the server treats as meaningful
+    if (!item.damage) delete item.damage;
+    if (!item.damageType) delete item.damageType;
+    if (!item.mechanical) delete item.mechanical;
+    DmCharEdit._invPost(pid, { action: 'add', item: item }, function() {
+      DmCharEdit.closeInvAdd(pid);
+    });
   }
 };
 window.DmCharEdit = DmCharEdit;

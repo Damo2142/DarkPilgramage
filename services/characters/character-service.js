@@ -471,7 +471,9 @@ class CharacterService {
           const itemId = b.itemId;
           const target = inventory.find(i => i.id === itemId);
           if (!target) return res.status(404).json({ error: 'item not found' });
-          if (target.cursed) return res.status(400).json({ error: 'Cannot remove cursed item' });
+          // Cursed items cannot be removed by players. DM may override via
+          // dmOverride:true (Addition 9 — DM inventory management).
+          if (target.cursed && !b.dmOverride) return res.status(400).json({ error: 'Cannot remove cursed item' });
           inventory = inventory.filter(i => i.id !== itemId);
         } else if (action === 'note') {
           const itemId = b.itemId;
@@ -482,8 +484,34 @@ class CharacterService {
             return i;
           });
           if (!matched) return res.status(404).json({ error: 'item not found' });
+        } else if (action === 'update') {
+          // Addition 9 — DM inventory management. Whitelisted field patch on
+          // an existing item by id. Name is editable too so the DM can fix
+          // typos, but id/ddb-owned plumbing (id, type-shape) stays locked.
+          const itemId = b.itemId;
+          const patch = b.patch && typeof b.patch === 'object' ? b.patch : null;
+          if (!itemId) return res.status(400).json({ error: 'itemId required' });
+          if (!patch) return res.status(400).json({ error: 'patch object required' });
+          const UPDATABLE = new Set([
+            'name', 'description', 'quantity', 'type', 'equipped', 'attuned',
+            'magical', 'cursed', 'silver', 'notes', 'mechanical',
+            'damage', 'damageType', 'attackBonus', 'damageBonus', 'properties',
+            'awardedByDM'
+          ]);
+          let matched = false;
+          inventory = inventory.map(i => {
+            if (i.id !== itemId) return i;
+            matched = true;
+            const next = { ...i };
+            for (const k of Object.keys(patch)) {
+              if (!UPDATABLE.has(k)) continue;
+              next[k] = patch[k];
+            }
+            return next;
+          });
+          if (!matched) return res.status(404).json({ error: 'item not found' });
         } else {
-          return res.status(400).json({ error: 'unknown action — expect add/remove/note' });
+          return res.status(400).json({ error: 'unknown action — expect add/remove/note/update' });
         }
 
         this.state.set('players.' + playerId + '.character.inventory', inventory);

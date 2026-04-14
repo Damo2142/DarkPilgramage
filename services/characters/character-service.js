@@ -754,19 +754,43 @@ class CharacterService {
         char.hp.temp = existing.hp.temp || 0;
       }
       // Preserve local equipped/attuned state (player may have changed these in-session)
+      // and Addition-1 custom weapon fields (magical, silver, attackBonus,
+      // damageBonus, damageType override, properties override, special_effect).
+      // DDB doesn't expose these — they are the Co-DM's combat metadata, keyed
+      // by item name. Do not overwrite them on re-sync.
       if (existing.inventory && existing.inventory.length > 0) {
+        const PRESERVE_KEYS = ['magical', 'silver', 'attackBonus', 'damageBonus', 'damageType', 'properties', 'special_effect'];
         const localState = {};
         for (const item of existing.inventory) {
-          if (item.name && (item.equipped || item.attuned)) {
-            localState[item.name] = { equipped: item.equipped, attuned: item.attuned };
+          if (!item.name) continue;
+          const keep = {};
+          if (item.equipped || item.attuned) {
+            keep.equipped = item.equipped;
+            keep.attuned = item.attuned;
           }
+          for (const k of PRESERVE_KEYS) {
+            if (item[k] !== undefined) keep[k] = item[k];
+          }
+          if (Object.keys(keep).length) localState[item.name] = keep;
         }
         for (const item of char.inventory) {
           const saved = localState[item.name];
-          if (saved) {
-            item.equipped = saved.equipped || item.equipped;
-            item.attuned = saved.attuned || item.attuned;
+          if (!saved) continue;
+          if (saved.equipped !== undefined) item.equipped = saved.equipped || item.equipped;
+          if (saved.attuned !== undefined) item.attuned = saved.attuned || item.attuned;
+          for (const k of PRESERVE_KEYS) {
+            if (saved[k] !== undefined) item[k] = saved[k];
           }
+        }
+      }
+      // Preserve Addition-1 spell-level magical flag (warlock spells etc).
+      if (existing.spells && existing.spells.length > 0 && Array.isArray(char.spells)) {
+        const spellLocal = {};
+        for (const s of existing.spells) {
+          if (s.name && s.magical !== undefined) spellLocal[s.name] = s.magical;
+        }
+        for (const s of char.spells) {
+          if (s.name && spellLocal[s.name] !== undefined) s.magical = spellLocal[s.name];
         }
       }
     }

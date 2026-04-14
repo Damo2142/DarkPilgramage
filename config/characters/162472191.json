@@ -163,7 +163,7 @@
       "ritual": false,
       "concentration": false,
       "prepared": true,
-      "description": "You touch one Large or smaller object that isn\u2019t being worn or carried by someone else. Until the spell ends, the object sheds Bright Light in a 20-foot radius and Dim Light for an additional 20 feet."
+      "description": "You touch one Large or smaller object that isn’t being worn or carried by someone else. Until the spell ends, the object sheds Bright Light in a 20-foot radius and Dim Light for an additional 20 feet."
     },
     {
       "name": "Prestidigitation",
@@ -181,7 +181,7 @@
       "ritual": false,
       "concentration": false,
       "prepared": true,
-      "description": "Lightning springs from you to a creature that you try to touch. Make a melee spell attack against the target. On a hit, the target takes 1d8 Lightning damage, and it can\u2019t make Opportunity Attacks unt"
+      "description": "Lightning springs from you to a creature that you try to touch. Make a melee spell attack against the target. On a hit, the target takes 1d8 Lightning damage, and it can’t make Opportunity Attacks unt"
     },
     {
       "name": "Sorcerous Burst",
@@ -226,7 +226,7 @@
       "ritual": false,
       "concentration": false,
       "prepared": false,
-      "description": "You touch a willing creature who isn\u2019t wearing armor. Until the spell ends, the target\u2019s base AC becomes 13 plus its Dexterity modifier. The spell ends early if the target dons armor."
+      "description": "You touch a willing creature who isn’t wearing armor. Until the spell ends, the target’s base AC becomes 13 plus its Dexterity modifier. The spell ends early if the target dons armor."
     },
     {
       "name": "Dragon's Breath",
@@ -573,7 +573,7 @@
     "ideals": null,
     "bonds": null,
     "flaws": null,
-    "backstoryText": "The original Spurt was born in the Underdark. His life was short but memorable. He fashioned his own tools and weapons. He befriended an able party of adventurers and helped them for a short time before a fire giant squashed him like a bug. Although Spurt lived only eleven days, his spurt of heroism inspired other kobolds to adopt his name and pursue adventurous lives.\n\nSpurt the Sorcerer is one of many Spurts in the multiverse. Her gift for Wild Sorcery stems from prolonged exposure to Underdark radiation. She\u2019s on a quest to find others who are ready to go on adventures, but she has yet to find any trustworthy friends.",
+    "backstoryText": "The original Spurt was born in the Underdark. His life was short but memorable. He fashioned his own tools and weapons. He befriended an able party of adventurers and helped them for a short time before a fire giant squashed him like a bug. Although Spurt lived only eleven days, his spurt of heroism inspired other kobolds to adopt his name and pursue adventurous lives.\n\nSpurt the Sorcerer is one of many Spurts in the multiverse. Her gift for Wild Sorcery stems from prolonged exposure to Underdark radiation. She’s on a quest to find others who are ready to go on adventures, but she has yet to find any trustworthy friends.",
     "allies": null,
     "organizations": null,
     "enemies": null,
@@ -592,7 +592,7 @@
     "description": "Spurt is a russet-colored kobold who collects critters and has several on her person, including a skunk in a wooden cage, several wasps in a bag, and centipedes in a basket. Although she can aggravate enemies by releasing these critters, she has no control over their behavior."
   },
   "patron": "Wild Magic Sorcery",
-  "_syncedAt": "2026-04-14T13:25:48.383Z",
+  "_syncedAt": "2026-04-14T13:30:00.798Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/162472191"
 }

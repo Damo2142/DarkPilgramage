@@ -462,10 +462,10 @@
     "Draconic"
   ],
   "backstory": {
-    "personalityTraits": "I face problems head-on. A simple, direct solution is the best path to success.\nI\u2019ve lost too many friends, and I\u2019m slow to make new ones.",
+    "personalityTraits": "I face problems head-on. A simple, direct solution is the best path to success.\nI’ve lost too many friends, and I’m slow to make new ones.",
     "ideals": "Responsibility. I do what I must and obey just authority. (Lawful)",
     "bonds": "Those who fight beside me are those worth dying for.\nThose who fight beside me are those worth dying for.",
-    "flaws": "I\u2019d rather eat my armor than admit when I\u2019m wrong.",
+    "flaws": "I’d rather eat my armor than admit when I’m wrong.",
     "backstoryText": "The Disgraced \"Risk Analyst\" - this is my unofficial title...\nI was a rising star in the Tower of Inquisition in Wroat, specializing in \"Social Risk Assessment.\" My job was to shadow Brelish nobles and ensure they didn't walk into scandals or assassinations. However, I uncovered a conspiracy involving a corrupt Medani elder and a high-ranking Brelish official. Instead of being rewarded, I was \"given a leave of absence\" to avoid a political firestorm since I am only half elvin even though my mother has worked hard to fit into the lifestyle with my father.\n\nMotivation: I travel to keep my head down, but my conscience (and the Medani tendency to help the community) keeps drawing me into local mysteries.\n\nWizard Subclass: Divination (The Mark of Detection literally allows me to see the future/truth) which helps prevent the \"risk\" before it happens.\n\nThe Mark: My father wanted a son but I was born a daughter instead.  From early on, I worked to keep up with my father's friends sons and participated in their training to prove myself.  His heritage was from the Mark of Detection subrace (from Eberron: Rising from the Last War),  I get a 1d4 bonus to Insight and Investigation checks, which is perfect for a half elf with magical sensitivities who wants to act like a detective.The Noble Background: My previous \"Position of Privilege\" represents my House's legal standing. Even though I am on a \"leave of absence\", I can get an audience with local constables or minor lords simply by showing my signet ring and the Mark on your skin.\nThe Personality: Medani heirs are often described as \"twitchy\" or hyper-alert. I tend to never sits with my back to the door and constantly scan the room for \"subtle threats.\"",
     "allies": null,
     "organizations": null,
@@ -485,7 +485,7 @@
     "description": null
   },
   "patron": "Eldritch Knight",
-  "_syncedAt": "2026-04-14T13:25:48.538Z",
+  "_syncedAt": "2026-04-14T13:30:00.962Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/164126673"
 }

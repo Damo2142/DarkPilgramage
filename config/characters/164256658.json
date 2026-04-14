@@ -442,7 +442,7 @@
     "Giant"
   ],
   "backstory": {
-    "personalityTraits": "I place no stock in wealthy or well-mannered folk. Money and manners won\u2019t save you from a hungry owlbear.\n",
+    "personalityTraits": "I place no stock in wealthy or well-mannered folk. Money and manners won’t save you from a hungry owlbear.\n",
     "ideals": "Change. Life is like the seasons, in constant change, and we must change with it. (Chaotic)",
     "bonds": "An injury to the unspoiled wilderness of my home is an injury to me.",
     "flaws": "I am slow to trust members of other races, tribes, and societies.",
@@ -455,7 +455,7 @@
   "appearance": {
     "gender": "Female",
     "age": 20,
-    "height": "7\u2019 6\u201d",
+    "height": "7’ 6”",
     "weight": 280,
     "size": null,
     "eyes": "Lavendar",
@@ -465,7 +465,7 @@
     "description": null
   },
   "patron": "Path of the Totem Warrior",
-  "_syncedAt": "2026-04-14T13:25:48.643Z",
+  "_syncedAt": "2026-04-14T13:30:01.086Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/164256658"
 }

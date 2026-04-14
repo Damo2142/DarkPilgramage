@@ -213,7 +213,7 @@
       "ritual": false,
       "concentration": false,
       "prepared": false,
-      "description": "Three illusory duplicates of yourself appear in your space. Until the spell ends, the duplicates move with you and mimic your actions, shifting position so it\u2019s impossible to track which image is real",
+      "description": "Three illusory duplicates of yourself appear in your space. Until the spell ends, the duplicates move with you and mimic your actions, shifting position so it’s impossible to track which image is real",
       "magical": true
     }
   ],
@@ -547,13 +547,13 @@
     "Elvish"
   ],
   "backstory": {
-    "personalityTraits": "I don\u2019t run from evil. Evil runs from me.\nI put no trust in divine beings.",
+    "personalityTraits": "I don’t run from evil. Evil runs from me.\nI put no trust in divine beings.",
     "ideals": "I have a dark calling that puts me above the law. (Chaotic)",
     "bonds": "A terrible guilt consumes me. I hope that I can find redemption through my actions.",
     "flaws": "I talk to spirits that no one else can see.",
-    "backstoryText": "Barry Frascht comes from a family that has assisted supernatural beings for generations, many times unknowingly. Sometimes through kindness, sometimes through stubbornness or bad decisions, the Fraschts repeatedly interfered with events that shaped the balance of the cosmos.\n\nOver time, many powerful entities came to owe the family favors.\n\nBarry\u2019s parents understood this strange legacy, but they died when Barry was young. Barry grew up believing the supernatural was nonsense.\n\nUnknown to him, cosmic forces assigned a genie to watch over him and keep him from accidentally causing catastrophic events. Barry believes the genie is an imaginary friend.",
-    "allies": "The Genie (Barry\u2019s \u201cImaginary Friend\u201d)\nA genie assigned by cosmic powers to watch over Barry.\nActs as Barry\u2019s exhausted best friend, babysitter, and reluctant guardian.\nBarry believes the genie is imaginary.",
-    "organizations": "\u201cThe Frascht Family Debt\u201d\nA loose supernatural understanding that Barry\u2019s family is owed favors by many powerful beings across the planes.",
+    "backstoryText": "Barry Frascht comes from a family that has assisted supernatural beings for generations, many times unknowingly. Sometimes through kindness, sometimes through stubbornness or bad decisions, the Fraschts repeatedly interfered with events that shaped the balance of the cosmos.\n\nOver time, many powerful entities came to owe the family favors.\n\nBarry’s parents understood this strange legacy, but they died when Barry was young. Barry grew up believing the supernatural was nonsense.\n\nUnknown to him, cosmic forces assigned a genie to watch over him and keep him from accidentally causing catastrophic events. Barry believes the genie is an imaginary friend.",
+    "allies": "The Genie (Barry’s “Imaginary Friend”)\nA genie assigned by cosmic powers to watch over Barry.\nActs as Barry’s exhausted best friend, babysitter, and reluctant guardian.\nBarry believes the genie is imaginary.",
+    "organizations": "“The Frascht Family Debt”\nA loose supernatural understanding that Barry’s family is owed favors by many powerful beings across the planes.",
     "enemies": "Unknown",
     "otherNotes": null
   },
@@ -570,7 +570,7 @@
     "description": null
   },
   "patron": "Fiend Patron",
-  "_syncedAt": "2026-04-14T13:25:48.461Z",
+  "_syncedAt": "2026-04-14T13:30:00.898Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/162702065"
 }

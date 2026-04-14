@@ -1138,6 +1138,9 @@ var RoomAudio = {
   _roomSinkId: null,
   _volume: 0.85,
   _audio: null,
+  _ambientAudio: null,
+  _ambientName: null,
+  _ambientVolume: 0.5,
   init: function() {
     try {
       var saved = JSON.parse(localStorage.getItem('codm.audioDevices.v1') || '{}');
@@ -1147,6 +1150,50 @@ var RoomAudio = {
       var v = parseFloat(localStorage.getItem('codm.roomVolume'));
       if (v >= 0 && v <= 1) RoomAudio._volume = v;
     } catch (e) {}
+  },
+  // Play/swap the ambient bed on the room speaker. Loops indefinitely.
+  // Called from atmo:profile_active when the profile declares audio.ambient.
+  handleAmbient: function(name, volume) {
+    if (!name) return;
+    if (RoomAudio._ambientName === name && RoomAudio._ambientAudio && !RoomAudio._ambientAudio.paused) return;
+    // Stop any previous ambient bed first
+    if (RoomAudio._ambientAudio) {
+      try { RoomAudio._ambientAudio.pause(); RoomAudio._ambientAudio.src = ''; } catch (e) {}
+    }
+    var url = '/sounds/' + String(name).replace(/\.mp3$/, '') + '.mp3';
+    var a = new Audio(url);
+    a.loop = true;
+    a.volume = typeof volume === 'number' ? Math.max(0, Math.min(1, volume)) : RoomAudio._ambientVolume;
+    RoomAudio._ambientAudio = a;
+    RoomAudio._ambientName = name;
+    var sinkLabel = 'default';
+    var play = function() {
+      a.play().then(function() {
+        console.log('[RoomAudio] ambient playing on', sinkLabel, '—', name, 'vol', a.volume);
+      }).catch(function(e) {
+        console.warn('[RoomAudio] ambient play failed on', sinkLabel, ':', e.message);
+        try { addWhisper({ tag: 'AUDIO', text: 'Ambient "' + name + '" play failed on ' + sinkLabel + ' (' + e.message + ')' }); } catch (x) {}
+      });
+    };
+    if (RoomAudio._roomSinkId && a.setSinkId) {
+      a.setSinkId(RoomAudio._roomSinkId).then(function() {
+        sinkLabel = 'room (' + String(RoomAudio._roomSinkId).slice(0, 8) + '…)';
+        play();
+      }).catch(function(err) {
+        sinkLabel = 'default (setSinkId rejected: ' + err.message + ')';
+        play();
+      });
+    } else {
+      sinkLabel = RoomAudio._roomSinkId ? 'default (no setSinkId support)' : 'default (no room sink configured)';
+      play();
+    }
+  },
+  stopAmbient: function() {
+    if (RoomAudio._ambientAudio) {
+      try { RoomAudio._ambientAudio.pause(); RoomAudio._ambientAudio.src = ''; } catch (e) {}
+      RoomAudio._ambientAudio = null;
+      RoomAudio._ambientName = null;
+    }
   },
   setVolume: function(v) {
     RoomAudio._volume = Math.max(0, Math.min(1, parseFloat(v)));
@@ -1523,6 +1570,16 @@ function handleMsg(msg) {
     if (a.profile) {
       currentAtmo = a.profile;
       addWhisper({ tag: 'EVENT', text: 'Atmosphere → ' + a.profile });
+    }
+    // Ambient bed — only atmo:profile_active carries the resolved audio block
+    // (dispatched by atmosphere-engine after the profile is applied).
+    if (t === 'atmo:profile_active' && a.audio && window.RoomAudio) {
+      if (a.audio.ambient) {
+        var vol = (a.audio.volume && typeof a.audio.volume.ambient === 'number') ? a.audio.volume.ambient : undefined;
+        RoomAudio.handleAmbient(a.audio.ambient, vol);
+      } else {
+        RoomAudio.stopAmbient();
+      }
     }
     return;
   }

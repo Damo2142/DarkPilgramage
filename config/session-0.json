@@ -273,7 +273,7 @@
       {
         "id": "sunset_complete",
         "gameTime": "1274-10-15T18:00:00",
-        "event": "world:atmosphere_shift",
+        "event": "dm:whisper",
         "data": {
           "description": "The last light dies. Full darkness outside.",
           "profile": "tavern_tense"
@@ -393,7 +393,7 @@
       {
         "id": "moonrise",
         "gameTime": "1274-10-15T19:45:00",
-        "event": "world:moonrise",
+        "event": "dm:whisper",
         "data": {
           "description": "The full moon rises behind the storm clouds. Tomas feels it.",
           "effects": [
@@ -415,7 +415,7 @@
       {
         "id": "scratching_sounds",
         "gameTime": "1274-10-15T20:30:00",
-        "event": "world:environmental",
+        "event": "dm:whisper",
         "data": {
           "description": "Scratching sounds from beneath the floor. The cellar.",
           "readAloud": "A sound. From below. Scritch. Scritch-scritch. Like nails on wood. Everyone hears it. Marta freezes.",
@@ -466,7 +466,7 @@
       {
         "id": "midnight_approaches",
         "gameTime": "1274-10-15T23:30:00",
-        "event": "world:midnight_warning",
+        "event": "dm:whisper",
         "data": {
           "description": "Midnight approaches. Tomas is desperate. Vladislav is hungry.",
           "text": "It's nearly midnight. Tomas MUST get to the cellar or he transforms in front of everyone. Vladislav is growing bold \u2014 he's been patient long enough. Both will act within the hour.",
@@ -477,16 +477,19 @@
       {
         "id": "tomas_breaks",
         "gameTime": "1274-10-16T00:00:00",
-        "event": "world:tomas_transformation",
+        "event": "dm:whisper",
         "data": {
           "description": "Midnight. Tomas can no longer resist. He transforms.",
+          "text": "Midnight. Tomas can no longer resist. He transforms. Ambient-life owns the actual transform tick — this is the DM cue.",
+          "priority": 1,
+          "category": "story",
           "condition": "npc:tomas:status:alive"
         }
       },
       {
         "id": "dawn",
         "gameTime": "1274-10-16T06:00:00",
-        "event": "world:dawn",
+        "event": "dm:whisper",
         "data": {
           "description": "Dawn breaks. The blizzard subsides. Vladislav must retreat or die.",
           "profile": "dawn"
@@ -2505,9 +2508,12 @@
             }
           },
           "onFail": {
-            "event": "world:tomas_transformation",
+            "event": "dm:whisper",
             "data": {
-              "description": "Tomas transforms in the common room"
+              "description": "Tomas transforms in the common room",
+              "text": "Tomas's reach-cellar goal failed — he transforms publicly in the common room. Run the transform beat.",
+              "priority": 1,
+              "category": "story"
             }
           }
         },

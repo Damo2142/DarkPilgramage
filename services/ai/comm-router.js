@@ -1157,6 +1157,40 @@ class CommRouter {
       });
 
       if (hit) {
+        // Addition 7 — immunity check runs after hit confirmed and before
+        // pending damage is set. If the target is immune to nonmagical
+        // weapons and the weapon is neither magical nor (silver-with-bypass),
+        // the hit is absorbed with zero damage and a narrative line is
+        // whispered to the DM instead of prompting damage dice.
+        const targetConfig = this._getActorConfig(target.actorSlug);
+        if (targetConfig?.immunities?.nonmagical_weapons) {
+          const weaponData = this._getWeaponData(character, weaponName);
+          const isMagical = !!(weaponData && weaponData.magical);
+          const isSilver = !!(weaponData && weaponData.silver);
+          const silverBypasses = targetConfig.immunities.silver_bypasses !== false;
+          if (!isMagical && !(isSilver && silverBypasses)) {
+            const narratives = (targetConfig.immunityNarrative &&
+              targetConfig.immunityNarrative.nonmagical_weapons) || [
+              'The attack connects but does not seem to affect them.'
+            ];
+            const narrative = narratives[Math.floor(Math.random() * narratives.length)];
+            this.bus.dispatch('dm:whisper', {
+              text: `⚠️ IMMUNITY — ${target.name} is immune to nonmagical weapons. Zero damage applied. Narrative: "${narrative}"`,
+              priority: 1, category: 'combat', source: 'comm-router'
+            });
+            this.state.set('combat.pendingDamage', null);
+            return true;
+          }
+        }
+        // Resistance / damage-type immunity — flagged for the damage roll.
+        if (targetConfig?.resistances?.damage_types?.length ||
+            targetConfig?.immunities?.damage_types?.length) {
+          this.state.set('combat.pendingResistance', {
+            targetId: target.id || target.name,
+            resistances: (targetConfig.resistances && targetConfig.resistances.damage_types) || [],
+            immunities: (targetConfig.immunities && targetConfig.immunities.damage_types) || []
+          });
+        }
         this.state.set('combat.pendingDamage', {
           attackerId: playerId,
           targetId: target.id || target.name,
@@ -1185,12 +1219,33 @@ class CommRouter {
         rageBonus = 2;
         damageBonus += rageBonus;
       }
-      const totalDamage = roll + damageBonus;
+      let totalDamage = roll + damageBonus;
+
+      // Addition 7 — apply resistance / damage-type immunity if the damage
+      // type is carried on the weapon. If the target is immune to this type
+      // zero out the damage; if resistant, halve. Narrative hint whispered.
+      const weaponDataDmg = this._getWeaponData(character, pending.weapon);
+      const dmgType = (weaponDataDmg && weaponDataDmg.damageType && String(weaponDataDmg.damageType).toLowerCase()) || null;
+      const pendingRes = this.state.get('combat.pendingResistance');
+      let resistanceNote = '';
+      if (dmgType && pendingRes && pendingRes.targetId === pending.targetId) {
+        const imms = (pendingRes.immunities || []).map(s => String(s).toLowerCase());
+        const ress = (pendingRes.resistances || []).map(s => String(s).toLowerCase());
+        if (imms.includes(dmgType)) {
+          resistanceNote = ` [${dmgType} immunity — zero applied]`;
+          totalDamage = 0;
+        } else if (ress.includes(dmgType)) {
+          const halved = Math.floor(totalDamage / 2);
+          resistanceNote = ` [${dmgType} resistance — ${totalDamage} halved to ${halved}]`;
+          totalDamage = halved;
+        }
+      }
+      this.state.set('combat.pendingResistance', null);
 
       // Apply damage via combat-service directly (no combat:apply_damage event exists).
       const combatSvc = this.orchestrator && this.orchestrator.getService('combat');
       if (combatSvc && typeof combatSvc.modifyHp === 'function') {
-        combatSvc.modifyHp(pending.targetId, -Math.abs(totalDamage));
+        if (totalDamage > 0) combatSvc.modifyHp(pending.targetId, -Math.abs(totalDamage));
       } else {
         this.bus.dispatch('dm:whisper', {
           text: `Combat parser: combat service unavailable — apply ${totalDamage} damage to ${pending.targetId} manually.`,
@@ -1201,7 +1256,7 @@ class CommRouter {
       this.state.set('combat.pendingDamage', null);
 
       this.bus.dispatch('dm:whisper', {
-        text: `${totalDamage} damage applied to ${pending.targetId} (rolled ${roll} + ${damageBonus} ${pending.weapon || ''} modifier${rageBonus ? ' — includes +2 rage bonus' : ''}).`,
+        text: `${totalDamage} damage applied to ${pending.targetId} (rolled ${roll} + ${damageBonus} ${pending.weapon || ''} modifier${rageBonus ? ' — includes +2 rage bonus' : ''})${resistanceNote}.`,
         priority: 1, category: 'combat', source: 'comm-router'
       });
       return true;
@@ -1359,6 +1414,41 @@ class CommRouter {
 
   _charName(playerId) {
     return this.state.get(`players.${playerId}.character.name`) || playerId;
+  }
+
+  // Addition 7 — read an actor/creature config by slug for immunity/resistance
+  // checks. Cached per-instance to avoid re-reading every attack. Searches
+  // config/actors first, then config/creatures, mirroring combat-service.
+  _getActorConfig(actorSlug) {
+    if (!actorSlug) return null;
+    if (!this._actorConfigCache) this._actorConfigCache = new Map();
+    if (this._actorConfigCache.has(actorSlug)) return this._actorConfigCache.get(actorSlug);
+    let cfg = null;
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      for (const dir of ['actors', 'creatures']) {
+        const p = path.join(__dirname, '..', '..', 'config', dir, `${actorSlug}.json`);
+        if (fs.existsSync(p)) { cfg = JSON.parse(fs.readFileSync(p, 'utf8')); break; }
+      }
+    } catch (e) { /* keep null */ }
+    this._actorConfigCache.set(actorSlug, cfg);
+    return cfg;
+  }
+
+  // Addition 7 — resolve a weapon by name off a character for magical/silver
+  // flags. Checks inventory, weapons, equipment arrays (DDB uses different
+  // shapes across characters). Case-insensitive substring match.
+  _getWeaponData(character, weaponName) {
+    if (!character || !weaponName) return null;
+    const wn = String(weaponName).toLowerCase();
+    const pools = [character.inventory, character.weapons, character.equipment];
+    for (const pool of pools) {
+      if (!Array.isArray(pool)) continue;
+      const found = pool.find(e => e && e.name && e.name.toLowerCase().includes(wn));
+      if (found) return found;
+    }
+    return null;
   }
 }
 

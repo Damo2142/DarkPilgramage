@@ -10,13 +10,26 @@
   "armor_desc": "natural armor",
   "hit_points": 144,
   "hit_dice": "17d8+68",
-  "speed": { "walk": 30 },
-  "strength": 18, "dexterity": 18, "constitution": 18,
-  "intelligence": 17, "wisdom": 15, "charisma": 18,
-  "strength_save": 7, "dexterity_save": 9, "constitution_save": null,
-  "intelligence_save": null, "wisdom_save": 7, "charisma_save": 9,
+  "speed": {
+    "walk": 30
+  },
+  "strength": 18,
+  "dexterity": 18,
+  "constitution": 18,
+  "intelligence": 17,
+  "wisdom": 15,
+  "charisma": 18,
+  "strength_save": 7,
+  "dexterity_save": 9,
+  "constitution_save": null,
+  "intelligence_save": null,
+  "wisdom_save": 7,
+  "charisma_save": 9,
   "perception": 7,
-  "skills": { "perception": 7, "stealth": 9 },
+  "skills": {
+    "perception": 7,
+    "stealth": 9
+  },
   "damage_resistances": "necrotic; bludgeoning, piercing, and slashing from nonmagical attacks",
   "damage_immunities": "",
   "damage_vulnerabilities": "radiant",
@@ -25,24 +38,56 @@
   "languages": "Common, Infernal, Elvish",
   "challenge_rating": "13",
   "special_abilities": [
-    { "name": "Shapechanger", "desc": "Can use action to polymorph into a bat, wolf, or mist." },
-    { "name": "Regeneration", "desc": "Regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water." },
-    { "name": "Spider Climb", "desc": "Can climb difficult surfaces, including upside down on ceilings." },
-    { "name": "Sunlight Hypersensitivity", "desc": "Takes 20 radiant damage when it starts its turn in sunlight. Disadvantage on attack rolls and ability checks in sunlight." }
+    {
+      "name": "Shapechanger",
+      "desc": "Can use action to polymorph into a bat, wolf, or mist."
+    },
+    {
+      "name": "Regeneration",
+      "desc": "Regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water."
+    },
+    {
+      "name": "Spider Climb",
+      "desc": "Can climb difficult surfaces, including upside down on ceilings."
+    },
+    {
+      "name": "Sunlight Hypersensitivity",
+      "desc": "Takes 20 radiant damage when it starts its turn in sunlight. Disadvantage on attack rolls and ability checks in sunlight."
+    }
   ],
   "actions": [
-    { "name": "Multiattack (Vampire Form Only)", "desc": "Makes two attacks, only one of which can be a bite attack." },
-    { "name": "Unarmed Strike", "desc": "Melee Weapon Attack: +9 to hit, reach 5 ft., one creature. Hit: 8 (1d8 + 4) bludgeoning damage. Instead of dealing damage, can grapple the target (escape DC 18)." },
-    { "name": "Bite", "desc": "Melee Weapon Attack: +9 to hit, reach 5 ft., one willing creature, or a creature that is grappled, incapacitated, or restrained. Hit: 7 (1d6 + 4) piercing damage plus 10 (3d6) necrotic damage. The target's hit point maximum is reduced by an amount equal to the necrotic damage taken." },
-    { "name": "Charm", "desc": "Targets one humanoid within 30 ft. DC 17 Wisdom save or be charmed for 24 hours. While charmed, regards Vladislav as a trusted friend." }
+    {
+      "name": "Multiattack (Vampire Form Only)",
+      "desc": "Makes two attacks, only one of which can be a bite attack."
+    },
+    {
+      "name": "Unarmed Strike",
+      "desc": "Melee Weapon Attack: +9 to hit, reach 5 ft., one creature. Hit: 8 (1d8 + 4) bludgeoning damage. Instead of dealing damage, can grapple the target (escape DC 18)."
+    },
+    {
+      "name": "Bite",
+      "desc": "Melee Weapon Attack: +9 to hit, reach 5 ft., one willing creature, or a creature that is grappled, incapacitated, or restrained. Hit: 7 (1d6 + 4) piercing damage plus 10 (3d6) necrotic damage. The target's hit point maximum is reduced by an amount equal to the necrotic damage taken."
+    },
+    {
+      "name": "Charm",
+      "desc": "Targets one humanoid within 30 ft. DC 17 Wisdom save or be charmed for 24 hours. While charmed, regards Vladislav as a trusted friend."
+    }
   ],
   "legendary_actions": [
-    { "name": "Move", "desc": "Vladislav moves up to his speed without provoking opportunity attacks." },
-    { "name": "Unarmed Strike", "desc": "Vladislav makes one unarmed strike." },
-    { "name": "Bite (Costs 2 Actions)", "desc": "Vladislav makes one bite attack." }
+    {
+      "name": "Move",
+      "desc": "Vladislav moves up to his speed without provoking opportunity attacks."
+    },
+    {
+      "name": "Unarmed Strike",
+      "desc": "Vladislav makes one unarmed strike."
+    },
+    {
+      "name": "Bite (Costs 2 Actions)",
+      "desc": "Vladislav makes one bite attack."
+    }
   ],
   "legendary_desc": "Vladislav can take 3 legendary actions, choosing from the options below.",
-
   "arrivalReason": {
     "summary": "Vladislav felt the Necronomicon page enter the area three hours before session start. He recognized Pieter when he arrived — he has encountered Pieter's family line before. He knows Pieter is now dead. He has been sitting in the corner waiting to see who has the page and what they intend to do with it.",
     "whatHeKnows": [
@@ -92,5 +137,33 @@
     "fleeDialogue": "You have no idea what is coming for you. I do."
   },
   "needsParty": true,
-  "needsPartyReason": "Only capable travelers heading toward Houska he has found. Evaluation of their potential is ongoing — he needs them alive long enough to decide whether they are useful against what waits at Houska."
+  "needsPartyReason": "Only capable travelers heading toward Houska he has found. Evaluation of their potential is ongoing — he needs them alive long enough to decide whether they are useful against what waits at Houska.",
+  "immunities": {
+    "damage_types": [
+      "poison",
+      "necrotic"
+    ],
+    "conditions": [
+      "charmed",
+      "exhaustion",
+      "frightened",
+      "paralyzed",
+      "poisoned"
+    ],
+    "nonmagical_weapons": true,
+    "silver_bypasses": false
+  },
+  "resistances": {
+    "damage_types": [
+      "fire",
+      "radiant"
+    ]
+  },
+  "immunityNarrative": {
+    "nonmagical_weapons": [
+      "Your weapon strikes but Vladislav does not react the way a man should.",
+      "The blow connects with a sound that is wrong. He tilts his head slightly. That is all.",
+      "Something turns your strike. He looks at you as if mildly curious about the attempt."
+    ]
+  }
 }

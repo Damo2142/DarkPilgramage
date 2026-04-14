@@ -508,6 +508,21 @@ class CombatService {
 
     const idx = c.conditions.indexOf(condition);
     const wasAdded = idx < 0; // adding vs removing
+    // Addition 8 — condition immunity check on ADD path only. Removal is
+    // always allowed (the condition is somehow on the token — let the DM
+    // clear it). Applies to both actor configs and SRD creature configs via
+    // the shared _creatureConfigFor helper.
+    if (wasAdded) {
+      const cfg = this._creatureConfigFor(c.actorSlug);
+      const imms = (cfg && cfg.immunities && cfg.immunities.conditions) || [];
+      if (imms.map(s => String(s).toLowerCase()).includes(String(condition).toLowerCase())) {
+        this.bus.dispatch('dm:whisper', {
+          text: `${c.name} is immune to ${condition} — condition not applied.`,
+          priority: 2, category: 'combat'
+        });
+        return c;
+      }
+    }
     if (idx >= 0) {
       c.conditions.splice(idx, 1);
     } else {
@@ -1775,6 +1790,19 @@ Available targets: ${enemies.map(e => `"${e.name}" (id: check turnOrder)`).join(
     if (!c) return null;
 
     const wasNew = !c.conditions.includes(condition);
+    // Addition 8 — condition immunity check on add path (same logic as
+    // toggleCondition). If already present we never hit this branch.
+    if (wasNew) {
+      const cfg = this._creatureConfigFor(c.actorSlug);
+      const imms = (cfg && cfg.immunities && cfg.immunities.conditions) || [];
+      if (imms.map(s => String(s).toLowerCase()).includes(String(condition).toLowerCase())) {
+        this.bus.dispatch('dm:whisper', {
+          text: `${c.name} is immune to ${condition} — condition not applied.`,
+          priority: 2, category: 'combat'
+        });
+        return c;
+      }
+    }
     if (wasNew) c.conditions.push(condition);
     if (!c._conditionDurations) c._conditionDurations = {};
     c._conditionDurations[condition] = {

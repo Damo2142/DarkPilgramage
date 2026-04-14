@@ -10,11 +10,20 @@
   "armor_desc": "12 in wolf or hybrid form, natural armor",
   "hit_points": 58,
   "hit_dice": "9d8+18",
-  "speed": { "walk": 30 },
-  "strength": 15, "dexterity": 13, "constitution": 14,
-  "intelligence": 10, "wisdom": 11, "charisma": 10,
+  "speed": {
+    "walk": 30
+  },
+  "strength": 15,
+  "dexterity": 13,
+  "constitution": 14,
+  "intelligence": 10,
+  "wisdom": 11,
+  "charisma": 10,
   "perception": 4,
-  "skills": { "perception": 4, "stealth": 3 },
+  "skills": {
+    "perception": 4,
+    "stealth": 3
+  },
   "damage_resistances": "",
   "damage_immunities": "bludgeoning, piercing, and slashing from nonmagical attacks not made with silvered weapons",
   "damage_vulnerabilities": "",
@@ -44,16 +53,75 @@
     "Midnight approaches and he becomes desperate to reach the cellar"
   ],
   "special_abilities": [
-    { "name": "Shapechanger", "desc": "Can use its action to polymorph into a wolf-humanoid hybrid or into a wolf, or back into its true form (human). Its statistics, other than AC, are the same in each form. Any equipment it is wearing or carrying isn't transformed. Reverts to true form if it dies." },
-    { "name": "Keen Hearing and Smell", "desc": "The werewolf has advantage on Wisdom (Perception) checks that rely on hearing or smell." },
-    { "name": "Involuntary Transformation", "desc": "When the full moon is visible, Tomas must succeed on a DC 15 Wisdom saving throw or transform involuntarily. He loses control and attacks the nearest creature." }
+    {
+      "name": "Shapechanger",
+      "desc": "Can use its action to polymorph into a wolf-humanoid hybrid or into a wolf, or back into its true form (human). Its statistics, other than AC, are the same in each form. Any equipment it is wearing or carrying isn't transformed. Reverts to true form if it dies."
+    },
+    {
+      "name": "Keen Hearing and Smell",
+      "desc": "The werewolf has advantage on Wisdom (Perception) checks that rely on hearing or smell."
+    },
+    {
+      "name": "Involuntary Transformation",
+      "desc": "When the full moon is visible, Tomas must succeed on a DC 15 Wisdom saving throw or transform involuntarily. He loses control and attacks the nearest creature."
+    }
   ],
   "actions": [
-    { "name": "Shortsword (Humanoid Form Only)", "desc": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) piercing damage.", "attack_bonus": 4, "damage_dice": "1d6", "damage_bonus": 2 },
-    { "name": "Hunting Knife (Humanoid Form Only)", "desc": "Melee or Ranged Weapon Attack: +4 to hit, reach 5 ft. or range 20/60 ft., one target. Hit: 4 (1d4 + 2) piercing damage.", "attack_bonus": 4, "damage_dice": "1d4", "damage_bonus": 2 },
-    { "name": "Multiattack (Hybrid Form Only)", "desc": "Makes two attacks: one with its bite and one with its claws." },
-    { "name": "Bite (Wolf or Hybrid Form Only)", "desc": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) piercing damage. If the target is a humanoid, it must succeed on a DC 12 Constitution saving throw or be cursed with werewolf lycanthropy.", "attack_bonus": 4, "damage_dice": "1d8", "damage_bonus": 2 },
-    { "name": "Claws (Hybrid Form Only)", "desc": "Melee Weapon Attack: +4 to hit, reach 5 ft., one creature. Hit: 7 (2d4 + 2) slashing damage.", "attack_bonus": 4, "damage_dice": "2d4", "damage_bonus": 2 }
+    {
+      "name": "Shortsword (Humanoid Form Only)",
+      "desc": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) piercing damage.",
+      "attack_bonus": 4,
+      "damage_dice": "1d6",
+      "damage_bonus": 2
+    },
+    {
+      "name": "Hunting Knife (Humanoid Form Only)",
+      "desc": "Melee or Ranged Weapon Attack: +4 to hit, reach 5 ft. or range 20/60 ft., one target. Hit: 4 (1d4 + 2) piercing damage.",
+      "attack_bonus": 4,
+      "damage_dice": "1d4",
+      "damage_bonus": 2
+    },
+    {
+      "name": "Multiattack (Hybrid Form Only)",
+      "desc": "Makes two attacks: one with its bite and one with its claws."
+    },
+    {
+      "name": "Bite (Wolf or Hybrid Form Only)",
+      "desc": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) piercing damage. If the target is a humanoid, it must succeed on a DC 12 Constitution saving throw or be cursed with werewolf lycanthropy.",
+      "attack_bonus": 4,
+      "damage_dice": "1d8",
+      "damage_bonus": 2
+    },
+    {
+      "name": "Claws (Hybrid Form Only)",
+      "desc": "Melee Weapon Attack: +4 to hit, reach 5 ft., one creature. Hit: 7 (2d4 + 2) slashing damage.",
+      "attack_bonus": 4,
+      "damage_dice": "2d4",
+      "damage_bonus": 2
+    }
   ],
-  "description": "In human form: Tomas Birkov, a gaunt trapper who arrived just before the PCs. Quiet, nervous, avoids questions. In hybrid form: a massive wolf-man with amber eyes and slavering jaws. The transformation is violent and terrifying — bones crack, fur erupts, his screams become howls."
+  "description": "In human form: Tomas Birkov, a gaunt trapper who arrived just before the PCs. Quiet, nervous, avoids questions. In hybrid form: a massive wolf-man with amber eyes and slavering jaws. The transformation is violent and terrifying — bones crack, fur erupts, his screams become howls.",
+  "immunities": {
+    "damage_types": [
+      "poison"
+    ],
+    "conditions": [
+      "charmed",
+      "frightened",
+      "paralyzed",
+      "poisoned"
+    ],
+    "nonmagical_weapons": true,
+    "silver_bypasses": true
+  },
+  "resistances": {
+    "damage_types": []
+  },
+  "immunityNarrative": {
+    "nonmagical_weapons": [
+      "Your weapon connects but something is deeply wrong — it should have done more damage.",
+      "The blow lands solidly but Tomas barely registers it. His skin is harder than it should be.",
+      "Something about his flesh turns the strike. He does not bleed the way a man should bleed."
+    ]
+  }
 }

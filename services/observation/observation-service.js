@@ -70,6 +70,15 @@ class ObservationService {
       this._checkWoundTell(env.data);
     }, 'observation');
 
+    // Inline ambient observations from ambient-life and scene-population.
+    // Payload variants:
+    //   reference: { id }                    — look up registered observation
+    //   inline:    { id, dc, text, ... }     — fire as Tier 2 directly
+    // Optional filters: dcModifier, targetPlayer, nearCellarDoor, upstairsOnly
+    this.bus.subscribe('observation:trigger', (env) => {
+      this._onObservationTrigger(env.data || {});
+    }, 'observation');
+
     this._setupRoutes();
     console.log(`[Observation] ${this.observations.size} event observation(s), ${this.monsterTells.size} monster tell set(s) loaded`);
   }
@@ -218,10 +227,15 @@ class ObservationService {
    */
   _fireTier2(obs) {
     const dc = obs.dc || 10;
-    const qualifying = this._getQualifyingPlayers(dc);
+    let qualifying = this._getQualifyingPlayers(dc);
+
+    // targetPlayer filter — restrict to a single player (used by spawn-hunt etc.)
+    if (obs.targetPlayer) {
+      qualifying = qualifying.filter(q => q.playerId === obs.targetPlayer);
+    }
 
     if (qualifying.length === 0) {
-      console.log(`[Observation] Tier 2 DC${dc}: no players qualify`);
+      console.log(`[Observation] Tier 2 DC${dc}: no players qualify${obs.targetPlayer ? ' (target=' + obs.targetPlayer + ')' : ''}`);
       return;
     }
 
@@ -317,6 +331,62 @@ class ObservationService {
     this._fireObservation(obs, `manual-${Date.now()}`);
   }
 
+  /**
+   * Handle an `observation:trigger` event from ambient-life / scene-population.
+   *
+   * Reference form: { id }                    — look up a config-registered observation
+   * Inline form:    { id, dc, text, ... }     — fire as Tier 2 directly
+   *
+   * Inline filters honored:
+   *   dcModifier      — flat numeric adjustment to the base DC
+   *   targetPlayer    — restrict to a single playerId
+   *
+   * Inline filters logged but NOT yet position-aware (TODO: integrate with map zones):
+   *   nearCellarDoor  — should restrict to players adjacent to cellar door
+   *   upstairsOnly    — should restrict to players on the upper floor
+   */
+  _onObservationTrigger(d) {
+    if (!d || !d.id) return;
+
+    // Reference path: { id } only — look up registered observation
+    if (!d.text && this.observations.has(d.id)) {
+      const eventObs = this.observations.get(d.id);
+      for (const obs of eventObs) this._fireObservation(obs, d.id);
+      return;
+    }
+
+    // Inline path requires text
+    if (!d.text) {
+      console.log(`[Observation] observation:trigger id=${d.id} — no text and no registered observation`);
+      return;
+    }
+
+    // Dedup by id (ambient-life ids are time-keyed so each tick is unique)
+    if (this.firedObservations.has(d.id)) return;
+    this.firedObservations.add(d.id);
+
+    const baseDc = (d.dc || 10) + (d.dcModifier || 0);
+    const obs = {
+      id: d.id,
+      tier: d.tier || 2,
+      dc: baseDc,
+      text: d.text,
+      suggest: d.suggest,
+      linkedSecret: d.linkedSecret,
+      targetPlayer: d.targetPlayer
+    };
+
+    if (d.nearCellarDoor || d.upstairsOnly) {
+      console.log(`[Observation] position filter requested but not yet enforced: ${d.nearCellarDoor ? 'nearCellarDoor ' : ''}${d.upstairsOnly ? 'upstairsOnly' : ''} (id=${d.id})`);
+    }
+
+    switch (obs.tier) {
+      case 1: this._fireTier1(obs); break;
+      case 3: this._fireTier3(obs); break;
+      default: this._fireTier2(obs);
+    }
+  }
+
   // ═══════════════════════════════════════════════════════════════
   // API ROUTES
   // ═══════════════════════════════════════════════════════════════
@@ -378,6 +448,15 @@ class ObservationService {
         waypoint: 'debug'
       });
       res.json({ ok: true, playerId });
+    });
+
+    // POST /api/debug/observation-trigger — dispatch observation:trigger for testing
+    // body: { id, dc, text, dcModifier?, targetPlayer?, tier? }
+    app.post('/api/debug/observation-trigger', (req, res) => {
+      const d = req.body || {};
+      if (!d.id) return res.status(400).json({ error: 'id required' });
+      this.bus.dispatch('observation:trigger', d);
+      res.json({ ok: true, dispatched: d });
     });
 
     // POST /api/debug/npc-speak — dispatch literal NPC dialogue for testing

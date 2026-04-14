@@ -516,8 +516,7 @@
       "visible": true,
       "hp": {
         "current": 22,
-        "max": 22,
-        "temp": 0
+        "max": 22
       },
       "ac": 15,
       "nameRevealedToPlayers": false,
@@ -526,6 +525,34 @@
         "dim": 560
       },
       "facing": -2.356194490192345
+    },
+    "nick": {
+      "name": "Chazz \"Merry Tunes\" Mortimer",
+      "type": "pc",
+      "x": 2030,
+      "y": 1470,
+      "image": "nick.webp",
+      "visible": true,
+      "hp": {
+        "current": 17,
+        "max": 17
+      },
+      "ac": 15,
+      "nameRevealedToPlayers": false
+    },
+    "jen": {
+      "name": "Marfire 2.0",
+      "type": "pc",
+      "x": 1750,
+      "y": 1750,
+      "image": "jen.webp",
+      "visible": true,
+      "hp": {
+        "current": 26,
+        "max": 26
+      },
+      "ac": 12,
+      "nameRevealedToPlayers": false
     },
     "marta": {
       "actorSlug": "marta",
@@ -677,6 +704,12 @@
     }
   ],
   "playerSpawns": {
+    "spread": [
+      { "x": 4550, "y": 2590 },
+      { "x": 4690, "y": 2590 },
+      { "x": 4550, "y": 2730 },
+      { "x": 4690, "y": 2730 }
+    ],
     "default": {
       "x": 4736,
       "y": 2688

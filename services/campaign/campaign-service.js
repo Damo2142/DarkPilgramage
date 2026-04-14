@@ -1253,9 +1253,7 @@ Keep each event to 1-2 sentences. Format as JSON array: [{"title": "...", "descr
         auto: true,
         source: 'campaign-service'
       });
-      this.bus.dispatch('audio:enable', { enabled: true });
       this.bus.dispatch('voice:enable', { enabled: true });
-      this.bus.dispatch('combat:enable', { enabled: true });
       this.bus.dispatch('session:started', { mode: 'live-session' });
       this.addWorldHistoryEntry({
         type: 'session-start',
@@ -1287,9 +1285,7 @@ Keep each event to 1-2 sentences. Format as JSON array: [{"title": "...", "descr
         auto: true,
         source: 'campaign-service'
       });
-      this.bus.dispatch('audio:enable', { enabled: false });
       this.bus.dispatch('voice:enable', { enabled: false });
-      this.bus.dispatch('combat:enable', { enabled: false });
       this.bus.dispatch('session:ended', { mode: 'between-session' });
       this.addWorldHistoryEntry({
         type: 'session-end',

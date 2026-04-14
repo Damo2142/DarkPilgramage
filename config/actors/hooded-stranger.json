@@ -80,5 +80,17 @@
     },
     "trigger": "sustained-eye-contact-or-direct-conversation",
     "note": "He does not intrude without reason. Every scan is deliberate. He takes only what is useful."
-  }
+  },
+  "interventionBehavior": {
+    "willInterveneTo": "Prevent party death when party is losing fight they did not start",
+    "interventionTrigger": "Party member reduced to 0 HP by Tomas in werewolf form",
+    "interventionMethod": "Subdues Tomas via vampire lord dominance — no combat required",
+    "interventionDialogue": "That is enough.",
+    "postInterventionDialogue": "You are alive because I am interested in whether you stay that way. Do not waste my interest.",
+    "ifAttackedByParty": "Demonstrates power gap without killing. Pins most aggressive attacker. Says: 'I could have fed on all of you before you woke this morning. I did not. Consider why.' Returns to table. Does not flee.",
+    "fleeCondition": "Below 50% HP only if party has demonstrated magical capability that threatens him",
+    "fleeDialogue": "You have no idea what is coming for you. I do."
+  },
+  "needsParty": true,
+  "needsPartyReason": "Only capable travelers heading toward Houska he has found. Evaluation of their potential is ongoing — he needs them alive long enough to decide whether they are useful against what waits at Houska."
 }

@@ -682,6 +682,7 @@
     <button class="tab-btn active" data-tab="map" onclick="switchTab('map')">Map</button>
     <button class="tab-btn" data-tab="chat" onclick="switchTab('chat')">Chat</button>
     <button class="tab-btn" data-tab="condition" onclick="switchTab('condition')">Condition</button>
+    <button class="tab-btn" data-tab="abilities" onclick="switchTab('abilities')">Abilities</button>
     <button class="tab-btn" data-tab="arms" onclick="switchTab('arms')">Arms &amp; Armor</button>
     <button class="tab-btn" data-tab="magic" onclick="switchTab('magic')">Gifts &amp; Magic</button>
     <button class="tab-btn" data-tab="soul" onclick="switchTab('soul')">Soul</button>
@@ -721,6 +722,46 @@
     <div id="grimoire-condition"></div>
 
     </div><!-- end gtab-condition -->
+
+    <!-- TAB: ABILITIES — conditional per character class -->
+    <div class="gtab" id="gtab-abilities">
+      <div class="gsection-label" style="display:none;">Abilities</div>
+      <div id="grimoire-abilities">
+        <div id="abilities-empty" style="color:#6a5a48;font-style:italic;padding:24px;text-align:center;">No class abilities available for this character yet.</div>
+        <div id="ability-rage" class="panel" style="display:none;">
+          <div class="st">Rage — Bear Totem</div>
+          <button id="btn-rage" class="add-btn" style="background:#8b0000;color:#fff;width:100%;padding:14px;font-size:16px;font-weight:bold;" onclick="activateRage()">⚡ ENTER RAGE</button>
+          <button id="btn-end-rage" class="add-btn" style="background:#5a2010;color:#fff;width:100%;padding:14px;font-size:16px;font-weight:bold;display:none;" onclick="endRage()">END RAGE</button>
+          <div style="text-align:center;margin-top:10px;color:#c8a820;font-size:14px;">Uses Remaining: <span id="rage-uses">3 / 3</span></div>
+          <div style="font-size:11px;color:#6a5a48;margin-top:8px;line-height:1.5;">Bear Totem: resistance to all damage except psychic. +2 melee damage. Advantage on STR checks and saves.</div>
+        </div>
+        <div id="ability-bardic" class="panel" style="display:none;">
+          <div class="st">Bardic Inspiration</div>
+          <select id="bardic-target" style="width:100%;margin-bottom:8px;padding:8px;background:#1a1412;color:#c8a820;border:1px solid #4a3a28;"><option value="">Select ally to inspire...</option></select>
+          <button class="add-btn" style="background:#c8a820;color:#1a1412;width:100%;padding:14px;font-size:15px;font-weight:bold;" onclick="giveBardicInspiration(document.getElementById('bardic-target').value)">✨ GRANT INSPIRATION (1d6)</button>
+          <div style="text-align:center;margin-top:10px;color:#c8a820;font-size:14px;">Uses Remaining: <span id="bardic-uses">4 / 4</span></div>
+          <div style="font-size:11px;color:#6a5a48;margin-top:8px;line-height:1.5;">Target gains a d6 they can add to one ability check, attack roll, or saving throw within 10 minutes.</div>
+        </div>
+        <div id="ability-fighter" class="panel" style="display:none;">
+          <div class="st">Second Wind</div>
+          <button class="add-btn" style="background:#c8a820;color:#1a1412;width:100%;padding:12px;font-size:14px;font-weight:bold;" onclick="secondWind()">🛡 SECOND WIND</button>
+          <div style="text-align:center;margin-top:6px;color:#c8a820;font-size:13px;">Uses Remaining: <span id="second-wind-uses">1 / 1</span></div>
+          <div style="font-size:11px;color:#6a5a48;margin-top:6px;line-height:1.5;">Heal 1d10+3 HP as a bonus action.</div>
+          <div class="st" style="margin-top:18px;">Action Surge</div>
+          <button class="add-btn" style="background:#8b0000;color:#fff;width:100%;padding:12px;font-size:14px;font-weight:bold;" onclick="actionSurge()">⚔ ACTION SURGE</button>
+          <div style="text-align:center;margin-top:6px;color:#c8a820;font-size:13px;">Uses Remaining: <span id="action-surge-uses">1 / 1</span></div>
+          <div style="font-size:11px;color:#6a5a48;margin-top:6px;line-height:1.5;">Gain an additional action this turn. Useable once per short rest.</div>
+        </div>
+        <div id="ability-rest-controls" class="panel" style="margin-top:16px;">
+          <div class="st">Rest</div>
+          <div style="display:flex;gap:6px;">
+            <button class="add-btn" style="flex:1;" onclick="takeRest('short')">☕ Short Rest</button>
+            <button class="add-btn" style="flex:1;" onclick="takeRest('long')">🛏 Long Rest</button>
+          </div>
+          <div style="font-size:11px;color:#6a5a48;margin-top:6px;">Short rest restores Second Wind, Action Surge, and warlock spell slots. Long rest restores all abilities, HP, and spell slots.</div>
+        </div>
+      </div>
+    </div><!-- end gtab-abilities -->
 
     <!-- TAB: ARMS & ARMOR -->
     <div class="gtab" id="gtab-arms">
@@ -1398,6 +1439,13 @@ function handle(m){
       showToast('Document', 'New: ' + m.title + (m.readable === false ? ' (unknown language)' : ''), 5000);
       break;
     case 'inspiration:gain': showInspiration(m); break;
+    case 'ability:bardic_inspiration': showBardicInspirationFlash(m.die || 'd6', m.from); break;
+    case 'character:abilities_update':
+      if (m.playerId === PID && m.abilities) {
+        _abilityState = _abilityState || {}; _abilityState[PID] = m.abilities;
+        try { renderAbilities(); } catch (e) {}
+      }
+      break;
     case 'player:list': updatePlayerList(m.players||[]); break;
     case 'wounds:updated':
       if (m.data && m.data.playerId === PID) WoundPanel.update(m.data.wounds);
@@ -1482,7 +1530,7 @@ function loadChar(c){
   if(c.spells&&c.spells.length){spells=c.spells.map(s=>({...s, level:s.level||0, concentration:!!s.concentration, ritual:!!s.ritual, school:s.school||'', description:s.description||''}));}
   // Populate features from DDB sync data (format: {name,source,description})
   if(c.features&&c.features.length){feats=c.features.map(f=>({name:f.name,src:f.source||'',desc:f.description||''}));}
-  renderHp(); renderAbil(); renderSaves(); renderSkills(); renderSpells(); renderInv(); renderFeats(); renderConds(); renderBackground();
+  renderHp(); renderAbil(); renderSaves(); renderSkills(); renderSpells(); renderInv(); renderFeats(); renderConds(); renderBackground(); renderAbilities();
   // Rebuild weapon attacks and AC from equipped items, then render
   rebuildWeaponAtks();
   recalcEquipAC();
@@ -1518,6 +1566,183 @@ function renderSkills(){
     const label=cap(sk.replace(/-/g,' '));
     return '<div class="skr"><div class="pdot '+dc+'" onclick="cycleSk(\''+sk+'\')"></div><span class="skn">'+label+' <span style="color:var(--text-dim);font-size:10px;">'+abl+'</span></span><span class="skmod" onclick="rollCheck(\''+label+'\','+mod+',\'skill\')" style="cursor:pointer;" title="Roll '+label+'">'+fmt(mod)+'</span></div>';
   }).join('');
+}
+
+// ── CLASS ABILITIES (Addition 2) ───────────────────────────────────
+// Abilities use-counts live on state.players[PID].abilities and are
+// returned by character-service when renderAbilities is called.
+var _abilityState = null;
+
+function renderAbilities() {
+  var cls = (window.char && char.class) || '';
+  var empty = document.getElementById('abilities-empty');
+  var rage = document.getElementById('ability-rage');
+  var bardic = document.getElementById('ability-bardic');
+  var fighter = document.getElementById('ability-fighter');
+  if (rage) rage.style.display = 'none';
+  if (bardic) bardic.style.display = 'none';
+  if (fighter) fighter.style.display = 'none';
+  var any = false;
+  var abil = (_abilityState && _abilityState[PID]) || {};
+  if (/Barbarian/i.test(cls)) {
+    if (rage) rage.style.display = 'block';
+    any = true;
+    var rUses = typeof abil.rage_uses === 'number' ? abil.rage_uses : 3;
+    updateAbilityUses('rage', rUses, 3);
+    var active = !!abil.rage_active;
+    var btnA = document.getElementById('btn-rage');
+    var btnE = document.getElementById('btn-end-rage');
+    if (btnA) btnA.style.display = active ? 'none' : 'block';
+    if (btnE) btnE.style.display = active ? 'block' : 'none';
+    if (active) showRageBanner(); else hideRageBanner();
+  }
+  if (/Bard/i.test(cls)) {
+    if (bardic) bardic.style.display = 'block';
+    any = true;
+    var bUses = typeof abil.bardic_inspiration_uses === 'number' ? abil.bardic_inspiration_uses : 4;
+    updateAbilityUses('bardic_inspiration', bUses, 4);
+  }
+  if (/Fighter/i.test(cls)) {
+    if (fighter) fighter.style.display = 'block';
+    any = true;
+    updateAbilityUses('second_wind', typeof abil.second_wind_uses === 'number' ? abil.second_wind_uses : 1, 1);
+    updateAbilityUses('action_surge', typeof abil.action_surge_uses === 'number' ? abil.action_surge_uses : 1, 1);
+  }
+  if (empty) empty.style.display = any ? 'none' : 'block';
+}
+
+function updateAbilityUses(ability, remaining, max) {
+  var m = { rage: 'rage-uses', bardic_inspiration: 'bardic-uses', second_wind: 'second-wind-uses', action_surge: 'action-surge-uses' };
+  var el = document.getElementById(m[ability]);
+  if (el) el.textContent = remaining + ' / ' + max;
+}
+
+function activateRage() {
+  fetch('/api/characters/ability', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ playerId: PID, ability: 'rage', action: 'activate' })
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      _abilityState = _abilityState || {}; _abilityState[PID] = _abilityState[PID] || {};
+      _abilityState[PID].rage_active = true; _abilityState[PID].rage_uses = d.remaining;
+      document.getElementById('btn-rage').style.display = 'none';
+      document.getElementById('btn-end-rage').style.display = 'block';
+      updateAbilityUses('rage', d.remaining, 3);
+      showRageBanner();
+    } else { showToast('System', d.error || 'Rage unavailable', 3000); }
+  }).catch(e => showToast('System', 'Rage failed: ' + e.message, 3000));
+}
+
+function endRage() {
+  fetch('/api/characters/ability', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ playerId: PID, ability: 'rage', action: 'deactivate' })
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      _abilityState = _abilityState || {}; _abilityState[PID] = _abilityState[PID] || {};
+      _abilityState[PID].rage_active = false;
+      document.getElementById('btn-rage').style.display = 'block';
+      document.getElementById('btn-end-rage').style.display = 'none';
+      hideRageBanner();
+    }
+  }).catch(e => showToast('System', 'End rage failed: ' + e.message, 3000));
+}
+
+function showRageBanner() {
+  var b = document.getElementById('rage-banner');
+  if (!b) {
+    b = document.createElement('div');
+    b.id = 'rage-banner';
+    b.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#8b0000;color:#fff;text-align:center;padding:8px;font-size:14px;font-weight:bold;z-index:8000;box-shadow:0 2px 10px rgba(0,0,0,0.7);';
+    b.textContent = '⚡ RAGING — +2 melee damage · Resistance to physical damage';
+    document.body.prepend(b);
+  }
+  b.style.display = 'block';
+}
+
+function hideRageBanner() {
+  var b = document.getElementById('rage-banner');
+  if (b) b.style.display = 'none';
+}
+
+function giveBardicInspiration(target) {
+  if (!target) { showToast('System', 'Pick an ally first', 2500); return; }
+  fetch('/api/characters/ability', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ playerId: PID, ability: 'bardic_inspiration', action: 'use', target: target })
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      updateAbilityUses('bardic_inspiration', d.remaining, 4);
+      _abilityState = _abilityState || {}; _abilityState[PID] = _abilityState[PID] || {};
+      _abilityState[PID].bardic_inspiration_uses = d.remaining;
+      showToast('Bardic Inspiration', 'Granted to ' + target, 3000);
+    } else { showToast('System', d.error || 'Bardic unavailable', 3000); }
+  }).catch(e => showToast('System', 'Bardic failed: ' + e.message, 3000));
+}
+
+function secondWind() {
+  fetch('/api/characters/ability', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ playerId: PID, ability: 'second_wind', action: 'use' })
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      updateAbilityUses('second_wind', d.remaining, 1);
+      _abilityState = _abilityState || {}; _abilityState[PID] = _abilityState[PID] || {};
+      _abilityState[PID].second_wind_uses = d.remaining;
+      showToast('Second Wind', 'Healed ' + (d.healed || '?') + ' HP', 4000);
+    } else { showToast('System', d.error || 'Second wind unavailable', 3000); }
+  }).catch(e => showToast('System', 'Second wind failed: ' + e.message, 3000));
+}
+
+function actionSurge() {
+  fetch('/api/characters/ability', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ playerId: PID, ability: 'action_surge', action: 'use' })
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      updateAbilityUses('action_surge', d.remaining, 1);
+      _abilityState = _abilityState || {}; _abilityState[PID] = _abilityState[PID] || {};
+      _abilityState[PID].action_surge_uses = d.remaining;
+      showActionSurgeBanner();
+    } else { showToast('System', d.error || 'Action surge unavailable', 3000); }
+  }).catch(e => showToast('System', 'Action surge failed: ' + e.message, 3000));
+}
+
+function showActionSurgeBanner() {
+  var b = document.getElementById('action-surge-banner');
+  if (!b) {
+    b = document.createElement('div');
+    b.id = 'action-surge-banner';
+    b.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c8a820;color:#1a1412;text-align:center;padding:8px;font-size:14px;font-weight:bold;z-index:8001;';
+    b.textContent = '⚔ ACTION SURGE — Extra action this turn';
+    document.body.prepend(b);
+  }
+  b.style.display = 'block';
+  setTimeout(function() { if (b) b.style.display = 'none'; }, 12000);
+}
+
+function takeRest(type) {
+  if (type !== 'short' && type !== 'long') return;
+  var label = type === 'long' ? 'LONG' : 'SHORT';
+  if (!confirm('Take a ' + label + ' rest? This restores abilities' + (type === 'long' ? ' and HP' : '') + '.')) return;
+  fetch('/api/characters/' + PID + '/rest', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ type: type })
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      _abilityState = _abilityState || {}; _abilityState[PID] = d.abilities || {};
+      renderAbilities();
+      showToast('Rest', label + ' rest complete', 4000);
+    } else { showToast('System', d.error || 'Rest failed', 3000); }
+  }).catch(e => showToast('System', 'Rest failed: ' + e.message, 3000));
+}
+
+function showBardicInspirationFlash(die, fromName) {
+  var flash = document.createElement('div');
+  flash.style.cssText = 'position:fixed;top:30%;left:50%;transform:translateX(-50%);background:rgba(26,20,18,0.95);color:#c8a820;border:2px solid #c8a820;padding:28px 40px;z-index:10000;text-align:center;font-family:Georgia,serif;box-shadow:0 0 30px rgba(200,168,32,0.6);';
+  flash.innerHTML = '<div style="font-size:14px;color:#888;">FROM ' + (fromName || 'ALLY').toUpperCase() + '</div><div style="font-size:22px;font-weight:bold;margin:8px 0;">✨ Bardic Inspiration</div><div style="font-size:16px;">1' + (die || 'd6') + ' — use within 10 minutes</div>';
+  document.body.appendChild(flash);
+  setTimeout(function() { if (flash) flash.remove(); }, 10000);
 }
 
 // ── HP ──────────────────────────────────────────────────────────────
@@ -2678,15 +2903,32 @@ function saveNotes(){try{localStorage.setItem('dpnotes_'+PID,$('notes-area').val
 
 function updatePlayerList(players){
   var sel=$('chat-ch-player');
-  sel.innerHTML='<option value="">Whisper to...</option>';
-  players.forEach(function(p){
-    if(p.id!==PID){
-      var opt=document.createElement('option');
-      opt.value=p.id;
-      opt.textContent=p.name||p.id;
-      sel.appendChild(opt);
-    }
-  });
+  if (sel) {
+    sel.innerHTML='<option value="">Whisper to...</option>';
+    players.forEach(function(p){
+      if(p.id!==PID){
+        var opt=document.createElement('option');
+        opt.value=p.id;
+        opt.textContent=p.name||p.id;
+        sel.appendChild(opt);
+      }
+    });
+  }
+  // Bardic target dropdown (Addition 2)
+  var bt = document.getElementById('bardic-target');
+  if (bt) {
+    var current = bt.value;
+    bt.innerHTML = '<option value="">Select ally to inspire...</option>';
+    players.forEach(function(p){
+      if (p.id !== PID) {
+        var o = document.createElement('option');
+        o.value = p.id;
+        o.textContent = p.name || p.id;
+        bt.appendChild(o);
+      }
+    });
+    if (current) bt.value = current;
+  }
 }
 
 var chatChannel='party';

@@ -70,9 +70,27 @@ class CharacterService {
       if (playerId) this._computeWounds(playerId, current, max);
     }, 'characters');
 
-    // Wound manual override route
-    const app = this.orchestrator.getService('dashboard')?.app;
-    if (app) {
+    // Wound manual override route + all HTTP routes below. Defer route
+    // registration until system:ready so dashboard-service (which mounts
+    // express on port 3200) has created its app object. character-service
+    // is registered BEFORE dashboard-service in server.js, so at this
+    // point orchestrator.getService('dashboard').app is null and every
+    // route registration would silently no-op — which is exactly what
+    // used to happen (pre-existing bug caught during Addition 2).
+    const registerRoutes = () => {
+      const app = this.orchestrator.getService('dashboard')?.app;
+      if (!app) return false;
+      this._registerHttpRoutes(app);
+      console.log('[Characters] HTTP routes registered (wounds, purse, absent, languages, abilities, rest)');
+      return true;
+    };
+    if (!registerRoutes()) {
+      this.bus.subscribe('system:ready', registerRoutes, 'characters');
+    }
+  }
+
+  _registerHttpRoutes(app) {
+    {
       app.put('/api/wounds/:playerId/:limb', (req, res) => {
         const { playerId, limb } = req.params;
         const { state: woundState } = req.body;
@@ -211,6 +229,189 @@ class CharacterService {
           this.state.set('players.' + playerId + '.character.languageBackstory.' + lang, backstory);
         }
         res.json({ ok: true });
+      });
+
+      // ── Addition 2: Class abilities ──────────────────────────────
+      // State lives at players.<pid>.abilities and holds use-counts plus
+      // active flags (rage_active, action_surge_active). Defaults are
+      // materialized lazily on first use.
+      const DEFAULT_ABILITY_MAX = {
+        rage: 3,
+        bardic_inspiration: 4,
+        second_wind: 1,
+        action_surge: 1
+      };
+      const _getAbilities = (playerId) => {
+        return this.state.get('players.' + playerId + '.abilities') || {};
+      };
+      const _setAbility = (playerId, key, value) => {
+        this.state.set('players.' + playerId + '.abilities.' + key, value);
+      };
+      const _broadcastAbilityState = (playerId) => {
+        const abilities = _getAbilities(playerId);
+        this.bus.dispatch('character:abilities_update', { playerId, abilities });
+      };
+
+      app.get('/api/characters/:playerId/abilities', (req, res) => {
+        res.json({ ok: true, abilities: _getAbilities(req.params.playerId) });
+      });
+
+      app.post('/api/characters/ability', (req, res) => {
+        const { playerId, ability, action, target } = req.body || {};
+        if (!playerId || !ability) return res.status(400).json({ error: 'playerId and ability required' });
+        const playerState = this.state.get('players.' + playerId);
+        if (!playerState) return res.status(404).json({ error: 'player not found' });
+        const abilities = _getAbilities(playerId);
+        const charName = playerState.character && playerState.character.name || playerId;
+
+        switch (ability) {
+          case 'rage': {
+            if (action === 'activate') {
+              const uses = abilities.rage_uses !== undefined ? abilities.rage_uses : DEFAULT_ABILITY_MAX.rage;
+              if (uses <= 0) return res.status(400).json({ error: 'No rage uses remaining — long rest required.' });
+              _setAbility(playerId, 'rage_active', true);
+              _setAbility(playerId, 'rage_uses', uses - 1);
+              this.bus.dispatch('character:ability_used', { playerId, ability: 'rage', action: 'activate' });
+              this.bus.dispatch('dm:whisper', {
+                text: `${charName} rages. Bear Totem — resistance to ALL damage except psychic. +2 melee damage. Advantage on STR checks and saves.`,
+                priority: 1, category: 'combat'
+              });
+              _broadcastAbilityState(playerId);
+              return res.json({ ok: true, remaining: uses - 1, active: true });
+            }
+            if (action === 'deactivate') {
+              _setAbility(playerId, 'rage_active', false);
+              this.bus.dispatch('character:ability_used', { playerId, ability: 'rage', action: 'deactivate' });
+              this.bus.dispatch('dm:whisper', {
+                text: `${charName} rage ended.`, priority: 2, category: 'combat'
+              });
+              _broadcastAbilityState(playerId);
+              return res.json({ ok: true, active: false });
+            }
+            return res.status(400).json({ error: 'rage action must be activate or deactivate' });
+          }
+          case 'bardic_inspiration': {
+            const uses = abilities.bardic_inspiration_uses !== undefined ? abilities.bardic_inspiration_uses : DEFAULT_ABILITY_MAX.bardic_inspiration;
+            if (uses <= 0) return res.status(400).json({ error: 'No bardic inspiration uses remaining — short or long rest required.' });
+            _setAbility(playerId, 'bardic_inspiration_uses', uses - 1);
+            if (target) {
+              this.bus.dispatch('player:notification', {
+                playerId: target, type: 'ability:bardic_inspiration', die: 'd6', from: charName
+              });
+            }
+            this.bus.dispatch('dm:whisper', {
+              text: `${charName} uses Bardic Inspiration on ${target || 'unknown'} — 1d6 granted for 10 minutes.`,
+              priority: 2, category: 'story'
+            });
+            _broadcastAbilityState(playerId);
+            return res.json({ ok: true, remaining: uses - 1 });
+          }
+          case 'second_wind': {
+            const uses = abilities.second_wind_uses !== undefined ? abilities.second_wind_uses : DEFAULT_ABILITY_MAX.second_wind;
+            if (uses <= 0) return res.status(400).json({ error: 'No second wind uses remaining — short or long rest required.' });
+            const fighterLevel = (playerState.character && playerState.character.level) || 3;
+            const roll = Math.floor(Math.random() * 10) + 1 + Math.max(1, fighterLevel);
+            const hp = (playerState.character && playerState.character.hp) || { current: 0, max: 25 };
+            const hpMax = typeof hp.max === 'number' ? hp.max : 25;
+            const hpCur = typeof hp.current === 'number' ? hp.current : 0;
+            const newHp = Math.min(hpCur + roll, hpMax);
+            this.state.set('players.' + playerId + '.character.hp.current', newHp);
+            _setAbility(playerId, 'second_wind_uses', uses - 1);
+            this.bus.dispatch('hp:update', { playerId, current: newHp, max: hpMax, source: 'second-wind' });
+            this.bus.dispatch('dm:whisper', {
+              text: `${charName} uses Second Wind — healed ${roll} HP (1d10+${Math.max(1, fighterLevel)}). Now ${newHp}/${hpMax}.`,
+              priority: 2, category: 'combat'
+            });
+            _broadcastAbilityState(playerId);
+            return res.json({ ok: true, remaining: uses - 1, healed: roll });
+          }
+          case 'action_surge': {
+            const uses = abilities.action_surge_uses !== undefined ? abilities.action_surge_uses : DEFAULT_ABILITY_MAX.action_surge;
+            if (uses <= 0) return res.status(400).json({ error: 'No action surge uses remaining — short or long rest required.' });
+            _setAbility(playerId, 'action_surge_active', true);
+            _setAbility(playerId, 'action_surge_uses', uses - 1);
+            this.bus.dispatch('dm:whisper', {
+              text: `${charName} uses Action Surge — extra action this turn.`,
+              priority: 1, category: 'combat'
+            });
+            _broadcastAbilityState(playerId);
+            return res.json({ ok: true, remaining: uses - 1 });
+          }
+          default:
+            return res.status(400).json({ error: 'Unknown ability: ' + ability });
+        }
+      });
+
+      // Short / long rest — reset ability counts + spell slots.
+      app.post('/api/characters/:playerId/rest', (req, res) => {
+        const playerId = req.params.playerId;
+        const type = (req.body && req.body.type) || 'short';
+        if (type !== 'short' && type !== 'long') {
+          return res.status(400).json({ error: 'type must be short or long' });
+        }
+        const playerState = this.state.get('players.' + playerId);
+        if (!playerState) return res.status(404).json({ error: 'player not found' });
+        const charName = playerState.character && playerState.character.name || playerId;
+        const char = playerState.character || {};
+        const isWarlock = /Warlock/i.test(char.class || '');
+
+        if (type === 'long') {
+          // Reset every ability to default max
+          _setAbility(playerId, 'rage_uses', DEFAULT_ABILITY_MAX.rage);
+          _setAbility(playerId, 'rage_active', false);
+          _setAbility(playerId, 'bardic_inspiration_uses', DEFAULT_ABILITY_MAX.bardic_inspiration);
+          _setAbility(playerId, 'second_wind_uses', DEFAULT_ABILITY_MAX.second_wind);
+          _setAbility(playerId, 'action_surge_uses', DEFAULT_ABILITY_MAX.action_surge);
+          _setAbility(playerId, 'action_surge_active', false);
+          // HP to max
+          if (char.hp && typeof char.hp.max === 'number') {
+            this.state.set('players.' + playerId + '.character.hp.current', char.hp.max);
+            this.state.set('players.' + playerId + '.character.hp.temp', 0);
+            this.bus.dispatch('hp:update', { playerId, current: char.hp.max, max: char.hp.max, source: 'long-rest' });
+          }
+          // Spell slots to max on all levels
+          if (char.spellSlots && typeof char.spellSlots === 'object') {
+            const updated = {};
+            for (const [k, v] of Object.entries(char.spellSlots)) {
+              if (v && typeof v === 'object' && typeof v.total === 'number') {
+                updated[k] = { total: v.total, used: 0, remaining: v.total };
+              } else {
+                updated[k] = v;
+              }
+            }
+            this.state.set('players.' + playerId + '.character.spellSlots', updated);
+          }
+          this.bus.dispatch('session:long_rest', { playerId });
+          this.bus.dispatch('dm:whisper', {
+            text: `${charName} takes a long rest. HP, spell slots, and all class abilities restored.`,
+            priority: 3, category: 'system'
+          });
+        } else {
+          // Short rest — Second Wind, Action Surge, warlock spell slots.
+          _setAbility(playerId, 'second_wind_uses', DEFAULT_ABILITY_MAX.second_wind);
+          _setAbility(playerId, 'action_surge_uses', DEFAULT_ABILITY_MAX.action_surge);
+          _setAbility(playerId, 'action_surge_active', false);
+          if (isWarlock && char.spellSlots && typeof char.spellSlots === 'object') {
+            const updated = {};
+            for (const [k, v] of Object.entries(char.spellSlots)) {
+              if (v && typeof v === 'object' && typeof v.total === 'number') {
+                updated[k] = { total: v.total, used: 0, remaining: v.total };
+              } else {
+                updated[k] = v;
+              }
+            }
+            this.state.set('players.' + playerId + '.character.spellSlots', updated);
+          }
+          this.bus.dispatch('dm:whisper', {
+            text: `${charName} takes a short rest. Second Wind, Action Surge` + (isWarlock ? ', and warlock spell slots' : '') + ' restored.',
+            priority: 3, category: 'system'
+          });
+        }
+
+        // Persist to disk
+        try { this._persistPlayerCharacter(playerId); } catch (e) {}
+        _broadcastAbilityState(playerId);
+        return res.json({ ok: true, type, abilities: _getAbilities(playerId) });
       });
     }
   }

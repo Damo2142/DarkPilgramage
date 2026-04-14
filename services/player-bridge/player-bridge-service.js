@@ -764,6 +764,28 @@ class PlayerBridgeService {
       this._sendToPlayer(playerId, { type: 'npc:chat_reply', npcId, npcName, text });
     }, 'player-bridge');
 
+    // Addition 2 — player-to-player ability notifications
+    // (bardic inspiration target flash, item-received flash, etc).
+    // character-service dispatches { playerId, type, ...payload }; we
+    // forward the payload as a WS message of the given type to that player.
+    this.bus.subscribe('player:notification', (env) => {
+      const d = env.data || {};
+      if (!d.playerId || !d.type) return;
+      const msg = { ...d };
+      const target = msg.playerId;
+      msg.type = d.type;
+      delete msg.playerId;
+      this._sendToPlayer(target, msg);
+    }, 'player-bridge');
+
+    // Addition 2 — ability state sync (use-counts, active flags).
+    // Forward to the owning player so their Chromebook UI can refresh.
+    this.bus.subscribe('character:abilities_update', (env) => {
+      const { playerId, abilities } = env.data || {};
+      if (!playerId) return;
+      this._sendToPlayer(playerId, { type: 'character:abilities_update', playerId, abilities });
+    }, 'player-bridge');
+
     // Handout distribution (Feature 50) — with language gating
     this.bus.subscribe('handout:send', (env) => {
       const { playerId, title, text, image, preview, language } = env.data;

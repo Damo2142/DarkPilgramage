@@ -729,7 +729,19 @@ class CombatService {
     let appliedDamage = 0;
     if (hit) {
       appliedDamage = damage;
-      this.modifyHp(targetId, -damage);
+      // Addition 3 — Rage resistance (Bear Totem: all damage except psychic)
+      if (target.type === 'pc') {
+        const targetAbilities = this.state.get('players.' + targetId + '.abilities');
+        if (targetAbilities && targetAbilities.rage_active && damageType !== 'psychic') {
+          const halved = Math.floor(appliedDamage / 2);
+          this.bus.dispatch('dm:whisper', {
+            text: `${target.name} raging (Bear Totem) — ${damageType || 'physical'} damage halved: ${appliedDamage} → ${halved}`,
+            priority: 1, category: 'combat'
+          });
+          appliedDamage = halved;
+        }
+      }
+      this.modifyHp(targetId, -appliedDamage);
     }
 
     const result = {

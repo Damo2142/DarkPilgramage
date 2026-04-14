@@ -1177,7 +1177,14 @@ class CommRouter {
     const pending = this.state.get('combat.pendingDamage');
     if (damageMatch && pending) {
       const roll = parseInt(damageMatch[1] || damageMatch[2] || damageMatch[3], 10);
-      const damageBonus = this._getDamageModifier(character, pending.weapon);
+      let damageBonus = this._getDamageModifier(character, pending.weapon);
+      // Addition 3 — Rage damage bonus (+2 on melee attacks while raging)
+      let rageBonus = 0;
+      const attackerAbilities = this.state.get('players.' + playerId + '.abilities');
+      if (attackerAbilities && attackerAbilities.rage_active) {
+        rageBonus = 2;
+        damageBonus += rageBonus;
+      }
       const totalDamage = roll + damageBonus;
 
       // Apply damage via combat-service directly (no combat:apply_damage event exists).
@@ -1194,7 +1201,7 @@ class CommRouter {
       this.state.set('combat.pendingDamage', null);
 
       this.bus.dispatch('dm:whisper', {
-        text: `${totalDamage} damage applied to ${pending.targetId} (rolled ${roll} + ${damageBonus} ${pending.weapon || ''} modifier).`,
+        text: `${totalDamage} damage applied to ${pending.targetId} (rolled ${roll} + ${damageBonus} ${pending.weapon || ''} modifier${rageBonus ? ' — includes +2 rage bonus' : ''}).`,
         priority: 1, category: 'combat', source: 'comm-router'
       });
       return true;

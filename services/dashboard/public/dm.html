@@ -1078,16 +1078,39 @@ var MaxControls = {
   handleMaxAudio: function(d) {
     if (!d || !d.url) return;
     if (MaxControls.paused) { console.log('[MaxControls] paused — dropping audio'); return; }
+    // Stop any previously-queued Max audio so successive whispers don't overlap
+    if (MaxControls._audio) {
+      try { MaxControls._audio.pause(); MaxControls._audio.src = ''; } catch (e) {}
+    }
     var audio = new Audio(d.url);
     audio.volume = MaxControls.volume;
+    var text = d.text || '';
+    var sinkUsed = 'default';
     var play = function() {
-      audio.play().catch(function(e) {
-        console.warn('[MaxControls] audio play failed:', e.message);
+      audio.play().then(function() {
+        console.log('[MaxControls] playing on', sinkUsed, '—', text.slice(0, 60));
+      }).catch(function(e) {
+        // Autoplay blocked, device gone, or other playback failure.
+        // Fall back to speechSynthesis so Max stays audible rather than
+        // silently vanishing. Surface in the whisper log so the DM sees it.
+        console.warn('[MaxControls] audio play failed on', sinkUsed, ':', e.message, '— falling back to browser TTS');
+        try {
+          addWhisper({ tag: 'AUDIO', text: 'Max audio play failed on ' + sinkUsed + ' (' + e.message + ') — speechSynthesis fallback' });
+        } catch (x) {}
+        if (text) MaxControls.handleMaxFallback({ text: text });
       });
     };
     if (MaxControls._earbudSinkId && audio.setSinkId) {
-      audio.setSinkId(MaxControls._earbudSinkId).then(play).catch(function() { play(); });
+      audio.setSinkId(MaxControls._earbudSinkId).then(function() {
+        sinkUsed = 'earbud (' + String(MaxControls._earbudSinkId).slice(0, 8) + '…)';
+        play();
+      }).catch(function(err) {
+        console.warn('[MaxControls] setSinkId failed (' + err.message + ') — using default sink');
+        sinkUsed = 'default (setSinkId rejected: ' + err.message + ')';
+        play();
+      });
     } else {
+      sinkUsed = MaxControls._earbudSinkId ? 'default (no setSinkId support)' : 'default (no earbud configured)';
       play();
     }
     MaxControls._audio = audio;

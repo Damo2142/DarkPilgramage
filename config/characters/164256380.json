@@ -360,7 +360,7 @@
     {
       "name": "Leather",
       "quantity": 1,
-      "equipped": false,
+      "equipped": true,
       "type": "Armor",
       "weight": 10,
       "rarity": "Common",
@@ -835,7 +835,7 @@
     "description": null
   },
   "patron": "College of Lore",
-  "_syncedAt": "2026-04-13T09:06:55.304Z",
+  "_syncedAt": "2026-04-14T13:25:48.592Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/164256380"
 }

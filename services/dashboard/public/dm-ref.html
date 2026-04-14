@@ -884,7 +884,7 @@ function renderPlayerCard(pid, p) {
     }
   }
 
-  var lightInfo = computeLightSource(ch.inventory || []);
+  var lightInfo = computeLightSource(ch.inventory || [], ch);
   var languages = (ch.languages || []).join(', ') || 'Common';
   var conds = (p.conditions || []).filter(Boolean);
   var statusLine = conds.length ? conds.join(', ') : 'none';
@@ -930,8 +930,10 @@ function renderPlayerCard(pid, p) {
     '</div>';
 }
 
-function computeLightSource(inventory) {
+function computeLightSource(inventory, character) {
   var lights = ['torch', 'lantern', 'lamp', 'candle'];
+  // 1) Equipped physical light source wins — it's bright light regardless of
+  // darkvision. Show fuel remaining.
   for (var i = 0; i < inventory.length; i++) {
     var item = inventory[i];
     var name = (item.name || '').toLowerCase();
@@ -943,6 +945,36 @@ function computeLightSource(inventory) {
         }
       }
     }
+  }
+  // 2) No physical light — check the character's senses. Darkvision turns
+  // dark into dim (disadvantage on perception but no auto-fail, attacks
+  // unaffected out to the darkvision range). Read from senses.darkvision
+  // first, fall back to a senses string, then to race defaults.
+  var dvRange = 0;
+  var blind = 0;
+  if (character) {
+    var s = character.senses;
+    if (s && typeof s === 'object') {
+      if (typeof s.darkvision === 'number') dvRange = s.darkvision;
+      if (typeof s.blindsight === 'number') blind = s.blindsight;
+    } else if (typeof s === 'string') {
+      var m = s.match(/darkvision\s+(\d+)/i);
+      if (m) dvRange = parseInt(m[1], 10);
+      var b = s.match(/blindsight\s+(\d+)/i);
+      if (b) blind = parseInt(b[1], 10);
+    }
+    if (!dvRange) {
+      var race = (character.race || '').toLowerCase();
+      if (['elf','half-elf','dwarf','gnome','half-orc','tiefling','drow','kobold'].some(function(r){ return race.indexOf(r) !== -1; })) {
+        dvRange = 60;
+      }
+    }
+  }
+  if (blind > 0) {
+    return { text: 'Blindsight ' + blind + 'ft', warn: false };
+  }
+  if (dvRange > 0) {
+    return { text: 'Darkvision ' + dvRange + 'ft', warn: false };
   }
   return { text: 'No light source — DARK', warn: true };
 }

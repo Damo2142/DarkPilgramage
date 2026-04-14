@@ -866,6 +866,31 @@ class PlayerBridgeService {
       }
     }, 'player-bridge');
 
+    // H4 — mid-session visibility toggle. The state:change path-routed
+    // handler silently drops hidden=true updates, so a DM toggling
+    // visibility through /api/map/token/visibility had no effect on
+    // player clients. Translate the event into add/remove messages.
+    this.bus.subscribe('map:token_visibility', (env) => {
+      const { tokenId, visible } = env.data || {};
+      if (!tokenId) return;
+      const activeMapId = this.state.get('map.id');
+      if (visible) {
+        const token = this.state.get(`map.tokens.${tokenId}`);
+        if (!token) return;
+        for (const [pid] of this.players) {
+          if (this.playerMaps[pid] !== activeMapId) continue;
+          let safe = token.type === 'npc' ? { ...token, name: 'Unknown' } : token;
+          safe = this._anonymizeToken(safe, pid);
+          this._sendToPlayer(pid, { type: 'map:token_added', token: safe });
+        }
+      } else {
+        for (const [pid] of this.players) {
+          if (this.playerMaps[pid] !== activeMapId) continue;
+          this._sendToPlayer(pid, { type: 'map:token_removed', tokenId });
+        }
+      }
+    }, 'player-bridge');
+
     // Forward combat events to all players
     const combatEvents = [
       'combat:started', 'combat:ended', 'combat:next_turn', 'combat:prev_turn',

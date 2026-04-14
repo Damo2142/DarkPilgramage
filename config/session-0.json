@@ -1978,6 +1978,51 @@
             "maxNote": "Strong conjuration magic. One source. Room 5. Behind the door. The page glows like a beacon to her Mark of Detection. Whisper DM: 'Zarina's mark reacts. Strong conjuration magic in Room 5. She found it before she knew she was looking.'"
           }
         ]
+      },
+      {
+        "eventId": "ground-floor-entry",
+        "items": [
+          {
+            "id": "obs-ground-entry-smell",
+            "tier": 1,
+            "text": "The common room smells of woodsmoke, old ale, and something underneath — damp earth, or iron."
+          },
+          {
+            "id": "obs-ground-entry-floor-path",
+            "tier": 2,
+            "dc": 10,
+            "text": "The floorboards near the bar are worn darker than the rest. People have been walking a path to the cellar door for a long time."
+          },
+          {
+            "id": "obs-ground-entry-cold-candle",
+            "tier": 2,
+            "dc": 13,
+            "text": "A candle on the stranger's table has gone out. The wax is cold. No draft reached the other candles.",
+            "linkedSecret": "vladislav_is_vampire"
+          }
+        ]
+      },
+      {
+        "eventId": "upper-floor-entry",
+        "items": [
+          {
+            "id": "obs-upper-entry-cold",
+            "tier": 1,
+            "text": "The upper hallway is cold. Colder than the common room below should have left it."
+          },
+          {
+            "id": "obs-upper-entry-door-unlatched",
+            "tier": 2,
+            "dc": 12,
+            "text": "Room 2's door is unlatched. The others are shut. The floor outside Room 2 has tracked-in snow still wet."
+          },
+          {
+            "id": "obs-upper-entry-scratches",
+            "tier": 2,
+            "dc": 14,
+            "text": "Scratches along the upper wainscot — deep, faint, curving. Not the height of a dog. You do not want to check the height."
+          }
+        ]
       }
     ],
     "items": [

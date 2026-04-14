@@ -1951,6 +1951,11 @@ function renderSpells(){
     }).join('')+'</div>';
   }
   slotHtml+='<button class="add-btn" style="margin-top:4px;" onclick="openAddSlot()">+ Add Slot Level</button>';
+  // Addition 4 — narrative magic status line above pips
+  const narr = _spellSlotNarrative();
+  if (narr) {
+    slotHtml = '<div style="font-style:italic;color:#c8a820;font-size:13px;margin-bottom:8px;padding:6px 10px;border-left:3px solid #c8a820;background:rgba(200,168,32,0.05);">'+esc(narr)+'</div>' + slotHtml;
+  }
   $('slotarea').innerHTML=slotHtml;
   const cants=spells.filter(s=>s.level===0), levd=spells.filter(s=>s.level>0).sort((a,b)=>a.level-b.level);
   $('cantrips').innerHTML=cants.length?cants.map((s,i)=>spRow(s,i)).join(''):'<div style="color:var(--text-dim);font-size:11px;">None</div>';
@@ -1997,8 +2002,47 @@ function togSpDesc(el){
 
 function useSlot(lvl,idx,total){
   const cur=slotState[lvl]!==undefined?slotState[lvl]:total;
-  slotState[lvl]=idx<cur?Math.max(0,cur-1):Math.min(total,cur+1);
+  // Clicking a filled pip (idx<cur) consumes; clicking an empty pip restores one.
+  const useAction = idx<cur ? 'use' : 'restore';
+  // Optimistic local update — server confirms via response.
+  slotState[lvl]=useAction==='use'?Math.max(0,cur-1):Math.min(total,cur+1);
   renderSpells();
+  // Addition 4 — persist slot change to server so DDB pushback + reload survive.
+  fetch('/api/characters/'+PID+'/spell-slot',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ level: lvl, action: useAction })
+  }).then(r=>r.json()).then(d=>{
+    if (d && d.ok && typeof d.remaining === 'number') {
+      slotState[lvl] = d.remaining;
+      // Keep char.spellSlots in sync so narrative status re-computes correctly
+      if (char.spellSlots && char.spellSlots[lvl]) {
+        char.spellSlots[lvl].remaining = d.remaining;
+        char.spellSlots[lvl].used = Math.max(0, d.total - d.remaining);
+      }
+      renderSpells();
+    }
+  }).catch(()=>{});
+}
+
+function _spellSlotNarrative(){
+  // Mirror of player-bridge-service._getSpellSlotDescription — show in UI.
+  const slots = (char && char.spellSlots) || null;
+  if (!slots || typeof slots !== 'object') return null;
+  let total=0, remaining=0, hasAny=false;
+  for (const k of Object.keys(slots)) {
+    const v = slots[k];
+    if (!v || typeof v !== 'object') continue;
+    if (Number.isFinite(v.total))     { total += v.total; hasAny = true; }
+    // Prefer local slotState if we've touched it
+    const stateVal = slotState[k] !== undefined ? slotState[k] : (Number.isFinite(v.remaining) ? v.remaining : v.total);
+    if (Number.isFinite(stateVal))    { remaining += stateVal; }
+  }
+  if (!hasAny || total <= 0) return null;
+  const pct = remaining / total;
+  if (pct >= 1.0) return 'Your magic feels full.';
+  if (pct >= 0.5) return 'Your magic feels strained.';
+  if (pct >= 0.1) return 'You have very little left.';
+  return 'Your magic is spent.';
 }
 
 function rmSpell(i){

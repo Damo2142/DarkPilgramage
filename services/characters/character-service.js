@@ -342,6 +342,43 @@ class CharacterService {
         }
       });
 
+      // Addition 4 — spell slot use/restore persistence.
+      // body: { level: 'level1' | 1, action: 'use' | 'restore' }
+      app.post('/api/characters/:playerId/spell-slot', (req, res) => {
+        const playerId = req.params.playerId;
+        const b = req.body || {};
+        let levelKey = b.level;
+        if (typeof levelKey === 'number') levelKey = 'level' + levelKey;
+        if (!levelKey || typeof levelKey !== 'string') {
+          return res.status(400).json({ error: 'level required (e.g. "level1" or 1)' });
+        }
+        const action = b.action === 'restore' ? 'restore' : 'use';
+        const playerState = this.state.get('players.' + playerId);
+        if (!playerState || !playerState.character) {
+          return res.status(404).json({ error: 'player character not found' });
+        }
+        const slots = playerState.character.spellSlots || {};
+        const slot = slots[levelKey];
+        if (!slot || typeof slot !== 'object') {
+          return res.status(404).json({ error: 'no spell slot at ' + levelKey });
+        }
+        const total = typeof slot.total === 'number' ? slot.total : 0;
+        let remaining = typeof slot.remaining === 'number' ? slot.remaining : total;
+        if (action === 'use') {
+          if (remaining <= 0) return res.status(400).json({ error: 'no slots remaining at ' + levelKey });
+          remaining -= 1;
+        } else {
+          if (remaining >= total) return res.json({ ok: true, remaining, total, changed: false });
+          remaining += 1;
+        }
+        const updated = { ...slots, [levelKey]: { ...slot, total, remaining, used: Math.max(0, total - remaining) } };
+        this.state.set('players.' + playerId + '.character.spellSlots', updated);
+        try { this._persistPlayerCharacter(playerId); } catch (e) {}
+        this.bus.dispatch('player:spells_update', { playerId });
+        this.bus.dispatch('character:update', { playerId });
+        return res.json({ ok: true, level: levelKey, total, remaining, action });
+      });
+
       // Short / long rest — reset ability counts + spell slots.
       app.post('/api/characters/:playerId/rest', (req, res) => {
         const playerId = req.params.playerId;

@@ -44,6 +44,11 @@ class EventBus extends EventEmitter {
     // is expensive and large objects are rarely literal duplicates anyway.
     if (!data || typeof data !== 'object') return event;
     const parts = [event];
+    // `id` is critical for events where the id IS the discriminator —
+    // observation:trigger, combat events keyed on combatant id, etc.
+    // Without it, 21 distinct observation:trigger dispatches for different
+    // eventIds collapse to one and 20 are silently dropped.
+    if (data.id != null)           parts.push('id=' + data.id);
     if (data.text != null)         parts.push('t=' + String(data.text).slice(0, 200));
     if (data.message != null)      parts.push('m=' + String(data.message).slice(0, 200));
     if (data.npcId != null)        parts.push('n=' + data.npcId);
@@ -56,6 +61,9 @@ class EventBus extends EventEmitter {
     if (data.category != null)     parts.push('cat=' + data.category);
     if (data.profile != null)      parts.push('pf=' + data.profile);
     if (data.zoneId != null)       parts.push('z=' + data.zoneId);
+    // For observation:trigger, targetPlayer scopes the fanout; include it
+    // so active-look from Kim and Nick produce distinct fingerprints.
+    if (data.targetPlayer != null) parts.push('tp=' + data.targetPlayer);
     return parts.join('|');
   }
 

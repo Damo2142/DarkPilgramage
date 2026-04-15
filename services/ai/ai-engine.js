@@ -438,8 +438,18 @@ Stay strictly within what ${npcName} knows. 1-3 sentences of dialogue typical.`;
     // Section 6 — API health monitoring
     this._startHealthCheck();
 
-    // Max Director — intervention queue, staging drift, language gate
+    // Max Director — intervention queue, staging drift, language gate.
+    // Idempotent guard: if start() runs a second time (e.g. the DM hits
+    // Restart Service → ai-engine from the CR-5 panel), stop the previous
+    // MaxDirector FIRST so its dm:whisper / transcript:segment / etc.
+    // subscriptions are unhooked from the bus. Without this, orphaned
+    // listeners cause every dm:whisper to be enqueued twice — which
+    // cascaded into double audio playback on rage activation (bug
+    // reported 2026-04-15).
     try {
+      if (this.maxDirector && typeof this.maxDirector.stop === 'function') {
+        try { this.maxDirector.stop(); } catch (e) { console.warn('[AIEngine] prev MaxDirector stop error:', e.message); }
+      }
       const MaxDirector = require('./max-director');
       this.maxDirector = new MaxDirector(this.orchestrator, this.bus, this.state, this.config);
       this.maxDirector.init();
@@ -463,6 +473,9 @@ Stay strictly within what ${npcName} knows. 1-3 sentences of dialogue typical.`;
     this.autonomy.stop();
     this.spurt.stop();
     this.pacing.stop();
+    if (this.maxDirector && typeof this.maxDirector.stop === 'function') {
+      try { this.maxDirector.stop(); } catch (e) { console.warn('[AIEngine] MaxDirector stop error:', e.message); }
+    }
     if (this._apiHealth.checkInterval) clearInterval(this._apiHealth.checkInterval);
   }
 

@@ -20,6 +20,8 @@ class ContextBuilder {
     this.config = config;
     this._recentTranscript = []; // Rolling buffer
     this._maxTranscriptMinutes = config.ai?.contextWindowMinutes || 5;
+    // Race reactions config (loaded once, cached). Silent-fail if missing.
+    this._raceReactions = this._loadRaceReactions();
   }
 
   /**
@@ -57,6 +59,7 @@ class ContextBuilder {
       recentDialogue: this._formatTranscript(),
       storyContext: this._formatStory(story),
       atmosphere: atmosphere.currentProfile || 'default',
+      raceReactions: this._formatRaceReactions(scene, players),
       timestamp: new Date().toISOString()
     };
   }
@@ -87,6 +90,7 @@ class ContextBuilder {
       mapState: this._formatMapState(),
       worldState: this._formatWorldState(),
       storyContext: this._formatStory(story),
+      raceReactions: this._formatRaceReactions(scene, players),
       timestamp: new Date().toISOString()
     };
   }
@@ -156,6 +160,9 @@ class ContextBuilder {
     }
     if (context.averageDread !== undefined) {
       parts.push(`## Average Party Dread: ${context.averageDread}/100`);
+    }
+    if (context.raceReactions) {
+      parts.push(`## RACE REACTIONS (current location)\n${context.raceReactions}`);
     }
 
     return parts.join('\n\n');
@@ -457,6 +464,88 @@ class ContextBuilder {
     const ctx = this.buildStoryContext();
     if (topic) ctx.palaceRecall = await this.getPalaceRecall(topic);
     return ctx;
+  }
+
+  // ── Race reactions (1274 Central Europe) ─────────────────────────
+  //
+  // Loaded once from config/race-reactions.json. Per-PC tier + maxWhisper
+  // for the current location flow into a `## RACE REACTIONS` section in
+  // the prompt so Max can apply the "one whisper per character per
+  // location on arrival" rule. Tier 3 is gated by Max prompt, never
+  // enforced here.
+
+  _loadRaceReactions() {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const p = path.join(__dirname, '..', '..', 'config', 'race-reactions.json');
+      if (!fs.existsSync(p)) return null;
+      return JSON.parse(fs.readFileSync(p, 'utf8'));
+    } catch (e) {
+      console.warn('[ContextBuilder] race-reactions.json load failed:', e.message);
+      return null;
+    }
+  }
+
+  // Map the active scene to a race-reactions location key. The config uses
+  // camelCase keys (pallidHart, orava, houska, village, forest, etc.).
+  // If we can't identify the location we return null and the formatter
+  // falls back to the per-character `europeanReception.baseline`.
+  _scenelocationKey(scene) {
+    const probe = (
+      (scene && (scene.id || scene.name || '')) || ''
+    ).toString().toLowerCase();
+    if (!probe) return null;
+    if (probe.includes('pallid')) return 'pallidHart';
+    if (probe.includes('orava')) return 'orava';
+    if (probe.includes('houska')) return 'houska';
+    if (probe.includes('village')) return 'village';
+    if (probe.includes('forest') || probe.includes('wild')) return 'forest';
+    if (probe.includes('german') && probe.includes('inn')) return 'german_inn';
+    if (probe.includes('slavic') && probe.includes('village')) return 'slavic_village';
+    return null;
+  }
+
+  _formatRaceReactions(scene, players) {
+    if (!this._raceReactions || !this._raceReactions.characters) return null;
+    const locKey = this._scenelocationKey(scene);
+    const lines = [];
+    for (const playerId of Object.keys(players || {})) {
+      const cfg = this._raceReactions.characters[playerId];
+      if (!cfg) continue; // no race-reactions entry for this player
+      const charName = cfg.characterName || playerId;
+      const race = cfg.race || 'unknown';
+
+      // Prefer the location-specific block; fall back to baseline.
+      const locBlock = locKey && cfg[locKey] ? cfg[locKey] : null;
+      const baseline = cfg.europeanReception?.baseline || '';
+
+      if (locBlock) {
+        const tier = (locBlock.tier !== undefined) ? `Tier ${locBlock.tier}` : '';
+        // Choose the most useful single line: maxWhisper > note > general
+        const summary = locBlock.maxWhisper || locBlock.note || locBlock.general || '';
+        if (summary) {
+          lines.push(`- ${charName} (${race}) — ${tier} at current location: ${summary}`);
+        } else if (tier) {
+          lines.push(`- ${charName} (${race}) — ${tier} at current location.`);
+        }
+      } else if (baseline) {
+        lines.push(`- ${charName} (${race}) — baseline: ${baseline}`);
+      }
+    }
+    if (!lines.length) return null;
+
+    // Append the storm/Vladislav overrides if we're at the Pallid Hart —
+    // these are session-relevant rules Max needs to apply tonight.
+    if (locKey === 'pallidHart') {
+      const rules = this._raceReactions.generalRules || {};
+      const overrides = [];
+      if (rules.stormOverride) overrides.push('Storm override: ' + rules.stormOverride);
+      if (rules.vladislavOverride) overrides.push('Vladislav override: ' + rules.vladislavOverride);
+      if (overrides.length) lines.push('', ...overrides);
+    }
+
+    return lines.join('\n');
   }
 
   /**

@@ -7,6 +7,9 @@ const DEDUP_SKIP_EVENTS = new Set([
   'audio:chunk', 'audio:dm_chunk', 'audio:player_stream_start', 'audio:player_stream_stop',
   'transcript:silence', 'player:camera_frame', 'world:time_update',
   'state:change', 'map:token_moved', 'token:move',
+  // Map activation — re-loading the same map should always re-trigger
+  // scene-population (NPC reset). Deduping would suppress this.
+  'map:activated',
   'system:error', '*',
   // Combat lifecycle events — each turn/round/attack is a discrete event that
   // must never be collapsed with a prior one. Without these exclusions, the

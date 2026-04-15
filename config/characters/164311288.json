@@ -1,0 +1,253 @@
+{
+  "ddbId": "164311288",
+  "name": "FrostyCritter's Character",
+  "class": "Rogue",
+  "classes": [
+    {
+      "name": "Rogue",
+      "level": 3,
+      "subclass": null
+    }
+  ],
+  "level": 3,
+  "race": "Halfling",
+  "background": "Criminal",
+  "alignment": "LE",
+  "hp": {
+    "current": 8,
+    "max": 18,
+    "temp": 0
+  },
+  "ac": 10,
+  "speed": 30,
+  "initiative": 0,
+  "proficiencyBonus": 2,
+  "abilities": {
+    "str": {
+      "score": 10,
+      "modifier": 0,
+      "modifierStr": "+0"
+    },
+    "dex": {
+      "score": 10,
+      "modifier": 0,
+      "modifierStr": "+0"
+    },
+    "con": {
+      "score": 10,
+      "modifier": 0,
+      "modifierStr": "+0"
+    },
+    "int": {
+      "score": 10,
+      "modifier": 0,
+      "modifierStr": "+0"
+    },
+    "wis": {
+      "score": 10,
+      "modifier": 0,
+      "modifierStr": "+0"
+    },
+    "cha": {
+      "score": 10,
+      "modifier": 0,
+      "modifierStr": "+0"
+    }
+  },
+  "savingThrows": {
+    "str": {
+      "modifier": 0,
+      "proficient": false
+    },
+    "dex": {
+      "modifier": 0,
+      "proficient": false
+    },
+    "con": {
+      "modifier": 0,
+      "proficient": false
+    },
+    "int": {
+      "modifier": 0,
+      "proficient": false
+    },
+    "wis": {
+      "modifier": 0,
+      "proficient": false
+    },
+    "cha": {
+      "modifier": 0,
+      "proficient": false
+    }
+  },
+  "skills": {
+    "acrobatics": {
+      "modifier": 4,
+      "proficiency": "expertise"
+    },
+    "animal-handling": {
+      "modifier": 0,
+      "proficiency": "none"
+    },
+    "arcana": {
+      "modifier": 0,
+      "proficiency": "none"
+    },
+    "athletics": {
+      "modifier": 0,
+      "proficiency": "none"
+    },
+    "deception": {
+      "modifier": 0,
+      "proficiency": "none"
+    },
+    "history": {
+      "modifier": 0,
+      "proficiency": "none"
+    },
+    "insight": {
+      "modifier": 2,
+      "proficiency": "proficiency"
+    },
+    "intimidation": {
+      "modifier": 0,
+      "proficiency": "none"
+    },
+    "investigation": {
+      "modifier": 2,
+      "proficiency": "proficiency"
+    },
+    "medicine": {
+      "modifier": 0,
+      "proficiency": "none"
+    },
+    "nature": {
+      "modifier": 0,
+      "proficiency": "none"
+    },
+    "perception": {
+      "modifier": 4,
+      "proficiency": "expertise"
+    },
+    "performance": {
+      "modifier": 0,
+      "proficiency": "none"
+    },
+    "persuasion": {
+      "modifier": 0,
+      "proficiency": "none"
+    },
+    "religion": {
+      "modifier": 0,
+      "proficiency": "none"
+    },
+    "sleight-of-hand": {
+      "modifier": 2,
+      "proficiency": "proficiency"
+    },
+    "stealth": {
+      "modifier": 2,
+      "proficiency": "proficiency"
+    },
+    "survival": {
+      "modifier": 0,
+      "proficiency": "none"
+    }
+  },
+  "spellSlots": null,
+  "spells": [],
+  "attacks": [],
+  "features": [
+    {
+      "name": "Saving Throws",
+      "source": "Advantage",
+      "description": ""
+    },
+    {
+      "name": "Common",
+      "source": "Language",
+      "description": ""
+    },
+    {
+      "name": "Halfling",
+      "source": "Language",
+      "description": ""
+    },
+    {
+      "name": "Common Sign Language",
+      "source": "Language",
+      "description": ""
+    },
+    {
+      "name": "Thieves’ Cant",
+      "source": "Language",
+      "description": ""
+    },
+    {
+      "name": "Choose a Language",
+      "source": "Language",
+      "description": ""
+    },
+    {
+      "name": "Subclass",
+      "source": "Set",
+      "description": ""
+    },
+    {
+      "name": "Nick (Dagger)",
+      "source": "Weapon Mastery",
+      "description": ""
+    },
+    {
+      "name": "Vex (Blowgun)",
+      "source": "Weapon Mastery",
+      "description": ""
+    }
+  ],
+  "senses": {
+    "darkvision": 0
+  },
+  "inventory": [],
+  "conditions": [],
+  "currency": {
+    "pp": 0,
+    "gp": 0,
+    "ep": 0,
+    "sp": 0,
+    "cp": 0
+  },
+  "languages": [
+    "Common",
+    "Halfling",
+    "Common Sign Language",
+    "Thieves’ Cant",
+    "Choose a Language"
+  ],
+  "backstory": {
+    "personalityTraits": "I don’t part with my money easily and will haggle tirelessly to get the best deal possible.",
+    "ideals": "Aspiration. I work hard to be the best there is at my craft. (Any)",
+    "bonds": "I owe my guild a great debt for forging me into the person I am today.",
+    "flaws": null,
+    "backstoryText": null,
+    "allies": null,
+    "organizations": null,
+    "enemies": null,
+    "otherNotes": null
+  },
+  "appearance": {
+    "gender": null,
+    "age": null,
+    "height": null,
+    "weight": null,
+    "size": null,
+    "eyes": null,
+    "hair": null,
+    "skin": null,
+    "faith": "Mask",
+    "description": null
+  },
+  "patron": null,
+  "_syncedAt": "2026-04-15T23:20:00.996Z",
+  "_source": "ddb",
+  "_ddbUrl": "https://www.dndbeyond.com/characters/164311288"
+}

@@ -356,6 +356,10 @@ class CombatService {
       } else {
         // NPCs die at 0
         c.isAlive = false;
+        // Persist death flag outside combat state so scene re-population
+        // (which may fire after map activation wipes map.tokens) doesn't
+        // resurrect the corpse at full HP.
+        this.state.set(`npcs.${combatantId}.dead`, true);
       }
       this.bus.dispatch('dm:whisper', {
         text: `${c.name} is down.`,
@@ -731,7 +735,7 @@ class CombatService {
   /**
    * Process an attack: check hit vs AC, apply damage if hit
    */
-  processAttack(attackerId, targetId, attackRoll, damage, damageType, crit = false) {
+  processAttack(attackerId, targetId, attackRoll, damage, damageType, crit = false, weaponName = null) {
     const combat = this._getCombatState();
     const attacker = combat.turnOrder.find(x => x.id === attackerId);
     const target = combat.turnOrder.find(x => x.id === targetId);
@@ -774,7 +778,7 @@ class CombatService {
 
     // ── Hit Location, Bleeding, Massive Damage, Morale ──
     if (hit && appliedDamage > 0 && target) {
-      this._processHitLocation(attackerId, targetId, appliedDamage, damageType, crit);
+      this._processHitLocation(attackerId, targetId, appliedDamage, damageType, crit, weaponName);
       this._checkMassiveDamage(targetId, appliedDamage);
       this._checkMorale(targetId, combat);
     }
@@ -786,10 +790,12 @@ class CombatService {
   _rollD6() { return Math.floor(Math.random() * 6) + 1; }
   _rollD4() { return Math.floor(Math.random() * 4) + 1; }
 
-  _processHitLocation(attackerId, targetId, damage, damageType, crit) {
+  _processHitLocation(attackerId, targetId, damage, damageType, crit, weaponName = null) {
     const combat = this._getCombatState();
     const target = combat.turnOrder.find(x => x.id === targetId);
     if (!target) return;
+    const attacker = combat.turnOrder.find(x => x.id === attackerId);
+    const attackerName = attacker ? attacker.name : (attackerId || 'someone');
 
     const currentHp = target.hp.current + damage; // HP before this hit was applied
     const pct = damage / currentHp;
@@ -802,8 +808,8 @@ class CombatService {
     // Graze = narrative only
     if (severity === 'graze') {
       this.bus.dispatch('combat:hit_location', {
-        attackerId, targetId, targetName: target.name, damage, severity,
-        location: null, consequence: null
+        attackerId, attackerName, targetId, targetName: target.name, damage, severity,
+        location: null, consequence: null, damageType, weaponName
       });
       return;
     }
@@ -827,13 +833,15 @@ class CombatService {
 
     // Dispatch for AI narration and DM whisper
     this.bus.dispatch('combat:hit_location', {
-      attackerId, targetId, targetName: target.name,
-      damage, severity, location, consequence, damageType
+      attackerId, attackerName, targetId, targetName: target.name,
+      damage, severity, location, consequence, damageType, weaponName
     });
 
-    // Whisper mechanical effect to DM
+    // Whisper mechanical effect to DM — include WHO + WEAPON so the DM
+    // (and Max's narration) know who took what wound from whom with what.
+    const weaponClause = weaponName ? ` with ${weaponName}` : '';
     this.bus.dispatch('dm:whisper', {
-      text: `${severity.toUpperCase()} hit on ${target.name}'s ${location}. ${consequence.mechanical}`,
+      text: `${severity.toUpperCase()} hit on ${target.name}'s ${location} from ${attackerName}${weaponClause}. ${consequence.mechanical}`,
       priority: 2, category: 'combat'
     });
 
@@ -1210,7 +1218,8 @@ class CombatService {
     const result = this.processAttack(
       combatant.id, decision.targetId,
       rollResult.attackRoll, rollResult.damage,
-      rollResult.dmgType, rollResult.crit
+      rollResult.dmgType, rollResult.crit,
+      rollResult.actionName
     );
     if (!result) {
       this.bus.dispatch('dm:whisper', {
@@ -1808,26 +1817,50 @@ Available targets: ${enemies.map(e => `"${e.name}" (id: check turnOrder)`).join(
 
       const result = await aiEngine.gemini.generateJSON(
         'You are a D&D 5e combat tactician. Respond with valid JSON only.',
-        prompt
+        prompt,
+        { maxTokens: 800, temperature: 0.7 }
       );
 
+      console.log('[CombatService] AI tactical result for ' + combatant.name + ':', JSON.stringify(result));
       if (result?.actionIndex !== undefined) {
-        // Map target by name if needed; if invalid/missing fall back to 30/70 picker.
-        let targetId = result.targetId;
-        if (!targetId || !combat.turnOrder.find(c => c.id === targetId)) {
-          targetId = this._pickTarget(combatant, enemies)?.id;
+        // Validate the AI picked a rollable action — Multiattack/saves-only
+        // actions (canRoll === false) can't be executed via rollNpcAction.
+        const picked = actions.actions[result.actionIndex];
+        if (!picked || !picked.canRoll) {
+          console.warn('[CombatService] AI picked unrollable action #' + result.actionIndex + ' (' + (picked?.name || 'missing') + ') — falling back to basic tactics');
+        } else {
+          // Resolve targetId: exact id match → name match → fallback picker.
+          // The AI often returns a character name ("Zarina Firethorn") or
+          // a map token id ("hooded-stranger"); match either, otherwise
+          // fall back to the 30/70 picker so a missing match doesn't
+          // retarget the AI's intent onto a random combatant.
+          let targetId = result.targetId;
+          if (targetId && !combat.turnOrder.find(c => c.id === targetId)) {
+            const lower = String(targetId).toLowerCase();
+            const byName = combat.turnOrder.find(c => c.type === 'pc' && c.isAlive && (c.name || '').toLowerCase() === lower);
+            const byPartial = byName || combat.turnOrder.find(c => c.type === 'pc' && c.isAlive && (c.name || '').toLowerCase().includes(lower));
+            if (byPartial) targetId = byPartial.id;
+            else targetId = null;
+          }
+          if (!targetId) {
+            targetId = this._pickTarget(combatant, enemies)?.id;
+          }
+          return {
+            actionIndex: result.actionIndex,
+            targetId,
+            reasoning: result.reasoning || 'AI tactical decision'
+          };
         }
-        return {
-          actionIndex: result.actionIndex,
-          targetId,
-          reasoning: result.reasoning || 'AI tactical decision'
-        };
+      } else {
+        console.warn('[CombatService] AI tactical returned no actionIndex — falling back for ' + combatant.name);
       }
     } catch (err) {
       console.error('[CombatService] AI tactics error:', err.message);
     }
 
-    return this._basicNpcTactics(combatant, combat);
+    const basic = this._basicNpcTactics(combatant, combat);
+    console.log('[CombatService] basicNpcTactics for ' + combatant.name + ':', JSON.stringify(basic));
+    return basic;
   }
 
   _basicNpcTactics(combatant, combat) {

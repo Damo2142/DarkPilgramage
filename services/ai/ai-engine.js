@@ -404,14 +404,20 @@ Stay strictly within what ${npcName} knows. 1-3 sentences of dialogue typical.`;
     // ── Hit narration (System 6) — every hit gets a one-sentence AI description ──
     this.bus.subscribe('combat:hit_location', async (env) => {
       if (!this.gemini?.available) return;
-      const { targetName, severity, location, damage, damageType } = env.data;
+      const { attackerName, targetName, severity, location, damage, damageType, weaponName } = env.data;
       const locStr = location ? ` to the ${location}` : '';
-      const prompt = `One sentence: a ${severity} ${damageType || ''} hit${locStr} on ${targetName}. Gothic, evocative, under 20 words. No HP, no numbers, no game terms. Just what it looks like.`;
+      const byWhom = attackerName ? ` from ${attackerName}` : '';
+      const withWhat = weaponName ? ` with ${weaponName}` : '';
+      const prompt = `One sentence: a ${severity} ${damageType || ''} hit${locStr} on ${targetName}${byWhom}${withWhat}. Gothic, evocative, under 25 words. Name the target. Name the attacker if given. Mention the weapon or attack type if given. No HP, no numbers, no game terms. Just what it looks like.`;
       try {
-        const desc = await this.gemini.generate(prompt, '', { maxTokens: 40, temperature: 0.9 });
+        const desc = await this.gemini.generate(prompt, '', { maxTokens: 60, temperature: 0.9 });
         if (desc) {
-          this.bus.dispatch('dm:whisper', { text: desc.trim(), priority: 3, category: 'combat' });
-          this.bus.dispatch('hal:response', { query: `[Hit: ${targetName}]`, response: desc.trim(), timestamp: Date.now(), source: 'auto' });
+          // Prefix with [target] so the DM and Max always know who took the wound
+          // even if the generated sentence drops the name.
+          const line = desc.trim();
+          const prefixed = line.toLowerCase().includes(targetName.toLowerCase()) ? line : `[${targetName}] ${line}`;
+          this.bus.dispatch('dm:whisper', { text: prefixed, priority: 3, category: 'combat' });
+          this.bus.dispatch('hal:response', { query: `[Hit: ${targetName} from ${attackerName || '?'}${weaponName ? ' with ' + weaponName : ''}]`, response: prefixed, timestamp: Date.now(), source: 'auto' });
         }
       } catch (e) { console.error('[AIEngine] Hit narration error:', e.message); }
     }, 'ai-engine');
@@ -1096,6 +1102,22 @@ Sample voice: "Spurt knows this is bad place. Spurt's tail is all prickly. But S
     // HAL history
     app.get('/api/hal/history', (req, res) => {
       res.json({ history: this._halHistory.slice(-8) });
+    });
+
+    // POST /api/hal/reload-prompt — re-read prompts/hal-codm.md from disk so
+    // prompt edits take effect without a full server restart. Useful while
+    // iterating on Max's voice mid-session.
+    app.post('/api/hal/reload-prompt', (req, res) => {
+      try {
+        const p = path.join(__dirname, '../../prompts/hal-codm.md');
+        const fresh = fs.readFileSync(p, 'utf-8');
+        const oldLen = (this._halSystemPrompt || '').length;
+        this._halSystemPrompt = fresh;
+        console.log(`[AIEngine] HAL prompt reloaded from ${p} (${oldLen} → ${fresh.length} chars)`);
+        res.json({ ok: true, oldLength: oldLen, newLength: fresh.length, path: p });
+      } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+      }
     });
 
     // Recap (System 10)

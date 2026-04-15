@@ -137,9 +137,14 @@ class CommRouter {
       return this.routePlayerInput({ playerId: d.playerId, text: d.text || '' }).catch(() => {});
     }, 'comm-router');
 
-    // NPC dialogue dispatched by AI engine — apply proximity routing
+    // NPC dialogue dispatched by AI engine — apply proximity routing.
+    // Skip if _skipRouting is set (e.g. scripted speech already routed).
     this.bus.subscribe('npc:approved', (env) => {
-      try { this.routeNpcSpeech(env.data || {}); } catch (e) {}
+      try {
+        const d = env.data || {};
+        if (d._skipRouting) return;
+        this.routeNpcSpeech(d);
+      } catch (e) {}
     }, 'comm-router');
 
     // Scripted NPC speech (timed events, scene scripts) — explicit language
@@ -147,11 +152,46 @@ class CommRouter {
       try {
         const d = env.data || {};
         this.routeNpcSpeech(d);
+        // Also route through the room speaker so Katya's songs, scripted
+        // monologues, and timed-event dialogue play audibly at the table.
+        // voice-service subscribes to npc:approved; the same handler is
+        // what NPC-auto-dialogue uses, so we reuse that pathway here
+        // rather than introducing a parallel TTS trigger.
+        if (d.text) {
+          this.bus.dispatch('npc:approved', {
+            id: 'scripted-' + Date.now(),
+            npc: d.npc || d.npcId,
+            npcId: d.npcId,
+            text: d.text,
+            voiceCode: d.voiceCode,
+            voiceProfile: d.voiceProfile || null,
+            languageId: d.languageId || null,
+            autoApproved: true,
+            _scripted: true,
+            _skipRouting: true   // we already called routeNpcSpeech above
+          });
+        }
         // If a followUp is attached, dispatch it after the configured delay.
         if (d.followUp && typeof d.followUp === 'object') {
           const delayMs = (d.followUp.delaySeconds || 5) * 1000;
           setTimeout(() => {
-            try { this.routeNpcSpeech({ ...d.followUp }); } catch (e) {}
+            try {
+              this.routeNpcSpeech({ ...d.followUp });
+              if (d.followUp.text) {
+                this.bus.dispatch('npc:approved', {
+                  id: 'scripted-fu-' + Date.now(),
+                  npc: d.followUp.npc || d.followUp.npcId || d.npc,
+                  npcId: d.followUp.npcId || d.npcId,
+                  text: d.followUp.text,
+                  voiceCode: d.followUp.voiceCode || d.voiceCode,
+                  voiceProfile: d.followUp.voiceProfile || null,
+                  languageId: d.followUp.languageId || d.languageId || null,
+                  autoApproved: true,
+                  _scripted: true,
+                  _skipRouting: true
+                });
+              }
+            } catch (e) {}
           }, delayMs);
         }
       } catch (e) {}
@@ -1057,7 +1097,12 @@ class CommRouter {
       if (m) {
         targetName = m[1].trim()
           .replace(/[.!?]+$/, '')          // strip trailing punctuation
-          .replace(/^(?:the|a|an)\s+/i, ''); // strip leading article so "the vampire spawn" matches "Vampire Spawn"
+          .replace(/^(?:the|a|an)\s+/i, '') // strip leading article so "the vampire spawn" matches "Vampire Spawn"
+          // Strip trailing weapon/spell clause so "tomas with my longsword"
+          // resolves to "tomas". Covers: "with ...", "using ...", "and ..."
+          // modifiers players naturally type.
+          .replace(/\s+(?:with|using|and|while|via)\s+.*$/i, '')
+          .trim();
         break;
       }
     }
@@ -1537,25 +1582,41 @@ class CommRouter {
   _fireActivePerception(playerId) {
     const charName = this._charName(playerId);
 
-    // Whisper to the DM that the player took an active look (so the DM
-    // earbud gets the cue alongside any Max advice).
+    // Roll a real d20 + perception modifier so the look is resolved
+    // as an active check (not just passive perception). The total is
+    // passed to the observation service and surfaced to both the DM
+    // earbud and the player UI.
+    const roll = this._rollPerception(playerId);
+
+    // Whisper to the DM — includes the roll breakdown so the DM sees
+    // exactly what the player scored against whatever DCs are in play.
     this.bus.dispatch('dm:whisper', {
-      text: `[ACTIVE PERCEPTION] ${charName} actively looks/investigates — firing scene observations`,
-      priority: 3,
+      text: `[PERCEPTION] ${charName} looks around — rolled ${roll.total} (d20 ${roll.d20}${roll.modStr}). Firing scene observations.`,
+      priority: 2,
       category: 'observation',
       source: 'comm-router'
     });
 
-    // Generic active-look signal — useful for downstream listeners that
-    // want to react to the intent itself (e.g. an AI-generated dynamic
-    // observation). Carries activeCheck:true and targetPlayer so the
-    // observation service / future enhancements can scope routing.
+    // Surface on the player UI as a toast/observation so the player
+    // sees their roll land. Player bridge listens for dm:private_message
+    // on their own playerId.
+    this.bus.dispatch('dm:private_message', {
+      playerId,
+      text: `You scan the room — Perception ${roll.total} (d20 ${roll.d20}${roll.modStr}).`,
+      style: 'observation',
+      duration: 6000
+    });
+
+    // Generic active-look signal with the roll total so observation
+    // service can gate reveals by DC <= roll.total.
     this.bus.dispatch('observation:trigger', {
       id: `active-look-${playerId}-${Date.now()}`,
       dc: 0,
       text: null,
       targetPlayer: playerId,
-      activeCheck: true
+      activeCheck: true,
+      perceptionRoll: roll.total,
+      perceptionDetail: roll
     });
 
     // Reference-path triggers — fire each registered observation event
@@ -1568,9 +1629,31 @@ class CommRouter {
       this.bus.dispatch('observation:trigger', {
         id: eid,
         targetPlayer: playerId,
-        activeCheck: true
+        activeCheck: true,
+        perceptionRoll: roll.total,
+        perceptionDetail: roll
       });
     }
+  }
+
+  // Roll d20 + perception skill mod (or wisdom mod if no perception skill).
+  // Returns { d20, mod, modStr, total, proficient }.
+  _rollPerception(playerId) {
+    const char = this.state.get(`players.${playerId}.character`) || {};
+    const skills = char.skills || {};
+    const abilities = char.abilities || {};
+    let mod = 0;
+    let proficient = false;
+    if (skills.perception && typeof skills.perception.modifier === 'number') {
+      mod = skills.perception.modifier;
+      proficient = skills.perception.proficiency && skills.perception.proficiency !== 'none';
+    } else if (abilities.wis && typeof abilities.wis.modifier === 'number') {
+      mod = abilities.wis.modifier;
+    }
+    const d20 = 1 + Math.floor(Math.random() * 20);
+    const total = d20 + mod;
+    const modStr = mod >= 0 ? ` + ${mod}` : ` - ${Math.abs(mod)}`;
+    return { d20, mod, modStr, total, proficient };
   }
 }
 

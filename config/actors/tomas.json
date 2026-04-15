@@ -27,7 +27,7 @@
   "damage_resistances": "",
   "damage_immunities": "bludgeoning, piercing, and slashing from nonmagical attacks not made with silvered weapons",
   "damage_vulnerabilities": "",
-  "condition_immunities": "",
+  "condition_immunities": "charmed, frightened, paralyzed, poisoned",
   "senses": "passive Perception 14",
   "languages": "Common (can't speak in wolf form)",
   "challenge_rating": "3",

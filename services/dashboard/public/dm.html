@@ -1257,8 +1257,13 @@ var RoomAudio = {
   // FIX-D — handle npc:audio events and play on the configured room sink
   handleNpcAudio: function(d) {
     if (!d || !d.url) return;
-    // Stop any previously-playing NPC line so rapid dialogue doesn't overlap
+    // Stop any previously-playing NPC line so rapid dialogue doesn't overlap.
+    // Mark it canceled so the pending setSinkId→play chain bails out
+    // instead of calling play() on an audio element whose src we just
+    // cleared — that was the source of "The element has no supported sources"
+    // errors when two NPC lines dispatched back-to-back.
     if (RoomAudio._audio) {
+      RoomAudio._audio.__rdCanceled = true;
       try { RoomAudio._audio.pause(); RoomAudio._audio.src = ''; } catch (e) {}
     }
     var audio = new Audio(d.url);
@@ -1267,9 +1272,13 @@ var RoomAudio = {
     var text = d.text || '';
     var sinkUsed = 'default';
     var play = function() {
+      if (audio.__rdCanceled) return; // superseded by a later NPC line
       audio.play().then(function() {
         console.log('[RoomAudio] NPC playing on', sinkUsed, '—', npcLabel, ':', text.slice(0, 60));
       }).catch(function(e) {
+        // If we were canceled by the next dispatch, don't warn or fall
+        // back — the replacement line is already playing.
+        if (audio.__rdCanceled) return;
         // Autoplay blocked or sink gone. Fall back to speechSynthesis so
         // the line is still audible, surface it in the whisper log so
         // the DM sees the fallback happened.
@@ -1282,6 +1291,8 @@ var RoomAudio = {
         }
       });
     };
+    RoomAudio._audio = audio; // stored BEFORE async setSinkId so a later
+                              // dispatch that arrives mid-chain can cancel us.
     if (RoomAudio._roomSinkId && audio.setSinkId) {
       audio.setSinkId(RoomAudio._roomSinkId).then(function() {
         sinkUsed = 'room (' + String(RoomAudio._roomSinkId).slice(0, 8) + '…)';
@@ -1295,13 +1306,57 @@ var RoomAudio = {
       sinkUsed = RoomAudio._roomSinkId ? 'default (no setSinkId support)' : 'default (no room sink configured)';
       play();
     }
-    RoomAudio._audio = audio;
     addWhisper({ tag: 'NPC', text: '[' + npcLabel + '] ' + text.slice(0, 80) });
   },
-  // FIX-D — silent text-only fallback when ElevenLabs is unavailable
+  // FIX-D — silent text-only fallback when ElevenLabs is unavailable,
+  // and language-gated fallback: when the NPC is speaking a non-Common
+  // language the room speaker should get indistinct speech so players
+  // who don't speak it can't follow the dialogue even at the table.
   handleNpcFallback: function(d) {
     if (!d || !d.text) return;
+    if (d.muffled) {
+      // Log the routing tell for the DM's whisper feed.
+      addWhisper({ tag: 'LANG', text: d.text });
+      // Browser speechSynthesis is the closest approximation to muffled
+      // speech we have on a bare-metal install. Use random phonetic
+      // syllables so no listener can reconstruct the line from the
+      // rhythm alone.
+      if ('speechSynthesis' in window) {
+        try {
+          var gibb = RoomAudio._gibberishFor(d.text || '', d.languageId);
+          var u = new SpeechSynthesisUtterance(gibb);
+          u.volume = Math.max(0.25, (RoomAudio._volume || 0.85) * 0.55);
+          u.rate = 0.9;
+          u.pitch = 0.85;
+          window.speechSynthesis.speak(u);
+        } catch (e) { console.warn('[RoomAudio] muffled fallback failed:', e.message); }
+      }
+      return;
+    }
     addWhisper({ tag: 'NPC', text: '[' + (d.npc || 'NPC') + ' silent] ' + d.text });
+  },
+
+  // Build a gibberish string of roughly the same syllable count as the
+  // source text so the "muffled" muttering has the right cadence without
+  // leaking any words.
+  _gibberishFor: function(text, langId) {
+    var PALETTES = {
+      slovak:  ['pre','tro','sla','mni','vy','kry','do','ne','zra','chu','mi','ste','ho','lo','pa'],
+      draconic:['kri','vo','sath','ixen','kyr','thur','uth','arax','vy','saur','kest','oth','rhy','mar'],
+      orcish:  ['grak','mog','zug','rakh','mur','kaz','nog','thar','bruk','gor','urk'],
+      undercommon:['zh','xu','vri','nesh','kyth','sul','dor','myl','quor'],
+      default: ['mur','um','nth','vo','sha','el','mo','ra','li','ka','en','so','tur','po']
+    };
+    var pal = PALETTES[(langId || '').toLowerCase()] || PALETTES.default;
+    var wordCount = Math.max(3, Math.min(20, Math.round((text || '').split(/\s+/).length * 0.7)));
+    var out = [];
+    for (var i = 0; i < wordCount; i++) {
+      var syllables = 1 + Math.floor(Math.random() * 3);
+      var w = '';
+      for (var j = 0; j < syllables; j++) w += pal[Math.floor(Math.random() * pal.length)];
+      out.push(w);
+    }
+    return out.join(' ');
   }
 };
 window.RoomAudio = RoomAudio;

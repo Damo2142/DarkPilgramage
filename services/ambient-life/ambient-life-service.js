@@ -715,6 +715,17 @@ class AmbientLifeService {
     this._performanceIndex++;
     this._whisperDM(`Katya performs: ${perf.title}`, 4, 'story');
     this.bus.dispatch('ambient:performance', { npcId: 'patron-minstrel', npcName: 'Katya', type: perf.type, title: perf.title, content: perf.content, timestamp: Date.now() });
+    // Route the actual performance text to the room speaker via the NPC
+    // speech pipeline (comm-router → voice-service → ElevenLabs → npc:audio).
+    if (perf.content) {
+      this.bus.dispatch('npc:scripted_speech', {
+        npcId: 'patron-minstrel',
+        npc: 'Katya Voss',
+        text: perf.content,
+        languageId: 'common',
+        narratorTranslation: null
+      });
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════

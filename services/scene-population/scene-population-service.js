@@ -114,13 +114,69 @@ class ScenePopulationService {
     }
     if (!scene) return; // No scene declared for this map — silent no-op
 
+    // Always snap NPC/creature tokens back to their scene-defined starting
+    // positions when the map activates. _activateMap in map-service wipes
+    // map.tokens to PC-only state on every activation, so scene-pop must
+    // re-create NPC tokens (even if this scene was populated earlier in
+    // the session). The scene.populated flag still guards the one-time
+    // side-effects (items whisper, encounter triggers, onEnter).
+    this._resetNpcPositionsToScene(scene);
+
     const populated = this.state.get('scene.populated') || {};
     if (populated[scene.id]) {
-      console.log(`[ScenePop] Scene ${scene.id} already populated — skip`);
+      console.log(`[ScenePop] Scene ${scene.id} side-effects already fired — NPCs re-placed at scene defaults, skipping full populate`);
       return;
     }
 
     this._populate(scene);
+  }
+
+  // Reset NPC positions (or re-create NPC tokens if map.tokens was wiped
+  // by a map re-activation). Preserves PC tokens completely. For existing
+  // NPC tokens, only x/y is updated — HP/conditions/visibility preserved.
+  _resetNpcPositionsToScene(scene) {
+    let moved = 0, recreated = 0, skippedDead = 0;
+    for (const t of (scene.tokens || [])) {
+      if (!t || !t.id) continue;
+      if ((t.type || 'npc') === 'pc') continue; // scenes don't own PC positions
+      // Never re-place a dead NPC. Death is recorded in state.npcs.<id>.dead
+      // by combat-service on kill; that flag survives map-token wipes so a
+      // scene reload does not resurrect corpses.
+      if (this.state.get(`npcs.${t.id}.dead`) === true) { skippedDead++; continue; }
+      const existing = this.state.get(`map.tokens.${t.id}`);
+      if (!existing) {
+        // Token missing — recreate from scene definition (happens after
+        // _activateMap wipes map.tokens).
+        const token = {
+          id: t.id,
+          tokenId: t.id,
+          actorSlug: t.actorSlug || t.id,
+          name: t.name || t.id,
+          type: t.type || 'npc',
+          x: t.x,
+          y: t.y,
+          hidden: t.hidden === true,
+          visible: t.hidden !== true,
+          hp: t.hp || { current: 10, max: 10 },
+          ac: t.ac || 10,
+          image: t.image || `${t.actorSlug || t.id}.webp`,
+          publicName: t.publicName || '',
+          nameRevealedToPlayers: t.nameRevealedToPlayers === true,
+          scenePlaced: true
+        };
+        this.state.set(`map.tokens.${t.id}`, token);
+        this.bus.dispatch('map:token_added', { tokenId: t.id, token });
+        recreated++;
+        continue;
+      }
+      if (existing.type === 'pc') continue;
+      if (existing.x === t.x && existing.y === t.y) continue;
+      const updated = { ...existing, x: t.x, y: t.y };
+      this.state.set(`map.tokens.${t.id}`, updated);
+      this.bus.dispatch('map:token_moved', { tokenId: t.id, x: t.x, y: t.y, reason: 'scene-reset' });
+      moved++;
+    }
+    if (moved || recreated || skippedDead) console.log(`[ScenePop] Scene "${scene.id}": ${recreated} NPC token(s) re-placed, ${moved} repositioned to scene defaults` + (skippedDead ? `, ${skippedDead} dead NPC(s) left buried` : ''));
   }
 
   _populate(scene) {
@@ -135,6 +191,8 @@ class ScenePopulationService {
       // Skip if already on the map (e.g. saved-state load)
       const existing = this.state.get(`map.tokens.${t.id}`);
       if (existing) continue;
+      // Don't resurrect dead NPCs on first populate after map switch either.
+      if (this.state.get(`npcs.${t.id}.dead`) === true) continue;
 
       const token = {
         id: t.id,

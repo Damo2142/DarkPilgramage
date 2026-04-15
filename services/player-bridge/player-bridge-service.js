@@ -668,21 +668,22 @@ class PlayerBridgeService {
     }, 'player-bridge');
 
     this.bus.subscribe('dm:private_message', (env) => {
-      const { playerId, text, durationMs } = env.data;
+      const { playerId, text, durationMs, style, linkedSecret } = env.data;
+      const payload = { type: 'dm:private_message', text, durationMs, style, linkedSecret };
       if (playerId === 'all') {
-        this._broadcast({ type: 'dm:private_message', text, durationMs });
+        this._broadcast(payload);
       } else {
-        this._sendToPlayer(playerId, { type: 'dm:private_message', text, durationMs });
+        this._sendToPlayer(playerId, payload);
       }
     }, 'player-bridge');
 
-    this.bus.subscribe('npc:approved', (env) => {
-      this._broadcast({
-        type: 'npc:dialogue',
-        npc: env.data.npc,
-        text: env.data.text
-      });
-    }, 'player-bridge');
+    // NPC dialogue is routed per-player by comm-router via the
+    // `player:npc_speech` handler above (applies proximity + language
+    // filters). The previous broadcast of `npc:dialogue` to every player
+    // duplicated the message — each player saw one overlay from the
+    // routed event and another from this broadcast. Collapsed into the
+    // per-player route so each player sees exactly one entry per line.
+    // (Room-speaker audio still fires via voice-service on npc:approved.)
 
     // Ambient life events — broadcast to all players
     this.bus.subscribe('ambient:observation', (env) => {

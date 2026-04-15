@@ -1698,10 +1698,11 @@ class CombatService {
 Current state: ${JSON.stringify(context)}
 
 Pick the BEST action. Consider:
-- Target the weakest/most dangerous enemy
+- Who is in reach or line of sight (prefer closest reachable target)
 - Use conditions/abilities strategically
 - Protect allies if possible
 - If badly wounded, consider defensive play
+- Do not automatically pile onto the lowest-HP enemy; consider position and threat
 
 Respond with JSON only: { "actionIndex": <number>, "targetId": "<enemy id>", "reasoning": "<brief tactical note>" }
 Available targets: ${enemies.map(e => `"${e.name}" (id: check turnOrder)`).join(', ')}`;
@@ -1712,12 +1713,10 @@ Available targets: ${enemies.map(e => `"${e.name}" (id: check turnOrder)`).join(
       );
 
       if (result?.actionIndex !== undefined) {
-        // Map target by name if needed
+        // Map target by name if needed; if invalid/missing fall back to 30/70 picker.
         let targetId = result.targetId;
         if (!targetId || !combat.turnOrder.find(c => c.id === targetId)) {
-          // Pick lowest HP enemy
-          const sorted = enemies.sort((a, b) => a.hp.current - b.hp.current);
-          targetId = sorted[0]?.id;
+          targetId = this._pickTarget(combatant, enemies)?.id;
         }
         return {
           actionIndex: result.actionIndex,
@@ -1740,13 +1739,55 @@ Available targets: ${enemies.map(e => `"${e.name}" (id: check turnOrder)`).join(
     const enemies = combat.turnOrder.filter(c => c.type === 'pc' && c.isAlive);
     if (!enemies.length) return null;
 
-    // Basic: use first available attack on lowest-HP enemy
-    const target = enemies.sort((a, b) => a.hp.current - b.hp.current)[0];
+    const target = this._pickTarget(combatant, enemies);
+    if (!target) return null;
     return {
       actionIndex: rollable[0].index,
       targetId: target.id,
-      reasoning: 'Basic tactics: attack weakest enemy'
+      reasoning: target._pickMode === 'random'
+        ? `Target ${target.name} (random pick)`
+        : `Target ${target.name} (nearest by map position)`
     };
+  }
+
+  /**
+   * Target selection for NPC AI: 30% random / 70% nearest-by-map-position.
+   * Returns the selected enemy (with a _pickMode tag for logging) or null.
+   * Falls back to random if no map token coords are available for the
+   * combatant (e.g. creature placed mid-combat without a token).
+   */
+  _pickTarget(combatant, enemies) {
+    if (!enemies || !enemies.length) return null;
+    const rollRandom = Math.random() < 0.3;
+    if (rollRandom) {
+      const pick = enemies[Math.floor(Math.random() * enemies.length)];
+      if (pick) pick._pickMode = 'random';
+      return pick;
+    }
+    const selfTok = this.state.get(`map.tokens.${combatant.id}`);
+    if (!selfTok || typeof selfTok.x !== 'number' || typeof selfTok.y !== 'number') {
+      // No position info — fall back to a random pick rather than defaulting
+      // to the lowest-HP PC (Bug 1 convergence on Spurt).
+      const pick = enemies[Math.floor(Math.random() * enemies.length)];
+      if (pick) pick._pickMode = 'random';
+      return pick;
+    }
+    let best = null, bestDist = Infinity;
+    for (const e of enemies) {
+      const tok = this.state.get(`map.tokens.${e.id}`);
+      if (!tok || typeof tok.x !== 'number' || typeof tok.y !== 'number') continue;
+      const dx = tok.x - selfTok.x, dy = tok.y - selfTok.y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < bestDist) { bestDist = d; best = e; }
+    }
+    if (!best) {
+      // No enemy has a token — random fallback.
+      const pick = enemies[Math.floor(Math.random() * enemies.length)];
+      if (pick) pick._pickMode = 'random';
+      return pick;
+    }
+    best._pickMode = 'nearest';
+    return best;
   }
 
   // ── Condition Duration Tracking (Feature 53) ────────────────────────────

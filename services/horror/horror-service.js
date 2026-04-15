@@ -99,31 +99,10 @@ class HorrorService {
       this._onHorrorTrigger(env.data);
     }, 'horror');
 
-    // Long rest — horror decays by 10, floored at 0. Fires whenever
-    // /api/characters/:playerId/rest (type=long) or /api/session/reset-all
-    // dispatches session:long_rest.
-    this.bus.subscribe('session:long_rest', (env) => {
-      const HORROR_DECAY = 10;
-      const playerId = env && env.data && env.data.playerId;
-      if (playerId) {
-        const before = this.horrorScores[playerId] || 0;
-        const after = Math.max(0, before - HORROR_DECAY);
-        this.horrorScores[playerId] = after;
-        this.state.set(`players.${playerId}.horror`, after);
-        if (before !== after) {
-          console.log(`[Horror] ${playerId} long rest: ${before} → ${after} (-${before - after})`);
-        }
-      } else {
-        // No target — apply decay to every known player (safety net)
-        for (const pid of Object.keys(this.horrorScores)) {
-          const before = this.horrorScores[pid] || 0;
-          const after = Math.max(0, before - HORROR_DECAY);
-          this.horrorScores[pid] = after;
-          this.state.set(`players.${pid}.horror`, after);
-        }
-      }
-      this._syncToState();
-    }, 'horror');
+    // Long rest — horror decay handled by the single existing subscriber
+    // at line ~170 below (party-wide -10). A second subscriber was added
+    // here in an earlier pass and double-counted the decay for the caller;
+    // removed to restore correct Math.max(0, score - 10) semantics.
 
     // Vladislav feeding
     this.bus.subscribe('world:timed_event', (env) => {

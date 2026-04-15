@@ -1045,11 +1045,11 @@ Answer concisely (2-4 sentences). If it's a rules question, give the D&D 5e rule
     this.app.post('/api/combat/attack', (req, res) => {
       const combatSvc = this.orchestrator.getService('combat');
       if (!combatSvc) return res.status(503).json({ error: 'Combat service unavailable' });
-      const { attackerId, targetId, attackRoll, damage, damageType, crit } = req.body || {};
+      const { attackerId, targetId, attackRoll, damage, damageType, crit, weaponName, magical, silvered } = req.body || {};
       if (!attackerId || !targetId || typeof attackRoll !== 'number' || typeof damage !== 'number') {
         return res.status(400).json({ error: 'attackerId, targetId, attackRoll, and damage required' });
       }
-      const result = combatSvc.processAttack(attackerId, targetId, attackRoll, damage, damageType, crit);
+      const result = combatSvc.processAttack(attackerId, targetId, attackRoll, damage, damageType, crit, weaponName || null, !!magical, !!silvered);
       if (!result) return res.status(404).json({ error: 'Attacker or target not found in combat' });
       res.json(result);
     });

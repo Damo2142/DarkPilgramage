@@ -180,6 +180,19 @@ class CombatService {
       const manualVal = manualInit[id] || manualInit[tokenId];
       const total = manualVal !== undefined ? manualVal : roll + initMod;
 
+      // Pull immunities/resistances from actor config so processAttack can
+      // enforce them (werewolf: nonmagical weapons, vampire: poison, etc.)
+      const actorSlug = token.actorSlug || token.slug || null;
+      let immunities = null, resistances = null;
+      if (actorSlug) {
+        const mapSvc = this.orchestrator.getService('map');
+        const actor = mapSvc?.customActors?.get(actorSlug) || mapSvc?.srdMonsters?.find(m => m.slug === actorSlug);
+        if (actor) {
+          immunities = actor.immunities || null;
+          resistances = actor.resistances || null;
+        }
+      }
+
       combatants.push({
         id: tokenId,
         name: token.name || tokenId,
@@ -190,7 +203,9 @@ class CombatService {
         hp: this._resolveCombatantHp(token),
         ac: this._resolveCombatantAc(token),
         conditions: [],
-        actorSlug: token.actorSlug || token.slug || null,
+        actorSlug,
+        immunities,
+        resistances,
         isAlive: true,
         deathSaves: { successes: 0, failures: 0 }
       });
@@ -735,7 +750,7 @@ class CombatService {
   /**
    * Process an attack: check hit vs AC, apply damage if hit
    */
-  processAttack(attackerId, targetId, attackRoll, damage, damageType, crit = false, weaponName = null) {
+  processAttack(attackerId, targetId, attackRoll, damage, damageType, crit = false, weaponName = null, magical = false, silvered = false) {
     const combat = this._getCombatState();
     const attacker = combat.turnOrder.find(x => x.id === attackerId);
     const target = combat.turnOrder.find(x => x.id === targetId);
@@ -743,8 +758,44 @@ class CombatService {
 
     const hit = crit || attackRoll >= target.ac;
     let appliedDamage = 0;
+    let immunityReason = null;
     if (hit) {
       appliedDamage = damage;
+
+      // ── Damage immunity / resistance from actor config ────────────
+      // NPC immunities live on the actor json (config/actors/<slug>.json)
+      // and get merged onto the combatant as `combatant.immunities` when the
+      // combatant is spawned from a token. Check three things:
+      //   1. damage_types list (e.g. poison) — hard immunity
+      //   2. nonmagical_weapons true — physical attacks need magical=true
+      //      (silver satisfies this if silver_bypasses is true and the
+      //      attack is silvered)
+      //   3. resistances.damage_types — halve damage
+      const imm = target.immunities || (target.actor && target.actor.immunities) || null;
+      const res = target.resistances || (target.actor && target.actor.resistances) || null;
+      const dType = (damageType || '').toLowerCase();
+      const isPhysical = ['slashing', 'piercing', 'bludgeoning'].includes(dType);
+      if (imm) {
+        if (Array.isArray(imm.damage_types) && imm.damage_types.map(s => s.toLowerCase()).includes(dType)) {
+          appliedDamage = 0;
+          immunityReason = `${target.name} is immune to ${dType} damage.`;
+        } else if (imm.nonmagical_weapons && isPhysical && !magical && !(imm.silver_bypasses && silvered)) {
+          appliedDamage = 0;
+          immunityReason = `${target.name} is immune to nonmagical ${dType} — ${weaponName || 'this weapon'} has no effect.`;
+        }
+      }
+      if (appliedDamage > 0 && res && Array.isArray(res.damage_types) && res.damage_types.map(s => s.toLowerCase()).includes(dType)) {
+        const halved = Math.floor(appliedDamage / 2);
+        this.bus.dispatch('dm:whisper', {
+          text: `${target.name} resists ${dType}: ${appliedDamage} → ${halved}`,
+          priority: 2, category: 'combat'
+        });
+        appliedDamage = halved;
+      }
+      if (immunityReason) {
+        this.bus.dispatch('dm:whisper', { text: immunityReason, priority: 1, category: 'combat' });
+      }
+
       // Addition 3 — Rage resistance (Bear Totem: all damage except psychic)
       if (target.type === 'pc') {
         const targetAbilities = this.state.get('players.' + targetId + '.abilities');
@@ -757,7 +808,7 @@ class CombatService {
           appliedDamage = halved;
         }
       }
-      this.modifyHp(targetId, -appliedDamage);
+      if (appliedDamage > 0) this.modifyHp(targetId, -appliedDamage);
     }
 
     const result = {

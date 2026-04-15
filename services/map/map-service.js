@@ -1120,8 +1120,9 @@ class MapService {
       res.json(results.slice(0, limit));
     });
 
-    // GET /api/equipment/:name — get full item data by exact name
-    app.get('/api/equipment/:name', (req, res) => {
+    // GET /api/equipment/item/:name — get full SRD item data by exact name.
+    // Moved under /item/ so it stops shadowing equipment-service's /api/equipment/:playerId.
+    app.get('/api/equipment/item/:name', (req, res) => {
       const name = decodeURIComponent(req.params.name).toLowerCase();
       const item = this.srdEquipment.find(i => i.name.toLowerCase() === name);
       if (!item) return res.status(404).json({ error: 'Item not found' });

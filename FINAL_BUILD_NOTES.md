@@ -630,10 +630,12 @@ EventBus                 → dedup active, real duplicates caught on boot
 - Session lifecycle (start campaign → start session → stop → reset) working
 
 **Pre-game-night checklist (Dave):**
-1. Kill any stale bare-metal `node server.js` on the host (from old `start.sh`-era processes) — they hold port 3200 and block the container: `ss -tlnp | grep 3200` then `kill <pid>` if found.
-2. Start the stack: `cd ~/dark-pilgrimage/co-dm && docker compose up -d`. This is the canonical start for game night. The legacy `~/dark-pilgrimage/start.sh` path (bare-metal node) is NOT used — do not run it.
-3. Verify startup: `docker compose logs co-dm | grep "Co-DM ready"` should appear within ~10s of `up -d`.
+1. Make sure Docker is NOT running: `docker compose ps` should show nothing. If a container is up, `docker compose down`. Docker breaks audio device routing — we do not use it.
+2. Start the stack bare-metal: `~/dark-pilgrimage/start.sh`. This is the canonical start. It launches the watchdog and `node server.js config/session-0.json` on the host. Run it in a terminal, or background it with `~/dark-pilgrimage/start.sh >> ~/dark-pilgrimage/co-dm.log 2>&1 &`.
+3. Verify startup: `tail -30 ~/dark-pilgrimage/co-dm.log | grep "Co-DM ready"` should appear within ~5s. `ss -tlnp | grep 3200` should show `node` holding port 3200.
 4. SSH key: add the public key from OVERNIGHT_DIAGNOSTIC.md to GitHub (one-time, only if not already done).
-5. Browser config: /dm/ref → Tools → Audio Devices → set Room Speaker + DM Earbud.
+5. Browser config: /dm/ref → Tools → Audio Devices → pick Room Speaker + DM Earbud → click "Save Audio Config" → reload /dm. The save step is required; the test button uses the live dropdown value, but Max playback reads the saved localStorage key.
 6. ElevenLabs: verify green on Tools tab.
 7. Test mode: Start Campaign → Start Session → verify Katya sings at 17:45.
+
+Clean shutdown: `pgrep -af "watchdog\.sh"` and `pgrep -af "node server\.js"` — kill the watchdog first (or it respawns node) then the node process and the start.sh bash. Port 3200 should free immediately.

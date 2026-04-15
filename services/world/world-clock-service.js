@@ -1315,13 +1315,48 @@ class WorldClockService {
 
   advanceTime(minutes) {
     this.gameTime = new Date(this.gameTime.getTime() + minutes * 60000);
-    this._checkTimedEvents();
+    // Catch up on both overdue one-shots AND repeating events whose next
+    // scheduled fire is still in the past. Without the loop, a repeating
+    // event like scratching_sounds (every 20 min) only fires once per
+    // advance call — pin it down so an 800-minute skip fires each interval.
+    let safety = 500;
+    while (safety-- > 0) {
+      const before = this.timedEvents.filter(e => e.fired || (e.repeating && e.gameTime)).length;
+      const firedThisPass = this._checkTimedEventsAndReport();
+      if (!firedThisPass) break;
+    }
     this._syncToState();
     this.bus.dispatch('world:time_advanced', {
       minutes,
       gameTime: this.gameTime.toISOString(),
       formatted: this._formatGameTime()
     });
+  }
+
+  // Variant of _checkTimedEvents that returns whether any event fired on
+  // this pass. Used by advanceTime() to catch up repeating events across
+  // a large time jump.
+  _checkTimedEventsAndReport() {
+    let firedCount = 0;
+    for (const evt of this.timedEvents) {
+      if (evt.fired && !evt.repeating) continue;
+      if (!evt.gameTime) continue;
+      if (evt.condition && !this._evaluateCondition(evt.condition)) continue;
+      if (this.gameTime >= evt.gameTime) {
+        evt.fired = true;
+        this.bus.dispatch('world:timed_event', {
+          id: evt.id, event: evt.event, data: evt.data,
+          gameTime: this.gameTime.toISOString()
+        });
+        if (evt.event) this.bus.dispatch(evt.event, { ...evt.data, _timedEvent: evt.id });
+        if (evt.data && evt.data.profile) this.bus.dispatch('atmo:change', { profile: evt.data.profile });
+        if (evt.repeating && evt.intervalMinutes) {
+          evt.gameTime = new Date(evt.gameTime.getTime() + evt.intervalMinutes * 60000);
+        }
+        firedCount++;
+      }
+    }
+    return firedCount > 0;
   }
 
   // ═══════════════════════════════════════════════════════════════

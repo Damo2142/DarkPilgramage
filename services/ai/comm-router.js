@@ -30,6 +30,24 @@ const DICE_KEYWORDS = [
   'rolled', 'rolls', 'rolling', 'roll'
 ];
 
+// Phrases that mark a player taking an active perception / investigation action.
+// When detected, comm-router fires observation:trigger events for the
+// current scene so the observation service can push perception flashes to
+// the player's Chromebook (rather than only Max whispering advice to the DM).
+// Multi-word phrases are matched case-insensitively as substrings; single
+// verbs are matched with word boundaries to avoid false positives.
+const ACTIVE_PERCEPTION_PHRASES = [
+  'look around', 'look for', 'look closer', 'look closely',
+  'scan the room', 'scan the area', 'scan around',
+  'search the area', 'search the room', 'search for',
+  'check the room', 'check the area',
+  'study the room', 'study the area'
+];
+const ACTIVE_PERCEPTION_VERBS = [
+  'investigate', 'examine', 'inspect', 'perception', 'notice',
+  'observe', 'survey', 'scrutinize'
+];
+
 // Roll types — pattern matches in declared text
 const ROLL_TYPES = {
   attack: /\b(to\s*hit|attack|hit\b)/i,
@@ -242,6 +260,18 @@ class CommRouter {
     const safeText = this._sanitizePlayerInput(text, playerId);
     if (!safeText) return;
     data = { ...data, text: safeText };
+
+    // Active perception / investigation detection — fires observation:trigger
+    // events for the current scene so the observation service can push
+    // perception flashes to the player's Chromebook. Non-blocking: we
+    // continue to route the message through Max / NPC / combat as normal.
+    try {
+      if (this._detectActivePerceptionIntent(safeText)) {
+        this._fireActivePerception(playerId);
+      }
+    } catch (e) {
+      console.warn('[CommRouter] active perception detector error:', e.message);
+    }
 
     // Addition 3 — combat initiation detection (out-of-combat only).
     // If the player declares an attack/charge/cast against a target on
@@ -1449,6 +1479,98 @@ class CommRouter {
       if (found) return found;
     }
     return null;
+  }
+
+  // ─── Active perception / investigation detection ───────────────
+  //
+  // Fires observation:trigger events when a player declares an active
+  // look / search / examine action in chat. Without this, only timed
+  // events surface observations — Max may whisper advice to the DM but
+  // the player's Chromebook never gets the perception flash. The C1 fix
+  // in observation-service handles per-player routing once the trigger
+  // is dispatched; this just makes the trigger fire on intent.
+
+  _detectActivePerceptionIntent(text) {
+    if (!text) return false;
+    const lower = text.toLowerCase();
+    for (const phrase of ACTIVE_PERCEPTION_PHRASES) {
+      if (lower.includes(phrase)) return true;
+    }
+    for (const verb of ACTIVE_PERCEPTION_VERBS) {
+      if (new RegExp('\\b' + verb + '\\b', 'i').test(lower)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Collect observation eventIds that should fire on an active look in the
+   * current scene. Reads from this.config.world?.observations || this.config.observations,
+   * mirroring how observation-service loads them. Filters by simple scene
+   * heuristic: upper-floor scene only includes events tagged 'upper'/'upstairs';
+   * everything else is treated as ground/cellar/anywhere and included for
+   * the ground scene. Unknown scene → return all eventIds.
+   */
+  _collectActiveLookObservationEvents() {
+    const cfg = this.config || {};
+    const world = cfg.world || {};
+    const obsList = world.observations || cfg.observations || [];
+    if (!Array.isArray(obsList) || obsList.length === 0) return [];
+    const sceneId = String(this.state.get('scene.id') || '').toLowerCase();
+    const isUpper = sceneId.includes('upper') || sceneId.includes('upstairs');
+    const eventIds = [];
+    const seen = new Set();
+    for (const o of obsList) {
+      const eid = o && (o.eventId || o.gameTime);
+      if (!eid || seen.has(eid)) continue;
+      const eidLower = String(eid).toLowerCase();
+      const isUpperEvent = eidLower.includes('upper') || eidLower.includes('upstairs');
+      // Upper scene: only upper events. Other (or unknown) scenes: skip
+      // explicitly upper-tagged events so they don't leak into the tavern.
+      if (isUpper && !isUpperEvent) continue;
+      if (!isUpper && isUpperEvent && sceneId) continue;
+      eventIds.push(eid);
+      seen.add(eid);
+    }
+    return eventIds;
+  }
+
+  _fireActivePerception(playerId) {
+    const charName = this._charName(playerId);
+
+    // Whisper to the DM that the player took an active look (so the DM
+    // earbud gets the cue alongside any Max advice).
+    this.bus.dispatch('dm:whisper', {
+      text: `[ACTIVE PERCEPTION] ${charName} actively looks/investigates — firing scene observations`,
+      priority: 3,
+      category: 'observation',
+      source: 'comm-router'
+    });
+
+    // Generic active-look signal — useful for downstream listeners that
+    // want to react to the intent itself (e.g. an AI-generated dynamic
+    // observation). Carries activeCheck:true and targetPlayer so the
+    // observation service / future enhancements can scope routing.
+    this.bus.dispatch('observation:trigger', {
+      id: `active-look-${playerId}-${Date.now()}`,
+      dc: 0,
+      text: null,
+      targetPlayer: playerId,
+      activeCheck: true
+    });
+
+    // Reference-path triggers — fire each registered observation event
+    // for the current scene. The observation service's _onObservationTrigger
+    // reference branch (`if (!d.text && this.observations.has(d.id))`) will
+    // fire all observations grouped under that eventId, with per-observation
+    // dedup so a given observation only fires once per session.
+    const eventIds = this._collectActiveLookObservationEvents();
+    for (const eid of eventIds) {
+      this.bus.dispatch('observation:trigger', {
+        id: eid,
+        targetPlayer: playerId,
+        activeCheck: true
+      });
+    }
   }
 }
 

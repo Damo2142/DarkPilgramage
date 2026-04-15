@@ -286,16 +286,13 @@ class CombatService {
       });
     }
 
-    // Build 7 — auto-combat. If the upcoming combatant is not a PC, fire
-    // its turn automatically after a short delay so the turn-announcement
-    // audio lands first. PCs (including Spurt, which spurt-agent.js owns)
-    // are left alone — type === 'pc' combatants never auto-run here.
-    if (upcomingNext && upcomingNext.type !== 'pc' && upcomingNext.isAlive) {
-      setTimeout(() => {
-        try { this._autoNpcTurn(upcomingNext); }
-        catch (e) { console.warn('[CombatService] auto-npc turn error:', e.message); }
-      }, 1500);
-    }
+    // NPC turn execution is owned by the combat:next_turn bus subscriber
+    // (_npcTacticalAI → _executeNpcCombatAction → processAttack) so the
+    // wound system, hit-location narration, and trust-level gate fire
+    // consistently. Previously a setTimeout here also ran _autoNpcTurn,
+    // which raced the bus subscriber: two target selections per turn, two
+    // damage applications, and a mismatch where the announcement named
+    // one PC while the wound landed on another.
 
     return combat;
   }

@@ -249,12 +249,41 @@
       padding: 10px 14px; background: var(--surface);
       border-left: 3px solid transparent; margin-bottom: 4px;
       font-size: 15px; border-radius: 0 3px 3px 0;
+      cursor: pointer;
     }
+    .init-row:hover { background: #2a1f15; }
     .init-row.current { background: #3a2010; border-left-color: var(--gold); }
+    .init-row.expanded { border-left-color: var(--amber); background: #2a1f15; }
     .init-row .turn-arrow { width: 14px; color: var(--gold); font-size: 14px; }
     .init-row .iname { flex: 1; color: var(--text); font-weight: 500; }
     .init-row .iconds { font-size: 11px; color: var(--amber); }
     .init-row .iinit { font-family: monospace; font-size: 14px; color: var(--text-dim); width: 32px; text-align: right; }
+    .init-row .ihp { font-family: monospace; font-size: 13px; min-width: 68px; text-align: right; }
+    .init-row .ihp-bar { width: 60px; height: 6px; background: #1a1412; border-radius: 3px; overflow: hidden; }
+    .init-row .ihp-fill { height: 100%; transition: width 120ms ease; }
+    .init-detail {
+      margin-bottom: 4px; padding: 12px 14px;
+      background: var(--surface2); border-left: 3px solid var(--amber);
+      border-radius: 0 3px 3px 0;
+    }
+    .init-detail .idt-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+    .init-detail .idt-row label { color: var(--text-dim); min-width: 60px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .init-detail .idt-row strong { color: var(--text); font-weight: 700; }
+    .init-detail .idt-presets { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+    .init-detail .idt-btn {
+      background: var(--surface3); color: var(--text); border: 1px solid var(--border);
+      font-family: monospace; font-size: 12px; padding: 5px 10px; border-radius: 3px; cursor: pointer;
+      min-width: 44px;
+    }
+    .init-detail .idt-btn.dmg { color: var(--red-bright, #e04040); border-color: #5a2020; }
+    .init-detail .idt-btn.dmg:hover { background: #3a1818; }
+    .init-detail .idt-btn.heal { color: var(--green, #40b060); border-color: #20502a; }
+    .init-detail .idt-btn.heal:hover { background: #18331e; }
+    .init-detail .idt-custom { display: flex; gap: 4px; }
+    .init-detail .idt-custom input {
+      flex: 1; background: var(--surface3); color: var(--text); border: 1px solid var(--border);
+      padding: 5px 8px; border-radius: 3px; font-size: 13px; font-family: monospace;
+    }
     #next-turn-btn {
       width: 100%; background: var(--surface2);
       border: 1px solid var(--gold); color: var(--gold);
@@ -1738,6 +1767,30 @@ function addToCombat() {
   });
 }
 
+var combatExpandedId = null;
+
+function toggleCombatExpand(id) {
+  combatExpandedId = combatExpandedId === id ? null : id;
+  renderCombat();
+}
+
+function combatHp(id, delta) {
+  fetch('/api/combat/hp', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ combatantId: id, delta: delta })
+  }).catch(function() {});
+}
+
+function combatHpCustom(id, heal) {
+  var input = document.getElementById('combat-hp-custom-' + id);
+  if (!input) return;
+  var val = parseInt(input.value, 10);
+  if (isNaN(val) || val <= 0) return;
+  combatHp(id, heal ? val : -val);
+  input.value = '';
+}
+
 function renderCombat() {
   var el = $('combat-tracker');
   var meta = $('combat-meta');
@@ -1745,6 +1798,7 @@ function renderCombat() {
   if (!combat || !combat.active || !combat.turnOrder || !combat.turnOrder.length) {
     el.innerHTML = '<div id="combat-empty">No active combat</div>';
     meta.textContent = '';
+    combatExpandedId = null;
     return;
   }
   var visible = combat.turnOrder.filter(function(c) {
@@ -1757,17 +1811,56 @@ function renderCombat() {
     var isCurrent = i === combat.currentTurn;
     var conds = (c.conditions || []).join(', ');
     var hp = c.hp || {};
-    var hpPct = hp.max ? Math.round((hp.current / hp.max) * 100) : 0;
-    var woundLabel = hpPct === 0 ? 'unconscious' : hpPct < 25 ? 'bloodied' : hpPct < 50 ? 'wounded' : '';
+    var hpCur = (typeof hp.current === 'number') ? hp.current : 0;
+    var hpMax = (typeof hp.max === 'number') ? hp.max : 0;
+    var hpPct = hpMax > 0 ? Math.round((hpCur / hpMax) * 100) : 0;
+    var hpColor = hpPct <= 0 ? '#e04040' : hpPct <= 25 ? '#c05030' : hpPct <= 50 ? '#c88040' : '#40b060';
+    var woundLabel = hpMax > 0 && hpCur === 0 ? 'unconscious' : hpPct < 25 ? 'bloodied' : hpPct < 50 ? 'wounded' : '';
     var tags = [];
     if (woundLabel) tags.push(woundLabel);
     if (conds) tags.push(conds);
-    return '<div class="init-row' + (isCurrent ? ' current' : '') + '">' +
+    var expanded = combatExpandedId === c.id;
+
+    var rowHtml = '<div class="init-row' + (isCurrent ? ' current' : '') + (expanded ? ' expanded' : '') +
+        '" onclick="toggleCombatExpand(\'' + c.id + '\')">' +
       '<div class="turn-arrow">' + (isCurrent ? '▶' : '') + '</div>' +
       '<div class="iname">' + esc(c.name || c.id) + '</div>' +
       (tags.length ? '<div class="iconds">[' + esc(tags.join(', ')) + ']</div>' : '') +
+      '<div class="ihp-bar"><div class="ihp-fill" style="width:' + hpPct + '%;background:' + hpColor + ';"></div></div>' +
+      '<div class="ihp" style="color:' + hpColor + ';">' + hpCur + '/' + hpMax + '</div>' +
       '<div class="iinit">' + (c.initiative != null ? c.initiative : '?') + '</div>' +
       '</div>';
+
+    if (!expanded) return rowHtml;
+
+    var detailHtml = '<div class="init-detail" onclick="event.stopPropagation()">' +
+      '<div class="idt-row"><label>HP</label>' +
+        '<strong style="color:' + hpColor + ';">' + hpCur + ' / ' + hpMax + '</strong>' +
+        (c.ac != null ? '<label style="margin-left:16px;">AC</label><strong>' + c.ac + '</strong>' : '') +
+        (c.initiative != null ? '<label style="margin-left:16px;">Init</label><strong>' + c.initiative + '</strong>' : '') +
+      '</div>' +
+      '<div class="idt-row"><label>Damage</label></div>' +
+      '<div class="idt-presets">' +
+        '<button class="idt-btn dmg" onclick="event.stopPropagation();combatHp(\'' + c.id + '\',-1)">-1</button>' +
+        '<button class="idt-btn dmg" onclick="event.stopPropagation();combatHp(\'' + c.id + '\',-5)">-5</button>' +
+        '<button class="idt-btn dmg" onclick="event.stopPropagation();combatHp(\'' + c.id + '\',-10)">-10</button>' +
+        '<button class="idt-btn dmg" onclick="event.stopPropagation();combatHp(\'' + c.id + '\',-25)">-25</button>' +
+      '</div>' +
+      '<div class="idt-row"><label>Healing</label></div>' +
+      '<div class="idt-presets">' +
+        '<button class="idt-btn heal" onclick="event.stopPropagation();combatHp(\'' + c.id + '\',1)">+1</button>' +
+        '<button class="idt-btn heal" onclick="event.stopPropagation();combatHp(\'' + c.id + '\',5)">+5</button>' +
+        '<button class="idt-btn heal" onclick="event.stopPropagation();combatHp(\'' + c.id + '\',10)">+10</button>' +
+        '<button class="idt-btn heal" onclick="event.stopPropagation();combatHp(\'' + c.id + '\',25)">+25</button>' +
+      '</div>' +
+      '<div class="idt-custom">' +
+        '<input type="number" id="combat-hp-custom-' + c.id + '" placeholder="amount" min="1" onclick="event.stopPropagation()">' +
+        '<button class="idt-btn dmg" onclick="event.stopPropagation();combatHpCustom(\'' + c.id + '\',false)">Dmg</button>' +
+        '<button class="idt-btn heal" onclick="event.stopPropagation();combatHpCustom(\'' + c.id + '\',true)">Heal</button>' +
+      '</div>' +
+    '</div>';
+
+    return rowHtml + detailHtml;
   }).join('');
   html += '<button id="next-turn-btn" onclick="nextTurn()">▶ NEXT TURN</button>';
   el.innerHTML = html;

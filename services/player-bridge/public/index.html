@@ -2195,7 +2195,8 @@ function castSpell(idx){
   const sa=char.spellcastingAbility||'cha', sm=abilMod(sa), prof=char.proficiencyBonus||2;
   const saveDC=8+sm+prof, atkMod=sm+prof;
 
-  // For leveled spells, consume a slot
+  // For leveled spells, consume a slot — optimistic local + server POST so
+  // the decrement survives character:update resyncs and page refresh.
   if(s.level>0){
     const slotKey='level'+s.level;
     const sl=(char.spellSlots||{})[slotKey];
@@ -2203,9 +2204,33 @@ function castSpell(idx){
       const rem=slotState[slotKey]!==undefined?slotState[slotKey]:(sl.remaining||sl.total||0);
       if(rem<=0){
         if(!confirm('No Level '+s.level+' slots remaining! Cast anyway?'))return;
+        // Casting anyway — don't decrement, don't POST (no slot to consume).
       } else {
         slotState[slotKey]=rem-1;
+        if(char.spellSlots[slotKey]){
+          char.spellSlots[slotKey].remaining = slotState[slotKey];
+          char.spellSlots[slotKey].used = Math.max(0, (sl.total||0) - slotState[slotKey]);
+        }
+        fetch('/api/characters/'+PID+'/spell-slot',{
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({ level: slotKey, action: 'use' })
+        }).then(r=>r.json()).then(d=>{
+          if(d && d.ok && typeof d.remaining === 'number'){
+            slotState[slotKey] = d.remaining;
+            if(char.spellSlots && char.spellSlots[slotKey]){
+              char.spellSlots[slotKey].remaining = d.remaining;
+              char.spellSlots[slotKey].used = Math.max(0, d.total - d.remaining);
+            }
+            renderSpells();
+          } else if(d && d.error){
+            showToast('Spell', 'Slot sync failed: '+d.error, 2500);
+          }
+        }).catch(()=>{ showToast('Spell','Slot sync failed (offline)', 2500); });
       }
+    } else {
+      // Level>0 spell but no matching slot entry — warn so the player knows
+      // the slot isn't being tracked (DDB sync gap or unsupported level).
+      showToast('Spell', 'No Level '+s.level+' slot tracked — cast not deducted', 3000);
     }
   }
 

@@ -750,14 +750,25 @@ class CharacterService {
     let count = 0;
     for (const [playerId, charId] of Object.entries(assignments)) {
       if (playerId.startsWith('_')) continue;
-      const char = characters[String(charId)];
-      if (!char) {
-        console.warn('[Characters] Assignment: player \'' + playerId + '\' -> ID ' + charId + ' not found');
-        continue;
-      }
-      // Preserve existing absent/notYetArrived state if already set
       const existing = this.state.get('players.' + playerId) || {};
       const bs = backstories[playerId] || {};
+      const char = charId ? characters[String(charId)] : null;
+
+      // Unresolved assignment (null or missing char file): still create a stub
+      // entry so the player slot survives restart and renders in the Players tab.
+      if (!char) {
+        if (charId) {
+          console.warn('[Characters] Assignment: player \'' + playerId + '\' -> ID ' + charId + ' not found — stub slot created');
+        }
+        this.state.setPlayer(playerId, {
+          name: playerId,
+          character: {},
+          absent: existing.absent || !!bs.absent,
+          absentReason: existing.absentReason || bs.absentReason || null,
+          notYetArrived: existing.notYetArrived || !!bs.notYetArrived
+        });
+        continue;
+      }
 
       // Apply campaign language overrides — replaces DDB-synced language list
       const langOverride = this._langOverrides && this._langOverrides[playerId];

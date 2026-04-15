@@ -7,7 +7,20 @@ const DEDUP_SKIP_EVENTS = new Set([
   'audio:chunk', 'audio:dm_chunk', 'audio:player_stream_start', 'audio:player_stream_stop',
   'transcript:silence', 'player:camera_frame', 'world:time_update',
   'state:change', 'map:token_moved', 'token:move',
-  'system:error', '*'
+  'system:error', '*',
+  // Combat lifecycle events — each turn/round/attack is a discrete event that
+  // must never be collapsed with a prior one. Without these exclusions, the
+  // second combat:next_turn fingerprint-matches the first within 5s and is
+  // dropped, leaving _npcTacticalAI / _executeNpcCombatAction silent for
+  // every turn after the first (root cause of F1 in production).
+  'combat:next_turn', 'combat:prev_turn', 'combat:started', 'combat:ended',
+  'combat:attack_result', 'combat:hp_changed', 'combat:hit_location',
+  'combat:condition_changed', 'combat:initiative_changed',
+  'combat:combatant_added', 'combat:combatant_removed',
+  'combat:death_save', 'combat:morale_break', 'combat:save_required',
+  'combat:shock_save_passed', 'combat:shock_failed',
+  'combat:player_initiated', 'combat:player_joins',
+  'combat:npc_suggestion', 'combat:forced_movement', 'combat:bleeding_tick'
 ]);
 
 class EventBus extends EventEmitter {

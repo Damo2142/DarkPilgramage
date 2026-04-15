@@ -187,8 +187,8 @@ class CombatService {
         initiative: total,
         initRoll: roll,
         initMod,
-        hp: { ...(token.hp || { current: 10, max: 10 }) },
-        ac: token.ac || 10,
+        hp: this._resolveCombatantHp(token),
+        ac: this._resolveCombatantAc(token),
         conditions: [],
         actorSlug: token.actorSlug || token.slug || null,
         isAlive: true,
@@ -1189,18 +1189,55 @@ class CombatService {
 
   async _executeNpcCombatAction(combatant, decision) {
     const rollResult = this.rollNpcAction(combatant.id, decision.actionIndex);
-    if (!rollResult || rollResult.error) return;
-
-    if (decision.targetId) {
-      const result = this.processAttack(
-        combatant.id, decision.targetId,
-        rollResult.attackRoll, rollResult.damage,
-        rollResult.dmgType, rollResult.crit
-      );
-      if (result) {
-        console.log(`[CombatService] ${combatant.name} attacks ${result.targetName}: ${result.hit ? 'HIT' : 'MISS'} (${rollResult.attackRoll} vs AC ${result.targetAC})${result.hit ? `, ${result.damage} ${result.damageType}` : ''}`);
-      }
+    if (!rollResult || rollResult.error) {
+      // Pre-attack failure — surface it so the DM knows the NPC turn fizzled
+      // rather than being silent.
+      this.bus.dispatch('dm:whisper', {
+        text: `[COMBAT] ${combatant.name} turn skipped — could not roll action (${rollResult?.error || 'no action parsed'}).`,
+        priority: 1, category: 'combat', source: 'combat-service'
+      });
+      return;
     }
+
+    if (!decision.targetId) {
+      this.bus.dispatch('dm:whisper', {
+        text: `[COMBAT] ${combatant.name} uses ${rollResult.actionName} — no target selected.`,
+        priority: 1, category: 'combat', source: 'combat-service'
+      });
+      return;
+    }
+
+    const result = this.processAttack(
+      combatant.id, decision.targetId,
+      rollResult.attackRoll, rollResult.damage,
+      rollResult.dmgType, rollResult.crit
+    );
+    if (!result) {
+      this.bus.dispatch('dm:whisper', {
+        text: `[COMBAT] ${combatant.name} attack failed — target ${decision.targetId} not found in combat.`,
+        priority: 1, category: 'combat', source: 'combat-service'
+      });
+      return;
+    }
+
+    // Whisper every NPC attack to the DM earbud. Before this, _executeNpcCombatAction
+    // only console.log'd — so auto-combat was silent on the earbud after commit
+    // a5ef09b removed the setTimeout → _autoNpcTurn path (which had been the
+    // whisper-producing path).
+    const attackerToHit = rollResult.toHitBonus ?? 0;
+    const hitMiss = result.hit ? (result.crit ? 'CRIT HIT' : 'HIT') : 'MISS';
+    const damageFragment = result.hit
+      ? ` — ${result.damage} ${result.damageType || 'damage'} applied`
+      : '';
+    this.bus.dispatch('dm:whisper', {
+      text:
+        `[COMBAT] ${combatant.name} → ${result.targetName} with ${rollResult.actionName || 'attack'} ` +
+        `— rolled ${rollResult.d20 ?? '?'} + ${attackerToHit >= 0 ? '+' : ''}${attackerToHit} = ${result.attackRoll} ` +
+        `vs AC ${result.targetAC} — ${hitMiss}${damageFragment}`,
+      priority: 1, category: 'combat', source: 'combat-service'
+    });
+
+    console.log(`[CombatService] ${combatant.name} attacks ${result.targetName}: ${hitMiss} (${rollResult.attackRoll} vs AC ${result.targetAC})${result.hit ? `, ${result.damage} ${result.damageType}` : ''}`);
   }
 
   // ── Build 7 — auto-combat for non-PC combatants ─────────────────
@@ -1291,6 +1328,68 @@ class CombatService {
         priority: 1, category: 'combat'
       });
     }
+  }
+
+  // Resolve HP for a combatant. Strategy: look up the actor config's authoritative
+  // max (via hit_points / hp.max / srd-monsters). If token.hp.max matches that
+  // authoritative max, the token is carrying mid-combat HP — use token.hp.current.
+  // Otherwise the token has the 10/10 default and we seed from the actor config.
+  // Fixes F3 (Vladislav 10/10 instead of 144/144).
+  _resolveCombatantHp(token) {
+    const authoritativeMax = this._resolveAuthoritativeHpMax(token);
+    if (authoritativeMax && Number.isFinite(authoritativeMax)) {
+      const tokHp = token && token.hp;
+      if (tokHp && Number.isFinite(tokHp.max) && tokHp.max === authoritativeMax && Number.isFinite(tokHp.current)) {
+        return { current: tokHp.current, max: authoritativeMax };
+      }
+      return { current: authoritativeMax, max: authoritativeMax };
+    }
+    if (token && token.hp && Number.isFinite(token.hp.max) && Number.isFinite(token.hp.current)) {
+      return { current: token.hp.current, max: token.hp.max };
+    }
+    return { current: 10, max: 10 };
+  }
+
+  _resolveAuthoritativeHpMax(token) {
+    const slug = token && (token.actorSlug || token.slug);
+    if (!slug) return null;
+    const cfg = this._creatureConfigFor(slug);
+    if (cfg) {
+      if (cfg.hp && Number.isFinite(cfg.hp.max)) return cfg.hp.max;
+      if (Number.isFinite(cfg.hit_points)) return cfg.hit_points;
+    }
+    try {
+      const mapSvc = this.orchestrator.getService('map');
+      // Guard against falsy slug matching SRD entries with undefined id via
+      // `undefined === undefined` — the whole branch is already behind `!slug`
+      // returning null above, but keep the explicit guard for defense.
+      if (slug) {
+        const srd = mapSvc?.srdMonsters?.find(m => m && ((m.slug && m.slug === slug) || (m.id && m.id === slug)));
+        if (srd && Number.isFinite(srd.hit_points)) return srd.hit_points;
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  _resolveCombatantAc(token) {
+    const slug = token && (token.actorSlug || token.slug);
+    const cfg = slug ? this._creatureConfigFor(slug) : null;
+    if (cfg) {
+      if (Number.isFinite(cfg.ac)) return cfg.ac;
+      if (Number.isFinite(cfg.armor_class)) return cfg.armor_class;
+    }
+    // Only consult the SRD monster table when we actually have a slug —
+    // `find(m.id === undefined)` silently matches the first SRD entry whose
+    // id is missing, which poisoned PC AC with aboleth's 17.
+    if (slug) {
+      try {
+        const mapSvc = this.orchestrator.getService('map');
+        const srd = mapSvc?.srdMonsters?.find(m => m && ((m.slug && m.slug === slug) || (m.id && m.id === slug)));
+        if (srd && Number.isFinite(srd.armor_class)) return srd.armor_class;
+      } catch (e) {}
+    }
+    if (token && Number.isFinite(token.ac) && token.ac > 0) return token.ac;
+    return 10;
   }
 
   _creatureConfigFor(actorSlug) {
@@ -2044,14 +2143,27 @@ Respond with JSON: { "items": [{ "name": "...", "description": "...", "type": "w
       // NPC tactical AI
       if (current.type === 'npc') {
         const trustLevel = this.state.get('session.aiTrustLevel') || 'manual';
-        const decision = await this._npcTacticalAI(current, combat);
+        let decision = null;
+        try {
+          decision = await this._npcTacticalAI(current, combat);
+        } catch (err) {
+          console.error(`[CombatService] _npcTacticalAI threw for ${current.name}:`, err.message);
+          this.bus.dispatch('dm:whisper', {
+            text: `[COMBAT] ${current.name}: tactical AI crashed (${err.message}) — manual resolution required`,
+            priority: 1, category: 'combat', source: 'combat-service'
+          });
+        }
+
+        if (!decision) {
+          try { decision = this._basicNpcTactics(current, combat); } catch (e) {
+            console.error(`[CombatService] _basicNpcTactics threw for ${current.name}:`, e.message);
+          }
+        }
 
         if (decision) {
           if (trustLevel === 'autopilot') {
-            // Auto-execute
             await this._executeNpcCombatAction(current, decision);
           } else {
-            // Queue for DM approval
             this.bus.dispatch('combat:npc_suggestion', {
               combatantId: current.id,
               combatantName: current.name,
@@ -2062,6 +2174,12 @@ Respond with JSON: { "items": [{ "name": "...", "description": "...", "type": "w
               priority: 2, category: 'combat'
             });
           }
+        } else {
+          // Surface the silent failure to the DM so turns never silently skip.
+          this.bus.dispatch('dm:whisper', {
+            text: `[COMBAT] ${current.name}'s turn — no AI decision available (no actions parsed for actorSlug="${current.actorSlug}"). Resolve manually or use /api/combat/npc-execute.`,
+            priority: 1, category: 'combat', source: 'combat-service'
+          });
         }
       }
     }, 'combat');

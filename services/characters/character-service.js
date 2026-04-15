@@ -25,6 +25,58 @@ const ALIGNMENTS = {1:'LG',2:'NG',3:'CG',4:'LN',5:'TN',6:'CN',7:'LE',8:'NE',9:'C
 function abilityMod(score) { return Math.floor((score - 10) / 2); }
 function modStr(mod) { return mod >= 0 ? '+' + mod : '' + mod; }
 
+// ── Spell-slot tables (PHB 113 + Warlock pact magic) ──
+const FULL_CASTER_SLOTS = {
+  1: [2], 2: [3], 3: [4,2], 4: [4,3], 5: [4,3,2],
+  6: [4,3,3], 7: [4,3,3,1], 8: [4,3,3,2], 9: [4,3,3,3,1], 10: [4,3,3,3,2],
+  11: [4,3,3,3,2,1], 12: [4,3,3,3,2,1], 13: [4,3,3,3,2,1,1], 14: [4,3,3,3,2,1,1],
+  15: [4,3,3,3,2,1,1,1], 16: [4,3,3,3,2,1,1,1], 17: [4,3,3,3,2,1,1,1,1],
+  18: [4,3,3,3,3,1,1,1,1], 19: [4,3,3,3,3,2,1,1,1], 20: [4,3,3,3,3,2,2,1,1]
+};
+const WARLOCK_SLOTS = {
+  1: [1,1], 2: [2,1], 3: [2,2], 4: [2,2], 5: [2,3], 6: [2,3],
+  7: [2,4], 8: [2,4], 9: [2,5], 10: [2,5], 11: [3,5], 12: [3,5],
+  13: [3,5], 14: [3,5], 15: [3,5], 16: [3,5], 17: [4,5], 18: [4,5],
+  19: [4,5], 20: [4,5]
+};
+const FULL_CASTER_CLASSES = new Set(['Bard','Cleric','Druid','Sorcerer','Wizard']);
+const HALF_CASTER_CLASSES = new Set(['Paladin','Ranger','Artificer']);
+const THIRD_CASTER_SUBS = new Set(['Eldritch Knight','Arcane Trickster']);
+
+function computeSpellSlotsForClasses(classes, usedMap = {}) {
+  const slots = {};
+  let full = 0, half = 0, third = 0;
+  for (const c of classes || []) {
+    if (!c || !c.name) continue;
+    if (c.name === 'Warlock') continue;
+    if (FULL_CASTER_CLASSES.has(c.name)) full += c.level || 0;
+    else if (HALF_CASTER_CLASSES.has(c.name)) half += c.level || 0;
+    else if (THIRD_CASTER_SUBS.has(c.subclass || '')) third += c.level || 0;
+  }
+  const casterLevel = full + Math.floor(half/2) + Math.floor(third/3);
+  if (casterLevel > 0) {
+    const table = FULL_CASTER_SLOTS[casterLevel] || [];
+    table.forEach((total, idx) => {
+      const key = 'level' + (idx + 1);
+      const used = Math.min(total, (usedMap[key] && usedMap[key].used) || 0);
+      slots[key] = { total, used, remaining: total - used };
+    });
+  }
+  const warlock = (classes || []).find(c => c && c.name === 'Warlock');
+  if (warlock && (warlock.level || 0) > 0) {
+    const pact = WARLOCK_SLOTS[warlock.level] || [0, 0];
+    const count = pact[0], lvl = pact[1];
+    if (count > 0) {
+      const key = 'level' + lvl;
+      const existing = slots[key] || { total: 0, used: 0, remaining: 0 };
+      const total = existing.total + count;
+      const used = Math.min(total, (usedMap[key] && usedMap[key].used) || existing.used);
+      slots[key] = { total, used, remaining: total - used };
+    }
+  }
+  return Object.keys(slots).length ? slots : null;
+}
+
 class CharacterService {
   constructor() {
     this.name = 'characters';
@@ -643,6 +695,77 @@ class CharacterService {
         try { this._persistPlayerCharacter(playerId); } catch (e) {}
         _broadcastAbilityState(playerId);
         return res.json({ ok: true, type, abilities: _getAbilities(playerId) });
+      });
+
+      // POST /api/session/reset-all — dry-run / session-start cleanup.
+      // For every assigned player: HP→max, temp HP→0, spell slots→full,
+      // class ability uses→max (rage 3, bardic 4, second wind 1, action surge 1),
+      // wounds cleared, death saves cleared. Horror→0 via state:session_reset bus
+      // event (horror-service already subscribes).
+      app.post('/api/session/reset-all', (req, res) => {
+        const playerStates = this.state.get('players') || {};
+        const summary = [];
+        for (const playerId of Object.keys(playerStates)) {
+          const playerState = playerStates[playerId];
+          if (!playerState || !playerState.character) continue;
+          const char = playerState.character;
+
+          // Abilities → default max
+          _setAbility(playerId, 'rage_uses', DEFAULT_ABILITY_MAX.rage);
+          _setAbility(playerId, 'rage_active', false);
+          _setAbility(playerId, 'bardic_inspiration_uses', DEFAULT_ABILITY_MAX.bardic_inspiration);
+          _setAbility(playerId, 'second_wind_uses', DEFAULT_ABILITY_MAX.second_wind);
+          _setAbility(playerId, 'action_surge_uses', DEFAULT_ABILITY_MAX.action_surge);
+          _setAbility(playerId, 'action_surge_active', false);
+
+          // HP → max, temp → 0
+          if (char.hp && typeof char.hp.max === 'number') {
+            this.state.set('players.' + playerId + '.character.hp.current', char.hp.max);
+            this.state.set('players.' + playerId + '.character.hp.temp', 0);
+            this.bus.dispatch('hp:update', { playerId, current: char.hp.max, max: char.hp.max, source: 'session-reset-all' });
+          }
+
+          // Spell slots → full
+          if (char.spellSlots && typeof char.spellSlots === 'object') {
+            const updated = {};
+            for (const [k, v] of Object.entries(char.spellSlots)) {
+              if (v && typeof v === 'object' && typeof v.total === 'number') {
+                updated[k] = { total: v.total, used: 0, remaining: v.total };
+              } else {
+                updated[k] = v;
+              }
+            }
+            this.state.set('players.' + playerId + '.character.spellSlots', updated);
+          }
+
+          // Wounds cleared (every limb → 0)
+          this.state.set('players.' + playerId + '.wounds', this._defaultWounds());
+
+          // Death saves cleared
+          this.state.set('players.' + playerId + '.deathSaves', { successes: 0, failures: 0 });
+
+          // Persist to disk so a subsequent restart doesn't reload stale HP.
+          try { this._persistPlayerCharacter(playerId); } catch (e) {}
+          _broadcastAbilityState(playerId);
+
+          summary.push({
+            playerId,
+            name: char.name || playerId,
+            class: char.class || null,
+            hpMax: (char.hp && char.hp.max) || null
+          });
+        }
+
+        // Horror → 0 for all. horror-service listens for state:session_reset
+        // and wipes scores + thresholds + arcProfiles.
+        this.bus.dispatch('state:session_reset', { source: 'reset-all' });
+
+        this.bus.dispatch('dm:whisper', {
+          text: `Session reset: ${summary.length} characters restored — full HP, spell slots, ability uses, wounds, death saves, and horror cleared.`,
+          priority: 2, category: 'system'
+        });
+        console.log('[Characters] /api/session/reset-all — ' + summary.length + ' players restored to full.');
+        res.json({ ok: true, resetCount: summary.length, players: summary });
       });
     }
   }
@@ -1284,7 +1407,14 @@ class CharacterService {
         const PRESERVE_KEYS = ['magical', 'silver', 'attackBonus', 'damageBonus', 'damageType', 'properties', 'special_effect',
           // Addition 5 — preserve player-authored inventory metadata.
           'notes', 'description', 'cursed', 'awardedByDM', 'mechanical', 'id'];
-        const localState = {};
+// Index local state by id FIRST (stable, handles duplicates) then
+        // by name as a fallback so items without ids still merge. Previously
+        // we keyed only on name — which silently lost PRESERVE_KEYS when a
+        // character carried two items of the same name (Chazz carries
+        // several "Dagger, +1" entries; only the last one's fields survived
+        // because later entries overwrote the earlier entry in the map).
+        const localById = {};
+        const localByName = {}; // name -> array of keep-objects (FIFO consume)
         const localExtras = []; // player-added items not present in DDB
         for (const item of existing.inventory) {
           if (!item.name) continue;
@@ -1296,14 +1426,24 @@ class CharacterService {
           for (const k of PRESERVE_KEYS) {
             if (item[k] !== undefined) keep[k] = item[k];
           }
-          if (Object.keys(keep).length) localState[item.name] = keep;
+          if (Object.keys(keep).length) {
+            if (item.id) localById[item.id] = keep;
+            if (!localByName[item.name]) localByName[item.name] = [];
+            localByName[item.name].push(keep);
+          }
           // Player-added item: has an id but is not present in DDB inventory.
           if (item.id && !char.inventory.some(d => d.name === item.name)) {
             localExtras.push(item);
           }
         }
         for (const item of char.inventory) {
-          const saved = localState[item.name];
+          // Prefer id match (stable). Fall back to name — but consume
+          // entries FIFO so duplicate-named items each map to a distinct
+          // locally-authored keep record.
+          let saved = (item.id && localById[item.id]) || null;
+          if (!saved && localByName[item.name] && localByName[item.name].length) {
+            saved = localByName[item.name].shift();
+          }
           if (!saved) continue;
           if (saved.equipped !== undefined) item.equipped = saved.equipped || item.equipped;
           if (saved.attuned !== undefined) item.attuned = saved.attuned || item.attuned;
@@ -1429,17 +1569,15 @@ class CharacterService {
       if (hasShield) ac += 2;
     }
 
-    // Spell slots
-    let spellSlots = null;
-    if (d.spellSlots) {
-      spellSlots = {};
-      for (const slot of d.spellSlots) {
-        if (slot.available > 0 || slot.used > 0) {
-          spellSlots['level' + slot.level] = { total: slot.available + slot.used, used: slot.used, remaining: slot.available };
-        }
-      }
-      if (!Object.keys(spellSlots).length) spellSlots = null;
+    // Spell slots — compute from class+level (DDB's spellSlots only holds used/modified entries)
+    const usedMap = {};
+    for (const slot of (d.spellSlots || [])) {
+      if (slot.used > 0) usedMap['level' + slot.level] = { used: slot.used };
     }
+    for (const slot of (d.pactMagic || [])) {
+      if (slot.used > 0) usedMap['level' + slot.level] = { used: slot.used };
+    }
+    const spellSlots = computeSpellSlotsForClasses(classes, usedMap);
 
     // Spells known
     const spells = [];

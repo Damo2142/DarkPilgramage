@@ -2486,9 +2486,23 @@ var AudioDevices = {
       AudioDevices._setStatus('Failed to save: ' + e.message);
     }
   },
-  testRoom: function() { AudioDevices._playTone(AudioDevices.selected.roomSpeaker, 440, 'Room speaker'); },
-  testEarbud: function() { AudioDevices._playTone(AudioDevices.selected.earbud, 660, 'DM earbud'); },
+  testRoom: function() {
+    console.log('[AudioDevices] testRoom click — deviceId:', AudioDevices.selected.roomSpeaker || '(none)');
+    AudioDevices._playTone(AudioDevices.selected.roomSpeaker, 440, 'Room speaker');
+  },
+  testEarbud: function() {
+    console.log('[AudioDevices] testEarbud click — deviceId:', AudioDevices.selected.earbud || '(none)');
+    AudioDevices._playTone(AudioDevices.selected.earbud, 660, 'DM earbud');
+  },
   _playTone: function(deviceId, freq, label) {
+    console.log('[AudioDevices] _playTone', { label, freq, deviceId: deviceId || '(empty — system default)', setSinkIdSupported: !!(new Audio()).setSinkId });
+    // Early warning when no device is selected. Without this the user
+    // sees "silent failure" because audio routes to the system default,
+    // which on this PC is NOT the room speaker / TOZO earbud.
+    if (!deviceId) {
+      AudioDevices._setStatus('⚠ ' + label + ' test: NO device selected. Pick one in the dropdown, click "Save Audio Config", then test again. Tone will play on system default.');
+      console.warn('[AudioDevices] ' + label + ' has no deviceId saved — tone will go to system default, not the intended device');
+    }
     var audio = new Audio();
     // Generate a 0.6s sine WAV inline so we don't need an external asset
     var sampleRate = 44100;
@@ -2513,23 +2527,31 @@ var AudioDevices = {
     audio.src = URL.createObjectURL(blob);
     var play = function() {
       audio.play().then(function() {
-        AudioDevices._setStatus('Playing test tone on ' + label);
+        console.log('[AudioDevices] tone PLAYING for', label);
+        AudioDevices._setStatus('Playing test tone on ' + label + (deviceId ? '' : ' (system default — no deviceId)'));
       }).catch(function(e) {
-        AudioDevices._setStatus(label + ' test failed: ' + e.message);
+        console.error('[AudioDevices] play() failed for', label, ':', e.name, e.message);
+        AudioDevices._setStatus('⚠ ' + label + ' test FAILED: ' + e.name + ' — ' + e.message);
       });
     };
     if (deviceId && audio.setSinkId) {
-      audio.setSinkId(deviceId).then(play).catch(function(e) {
-        AudioDevices._setStatus(label + ' setSinkId failed (' + e.message + '), playing on default');
+      audio.setSinkId(deviceId).then(function() {
+        console.log('[AudioDevices] setSinkId OK — sink now:', String(deviceId).slice(0, 12) + '…');
+        play();
+      }).catch(function(e) {
+        console.warn('[AudioDevices] setSinkId REJECTED for', label, ':', e.name, e.message, '— falling through to default');
+        AudioDevices._setStatus('⚠ ' + label + ' setSinkId rejected (' + e.name + ': ' + e.message + '). Device may be gone. Refresh Devices → re-pick → Save.');
         play();
       });
     } else {
+      if (!audio.setSinkId) console.warn('[AudioDevices] browser has no HTMLAudioElement.setSinkId — always playing on default');
       play();
     }
   },
   _setStatus: function(text) {
     var el = $('audio-devices-status');
     if (el) el.textContent = text;
+    console.log('[AudioDevices]', text);
   }
 };
 window.AudioDevices = AudioDevices;

@@ -77,37 +77,10 @@
        BODY ZONE — 220px
        ══════════════════════════════════════════ */
     #zone-body{
-      height:200px;min-height:200px;max-height:200px;flex-shrink:0;
+      height:220px;min-height:220px;max-height:220px;flex-shrink:0;
       background:#161210;border-bottom:1px solid #3a3028;
       display:flex;flex-direction:column;align-items:center;justify-content:center;
       position:relative;
-    }
-    /* ── Chromebook redesign 2026-04-16 ──
-       Short-viewport Chromebooks (typ. 1366x768, 1280x800): shrink fixed chrome
-       so tab content has breathing room. Applies at both 768 and 800 vertical. */
-    @media (max-height: 820px){
-      #topbar{height:42px;min-height:42px;max-height:42px;padding:0 14px;}
-      .char-title{font-size:16px;}
-      .char-sub{font-size:11px;}
-      #zone-observation{height:30px;min-height:30px;max-height:30px;}
-      #observation-text{font-size:13px;}
-      #zone-body{height:160px;min-height:160px;max-height:160px;}
-      #wound-overlay svg{height:130px !important;width:auto !important;}
-      #body-narrative{font-size:12px;margin-top:2px;}
-      #tab-bar .tab-btn{padding:8px 12px;font-size:11px;}
-      #input-bar{height:48px;min-height:48px;max-height:48px;}
-      #speak-input{height:32px;font-size:13px;}
-      .journal-btn{width:38px;height:38px;font-size:18px;}
-      #wound-overlay-detail{top:210px;}
-      #grimoire-content{padding:14px 16px;}
-      /* Two-column ability/save grid on wider laptops to use horizontal space */
-      #abgrid.abg{grid-template-columns:repeat(6,1fr);}
-      #sklist{column-count:2;column-gap:16px;}
-      #sklist > *{break-inside:avoid;}
-    }
-    /* Wide viewports (external monitor) can use even more columns */
-    @media (min-width: 1400px) and (max-height: 820px){
-      #grimoire-content{padding:14px 28px;}
     }
     #wound-overlay{cursor:pointer;transition:opacity 0.2s;}
     #body-narrative{
@@ -664,8 +637,7 @@
 <div id="app">
 
   <!-- OBSERVATION ZONE — italic fade-in messages, auto-remove after 45s -->
-  <!-- Floating observation toasts: sit below topbar so the character name doesn't vanish under them. -->
-  <div id="observation-zone" style="position:fixed;top:52px;left:0;right:0;z-index:200;pointer-events:none;padding:6px 12px;display:flex;flex-direction:column;gap:6px;"></div>
+  <div id="observation-zone" style="position:fixed;top:0;left:0;right:0;z-index:200;pointer-events:none;padding:12px 20px;display:flex;flex-direction:column;gap:6px;"></div>
 
   <!-- TOP BAR — 48px -->
   <div id="topbar">
@@ -705,22 +677,22 @@
   <!-- FIX3B — Map touch hint shown briefly when own token is selected -->
   <div id="map-touch-hint">TAP DESTINATION TO MOVE</div>
 
-  <!-- TAB BAR — Chromebook redesign 2026-04-16: Map tab removed (table map handles location).
-       Chat is the default tab. Tabs sized for 1366x768 / 1280x800 Chromebooks. -->
+  <!-- TAB BAR — PHASE 5A: CHAT is the second tab -->
   <div id="tab-bar">
-    <button class="tab-btn active" data-tab="chat" onclick="switchTab('chat')">Chat</button>
-    <button class="tab-btn" data-tab="numbers" onclick="switchTab('numbers')">Combat</button>
-    <button class="tab-btn" data-tab="magic" onclick="switchTab('magic')">Spells</button>
-    <button class="tab-btn" data-tab="arms" onclick="switchTab('arms')">Inventory</button>
-    <button class="tab-btn" data-tab="abilities" onclick="switchTab('abilities')">Abilities</button>
+    <button class="tab-btn active" data-tab="map" onclick="switchTab('map')">Map</button>
+    <button class="tab-btn" data-tab="chat" onclick="switchTab('chat')">Chat</button>
     <button class="tab-btn" data-tab="condition" onclick="switchTab('condition')">Condition</button>
+    <button class="tab-btn" data-tab="abilities" onclick="switchTab('abilities')">Abilities</button>
+    <button class="tab-btn" data-tab="arms" onclick="switchTab('arms')">Arms &amp; Armor</button>
+    <button class="tab-btn" data-tab="magic" onclick="switchTab('magic')">Gifts &amp; Magic</button>
     <button class="tab-btn" data-tab="soul" onclick="switchTab('soul')">Soul</button>
+    <button class="tab-btn" data-tab="numbers" onclick="switchTab('numbers')">Numbers</button>
   </div>
 
   <!-- GRIMOIRE CONTENT — scrollable, fills remaining -->
   <div id="grimoire-content">
-    <!-- TAB: MAP — hidden in Chromebook redesign 2026-04-16. DOM kept so JS refs (PlayerMap, player-map-canvas) don't crash; never shown. -->
-    <div class="gtab" id="gtab-map" style="display:none !important;padding:0;height:calc(100vh - 100px);">
+    <!-- TAB: MAP — complete rewrite: IMG + CSS transform + DOM tokens -->
+    <div class="gtab active" id="gtab-map" style="padding:0;height:calc(100vh - 100px);">
       <div id="panel-map" style="position:relative;overflow:hidden;width:100%;height:100%;background:#000;touch-action:none;">
         <img id="player-map-img" style="position:absolute;transform-origin:0 0;user-select:none;-webkit-user-drag:none;" draggable="false">
         <div id="player-grid-overlay" style="position:absolute;transform-origin:0 0;pointer-events:none;z-index:1;opacity:0.12;"></div>
@@ -730,8 +702,10 @@
       </div>
     </div>
 
-    <!-- TAB: CHAT — default tab after 2026-04-16 redesign (map removed for table play). -->
-    <div class="gtab active" id="gtab-chat">
+    <!-- TAB: CHAT — PHASE 5C / FIX-K1: dedicated full-screen chat interface
+         No inline display:none — that was overriding the .gtab.active rule
+         and leaving the panel blank when CHAT was selected. -->
+    <div class="gtab" id="gtab-chat">
       <div id="chat-history">
         <div id="chat-empty-state" style="margin:auto;text-align:center;color:#6a5a48;font-style:italic;padding:24px;">Speak to Max, an NPC, or another player...</div>
       </div>
@@ -1283,17 +1257,23 @@ function showObservation(text, durationMs) {
 
 // Tab switching
 function switchTab(tabName) {
-  // Chromebook redesign 2026-04-16: map removed. Any legacy switchTab('map')
-  // (e.g. from AOE spell visualization) silently becomes combat — players use the table map.
-  if (tabName === 'map') tabName = 'numbers';
   document.querySelectorAll('.gtab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   const tab = document.getElementById('gtab-' + tabName);
   if (tab) tab.classList.add('active');
   const btn = document.querySelector('.tab-btn[data-tab="' + tabName + '"]');
   if (btn) btn.classList.add('active');
-  document.body.classList.remove('map-fullscreen', 'tabs-hidden');
-  if (_tabsHideTimer) clearTimeout(_tabsHideTimer);
+  // FIX3A — MAP tab full screen mode
+  if (tabName === 'map') {
+    document.body.classList.add('map-fullscreen');
+    _scheduleTabsAutoHide();
+    if (window.PlayerMap) {
+      setTimeout(() => { try { PlayerMap.resize(); PlayerMap.render(); } catch (e) {} }, 50);
+    }
+  } else {
+    document.body.classList.remove('map-fullscreen', 'tabs-hidden');
+    if (_tabsHideTimer) clearTimeout(_tabsHideTimer);
+  }
 }
 
 // FIX3A — auto-hide tab bar after 3s in MAP mode; reappears on tap.

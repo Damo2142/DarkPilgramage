@@ -1579,7 +1579,10 @@ function renderSkills(){
 var _abilityState = null;
 
 function renderAbilities() {
-  var cls = (window.char && char.class) || '';
+  // char is a module-scoped `let` on line 1190, not on window. The former
+  // `window.char && char.class` gate always produced '' and no ability
+  // panel would ever show. Read char.class directly with a safety guard.
+  var cls = (char && char.class) || '';
   var empty = document.getElementById('abilities-empty');
   var rage = document.getElementById('ability-rage');
   var bardic = document.getElementById('ability-bardic');
@@ -5058,7 +5061,7 @@ var ChatBar = {
     input.value = '';
     var seq = (++ChatBar._seqCounter) + ':' + now;
     if (typeof send === 'function') {
-      send({ type: 'chat:message', channel: 'party', text: text, seq: seq, fromName: (window.char && char.name) || 'Player' });
+      send({ type: 'chat:message', channel: 'party', text: text, seq: seq, fromName: (char && char.name) || 'Player' });
     }
     ChatBar.appendMessage({ type: 'player', speaker: 'You', text: text });
   },
@@ -5150,7 +5153,7 @@ var ChatTab = {
     input.value = '';
     var seq = (++ChatBar._seqCounter) + ':' + now;
     if (typeof send === 'function') {
-      send({ type: 'chat:message', channel: 'party', text: text, seq: seq, fromName: (window.char && char.name) || 'Player' });
+      send({ type: 'chat:message', channel: 'party', text: text, seq: seq, fromName: (char && char.name) || 'Player' });
     }
     ChatBar.appendMessage({ type: 'player', speaker: 'You', text: text });
   },

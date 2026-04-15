@@ -23,7 +23,13 @@ const DEDUP_SKIP_EVENTS = new Set([
   'combat:death_save', 'combat:morale_break', 'combat:save_required',
   'combat:shock_save_passed', 'combat:shock_failed',
   'combat:player_initiated', 'combat:player_joins',
-  'combat:npc_suggestion', 'combat:forced_movement', 'combat:bleeding_tick'
+  'combat:npc_suggestion', 'combat:forced_movement', 'combat:bleeding_tick',
+  // Session lifecycle events — two long rests for the same player in the
+  // same 5s window (test harness, back-to-back /api/characters/:pid/rest,
+  // or DM clicking twice) otherwise fingerprint-match and the second gets
+  // dropped, leaving horror decay / ability restores silently skipped.
+  'session:long_rest', 'session:short_rest', 'session:started', 'session:ended',
+  'session:paused', 'session:resumed', 'state:session_reset', 'state:session_loaded'
 ]);
 
 class EventBus extends EventEmitter {

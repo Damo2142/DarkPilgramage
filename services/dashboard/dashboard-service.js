@@ -1202,6 +1202,9 @@ Answer concisely (2-4 sentences). If it's a rules question, give the D&D 5e rule
       case 'audio:sfx':
         this.bus.dispatch('audio:sfx', { effect: msg.effect, device: msg.device, surround: msg.surround });
         break;
+      case 'codm:read_aloud':
+        this.bus.dispatch('codm:read_aloud', { text: (msg.data && msg.data.text) || msg.text || '' });
+        break;
       case 'audio:dm_chunk':
         this.bus.dispatch('audio:dm_chunk', msg.data || msg);
         break;

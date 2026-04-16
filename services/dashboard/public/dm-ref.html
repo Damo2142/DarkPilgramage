@@ -2251,13 +2251,23 @@ var DmAttack = {
     });
   },
 
+  // Shared: display narrative in the panel AND dispatch to room speaker.
+  // Vivid narrative → room (all players hear). Mechanical details stay earbud-only.
+  _showAndSpeak: function(elId, text, fallback) {
+    var narrative = text || fallback || '';
+    var el = document.getElementById(elId);
+    if (el) el.textContent = narrative;
+    if (narrative && ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: 'codm:read_aloud', data: { text: narrative } }));
+    }
+  },
+
   _narrateMiss: function(attacker, target, weapon) {
     fetch('/api/hal/query', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: 'Narrate a vivid combat miss. ' + attacker + ' swings ' + weapon + ' at ' + target + ' and misses. One sentence, gothic horror tone, specific to the weapon and target. Never say "you missed." Describe the physical moment.' })
     }).then(function(r) { return r.json(); }).then(function(r) {
-      var el = document.getElementById('dma-narrative');
-      if (el) el.textContent = r.response || 'The blow goes wide.';
+      DmAttack._showAndSpeak('dma-narrative', r.response, 'The blow goes wide.');
     }).catch(function() {});
   },
 
@@ -2267,8 +2277,7 @@ var DmAttack = {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: 'Narrate a ' + severity + ' combat hit. ' + attacker + ' hits ' + target + ' with ' + weapon + ' for ' + damage + ' ' + dmgType + ' damage. One sentence, gothic horror tone, vivid and physical. Never state numbers. Describe what the weapon does to the body.' })
     }).then(function(r) { return r.json(); }).then(function(r) {
-      var el = document.getElementById('dma-hit-narrative');
-      if (el) el.textContent = r.response || 'The blade finds its mark.';
+      DmAttack._showAndSpeak('dma-hit-narrative', r.response, 'The blade finds its mark.');
     }).catch(function() {});
   },
 
@@ -2277,8 +2286,7 @@ var DmAttack = {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: 'Narrate weapon immunity. ' + attacker + ' strikes ' + target + ' with ' + weapon + ' — the weapon passes through or bounces off harmlessly. ' + target + ' is immune to nonmagical weapons. One sentence, gothic horror, describe the uncanny moment of realization.' })
     }).then(function(r) { return r.json(); }).then(function(r) {
-      var el = document.getElementById('dma-narrative');
-      if (el) el.textContent = r.response || 'The weapon has no effect.';
+      DmAttack._showAndSpeak('dma-narrative', r.response, 'The weapon has no effect.');
     }).catch(function() {});
   }
 };
@@ -2441,7 +2449,7 @@ var DmSpell = {
       fetch('/api/hal/query',{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({query:'Narrate a spell miss. '+casterName+' casts '+s.name+' at '+target.name+' and misses. One sentence, gothic horror, vivid. Describe the spell energy going astray in the tavern.'})
       }).then(function(r){return r.json();}).then(function(r){
-        var el=document.getElementById('dms-narrative'); if(el) el.textContent=r.response||'The spell fizzles.';
+        DmAttack._showAndSpeak('dms-narrative', r.response, 'The spell fizzles.');
       }).catch(function(){});
     } else {
       resEl.innerHTML = '<div style="color:var(--green);font-weight:700;font-size:16px;">HIT'+(crit?' — CRITICAL!':'')+'</div>' +
@@ -2529,7 +2537,7 @@ var DmSpell = {
     fetch('/api/hal/query',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({query:'Narrate '+casterName+' casting '+s.name+' on '+targetNames+'. '+failCount+' failed the save, '+passCount+' passed. One or two sentences, gothic horror, vivid. Describe the spell effect in the tavern setting.'})
     }).then(function(r){return r.json();}).then(function(r){
-      var el=document.getElementById('dms-save-narrative'); if(el) el.textContent=r.response||'';
+      DmAttack._showAndSpeak('dms-save-narrative', r.response, '');
     }).catch(function(){});
   },
 
@@ -2572,7 +2580,7 @@ var DmSpell = {
         fetch('/api/hal/query',{method:'POST',headers:{'Content-Type':'application/json'},
           body:JSON.stringify({query:'Narrate '+pd.casterName+' hitting '+pd.targetName+' with '+s.name+' for '+applied+' '+s.damageType+' damage. One sentence, gothic horror, describe the magical impact.'})
         }).then(function(r2){return r2.json();}).then(function(r2){
-          var el=document.getElementById('dms-hit-narr'); if(el) el.textContent=r2.response||'';
+          DmAttack._showAndSpeak('dms-hit-narr', r2.response, '');
         }).catch(function(){});
       }).catch(function(){});
       return;
@@ -2587,7 +2595,7 @@ var DmSpell = {
     fetch('/api/hal/query',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({query:'Narrate '+pd.casterName+' casting '+s.name+' hitting '+targetNames+' for '+fullDmg+' '+s.damageType+' damage in the tavern. One sentence, gothic horror, describe the area effect.'})
     }).then(function(r){return r.json();}).then(function(r){
-      var el=document.getElementById('dms-aoe-narr'); if(el) el.textContent=r.response||'';
+      DmAttack._showAndSpeak('dms-aoe-narr', r.response, '');
     }).catch(function(){});
   }
 };

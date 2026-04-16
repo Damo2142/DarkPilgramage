@@ -154,7 +154,18 @@
       "proficiency": "proficiency"
     }
   },
-  "spellSlots": null,
+  "spellSlots": {
+    "level1": {
+      "total": 4,
+      "used": 0,
+      "remaining": 4
+    },
+    "level2": {
+      "total": 2,
+      "used": 0,
+      "remaining": 2
+    }
+  },
   "spells": [
     {
       "name": "Light",
@@ -478,7 +489,7 @@
       "weight": 1,
       "rarity": "Common",
       "magic": false,
-      "id": "inv-tinderbox-mnys8jqrbwp4"
+      "id": "inv-tinderbox-mo0lsjej6h4o"
     },
     {
       "name": "Torch",
@@ -488,7 +499,7 @@
       "weight": 1,
       "rarity": "Common",
       "magic": false,
-      "id": "inv-torch-mnys8jqrqxfc"
+      "id": "inv-torch-mo0lsjejwggt"
     },
     {
       "name": "Waterskin",
@@ -498,7 +509,7 @@
       "weight": 5,
       "rarity": "Common",
       "magic": false,
-      "id": "inv-waterskin-mnys8jqrvtpm"
+      "id": "inv-waterskin-mo0lsjejbny2"
     },
     {
       "name": "Oil",
@@ -538,7 +549,7 @@
       "weight": 1,
       "rarity": "Common",
       "magic": false,
-      "id": "inv-tinderbox-mnys8jqrx98p"
+      "id": "inv-tinderbox-mo0lumipnmbs"
     },
     {
       "name": "Torch",
@@ -548,7 +559,7 @@
       "weight": 1,
       "rarity": "Common",
       "magic": false,
-      "id": "inv-torch-mnys8jqrj7ej"
+      "id": "inv-torch-mo0lumip52p4"
     },
     {
       "name": "Waterskin",
@@ -558,7 +569,7 @@
       "weight": 5,
       "rarity": "Common",
       "magic": false,
-      "id": "inv-waterskin-mnys8jqrrao6"
+      "id": "inv-waterskin-mo0lumippfft"
     },
     {
       "name": "Caltrops",
@@ -617,7 +628,7 @@
     "description": "Spurt is a russet-colored kobold who collects critters and has several on her person, including a skunk in a wooden cage, several wasps in a bag, and centipedes in a basket. Although she can aggravate enemies by releasing these critters, she has no control over their behavior."
   },
   "patron": "Wild Magic Sorcery",
-  "_syncedAt": "2026-04-14T15:34:41.907Z",
+  "_syncedAt": "2026-04-16T18:56:00.316Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/162472191"
 }

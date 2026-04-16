@@ -51,7 +51,19 @@
         "displayName": "Draconic",
         "fluency": "fluent \u2014 native",
         "note": "Universal dragon tongue. Spurt thinks in Draconic."
-      }
+      },
+       {
+        "id": "polish",
+        "displayName": "Polish",
+        "fluency": "conversational",
+        "note": "Picked up on the road through Poland."
+      },
+      {
+        "id": "slovak",
+        "displayName": "Slovak",
+        "fluency": "partial",
+        "note": "Enough to understand Marta when she switches to Slovak if frightened. Enough to catch Gregor's warnings without Katya."
+      }      
     ],
     "languageNote": "Spurt is from the Americas but speaks Common and Draconic. Draconic being universal means he can speak it anywhere \u2014 it predates human civilization on every continent. Vladislav recognizes it immediately when Spurt speaks it."
   },

@@ -14,7 +14,7 @@
   "background": "Outlander",
   "alignment": "TN",
   "hp": {
-    "current": 32,
+    "current": 26,
     "max": 26,
     "temp": 0
   },
@@ -482,7 +482,7 @@
     "description": null
   },
   "patron": "Path of the Totem Warrior",
-  "_syncedAt": "2026-04-14T15:34:42.143Z",
+  "_syncedAt": "2026-04-16T18:56:00.557Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/164256658"
 }

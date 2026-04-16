@@ -14,7 +14,7 @@
   "background": "Criminal",
   "alignment": "LE",
   "hp": {
-    "current": 8,
+    "current": 18,
     "max": 18,
     "temp": 0
   },
@@ -247,7 +247,7 @@
     "description": null
   },
   "patron": null,
-  "_syncedAt": "2026-04-15T23:20:00.996Z",
+  "_syncedAt": "2026-04-16T18:56:00.600Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/164311288"
 }

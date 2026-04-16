@@ -154,7 +154,13 @@
       "proficiency": "none"
     }
   },
-  "spellSlots": null,
+  "spellSlots": {
+    "level2": {
+      "total": 2,
+      "used": 0,
+      "remaining": 2
+    }
+  },
   "spells": [
     {
       "name": "Hex",
@@ -295,7 +301,7 @@
       ],
       "range": "20/60ft",
       "magical": false,
-      "id": "inv-dagger-mnys8ji6kxkc"
+      "id": "inv-dagger-mo0lsjh8rguh"
     },
     {
       "name": "Dagger",
@@ -316,7 +322,7 @@
       ],
       "range": "20/60ft",
       "magical": false,
-      "id": "inv-dagger-mnys8jszb2ud"
+      "id": "inv-dagger-mo0lumlm4rs5"
     },
     {
       "name": "Sickle",
@@ -375,7 +381,7 @@
       "weight": 5,
       "rarity": "Common",
       "magic": false,
-      "id": "inv-book-mnys8ji621g9"
+      "id": "inv-book-mo0lsjh8xwwk"
     },
     {
       "name": "Orb",
@@ -455,7 +461,7 @@
       "weight": 1,
       "rarity": "Common",
       "magic": false,
-      "id": "inv-tinderbox-mnys8ji6bm3l"
+      "id": "inv-tinderbox-mo0lsjh8i6rz"
     },
     {
       "name": "Torch",
@@ -515,7 +521,7 @@
       "weight": 1,
       "rarity": "Common",
       "magic": false,
-      "id": "inv-tinderbox-mnys8jsz595w"
+      "id": "inv-tinderbox-mo0lumlm6cns"
     },
     {
       "name": "Book",
@@ -525,7 +531,7 @@
       "weight": 5,
       "rarity": "Common",
       "magic": false,
-      "id": "inv-book-mnys8jsz9nnz"
+      "id": "inv-book-mo0lumlmggxi"
     },
     {
       "name": "Lamp",
@@ -597,7 +603,7 @@
     "description": null
   },
   "patron": "Fiend Patron",
-  "_syncedAt": "2026-04-14T15:34:41.987Z",
+  "_syncedAt": "2026-04-16T18:56:00.386Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/162702065"
 }

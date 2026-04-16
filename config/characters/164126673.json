@@ -154,7 +154,13 @@
       "proficiency": "none"
     }
   },
-  "spellSlots": null,
+  "spellSlots": {
+    "level1": {
+      "total": 2,
+      "used": 0,
+      "remaining": 2
+    }
+  },
   "spells": [],
   "attacks": [],
   "features": [
@@ -481,6 +487,32 @@
       "cursed": false,
       "notes": "Awarded by DM",
       "awardedByDM": true
+    },
+    {
+      "id": "item-1776281650409-tk54",
+      "name": "Test Smoke Pellet",
+      "description": "Creates smoke",
+      "quantity": 1,
+      "type": "gear",
+      "equipped": false,
+      "attuned": false,
+      "magical": false,
+      "cursed": false,
+      "notes": ""
+    },
+    {
+      "id": "item-1776281677538-e9s1",
+      "name": "Test Sword",
+      "description": "",
+      "mechanical": "",
+      "quantity": 1,
+      "type": "gear",
+      "equipped": false,
+      "attuned": false,
+      "magical": true,
+      "cursed": false,
+      "notes": "Awarded by DM",
+      "awardedByDM": true
     }
   ],
   "conditions": [],
@@ -520,7 +552,7 @@
     "description": null
   },
   "patron": "Eldritch Knight",
-  "_syncedAt": "2026-04-14T15:34:42.036Z",
+  "_syncedAt": "2026-04-16T18:56:00.455Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/164126673",
   "notes": "smoke test note"

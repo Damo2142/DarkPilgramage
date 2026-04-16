@@ -99,6 +99,11 @@ class HorrorService {
       this._onHorrorTrigger(env.data);
     }, 'horror');
 
+    // Long rest — horror decay handled by the single existing subscriber
+    // at line ~170 below (party-wide -10). A second subscriber was added
+    // here in an earlier pass and double-counted the decay for the caller;
+    // removed to restore correct Math.max(0, score - 10) semantics.
+
     // Vladislav feeding
     this.bus.subscribe('world:timed_event', (env) => {
       if (env.data.id === 'gregor_collapse') {
@@ -327,7 +332,7 @@ Respond in JSON only:
           const response = await aiEngine.gemini.generate(
             'You are a D&D character psychologist. Respond only with valid JSON.',
             prompt,
-            { maxTokens: 300, temperature: 0.9 }
+            { maxTokens: 800, temperature: 0.9 }
           );
 
           // Try to parse JSON from response. Gemini may return null/empty

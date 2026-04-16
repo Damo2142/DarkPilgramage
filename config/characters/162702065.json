@@ -18,7 +18,7 @@
     "max": 18,
     "temp": 0
   },
-  "ac": 11,
+  "ac": 12,
   "speed": 30,
   "initiative": 1,
   "proficiencyBonus": 2,
@@ -154,7 +154,13 @@
       "proficiency": "none"
     }
   },
-  "spellSlots": null,
+  "spellSlots": {
+    "level2": {
+      "total": 2,
+      "used": 0,
+      "remaining": 2
+    }
+  },
   "spells": [
     {
       "name": "Hex",
@@ -163,7 +169,8 @@
       "ritual": false,
       "concentration": true,
       "prepared": false,
-      "description": "You place a curse on a creature that you can see within range. Until the spell ends, you deal an extra 1d6 Necrotic damage to the target whenever you hit it with an attack roll. Also, choose one abili"
+      "description": "You place a curse on a creature that you can see within range. Until the spell ends, you deal an extra 1d6 Necrotic damage to the target whenever you hit it with an attack roll. Also, choose one abili",
+      "magical": true
     },
     {
       "name": "Eldritch Blast",
@@ -172,7 +179,8 @@
       "ritual": false,
       "concentration": false,
       "prepared": true,
-      "description": "You hurl a beam of crackling energy. Make a ranged spell attack against one creature or object in range. On a hit, the target takes 1d10 Force damage.\r\nCantrip Upgrade. The spell creates two beams at "
+      "description": "You hurl a beam of crackling energy. Make a ranged spell attack against one creature or object in range. On a hit, the target takes 1d10 Force damage.\r\nCantrip Upgrade. The spell creates two beams at ",
+      "magical": true
     },
     {
       "name": "Prestidigitation",
@@ -181,7 +189,8 @@
       "ritual": false,
       "concentration": false,
       "prepared": true,
-      "description": "You create a magical effect within range. Choose the effect from the options below. If you cast this spell multiple times, you can have up to three of its non-instantaneous effects active at a time.\r\n"
+      "description": "You create a magical effect within range. Choose the effect from the options below. If you cast this spell multiple times, you can have up to three of its non-instantaneous effects active at a time.\r\n",
+      "magical": true
     },
     {
       "name": "Hellish Rebuke",
@@ -190,7 +199,8 @@
       "ritual": false,
       "concentration": false,
       "prepared": false,
-      "description": "The creature that damaged you is momentarily surrounded by green flames. It makes a Dexterity saving throw, taking 2d10 Fire damage on a failed save or half as much damage on a successful one.\r\nUsing "
+      "description": "The creature that damaged you is momentarily surrounded by green flames. It makes a Dexterity saving throw, taking 2d10 Fire damage on a failed save or half as much damage on a successful one.\r\nUsing ",
+      "magical": true
     },
     {
       "name": "Misty Step",
@@ -199,7 +209,8 @@
       "ritual": false,
       "concentration": false,
       "prepared": false,
-      "description": "Briefly surrounded by silvery mist, you teleport up to 30 feet to an unoccupied space you can see."
+      "description": "Briefly surrounded by silvery mist, you teleport up to 30 feet to an unoccupied space you can see.",
+      "magical": true
     },
     {
       "name": "Mirror Image",
@@ -208,7 +219,8 @@
       "ritual": false,
       "concentration": false,
       "prepared": false,
-      "description": "Three illusory duplicates of yourself appear in your space. Until the spell ends, the duplicates move with you and mimic your actions, shifting position so it’s impossible to track which image is real"
+      "description": "Three illusory duplicates of yourself appear in your space. Until the spell ends, the duplicates move with you and mimic your actions, shifting position so it’s impossible to track which image is real",
+      "magical": true
     }
   ],
   "attacks": [],
@@ -266,7 +278,9 @@
       "weight": 10,
       "rarity": "Common",
       "magic": false,
-      "ac": 11
+      "ac": 11,
+      "acType": "light",
+      "id": "inv-leather-mnys8ji6npbi"
     },
     {
       "name": "Dagger",
@@ -285,7 +299,9 @@
         "thrown",
         "nick"
       ],
-      "range": "20/60ft"
+      "range": "20/60ft",
+      "magical": false,
+      "id": "inv-dagger-mo0lsjh8rguh"
     },
     {
       "name": "Dagger",
@@ -304,7 +320,9 @@
         "thrown",
         "nick"
       ],
-      "range": "20/60ft"
+      "range": "20/60ft",
+      "magical": false,
+      "id": "inv-dagger-mo0lumlm4rs5"
     },
     {
       "name": "Sickle",
@@ -321,7 +339,9 @@
         "light",
         "nick"
       ],
-      "range": "5/5ft"
+      "range": "5/5ft",
+      "magical": false,
+      "id": "inv-sickle-mnys8ji62244"
     },
     {
       "name": "Chest",
@@ -330,7 +350,8 @@
       "type": "Other Gear",
       "weight": 25,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-chest-mnys8ji60iei"
     },
     {
       "name": "Clothes, Common",
@@ -339,7 +360,8 @@
       "type": "Other Gear",
       "weight": 3,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-clothes-common-mnys8ji60f49"
     },
     {
       "name": "Backpack",
@@ -348,7 +370,8 @@
       "type": "Other Gear",
       "weight": 5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-backpack-mnys8ji6qa1i"
     },
     {
       "name": "Book",
@@ -357,7 +380,8 @@
       "type": "Other Gear",
       "weight": 5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-book-mo0lsjh8xwwk"
     },
     {
       "name": "Orb",
@@ -366,7 +390,8 @@
       "type": "Other Gear",
       "weight": 3,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-orb-mnys8ji60ldt"
     },
     {
       "name": "Crowbar",
@@ -375,7 +400,8 @@
       "type": "Other Gear",
       "weight": 5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-crowbar-mnys8ji6qmsq"
     },
     {
       "name": "Hammer",
@@ -384,7 +410,8 @@
       "type": "Other Gear",
       "weight": 3,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-hammer-mnys8ji6sja2"
     },
     {
       "name": "Holy Water (flask)",
@@ -393,7 +420,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-holy-water-flask--mnys8ji6to0j"
     },
     {
       "name": "Manacles",
@@ -402,7 +430,8 @@
       "type": "Other Gear",
       "weight": 6,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-manacles-mnys8ji6jkct"
     },
     {
       "name": "Mirror, Steel",
@@ -411,7 +440,8 @@
       "type": "Other Gear",
       "weight": 0.5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-mirror-steel-mnys8ji6uyqd"
     },
     {
       "name": "Oil (flask)",
@@ -420,7 +450,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-oil-flask--mnys8ji6kq6r"
     },
     {
       "name": "Tinderbox",
@@ -429,7 +460,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-tinderbox-mo0lsjh8i6rz"
     },
     {
       "name": "Torch",
@@ -438,7 +470,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-torch-mnys8ji6r8yh"
     },
     {
       "name": "Stake (Wooden)",
@@ -447,7 +480,8 @@
       "type": "Other Gear",
       "weight": 0,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-stake-wooden--mnys8ji67nmz"
     },
     {
       "name": "Holy Symbol",
@@ -456,7 +490,8 @@
       "type": "Other Gear",
       "weight": 0,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-holy-symbol-mnys8ji65276"
     },
     {
       "name": "Oil",
@@ -465,7 +500,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-oil-mnys8ji6iheb"
     },
     {
       "name": "Parchment",
@@ -474,7 +510,8 @@
       "type": "Other Gear",
       "weight": 0,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-parchment-mnys8ji6f861"
     },
     {
       "name": "Tinderbox",
@@ -483,7 +520,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-tinderbox-mo0lumlm6cns"
     },
     {
       "name": "Book",
@@ -492,7 +530,8 @@
       "type": "Other Gear",
       "weight": 5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-book-mo0lumlmggxi"
     },
     {
       "name": "Lamp",
@@ -501,7 +540,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-lamp-mnys8ji6ij15"
     },
     {
       "name": "Ink Pen",
@@ -510,7 +550,8 @@
       "type": "Other Gear",
       "weight": 0,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-ink-pen-mnys8ji719wx"
     },
     {
       "name": "Ink",
@@ -519,7 +560,8 @@
       "type": "Other Gear",
       "weight": 0,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-ink-mnys8ji7qw2z"
     }
   ],
   "conditions": [],
@@ -561,7 +603,7 @@
     "description": null
   },
   "patron": "Fiend Patron",
-  "_syncedAt": "2026-04-11T23:41:04.757Z",
+  "_syncedAt": "2026-04-16T18:56:00.386Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/162702065"
 }

@@ -10,13 +10,26 @@
   "armor_desc": "natural armor",
   "hit_points": 82,
   "hit_dice": "11d8+33",
-  "speed": { "walk": 30 },
-  "strength": 16, "dexterity": 16, "constitution": 16,
-  "intelligence": 11, "wisdom": 10, "charisma": 12,
-  "strength_save": null, "dexterity_save": 6, "constitution_save": null,
-  "intelligence_save": null, "wisdom_save": 3, "charisma_save": null,
+  "speed": {
+    "walk": 30
+  },
+  "strength": 16,
+  "dexterity": 16,
+  "constitution": 16,
+  "intelligence": 11,
+  "wisdom": 10,
+  "charisma": 12,
+  "strength_save": null,
+  "dexterity_save": 6,
+  "constitution_save": null,
+  "intelligence_save": null,
+  "wisdom_save": 3,
+  "charisma_save": null,
   "perception": 3,
-  "skills": { "perception": 3, "stealth": 6 },
+  "skills": {
+    "perception": 3,
+    "stealth": 6
+  },
   "damage_resistances": "necrotic; bludgeoning, piercing, and slashing from nonmagical attacks",
   "damage_immunities": "",
   "damage_vulnerabilities": "",
@@ -25,13 +38,53 @@
   "languages": "the languages it knew in life",
   "challenge_rating": "5",
   "special_abilities": [
-    { "name": "Regeneration", "desc": "Regains 10 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If it takes radiant damage or damage from holy water, this trait doesn't function at the start of its next turn." },
-    { "name": "Spider Climb", "desc": "Can climb difficult surfaces, including upside down on ceilings, without needing to make an ability check." },
-    { "name": "Sunlight Hypersensitivity", "desc": "Takes 20 radiant damage when it starts its turn in sunlight. While in sunlight, it has disadvantage on attack rolls and ability checks." }
+    {
+      "name": "Regeneration",
+      "desc": "Regains 10 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If it takes radiant damage or damage from holy water, this trait doesn't function at the start of its next turn."
+    },
+    {
+      "name": "Spider Climb",
+      "desc": "Can climb difficult surfaces, including upside down on ceilings, without needing to make an ability check."
+    },
+    {
+      "name": "Sunlight Hypersensitivity",
+      "desc": "Takes 20 radiant damage when it starts its turn in sunlight. While in sunlight, it has disadvantage on attack rolls and ability checks."
+    }
   ],
   "actions": [
-    { "name": "Multiattack", "desc": "Makes two attacks, only one of which can be a bite attack." },
-    { "name": "Claws", "desc": "Melee Weapon Attack: +6 to hit, reach 5 ft., one creature. Hit: 8 (2d4 + 3) slashing damage. Instead of dealing damage, the vampire can grapple the target (escape DC 13).", "attack_bonus": 6, "damage_dice": "2d4", "damage_bonus": 3 },
-    { "name": "Bite", "desc": "Melee Weapon Attack: +6 to hit, reach 5 ft., one willing creature, or a creature that is grappled, incapacitated, or restrained. Hit: 6 (1d6 + 3) piercing damage plus 7 (2d6) necrotic damage. The target's hit point maximum is reduced by an amount equal to the necrotic damage taken, and the vampire regains hit points equal to that amount.", "attack_bonus": 6, "damage_dice": "1d6", "damage_bonus": 3 }
-  ]
+    {
+      "name": "Multiattack",
+      "desc": "Makes two attacks, only one of which can be a bite attack."
+    },
+    {
+      "name": "Claws",
+      "desc": "Melee Weapon Attack: +6 to hit, reach 5 ft., one creature. Hit: 8 (2d4 + 3) slashing damage. Instead of dealing damage, the vampire can grapple the target (escape DC 13).",
+      "attack_bonus": 6,
+      "damage_dice": "2d4",
+      "damage_bonus": 3
+    },
+    {
+      "name": "Bite",
+      "desc": "Melee Weapon Attack: +6 to hit, reach 5 ft., one willing creature, or a creature that is grappled, incapacitated, or restrained. Hit: 6 (1d6 + 3) piercing damage plus 7 (2d6) necrotic damage. The target's hit point maximum is reduced by an amount equal to the necrotic damage taken, and the vampire regains hit points equal to that amount.",
+      "attack_bonus": 6,
+      "damage_dice": "1d6",
+      "damage_bonus": 3
+    }
+  ],
+  "immunities": {
+    "damage_types": [
+      "poison"
+    ],
+    "conditions": [
+      "poisoned",
+      "exhaustion"
+    ],
+    "nonmagical_weapons": false
+  },
+  "resistances": {
+    "damage_types": [
+      "necrotic"
+    ]
+  },
+  "immunityNarrative": {}
 }

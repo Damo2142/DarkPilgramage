@@ -25,6 +25,58 @@ const ALIGNMENTS = {1:'LG',2:'NG',3:'CG',4:'LN',5:'TN',6:'CN',7:'LE',8:'NE',9:'C
 function abilityMod(score) { return Math.floor((score - 10) / 2); }
 function modStr(mod) { return mod >= 0 ? '+' + mod : '' + mod; }
 
+// ── Spell-slot tables (PHB 113 + Warlock pact magic) ──
+const FULL_CASTER_SLOTS = {
+  1: [2], 2: [3], 3: [4,2], 4: [4,3], 5: [4,3,2],
+  6: [4,3,3], 7: [4,3,3,1], 8: [4,3,3,2], 9: [4,3,3,3,1], 10: [4,3,3,3,2],
+  11: [4,3,3,3,2,1], 12: [4,3,3,3,2,1], 13: [4,3,3,3,2,1,1], 14: [4,3,3,3,2,1,1],
+  15: [4,3,3,3,2,1,1,1], 16: [4,3,3,3,2,1,1,1], 17: [4,3,3,3,2,1,1,1,1],
+  18: [4,3,3,3,3,1,1,1,1], 19: [4,3,3,3,3,2,1,1,1], 20: [4,3,3,3,3,2,2,1,1]
+};
+const WARLOCK_SLOTS = {
+  1: [1,1], 2: [2,1], 3: [2,2], 4: [2,2], 5: [2,3], 6: [2,3],
+  7: [2,4], 8: [2,4], 9: [2,5], 10: [2,5], 11: [3,5], 12: [3,5],
+  13: [3,5], 14: [3,5], 15: [3,5], 16: [3,5], 17: [4,5], 18: [4,5],
+  19: [4,5], 20: [4,5]
+};
+const FULL_CASTER_CLASSES = new Set(['Bard','Cleric','Druid','Sorcerer','Wizard']);
+const HALF_CASTER_CLASSES = new Set(['Paladin','Ranger','Artificer']);
+const THIRD_CASTER_SUBS = new Set(['Eldritch Knight','Arcane Trickster']);
+
+function computeSpellSlotsForClasses(classes, usedMap = {}) {
+  const slots = {};
+  let full = 0, half = 0, third = 0;
+  for (const c of classes || []) {
+    if (!c || !c.name) continue;
+    if (c.name === 'Warlock') continue;
+    if (FULL_CASTER_CLASSES.has(c.name)) full += c.level || 0;
+    else if (HALF_CASTER_CLASSES.has(c.name)) half += c.level || 0;
+    else if (THIRD_CASTER_SUBS.has(c.subclass || '')) third += c.level || 0;
+  }
+  const casterLevel = full + Math.floor(half/2) + Math.floor(third/3);
+  if (casterLevel > 0) {
+    const table = FULL_CASTER_SLOTS[casterLevel] || [];
+    table.forEach((total, idx) => {
+      const key = 'level' + (idx + 1);
+      const used = Math.min(total, (usedMap[key] && usedMap[key].used) || 0);
+      slots[key] = { total, used, remaining: total - used };
+    });
+  }
+  const warlock = (classes || []).find(c => c && c.name === 'Warlock');
+  if (warlock && (warlock.level || 0) > 0) {
+    const pact = WARLOCK_SLOTS[warlock.level] || [0, 0];
+    const count = pact[0], lvl = pact[1];
+    if (count > 0) {
+      const key = 'level' + lvl;
+      const existing = slots[key] || { total: 0, used: 0, remaining: 0 };
+      const total = existing.total + count;
+      const used = Math.min(total, (usedMap[key] && usedMap[key].used) || existing.used);
+      slots[key] = { total, used, remaining: total - used };
+    }
+  }
+  return Object.keys(slots).length ? slots : null;
+}
+
 class CharacterService {
   constructor() {
     this.name = 'characters';
@@ -50,6 +102,10 @@ class CharacterService {
   async start() {
     const loaded = this._loadAll();
     console.log('[Characters] Loaded ' + loaded + ' character(s) into game state');
+    // Addition 10 — one-shot migration: ensure every inventory item across
+    // every loaded character has a stable id. DDB-synced items don't have
+    // ids, and without them the DM inventory editor can't address an item.
+    this._migrateInventoryIds();
     // Auto-sync from DDB if configured
     const ddbConf = this._readDdbConfig();
     const cookie = process.env.COBALT_COOKIE || process.env.DDB_COBALT_TOKEN;
@@ -70,9 +126,27 @@ class CharacterService {
       if (playerId) this._computeWounds(playerId, current, max);
     }, 'characters');
 
-    // Wound manual override route
-    const app = this.orchestrator.getService('dashboard')?.app;
-    if (app) {
+    // Wound manual override route + all HTTP routes below. Defer route
+    // registration until system:ready so dashboard-service (which mounts
+    // express on port 3200) has created its app object. character-service
+    // is registered BEFORE dashboard-service in server.js, so at this
+    // point orchestrator.getService('dashboard').app is null and every
+    // route registration would silently no-op — which is exactly what
+    // used to happen (pre-existing bug caught during Addition 2).
+    const registerRoutes = () => {
+      const app = this.orchestrator.getService('dashboard')?.app;
+      if (!app) return false;
+      this._registerHttpRoutes(app);
+      console.log('[Characters] HTTP routes registered (wounds, purse, absent, languages, abilities, rest)');
+      return true;
+    };
+    if (!registerRoutes()) {
+      this.bus.subscribe('system:ready', registerRoutes, 'characters');
+    }
+  }
+
+  _registerHttpRoutes(app) {
+    {
       app.put('/api/wounds/:playerId/:limb', (req, res) => {
         const { playerId, limb } = req.params;
         const { state: woundState } = req.body;
@@ -212,11 +286,519 @@ class CharacterService {
         }
         res.json({ ok: true });
       });
+
+      // ── Addition 2: Class abilities ──────────────────────────────
+      // State lives at players.<pid>.abilities and holds use-counts plus
+      // active flags (rage_active, action_surge_active). Defaults are
+      // materialized lazily on first use.
+      const DEFAULT_ABILITY_MAX = {
+        rage: 3,
+        bardic_inspiration: 4,
+        second_wind: 1,
+        action_surge: 1
+      };
+      const _getAbilities = (playerId) => {
+        return this.state.get('players.' + playerId + '.abilities') || {};
+      };
+      const _setAbility = (playerId, key, value) => {
+        this.state.set('players.' + playerId + '.abilities.' + key, value);
+      };
+      const _broadcastAbilityState = (playerId) => {
+        const abilities = _getAbilities(playerId);
+        this.bus.dispatch('character:abilities_update', { playerId, abilities });
+      };
+
+      app.get('/api/characters/:playerId/abilities', (req, res) => {
+        res.json({ ok: true, abilities: _getAbilities(req.params.playerId) });
+      });
+
+      app.post('/api/characters/ability', (req, res) => {
+        const { playerId, ability, action, target } = req.body || {};
+        if (!playerId || !ability) return res.status(400).json({ error: 'playerId and ability required' });
+        const playerState = this.state.get('players.' + playerId);
+        if (!playerState) return res.status(404).json({ error: 'player not found' });
+        const abilities = _getAbilities(playerId);
+        const charName = playerState.character && playerState.character.name || playerId;
+
+        switch (ability) {
+          case 'rage': {
+            if (action === 'activate') {
+              const uses = abilities.rage_uses !== undefined ? abilities.rage_uses : DEFAULT_ABILITY_MAX.rage;
+              if (uses <= 0) return res.status(400).json({ error: 'No rage uses remaining — long rest required.' });
+              _setAbility(playerId, 'rage_active', true);
+              _setAbility(playerId, 'rage_uses', uses - 1);
+              this.bus.dispatch('character:ability_used', { playerId, ability: 'rage', action: 'activate' });
+              this.bus.dispatch('dm:whisper', {
+                text: `${charName} rages. Bear Totem — resistance to ALL damage except psychic. +2 melee damage. Advantage on STR checks and saves.`,
+                priority: 1, category: 'combat'
+              });
+              _broadcastAbilityState(playerId);
+              return res.json({ ok: true, remaining: uses - 1, active: true });
+            }
+            if (action === 'deactivate') {
+              _setAbility(playerId, 'rage_active', false);
+              this.bus.dispatch('character:ability_used', { playerId, ability: 'rage', action: 'deactivate' });
+              this.bus.dispatch('dm:whisper', {
+                text: `${charName} rage ended.`, priority: 2, category: 'combat'
+              });
+              _broadcastAbilityState(playerId);
+              return res.json({ ok: true, active: false });
+            }
+            return res.status(400).json({ error: 'rage action must be activate or deactivate' });
+          }
+          case 'bardic_inspiration': {
+            const uses = abilities.bardic_inspiration_uses !== undefined ? abilities.bardic_inspiration_uses : DEFAULT_ABILITY_MAX.bardic_inspiration;
+            if (uses <= 0) return res.status(400).json({ error: 'No bardic inspiration uses remaining — short or long rest required.' });
+            _setAbility(playerId, 'bardic_inspiration_uses', uses - 1);
+            if (target) {
+              this.bus.dispatch('player:notification', {
+                playerId: target, type: 'ability:bardic_inspiration', die: 'd6', from: charName
+              });
+            }
+            this.bus.dispatch('dm:whisper', {
+              text: `${charName} uses Bardic Inspiration on ${target || 'unknown'} — 1d6 granted for 10 minutes.`,
+              priority: 2, category: 'story'
+            });
+            _broadcastAbilityState(playerId);
+            return res.json({ ok: true, remaining: uses - 1 });
+          }
+          case 'second_wind': {
+            const uses = abilities.second_wind_uses !== undefined ? abilities.second_wind_uses : DEFAULT_ABILITY_MAX.second_wind;
+            if (uses <= 0) return res.status(400).json({ error: 'No second wind uses remaining — short or long rest required.' });
+            const fighterLevel = (playerState.character && playerState.character.level) || 3;
+            const roll = Math.floor(Math.random() * 10) + 1 + Math.max(1, fighterLevel);
+            const hp = (playerState.character && playerState.character.hp) || { current: 0, max: 25 };
+            const hpMax = typeof hp.max === 'number' ? hp.max : 25;
+            const hpCur = typeof hp.current === 'number' ? hp.current : 0;
+            const newHp = Math.min(hpCur + roll, hpMax);
+            this.state.set('players.' + playerId + '.character.hp.current', newHp);
+            _setAbility(playerId, 'second_wind_uses', uses - 1);
+            this.bus.dispatch('hp:update', { playerId, current: newHp, max: hpMax, source: 'second-wind' });
+            this.bus.dispatch('dm:whisper', {
+              text: `${charName} uses Second Wind — healed ${roll} HP (1d10+${Math.max(1, fighterLevel)}). Now ${newHp}/${hpMax}.`,
+              priority: 2, category: 'combat'
+            });
+            _broadcastAbilityState(playerId);
+            return res.json({ ok: true, remaining: uses - 1, healed: roll });
+          }
+          case 'action_surge': {
+            const uses = abilities.action_surge_uses !== undefined ? abilities.action_surge_uses : DEFAULT_ABILITY_MAX.action_surge;
+            if (uses <= 0) return res.status(400).json({ error: 'No action surge uses remaining — short or long rest required.' });
+            _setAbility(playerId, 'action_surge_active', true);
+            _setAbility(playerId, 'action_surge_uses', uses - 1);
+            this.bus.dispatch('dm:whisper', {
+              text: `${charName} uses Action Surge — extra action this turn.`,
+              priority: 1, category: 'combat'
+            });
+            _broadcastAbilityState(playerId);
+            return res.json({ ok: true, remaining: uses - 1 });
+          }
+          default:
+            return res.status(400).json({ error: 'Unknown ability: ' + ability });
+        }
+      });
+
+      // Addition 6 — DM item award. Append-only path that dispatches
+      // both a DM whisper and a player:notification so the target player
+      // Chromebook flashes a "Item Received" overlay.
+      app.post('/api/characters/award-item', (req, res) => {
+        const b = req.body || {};
+        const playerId = b.playerId;
+        const item = b.item || {};
+        if (!playerId || !item.name) return res.status(400).json({ error: 'playerId and item.name required' });
+        const playerState = this.state.get('players.' + playerId);
+        if (!playerState || !playerState.character) return res.status(404).json({ error: 'player character not found' });
+        const newItem = {
+          id: item.id || ('item-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6)),
+          name: item.name,
+          description: item.description || '',
+          mechanical: item.mechanical || '',
+          quantity: typeof item.quantity === 'number' ? item.quantity : 1,
+          type: item.type || 'gear',
+          equipped: !!item.equipped,
+          attuned: !!item.attuned,
+          magical: !!item.magical,
+          cursed: !!item.cursed,
+          notes: item.notes || 'Awarded by DM',
+          awardedByDM: true
+        };
+        const inventory = [...(playerState.character.inventory || []), newItem];
+        this.state.set('players.' + playerId + '.character.inventory', inventory);
+        try { this._persistPlayerCharacter(playerId); } catch (e) {}
+        this.bus.dispatch('character:update', { playerId });
+        this.bus.dispatch('player:inventory_update', { playerId });
+
+        const charName = playerState.character.name || playerId;
+        this.bus.dispatch('dm:whisper', {
+          text: `${newItem.name} awarded to ${charName}.` + (newItem.cursed ? ' ⚠ CURSED — hidden from player description text.' : ''),
+          priority: 2, category: 'story'
+        });
+        // Notify player Chromebook — player-bridge subscriber translates to WS msg.
+        this.bus.dispatch('player:notification', {
+          playerId,
+          type: 'item:received',
+          itemName: newItem.name,
+          // Hide the flavor description for cursed items — just a name/flash.
+          description: newItem.cursed ? '' : (newItem.description || ''),
+          magical: newItem.magical,
+          cursed: newItem.cursed
+        });
+        return res.json({ ok: true, item: newItem });
+      });
+
+      // Addition 6 — DM per-field character edit via PATCH dot-path.
+      // body: { path: 'abilities.str.score', value: 18 }
+      // Auto-recalculates derived stats when an ability score changes.
+      const BLOCKED_FIELD_PREFIXES = ['ddbId', 'id', 'foundryId', '_syncedAt'];
+      app.patch('/api/characters/:playerId/field', (req, res) => {
+        const playerId = req.params.playerId;
+        const b = req.body || {};
+        const path = b.path;
+        if (!path || typeof path !== 'string') return res.status(400).json({ error: 'path required' });
+        if (BLOCKED_FIELD_PREFIXES.some(p => path === p || path.startsWith(p + '.'))) {
+          return res.status(403).json({ error: 'Field is read-only' });
+        }
+        const playerState = this.state.get('players.' + playerId);
+        if (!playerState || !playerState.character) return res.status(404).json({ error: 'player character not found' });
+        const character = playerState.character;
+        // Traverse the dot path; create intermediate objects where needed.
+        const parts = path.split('.');
+        let obj = character;
+        for (let i = 0; i < parts.length - 1; i++) {
+          if (obj[parts[i]] === null || obj[parts[i]] === undefined) obj[parts[i]] = {};
+          else if (typeof obj[parts[i]] !== 'object') return res.status(400).json({ error: 'path segment is not an object: ' + parts.slice(0, i + 1).join('.') });
+          obj = obj[parts[i]];
+        }
+        obj[parts[parts.length - 1]] = b.value;
+
+        // Auto-recalculate derived stats when an ability score changes.
+        if (path.startsWith('abilities.') && path.endsWith('.score')) {
+          const abilityName = parts[1];
+          const score = parseInt(b.value, 10);
+          if (!Number.isNaN(score) && character.abilities && character.abilities[abilityName]) {
+            const modifier = Math.floor((score - 10) / 2);
+            character.abilities[abilityName].modifier = modifier;
+            character.abilities[abilityName].modifierStr = (modifier >= 0 ? '+' : '') + modifier;
+          }
+          this._recalculateDerivedStats(character);
+        }
+
+        this.state.set('players.' + playerId + '.character', character);
+        try { this._persistPlayerCharacter(playerId); } catch (e) {}
+        this.bus.dispatch('character:update', { playerId });
+        return res.json({ ok: true, path, value: b.value });
+      });
+
+      // Addition 5 — player inventory editing (add / remove / note).
+      // body: { action: 'add'|'remove'|'note', item?, itemId?, note? }
+      app.post('/api/characters/:playerId/inventory', (req, res) => {
+        const playerId = req.params.playerId;
+        const b = req.body || {};
+        const action = b.action;
+        if (!action) return res.status(400).json({ error: 'action required' });
+        const playerState = this.state.get('players.' + playerId);
+        if (!playerState || !playerState.character) return res.status(404).json({ error: 'player character not found' });
+        let inventory = Array.isArray(playerState.character.inventory) ? [...playerState.character.inventory] : [];
+
+        if (action === 'add') {
+          const item = b.item || {};
+          if (!item.name) return res.status(400).json({ error: 'item.name required' });
+          const newItem = {
+            id: item.id || ('item-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6)),
+            name: item.name,
+            description: item.description || '',
+            quantity: typeof item.quantity === 'number' ? item.quantity : 1,
+            type: item.type || 'gear',
+            equipped: !!item.equipped,
+            attuned: !!item.attuned,
+            magical: !!item.magical,
+            cursed: !!item.cursed,
+            notes: item.notes || '',
+            ...(item.damage ? { damage: item.damage } : {}),
+            ...(item.damageType ? { damageType: item.damageType } : {}),
+            ...(item.attackBonus !== undefined ? { attackBonus: item.attackBonus } : {}),
+            ...(item.damageBonus !== undefined ? { damageBonus: item.damageBonus } : {}),
+            ...(item.silver !== undefined ? { silver: item.silver } : {}),
+            ...(item.mechanical ? { mechanical: item.mechanical } : {}),
+            ...(item.awardedByDM ? { awardedByDM: true } : {})
+          };
+          inventory.push(newItem);
+        } else if (action === 'remove') {
+          const itemId = b.itemId;
+          const target = inventory.find(i => i.id === itemId);
+          if (!target) return res.status(404).json({ error: 'item not found' });
+          // Cursed items cannot be removed by players. DM may override via
+          // dmOverride:true (Addition 9 — DM inventory management).
+          if (target.cursed && !b.dmOverride) return res.status(400).json({ error: 'Cannot remove cursed item' });
+          inventory = inventory.filter(i => i.id !== itemId);
+        } else if (action === 'note') {
+          const itemId = b.itemId;
+          const note = typeof b.note === 'string' ? b.note : '';
+          let matched = false;
+          inventory = inventory.map(i => {
+            if (i.id === itemId) { matched = true; return { ...i, notes: note }; }
+            return i;
+          });
+          if (!matched) return res.status(404).json({ error: 'item not found' });
+        } else if (action === 'update') {
+          // Addition 9 — DM inventory management. Whitelisted field patch on
+          // an existing item by id. Name is editable too so the DM can fix
+          // typos, but id/ddb-owned plumbing (id, type-shape) stays locked.
+          const itemId = b.itemId;
+          const patch = b.patch && typeof b.patch === 'object' ? b.patch : null;
+          if (!itemId) return res.status(400).json({ error: 'itemId required' });
+          if (!patch) return res.status(400).json({ error: 'patch object required' });
+          const UPDATABLE = new Set([
+            'name', 'description', 'quantity', 'type', 'equipped', 'attuned',
+            'magical', 'cursed', 'silver', 'notes', 'mechanical',
+            'damage', 'damageType', 'attackBonus', 'damageBonus', 'properties',
+            'awardedByDM'
+          ]);
+          let matched = false;
+          inventory = inventory.map(i => {
+            if (i.id !== itemId) return i;
+            matched = true;
+            const next = { ...i };
+            for (const k of Object.keys(patch)) {
+              if (!UPDATABLE.has(k)) continue;
+              next[k] = patch[k];
+            }
+            return next;
+          });
+          if (!matched) return res.status(404).json({ error: 'item not found' });
+        } else {
+          return res.status(400).json({ error: 'unknown action — expect add/remove/note/update' });
+        }
+
+        this.state.set('players.' + playerId + '.character.inventory', inventory);
+        try { this._persistPlayerCharacter(playerId); } catch (e) {}
+        this.bus.dispatch('character:update', { playerId });
+        this.bus.dispatch('player:inventory_update', { playerId });
+        return res.json({ ok: true, inventory });
+      });
+
+      // Addition 5 — player notes persistence (server-side, debounced client).
+      app.post('/api/characters/:playerId/notes', (req, res) => {
+        const playerId = req.params.playerId;
+        const notes = (req.body && typeof req.body.notes === 'string') ? req.body.notes : '';
+        const playerState = this.state.get('players.' + playerId);
+        if (!playerState || !playerState.character) return res.status(404).json({ error: 'player character not found' });
+        this.state.set('players.' + playerId + '.character.notes', notes);
+        try { this._persistPlayerCharacter(playerId); } catch (e) {}
+        return res.json({ ok: true });
+      });
+
+      // Addition 4 — spell slot use/restore persistence.
+      // body: { level: 'level1' | 1, action: 'use' | 'restore' }
+      app.post('/api/characters/:playerId/spell-slot', (req, res) => {
+        const playerId = req.params.playerId;
+        const b = req.body || {};
+        let levelKey = b.level;
+        if (typeof levelKey === 'number') levelKey = 'level' + levelKey;
+        if (!levelKey || typeof levelKey !== 'string') {
+          return res.status(400).json({ error: 'level required (e.g. "level1" or 1)' });
+        }
+        const action = b.action === 'restore' ? 'restore' : 'use';
+        const playerState = this.state.get('players.' + playerId);
+        if (!playerState || !playerState.character) {
+          return res.status(404).json({ error: 'player character not found' });
+        }
+        const slots = playerState.character.spellSlots || {};
+        const slot = slots[levelKey];
+        if (!slot || typeof slot !== 'object') {
+          return res.status(404).json({ error: 'no spell slot at ' + levelKey });
+        }
+        const total = typeof slot.total === 'number' ? slot.total : 0;
+        let remaining = typeof slot.remaining === 'number' ? slot.remaining : total;
+        if (action === 'use') {
+          if (remaining <= 0) return res.status(400).json({ error: 'no slots remaining at ' + levelKey });
+          remaining -= 1;
+        } else {
+          if (remaining >= total) return res.json({ ok: true, remaining, total, changed: false });
+          remaining += 1;
+        }
+        const updated = { ...slots, [levelKey]: { ...slot, total, remaining, used: Math.max(0, total - remaining) } };
+        this.state.set('players.' + playerId + '.character.spellSlots', updated);
+        try { this._persistPlayerCharacter(playerId); } catch (e) {}
+        this.bus.dispatch('player:spells_update', { playerId });
+        this.bus.dispatch('character:update', { playerId });
+        return res.json({ ok: true, level: levelKey, total, remaining, action });
+      });
+
+      // Short / long rest — reset ability counts + spell slots.
+      app.post('/api/characters/:playerId/rest', (req, res) => {
+        const playerId = req.params.playerId;
+        const type = (req.body && req.body.type) || 'short';
+        if (type !== 'short' && type !== 'long') {
+          return res.status(400).json({ error: 'type must be short or long' });
+        }
+        const playerState = this.state.get('players.' + playerId);
+        if (!playerState) return res.status(404).json({ error: 'player not found' });
+        const charName = playerState.character && playerState.character.name || playerId;
+        const char = playerState.character || {};
+        const isWarlock = /Warlock/i.test(char.class || '');
+
+        if (type === 'long') {
+          // Reset every ability to default max
+          _setAbility(playerId, 'rage_uses', DEFAULT_ABILITY_MAX.rage);
+          _setAbility(playerId, 'rage_active', false);
+          _setAbility(playerId, 'bardic_inspiration_uses', DEFAULT_ABILITY_MAX.bardic_inspiration);
+          _setAbility(playerId, 'second_wind_uses', DEFAULT_ABILITY_MAX.second_wind);
+          _setAbility(playerId, 'action_surge_uses', DEFAULT_ABILITY_MAX.action_surge);
+          _setAbility(playerId, 'action_surge_active', false);
+          // HP to max
+          if (char.hp && typeof char.hp.max === 'number') {
+            this.state.set('players.' + playerId + '.character.hp.current', char.hp.max);
+            this.state.set('players.' + playerId + '.character.hp.temp', 0);
+            this.bus.dispatch('hp:update', { playerId, current: char.hp.max, max: char.hp.max, source: 'long-rest' });
+          }
+          // Spell slots to max on all levels
+          if (char.spellSlots && typeof char.spellSlots === 'object') {
+            const updated = {};
+            for (const [k, v] of Object.entries(char.spellSlots)) {
+              if (v && typeof v === 'object' && typeof v.total === 'number') {
+                updated[k] = { total: v.total, used: 0, remaining: v.total };
+              } else {
+                updated[k] = v;
+              }
+            }
+            this.state.set('players.' + playerId + '.character.spellSlots', updated);
+          }
+          this.bus.dispatch('session:long_rest', { playerId });
+          this.bus.dispatch('dm:whisper', {
+            text: `${charName} takes a long rest. HP, spell slots, and all class abilities restored.`,
+            priority: 3, category: 'system'
+          });
+        } else {
+          // Short rest — Second Wind, Action Surge, warlock spell slots.
+          _setAbility(playerId, 'second_wind_uses', DEFAULT_ABILITY_MAX.second_wind);
+          _setAbility(playerId, 'action_surge_uses', DEFAULT_ABILITY_MAX.action_surge);
+          _setAbility(playerId, 'action_surge_active', false);
+          if (isWarlock && char.spellSlots && typeof char.spellSlots === 'object') {
+            const updated = {};
+            for (const [k, v] of Object.entries(char.spellSlots)) {
+              if (v && typeof v === 'object' && typeof v.total === 'number') {
+                updated[k] = { total: v.total, used: 0, remaining: v.total };
+              } else {
+                updated[k] = v;
+              }
+            }
+            this.state.set('players.' + playerId + '.character.spellSlots', updated);
+          }
+          this.bus.dispatch('dm:whisper', {
+            text: `${charName} takes a short rest. Second Wind, Action Surge` + (isWarlock ? ', and warlock spell slots' : '') + ' restored.',
+            priority: 3, category: 'system'
+          });
+        }
+
+        // Persist to disk
+        try { this._persistPlayerCharacter(playerId); } catch (e) {}
+        _broadcastAbilityState(playerId);
+        return res.json({ ok: true, type, abilities: _getAbilities(playerId) });
+      });
+
+      // POST /api/session/reset-all — dry-run / session-start cleanup.
+      // For every assigned player: HP→max, temp HP→0, spell slots→full,
+      // class ability uses→max (rage 3, bardic 4, second wind 1, action surge 1),
+      // wounds cleared, death saves cleared. Horror→0 via state:session_reset bus
+      // event (horror-service already subscribes).
+      app.post('/api/session/reset-all', (req, res) => {
+        const playerStates = this.state.get('players') || {};
+        const summary = [];
+        for (const playerId of Object.keys(playerStates)) {
+          const playerState = playerStates[playerId];
+          if (!playerState || !playerState.character) continue;
+          const char = playerState.character;
+
+          // Abilities → default max
+          _setAbility(playerId, 'rage_uses', DEFAULT_ABILITY_MAX.rage);
+          _setAbility(playerId, 'rage_active', false);
+          _setAbility(playerId, 'bardic_inspiration_uses', DEFAULT_ABILITY_MAX.bardic_inspiration);
+          _setAbility(playerId, 'second_wind_uses', DEFAULT_ABILITY_MAX.second_wind);
+          _setAbility(playerId, 'action_surge_uses', DEFAULT_ABILITY_MAX.action_surge);
+          _setAbility(playerId, 'action_surge_active', false);
+
+          // HP → max, temp → 0
+          if (char.hp && typeof char.hp.max === 'number') {
+            this.state.set('players.' + playerId + '.character.hp.current', char.hp.max);
+            this.state.set('players.' + playerId + '.character.hp.temp', 0);
+            this.bus.dispatch('hp:update', { playerId, current: char.hp.max, max: char.hp.max, source: 'session-reset-all' });
+          }
+
+          // Spell slots → full
+          if (char.spellSlots && typeof char.spellSlots === 'object') {
+            const updated = {};
+            for (const [k, v] of Object.entries(char.spellSlots)) {
+              if (v && typeof v === 'object' && typeof v.total === 'number') {
+                updated[k] = { total: v.total, used: 0, remaining: v.total };
+              } else {
+                updated[k] = v;
+              }
+            }
+            this.state.set('players.' + playerId + '.character.spellSlots', updated);
+          }
+
+          // Wounds cleared (every limb → 0)
+          this.state.set('players.' + playerId + '.wounds', this._defaultWounds());
+
+          // Death saves cleared
+          this.state.set('players.' + playerId + '.deathSaves', { successes: 0, failures: 0 });
+
+          // Persist to disk so a subsequent restart doesn't reload stale HP.
+          try { this._persistPlayerCharacter(playerId); } catch (e) {}
+          _broadcastAbilityState(playerId);
+
+          summary.push({
+            playerId,
+            name: char.name || playerId,
+            class: char.class || null,
+            hpMax: (char.hp && char.hp.max) || null
+          });
+        }
+
+        // Horror → 0 for all. horror-service listens for state:session_reset
+        // and wipes scores + thresholds + arcProfiles.
+        this.bus.dispatch('state:session_reset', { source: 'reset-all' });
+
+        this.bus.dispatch('dm:whisper', {
+          text: `Session reset: ${summary.length} characters restored — full HP, spell slots, ability uses, wounds, death saves, and horror cleared.`,
+          priority: 2, category: 'system'
+        });
+        console.log('[Characters] /api/session/reset-all — ' + summary.length + ' players restored to full.');
+        res.json({ ok: true, resetCount: summary.length, players: summary });
+      });
     }
   }
 
   _defaultWounds() {
     return { head: 0, torso: 0, leftArm: 0, rightArm: 0, leftLeg: 0, rightLeg: 0 };
+  }
+
+  // Addition 6 — recompute derived stats from ability scores after an
+  // ability score edit. Pure data transform on the character object.
+  _recalculateDerivedStats(character) {
+    if (!character || !character.abilities) return;
+    const dexMod = (character.abilities.dex && character.abilities.dex.modifier) || 0;
+    const wisMod = (character.abilities.wis && character.abilities.wis.modifier) || 0;
+    const profBonus = character.proficiencyBonus || 2;
+    // Initiative = DEX mod (unless overridden by a feat, which we preserve if set explicitly)
+    if (typeof character.initiative !== 'number' || character.initiative === dexMod) {
+      character.initiative = dexMod;
+    } else {
+      // Leave manual override alone
+    }
+    // Passive perception
+    const percSkill = (character.skills && (character.skills.perception || character.skills.Perception)) || null;
+    const percProf = percSkill && (percSkill.proficiency === 'proficiency' || percSkill.proficiency === 'expertise');
+    character.passivePerception = 10 + wisMod + (percProf ? profBonus : 0);
+    // Spell save DC (if spellcasting ability set)
+    if (character.spellcastingAbility && character.abilities[character.spellcastingAbility]) {
+      const spellMod = character.abilities[character.spellcastingAbility].modifier || 0;
+      character.spellSaveDC = 8 + profBonus + spellMod;
+      character.spellAttackBonus = profBonus + spellMod;
+    }
+    // Recalculate AC for armor-based characters (handled by _calcAC on persist)
+    try { character.ac = this._calcAC(character); } catch (e) {}
   }
 
   _computeWounds(playerId, current, max) {
@@ -291,14 +873,25 @@ class CharacterService {
     let count = 0;
     for (const [playerId, charId] of Object.entries(assignments)) {
       if (playerId.startsWith('_')) continue;
-      const char = characters[String(charId)];
-      if (!char) {
-        console.warn('[Characters] Assignment: player \'' + playerId + '\' -> ID ' + charId + ' not found');
-        continue;
-      }
-      // Preserve existing absent/notYetArrived state if already set
       const existing = this.state.get('players.' + playerId) || {};
       const bs = backstories[playerId] || {};
+      const char = charId ? characters[String(charId)] : null;
+
+      // Unresolved assignment (null or missing char file): still create a stub
+      // entry so the player slot survives restart and renders in the Players tab.
+      if (!char) {
+        if (charId) {
+          console.warn('[Characters] Assignment: player \'' + playerId + '\' -> ID ' + charId + ' not found — stub slot created');
+        }
+        this.state.setPlayer(playerId, {
+          name: playerId,
+          character: {},
+          absent: existing.absent || !!bs.absent,
+          absentReason: existing.absentReason || bs.absentReason || null,
+          notYetArrived: existing.notYetArrived || !!bs.notYetArrived
+        });
+        continue;
+      }
 
       // Apply campaign language overrides — replaces DDB-synced language list
       const langOverride = this._langOverrides && this._langOverrides[playerId];
@@ -574,6 +1167,58 @@ class CharacterService {
     this.saveCharacter(String(id), charData);
   }
 
+  /**
+   * Addition 10 follow-up — assign stable ids to inventory items that don't
+   * have one. DDB-synced items arrive without ids; without this the DM edit
+   * UI skips them entirely (and the /inventory update action can't address
+   * them). Returns true if any id was assigned so callers can decide whether
+   * to persist.
+   */
+  _ensureInventoryIds(character) {
+    if (!character || !Array.isArray(character.inventory)) return false;
+    let dirty = false;
+    const seen = new Set();
+    for (const it of character.inventory) {
+      if (!it) continue;
+      if (it.id && !seen.has(it.id)) { seen.add(it.id); continue; }
+      // Missing OR duplicate (e.g. two Daggers both with no id) — generate.
+      const seed = (it.name || 'item').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24);
+      let candidate;
+      do {
+        candidate = 'inv-' + seed + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      } while (seen.has(candidate));
+      it.id = candidate;
+      seen.add(candidate);
+      dirty = true;
+    }
+    return dirty;
+  }
+
+  /**
+   * Run _ensureInventoryIds across every loaded player character and
+   * persist any file that changed. Called once on start() after _loadAll.
+   */
+  _migrateInventoryIds() {
+    const players = this.state.get('players') || {};
+    let migratedCount = 0;
+    for (const [pid, p] of Object.entries(players)) {
+      if (!p || !p.character) continue;
+      const dirty = this._ensureInventoryIds(p.character);
+      if (dirty) {
+        migratedCount++;
+        const charId = p.character.ddbId || p.character.foundryId;
+        if (charId) {
+          try { this.saveCharacter(String(charId), p.character); } catch (e) {
+            console.warn('[Characters] Inventory id migration write failed for ' + pid + ': ' + e.message);
+          }
+        }
+      }
+    }
+    if (migratedCount > 0) {
+      console.log('[Characters] Assigned inventory ids across ' + migratedCount + ' character file(s) — DM editor now addressable');
+    }
+  }
+
   // ══════════════════════════════════════════════════════════════════════════
   // DDB SYNC — Pull from D&D Beyond
   // ══════════════════════════════════════════════════════════════════════════
@@ -754,25 +1399,83 @@ class CharacterService {
         char.hp.temp = existing.hp.temp || 0;
       }
       // Preserve local equipped/attuned state (player may have changed these in-session)
+      // and Addition-1 custom weapon fields (magical, silver, attackBonus,
+      // damageBonus, damageType override, properties override, special_effect).
+      // DDB doesn't expose these — they are the Co-DM's combat metadata, keyed
+      // by item name. Do not overwrite them on re-sync.
       if (existing.inventory && existing.inventory.length > 0) {
-        const localState = {};
+        const PRESERVE_KEYS = ['magical', 'silver', 'attackBonus', 'damageBonus', 'damageType', 'properties', 'special_effect',
+          // Addition 5 — preserve player-authored inventory metadata.
+          'notes', 'description', 'cursed', 'awardedByDM', 'mechanical', 'id'];
+// Index local state by id FIRST (stable, handles duplicates) then
+        // by name as a fallback so items without ids still merge. Previously
+        // we keyed only on name — which silently lost PRESERVE_KEYS when a
+        // character carried two items of the same name (Chazz carries
+        // several "Dagger, +1" entries; only the last one's fields survived
+        // because later entries overwrote the earlier entry in the map).
+        const localById = {};
+        const localByName = {}; // name -> array of keep-objects (FIFO consume)
+        const localExtras = []; // player-added items not present in DDB
         for (const item of existing.inventory) {
-          if (item.name && (item.equipped || item.attuned)) {
-            localState[item.name] = { equipped: item.equipped, attuned: item.attuned };
+          if (!item.name) continue;
+          const keep = {};
+          if (item.equipped || item.attuned) {
+            keep.equipped = item.equipped;
+            keep.attuned = item.attuned;
+          }
+          for (const k of PRESERVE_KEYS) {
+            if (item[k] !== undefined) keep[k] = item[k];
+          }
+          if (Object.keys(keep).length) {
+            if (item.id) localById[item.id] = keep;
+            if (!localByName[item.name]) localByName[item.name] = [];
+            localByName[item.name].push(keep);
+          }
+          // Player-added item: has an id but is not present in DDB inventory.
+          if (item.id && !char.inventory.some(d => d.name === item.name)) {
+            localExtras.push(item);
           }
         }
         for (const item of char.inventory) {
-          const saved = localState[item.name];
-          if (saved) {
-            item.equipped = saved.equipped || item.equipped;
-            item.attuned = saved.attuned || item.attuned;
+          // Prefer id match (stable). Fall back to name — but consume
+          // entries FIFO so duplicate-named items each map to a distinct
+          // locally-authored keep record.
+          let saved = (item.id && localById[item.id]) || null;
+          if (!saved && localByName[item.name] && localByName[item.name].length) {
+            saved = localByName[item.name].shift();
           }
+          if (!saved) continue;
+          if (saved.equipped !== undefined) item.equipped = saved.equipped || item.equipped;
+          if (saved.attuned !== undefined) item.attuned = saved.attuned || item.attuned;
+          for (const k of PRESERVE_KEYS) {
+            if (saved[k] !== undefined) item[k] = saved[k];
+          }
+        }
+        // Append player-added items that DDB doesn't know about.
+        if (localExtras.length) char.inventory.push(...localExtras);
+      }
+      // Addition 5 — preserve top-level player notes.
+      if (typeof existing.notes === 'string') {
+        char.notes = existing.notes;
+      }
+      // Preserve Addition-1 spell-level magical flag (warlock spells etc).
+      if (existing.spells && existing.spells.length > 0 && Array.isArray(char.spells)) {
+        const spellLocal = {};
+        for (const s of existing.spells) {
+          if (s.name && s.magical !== undefined) spellLocal[s.name] = s.magical;
+        }
+        for (const s of char.spells) {
+          if (s.name && spellLocal[s.name] !== undefined) s.magical = spellLocal[s.name];
         }
       }
     }
 
     // Recalculate AC based on current equipped items
     char.ac = this._calcAC(char);
+
+    // Addition 10 — ensure every inventory item has a stable id before
+    // writing so the DM editor can address it. DDB items arrive without ids.
+    this._ensureInventoryIds(char);
 
     this.saveCharacter(String(ddbId), char);
     console.log('[DDB] Synced: ' + char.name + ' (' + char.race + ' ' + char.class + ' ' + char.level + ')');
@@ -866,17 +1569,15 @@ class CharacterService {
       if (hasShield) ac += 2;
     }
 
-    // Spell slots
-    let spellSlots = null;
-    if (d.spellSlots) {
-      spellSlots = {};
-      for (const slot of d.spellSlots) {
-        if (slot.available > 0 || slot.used > 0) {
-          spellSlots['level' + slot.level] = { total: slot.available + slot.used, used: slot.used, remaining: slot.available };
-        }
-      }
-      if (!Object.keys(spellSlots).length) spellSlots = null;
+    // Spell slots — compute from class+level (DDB's spellSlots only holds used/modified entries)
+    const usedMap = {};
+    for (const slot of (d.spellSlots || [])) {
+      if (slot.used > 0) usedMap['level' + slot.level] = { used: slot.used };
     }
+    for (const slot of (d.pactMagic || [])) {
+      if (slot.used > 0) usedMap['level' + slot.level] = { used: slot.used };
+    }
+    const spellSlots = computeSpellSlotsForClasses(classes, usedMap);
 
     // Spells known
     const spells = [];

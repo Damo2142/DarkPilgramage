@@ -30,6 +30,24 @@ const DICE_KEYWORDS = [
   'rolled', 'rolls', 'rolling', 'roll'
 ];
 
+// Phrases that mark a player taking an active perception / investigation action.
+// When detected, comm-router fires observation:trigger events for the
+// current scene so the observation service can push perception flashes to
+// the player's Chromebook (rather than only Max whispering advice to the DM).
+// Multi-word phrases are matched case-insensitively as substrings; single
+// verbs are matched with word boundaries to avoid false positives.
+const ACTIVE_PERCEPTION_PHRASES = [
+  'look around', 'look for', 'look closer', 'look closely',
+  'scan the room', 'scan the area', 'scan around',
+  'search the area', 'search the room', 'search for',
+  'check the room', 'check the area',
+  'study the room', 'study the area'
+];
+const ACTIVE_PERCEPTION_VERBS = [
+  'investigate', 'examine', 'inspect', 'perception', 'notice',
+  'observe', 'survey', 'scrutinize'
+];
+
 // Roll types — pattern matches in declared text
 const ROLL_TYPES = {
   attack: /\b(to\s*hit|attack|hit\b)/i,
@@ -119,9 +137,14 @@ class CommRouter {
       return this.routePlayerInput({ playerId: d.playerId, text: d.text || '' }).catch(() => {});
     }, 'comm-router');
 
-    // NPC dialogue dispatched by AI engine — apply proximity routing
+    // NPC dialogue dispatched by AI engine — apply proximity routing.
+    // Skip if _skipRouting is set (e.g. scripted speech already routed).
     this.bus.subscribe('npc:approved', (env) => {
-      try { this.routeNpcSpeech(env.data || {}); } catch (e) {}
+      try {
+        const d = env.data || {};
+        if (d._skipRouting) return;
+        this.routeNpcSpeech(d);
+      } catch (e) {}
     }, 'comm-router');
 
     // Scripted NPC speech (timed events, scene scripts) — explicit language
@@ -129,11 +152,46 @@ class CommRouter {
       try {
         const d = env.data || {};
         this.routeNpcSpeech(d);
+        // Also route through the room speaker so Katya's songs, scripted
+        // monologues, and timed-event dialogue play audibly at the table.
+        // voice-service subscribes to npc:approved; the same handler is
+        // what NPC-auto-dialogue uses, so we reuse that pathway here
+        // rather than introducing a parallel TTS trigger.
+        if (d.text) {
+          this.bus.dispatch('npc:approved', {
+            id: 'scripted-' + Date.now(),
+            npc: d.npc || d.npcId,
+            npcId: d.npcId,
+            text: d.text,
+            voiceCode: d.voiceCode,
+            voiceProfile: d.voiceProfile || null,
+            languageId: d.languageId || null,
+            autoApproved: true,
+            _scripted: true,
+            _skipRouting: true   // we already called routeNpcSpeech above
+          });
+        }
         // If a followUp is attached, dispatch it after the configured delay.
         if (d.followUp && typeof d.followUp === 'object') {
           const delayMs = (d.followUp.delaySeconds || 5) * 1000;
           setTimeout(() => {
-            try { this.routeNpcSpeech({ ...d.followUp }); } catch (e) {}
+            try {
+              this.routeNpcSpeech({ ...d.followUp });
+              if (d.followUp.text) {
+                this.bus.dispatch('npc:approved', {
+                  id: 'scripted-fu-' + Date.now(),
+                  npc: d.followUp.npc || d.followUp.npcId || d.npc,
+                  npcId: d.followUp.npcId || d.npcId,
+                  text: d.followUp.text,
+                  voiceCode: d.followUp.voiceCode || d.voiceCode,
+                  voiceProfile: d.followUp.voiceProfile || null,
+                  languageId: d.followUp.languageId || d.languageId || null,
+                  autoApproved: true,
+                  _scripted: true,
+                  _skipRouting: true
+                });
+              }
+            } catch (e) {}
           }, delayMs);
         }
       } catch (e) {}
@@ -242,6 +300,18 @@ class CommRouter {
     const safeText = this._sanitizePlayerInput(text, playerId);
     if (!safeText) return;
     data = { ...data, text: safeText };
+
+    // Active perception / investigation detection — fires observation:trigger
+    // events for the current scene so the observation service can push
+    // perception flashes to the player's Chromebook. Non-blocking: we
+    // continue to route the message through Max / NPC / combat as normal.
+    try {
+      if (this._detectActivePerceptionIntent(safeText)) {
+        this._fireActivePerception(playerId);
+      }
+    } catch (e) {
+      console.warn('[CommRouter] active perception detector error:', e.message);
+    }
 
     // Addition 3 — combat initiation detection (out-of-combat only).
     // If the player declares an attack/charge/cast against a target on
@@ -1027,7 +1097,12 @@ class CommRouter {
       if (m) {
         targetName = m[1].trim()
           .replace(/[.!?]+$/, '')          // strip trailing punctuation
-          .replace(/^(?:the|a|an)\s+/i, ''); // strip leading article so "the vampire spawn" matches "Vampire Spawn"
+          .replace(/^(?:the|a|an)\s+/i, '') // strip leading article so "the vampire spawn" matches "Vampire Spawn"
+          // Strip trailing weapon/spell clause so "tomas with my longsword"
+          // resolves to "tomas". Covers: "with ...", "using ...", "and ..."
+          // modifiers players naturally type.
+          .replace(/\s+(?:with|using|and|while|via)\s+.*$/i, '')
+          .trim();
         break;
       }
     }
@@ -1157,6 +1232,40 @@ class CommRouter {
       });
 
       if (hit) {
+        // Addition 7 — immunity check runs after hit confirmed and before
+        // pending damage is set. If the target is immune to nonmagical
+        // weapons and the weapon is neither magical nor (silver-with-bypass),
+        // the hit is absorbed with zero damage and a narrative line is
+        // whispered to the DM instead of prompting damage dice.
+        const targetConfig = this._getActorConfig(target.actorSlug);
+        if (targetConfig?.immunities?.nonmagical_weapons) {
+          const weaponData = this._getWeaponData(character, weaponName);
+          const isMagical = !!(weaponData && weaponData.magical);
+          const isSilver = !!(weaponData && weaponData.silver);
+          const silverBypasses = targetConfig.immunities.silver_bypasses !== false;
+          if (!isMagical && !(isSilver && silverBypasses)) {
+            const narratives = (targetConfig.immunityNarrative &&
+              targetConfig.immunityNarrative.nonmagical_weapons) || [
+              'The attack connects but does not seem to affect them.'
+            ];
+            const narrative = narratives[Math.floor(Math.random() * narratives.length)];
+            this.bus.dispatch('dm:whisper', {
+              text: `⚠️ IMMUNITY — ${target.name} is immune to nonmagical weapons. Zero damage applied. Narrative: "${narrative}"`,
+              priority: 1, category: 'combat', source: 'comm-router'
+            });
+            this.state.set('combat.pendingDamage', null);
+            return true;
+          }
+        }
+        // Resistance / damage-type immunity — flagged for the damage roll.
+        if (targetConfig?.resistances?.damage_types?.length ||
+            targetConfig?.immunities?.damage_types?.length) {
+          this.state.set('combat.pendingResistance', {
+            targetId: target.id || target.name,
+            resistances: (targetConfig.resistances && targetConfig.resistances.damage_types) || [],
+            immunities: (targetConfig.immunities && targetConfig.immunities.damage_types) || []
+          });
+        }
         this.state.set('combat.pendingDamage', {
           attackerId: playerId,
           targetId: target.id || target.name,
@@ -1177,13 +1286,41 @@ class CommRouter {
     const pending = this.state.get('combat.pendingDamage');
     if (damageMatch && pending) {
       const roll = parseInt(damageMatch[1] || damageMatch[2] || damageMatch[3], 10);
-      const damageBonus = this._getDamageModifier(character, pending.weapon);
-      const totalDamage = roll + damageBonus;
+      let damageBonus = this._getDamageModifier(character, pending.weapon);
+      // Addition 3 — Rage damage bonus (+2 on melee attacks while raging)
+      let rageBonus = 0;
+      const attackerAbilities = this.state.get('players.' + playerId + '.abilities');
+      if (attackerAbilities && attackerAbilities.rage_active) {
+        rageBonus = 2;
+        damageBonus += rageBonus;
+      }
+      let totalDamage = roll + damageBonus;
+
+      // Addition 7 — apply resistance / damage-type immunity if the damage
+      // type is carried on the weapon. If the target is immune to this type
+      // zero out the damage; if resistant, halve. Narrative hint whispered.
+      const weaponDataDmg = this._getWeaponData(character, pending.weapon);
+      const dmgType = (weaponDataDmg && weaponDataDmg.damageType && String(weaponDataDmg.damageType).toLowerCase()) || null;
+      const pendingRes = this.state.get('combat.pendingResistance');
+      let resistanceNote = '';
+      if (dmgType && pendingRes && pendingRes.targetId === pending.targetId) {
+        const imms = (pendingRes.immunities || []).map(s => String(s).toLowerCase());
+        const ress = (pendingRes.resistances || []).map(s => String(s).toLowerCase());
+        if (imms.includes(dmgType)) {
+          resistanceNote = ` [${dmgType} immunity — zero applied]`;
+          totalDamage = 0;
+        } else if (ress.includes(dmgType)) {
+          const halved = Math.floor(totalDamage / 2);
+          resistanceNote = ` [${dmgType} resistance — ${totalDamage} halved to ${halved}]`;
+          totalDamage = halved;
+        }
+      }
+      this.state.set('combat.pendingResistance', null);
 
       // Apply damage via combat-service directly (no combat:apply_damage event exists).
       const combatSvc = this.orchestrator && this.orchestrator.getService('combat');
       if (combatSvc && typeof combatSvc.modifyHp === 'function') {
-        combatSvc.modifyHp(pending.targetId, -Math.abs(totalDamage));
+        if (totalDamage > 0) combatSvc.modifyHp(pending.targetId, -Math.abs(totalDamage));
       } else {
         this.bus.dispatch('dm:whisper', {
           text: `Combat parser: combat service unavailable — apply ${totalDamage} damage to ${pending.targetId} manually.`,
@@ -1194,7 +1331,7 @@ class CommRouter {
       this.state.set('combat.pendingDamage', null);
 
       this.bus.dispatch('dm:whisper', {
-        text: `${totalDamage} damage applied to ${pending.targetId} (rolled ${roll} + ${damageBonus} ${pending.weapon || ''} modifier).`,
+        text: `${totalDamage} damage applied to ${pending.targetId} (rolled ${roll} + ${damageBonus} ${pending.weapon || ''} modifier${rageBonus ? ' — includes +2 rage bonus' : ''})${resistanceNote}.`,
         priority: 1, category: 'combat', source: 'comm-router'
       });
       return true;
@@ -1352,6 +1489,171 @@ class CommRouter {
 
   _charName(playerId) {
     return this.state.get(`players.${playerId}.character.name`) || playerId;
+  }
+
+  // Addition 7 — read an actor/creature config by slug for immunity/resistance
+  // checks. Cached per-instance to avoid re-reading every attack. Searches
+  // config/actors first, then config/creatures, mirroring combat-service.
+  _getActorConfig(actorSlug) {
+    if (!actorSlug) return null;
+    if (!this._actorConfigCache) this._actorConfigCache = new Map();
+    if (this._actorConfigCache.has(actorSlug)) return this._actorConfigCache.get(actorSlug);
+    let cfg = null;
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      for (const dir of ['actors', 'creatures']) {
+        const p = path.join(__dirname, '..', '..', 'config', dir, `${actorSlug}.json`);
+        if (fs.existsSync(p)) { cfg = JSON.parse(fs.readFileSync(p, 'utf8')); break; }
+      }
+    } catch (e) { /* keep null */ }
+    this._actorConfigCache.set(actorSlug, cfg);
+    return cfg;
+  }
+
+  // Addition 7 — resolve a weapon by name off a character for magical/silver
+  // flags. Checks inventory, weapons, equipment arrays (DDB uses different
+  // shapes across characters). Case-insensitive substring match.
+  _getWeaponData(character, weaponName) {
+    if (!character || !weaponName) return null;
+    const wn = String(weaponName).toLowerCase();
+    const pools = [character.inventory, character.weapons, character.equipment];
+    for (const pool of pools) {
+      if (!Array.isArray(pool)) continue;
+      const found = pool.find(e => e && e.name && e.name.toLowerCase().includes(wn));
+      if (found) return found;
+    }
+    return null;
+  }
+
+  // ─── Active perception / investigation detection ───────────────
+  //
+  // Fires observation:trigger events when a player declares an active
+  // look / search / examine action in chat. Without this, only timed
+  // events surface observations — Max may whisper advice to the DM but
+  // the player's Chromebook never gets the perception flash. The C1 fix
+  // in observation-service handles per-player routing once the trigger
+  // is dispatched; this just makes the trigger fire on intent.
+
+  _detectActivePerceptionIntent(text) {
+    if (!text) return false;
+    const lower = text.toLowerCase();
+    for (const phrase of ACTIVE_PERCEPTION_PHRASES) {
+      if (lower.includes(phrase)) return true;
+    }
+    for (const verb of ACTIVE_PERCEPTION_VERBS) {
+      if (new RegExp('\\b' + verb + '\\b', 'i').test(lower)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Collect observation eventIds that should fire on an active look in the
+   * current scene. Reads from this.config.world?.observations || this.config.observations,
+   * mirroring how observation-service loads them. Filters by simple scene
+   * heuristic: upper-floor scene only includes events tagged 'upper'/'upstairs';
+   * everything else is treated as ground/cellar/anywhere and included for
+   * the ground scene. Unknown scene → return all eventIds.
+   */
+  _collectActiveLookObservationEvents() {
+    const cfg = this.config || {};
+    const world = cfg.world || {};
+    const obsList = world.observations || cfg.observations || [];
+    if (!Array.isArray(obsList) || obsList.length === 0) return [];
+    const sceneId = String(this.state.get('scene.id') || '').toLowerCase();
+    const isUpper = sceneId.includes('upper') || sceneId.includes('upstairs');
+    const eventIds = [];
+    const seen = new Set();
+    for (const o of obsList) {
+      const eid = o && (o.eventId || o.gameTime);
+      if (!eid || seen.has(eid)) continue;
+      const eidLower = String(eid).toLowerCase();
+      const isUpperEvent = eidLower.includes('upper') || eidLower.includes('upstairs');
+      // Upper scene: only upper events. Other (or unknown) scenes: skip
+      // explicitly upper-tagged events so they don't leak into the tavern.
+      if (isUpper && !isUpperEvent) continue;
+      if (!isUpper && isUpperEvent && sceneId) continue;
+      eventIds.push(eid);
+      seen.add(eid);
+    }
+    return eventIds;
+  }
+
+  _fireActivePerception(playerId) {
+    const charName = this._charName(playerId);
+
+    // Roll a real d20 + perception modifier so the look is resolved
+    // as an active check (not just passive perception). The total is
+    // passed to the observation service and surfaced to both the DM
+    // earbud and the player UI.
+    const roll = this._rollPerception(playerId);
+
+    // Whisper to the DM — includes the roll breakdown so the DM sees
+    // exactly what the player scored against whatever DCs are in play.
+    this.bus.dispatch('dm:whisper', {
+      text: `[PERCEPTION] ${charName} looks around — rolled ${roll.total} (d20 ${roll.d20}${roll.modStr}). Firing scene observations.`,
+      priority: 2,
+      category: 'observation',
+      source: 'comm-router'
+    });
+
+    // Surface on the player UI as a toast/observation so the player
+    // sees their roll land. Player bridge listens for dm:private_message
+    // on their own playerId.
+    this.bus.dispatch('dm:private_message', {
+      playerId,
+      text: `You scan the room — Perception ${roll.total} (d20 ${roll.d20}${roll.modStr}).`,
+      style: 'observation',
+      duration: 6000
+    });
+
+    // Generic active-look signal with the roll total so observation
+    // service can gate reveals by DC <= roll.total.
+    this.bus.dispatch('observation:trigger', {
+      id: `active-look-${playerId}-${Date.now()}`,
+      dc: 0,
+      text: null,
+      targetPlayer: playerId,
+      activeCheck: true,
+      perceptionRoll: roll.total,
+      perceptionDetail: roll
+    });
+
+    // Reference-path triggers — fire each registered observation event
+    // for the current scene. The observation service's _onObservationTrigger
+    // reference branch (`if (!d.text && this.observations.has(d.id))`) will
+    // fire all observations grouped under that eventId, with per-observation
+    // dedup so a given observation only fires once per session.
+    const eventIds = this._collectActiveLookObservationEvents();
+    for (const eid of eventIds) {
+      this.bus.dispatch('observation:trigger', {
+        id: eid,
+        targetPlayer: playerId,
+        activeCheck: true,
+        perceptionRoll: roll.total,
+        perceptionDetail: roll
+      });
+    }
+  }
+
+  // Roll d20 + perception skill mod (or wisdom mod if no perception skill).
+  // Returns { d20, mod, modStr, total, proficient }.
+  _rollPerception(playerId) {
+    const char = this.state.get(`players.${playerId}.character`) || {};
+    const skills = char.skills || {};
+    const abilities = char.abilities || {};
+    let mod = 0;
+    let proficient = false;
+    if (skills.perception && typeof skills.perception.modifier === 'number') {
+      mod = skills.perception.modifier;
+      proficient = skills.perception.proficiency && skills.perception.proficiency !== 'none';
+    } else if (abilities.wis && typeof abilities.wis.modifier === 'number') {
+      mod = abilities.wis.modifier;
+    }
+    const d20 = 1 + Math.floor(Math.random() * 20);
+    const total = d20 + mod;
+    const modStr = mod >= 0 ? ` + ${mod}` : ` - ${Math.abs(mod)}`;
+    return { d20, mod, modStr, total, proficient };
   }
 }
 

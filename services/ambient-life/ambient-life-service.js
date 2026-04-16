@@ -557,40 +557,58 @@ class AmbientLifeService {
     this.state.set(`npcs.${npcId}.location`, move.label);
     const npcName = npc.name || npcId;
     this._whisperDM(`${npcName} ${move.action}`, 5, 'ambient');
+
+    // Actually move the NPC's map token so the DM sees the movement on the
+    // battlemap — previously only the text `location` label was updated.
+    if (typeof move.x === 'number' && typeof move.y === 'number') {
+      const mapService = this.orchestrator.getService('map');
+      const token = this.state.get(`map.tokens.${npcId}`);
+      if (mapService && token) {
+        try {
+          mapService._moveToken(npcId, move.x, move.y, { force: true });
+        } catch (e) {
+          console.warn(`[AmbientLife] NPC token move failed for ${npcId}: ${e.message}`);
+        }
+      }
+    }
+
     this.bus.dispatch('ambient:npc_move', { npcId, npcName, label: move.label, action: move.action, timestamp: Date.now() });
   }
 
   _getNpcMoveOptions(npcId) {
+    // Coordinates mirror _getMapPosition anchors for the Pallid Hart ground
+    // floor (gridSize 70). Each move updates both the narrative location
+    // label AND the actual map token x/y — see _fireNpcMove.
     const moves = {
       'marta': [
-        { label: 'behind the bar', action: 'moves behind the bar, polishing glasses nervously.' },
-        { label: 'by the fireplace', action: 'moves to the fireplace to add a log. Her hands tremble.' },
-        { label: 'near the cellar door', action: 'walks toward the cellar door, hesitates, then stops.' },
-        { label: 'serving tables', action: 'circles the room refilling mugs, avoiding the stranger\'s corner.' }
+        { label: 'behind the bar', action: 'moves behind the bar, polishing glasses nervously.', x: 1050, y: 385 },
+        { label: 'by the fireplace', action: 'moves to the fireplace to add a log. Her hands tremble.', x: 175, y: 385 },
+        { label: 'near the cellar door', action: 'walks toward the cellar door, hesitates, then stops.', x: 420, y: 560 },
+        { label: 'serving tables', action: 'circles the room refilling mugs, avoiding the stranger\'s corner.', x: 700, y: 490 }
       ],
       'tomas': [
-        { label: 'near the entry door', action: 'moves to the door and checks the latch again.' },
-        { label: 'by the window', action: 'stands at the window, staring at the sky through the frost.' },
-        { label: 'near the cellar door', action: 'drifts toward the cellar door, trying to look casual.' },
-        { label: 'pacing by the wall', action: 'paces along the far wall, unable to sit still.' }
+        { label: 'near the entry door', action: 'moves to the door and checks the latch again.', x: 700, y: 770 },
+        { label: 'by the window', action: 'stands at the window, staring at the sky through the frost.', x: 1155, y: 490 },
+        { label: 'near the cellar door', action: 'drifts toward the cellar door, trying to look casual.', x: 420, y: 560 },
+        { label: 'pacing by the wall', action: 'paces along the far wall, unable to sit still.', x: 700, y: 280 }
       ],
       'patron-farmer': [
-        { label: 'table near the hearth', action: 'hasn\'t moved from his spot by the fire. Staring into the flames.' },
-        { label: 'at the bar', action: 'shuffles to the bar and asks Marta for something stronger.' }
+        { label: 'table near the hearth', action: 'hasn\'t moved from his spot by the fire. Staring into the flames.', x: 245, y: 385 },
+        { label: 'at the bar', action: 'shuffles to the bar and asks Marta for something stronger.', x: 980, y: 385 }
       ],
       'patron-merchant': [
-        { label: 'table with his goods', action: 'reorganizes his merchant goods under the table for the fifth time.' },
-        { label: 'at the bar', action: 'goes to the bar and orders another drink.' },
-        { label: 'near the entry door', action: 'moves to the door and peers through the keyhole at the storm.' }
+        { label: 'table with his goods', action: 'reorganizes his merchant goods under the table for the fifth time.', x: 700, y: 700 },
+        { label: 'at the bar', action: 'goes to the bar and orders another drink.', x: 980, y: 385 },
+        { label: 'near the entry door', action: 'moves to the door and peers through the keyhole at the storm.', x: 700, y: 770 }
       ],
       'patron-pilgrim': [
-        { label: 'corner table with candle', action: 'remains at his corner table, praying quietly.' },
-        { label: 'near the cellar door', action: 'approaches the cellar door. Places his palm flat against it. Steps back.' }
+        { label: 'corner table with candle', action: 'remains at his corner table, praying quietly.', x: 315, y: 210 },
+        { label: 'near the cellar door', action: 'approaches the cellar door. Places his palm flat against it. Steps back.', x: 420, y: 560 }
       ],
       'patron-minstrel': [
-        { label: 'by the hearth with lute', action: 'settles by the hearth and tunes her lute absently.' },
-        { label: 'at the bar', action: 'leans against the bar, chatting with Marta in low tones.' },
-        { label: 'wandering the room', action: 'strolls through the room, observing everyone with those sharp eyes.' }
+        { label: 'by the hearth with lute', action: 'settles by the hearth and tunes her lute absently.', x: 175, y: 385 },
+        { label: 'at the bar', action: 'leans against the bar, chatting with Marta in low tones.', x: 980, y: 385 },
+        { label: 'wandering the room', action: 'strolls through the room, observing everyone with those sharp eyes.', x: 700, y: 490 }
       ]
     };
     return moves[npcId] || [];
@@ -697,6 +715,17 @@ class AmbientLifeService {
     this._performanceIndex++;
     this._whisperDM(`Katya performs: ${perf.title}`, 4, 'story');
     this.bus.dispatch('ambient:performance', { npcId: 'patron-minstrel', npcName: 'Katya', type: perf.type, title: perf.title, content: perf.content, timestamp: Date.now() });
+    // Route the actual performance text to the room speaker via the NPC
+    // speech pipeline (comm-router → voice-service → ElevenLabs → npc:audio).
+    if (perf.content) {
+      this.bus.dispatch('npc:scripted_speech', {
+        npcId: 'patron-minstrel',
+        npc: 'Katya Voss',
+        text: perf.content,
+        languageId: 'common',
+        narratorTranslation: null
+      });
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════

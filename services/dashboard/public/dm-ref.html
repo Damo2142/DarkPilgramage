@@ -249,12 +249,41 @@
       padding: 10px 14px; background: var(--surface);
       border-left: 3px solid transparent; margin-bottom: 4px;
       font-size: 15px; border-radius: 0 3px 3px 0;
+      cursor: pointer;
     }
+    .init-row:hover { background: #2a1f15; }
     .init-row.current { background: #3a2010; border-left-color: var(--gold); }
+    .init-row.expanded { border-left-color: var(--amber); background: #2a1f15; }
     .init-row .turn-arrow { width: 14px; color: var(--gold); font-size: 14px; }
     .init-row .iname { flex: 1; color: var(--text); font-weight: 500; }
     .init-row .iconds { font-size: 11px; color: var(--amber); }
     .init-row .iinit { font-family: monospace; font-size: 14px; color: var(--text-dim); width: 32px; text-align: right; }
+    .init-row .ihp { font-family: monospace; font-size: 13px; min-width: 68px; text-align: right; }
+    .init-row .ihp-bar { width: 60px; height: 6px; background: #1a1412; border-radius: 3px; overflow: hidden; }
+    .init-row .ihp-fill { height: 100%; transition: width 120ms ease; }
+    .init-detail {
+      margin-bottom: 4px; padding: 12px 14px;
+      background: var(--surface2); border-left: 3px solid var(--amber);
+      border-radius: 0 3px 3px 0;
+    }
+    .init-detail .idt-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+    .init-detail .idt-row label { color: var(--text-dim); min-width: 60px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .init-detail .idt-row strong { color: var(--text); font-weight: 700; }
+    .init-detail .idt-presets { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+    .init-detail .idt-btn {
+      background: var(--surface3); color: var(--text); border: 1px solid var(--border);
+      font-family: monospace; font-size: 12px; padding: 5px 10px; border-radius: 3px; cursor: pointer;
+      min-width: 44px;
+    }
+    .init-detail .idt-btn.dmg { color: var(--red-bright, #e04040); border-color: #5a2020; }
+    .init-detail .idt-btn.dmg:hover { background: #3a1818; }
+    .init-detail .idt-btn.heal { color: var(--green, #40b060); border-color: #20502a; }
+    .init-detail .idt-btn.heal:hover { background: #18331e; }
+    .init-detail .idt-custom { display: flex; gap: 4px; }
+    .init-detail .idt-custom input {
+      flex: 1; background: var(--surface3); color: var(--text); border: 1px solid var(--border);
+      padding: 5px 8px; border-radius: 3px; font-size: 13px; font-family: monospace;
+    }
     #next-turn-btn {
       width: 100%; background: var(--surface2);
       border: 1px solid var(--gold); color: var(--gold);
@@ -517,13 +546,122 @@
       <div id="combat-empty">No active combat</div>
     </div>
 
+    <!-- ═══ DM ATTACK RESOLVER — physical dice workflow ═══ -->
+    <div id="dm-attack-panel" style="display:none;margin-top:16px;padding:14px;background:#1a1510;border:2px solid var(--gold);border-radius:6px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+        <span style="font-size:13px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1px;">
+          Resolve — <span id="dma-attacker-name" style="color:var(--text);text-transform:none;"></span>
+        </span>
+        <div style="margin-left:auto;display:flex;gap:4px;">
+          <button id="dma-mode-weapon" class="tool-btn primary" style="font-size:11px;padding:4px 12px;" onclick="DmAttack._setMode('weapon')">⚔ Weapon</button>
+          <button id="dma-mode-spell" class="tool-btn" style="font-size:11px;padding:4px 12px;" onclick="DmAttack._setMode('spell')">✦ Spell</button>
+        </div>
+      </div>
+
+      <!-- NPC target list (name + AC for DM eyes) -->
+      <div id="dma-npc-ref" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;"></div>
+
+      <!-- ═══ WEAPON SECTION (existing) ═══ -->
+      <div id="dma-weapon-section">
+
+      <!-- Weapon selector buttons -->
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;">Weapon:</div>
+      <div id="dma-weapons" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;"></div>
+
+      <!-- Target + raw d20 -->
+      <div style="display:flex;gap:10px;align-items:end;margin-bottom:10px;">
+        <div style="flex:1;">
+          <label style="font-size:11px;color:var(--text-dim);">Target</label>
+          <select id="dma-target" style="width:100%;padding:8px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;font-size:14px;"></select>
+        </div>
+        <div style="width:90px;">
+          <label style="font-size:11px;color:var(--text-dim);">Raw d20</label>
+          <input id="dma-d20" type="number" min="1" max="20" placeholder="d20" style="width:100%;padding:8px;text-align:center;font-size:16px;font-weight:700;background:var(--bg);border:1px solid var(--border);color:var(--gold);border-radius:4px;">
+        </div>
+        <button class="tool-btn primary" style="padding:10px 18px;font-weight:700;white-space:nowrap;" onclick="DmAttack.resolve()">RESOLVE</button>
+      </div>
+
+      <!-- Result display -->
+      <div id="dma-result" style="display:none;padding:12px;background:var(--surface);border-radius:4px;margin-bottom:10px;font-size:14px;line-height:1.6;"></div>
+
+      <!-- Damage section (hidden until HIT) -->
+      <div id="dma-damage-section" style="display:none;">
+        <div style="display:flex;gap:10px;align-items:end;">
+          <div style="flex:1;">
+            <label style="font-size:11px;color:var(--text-dim);">Raw Damage Dice Roll <span id="dma-dmg-dice" style="color:var(--gold);"></span></label>
+            <input id="dma-dmg-raw" type="number" min="1" placeholder="dice total" style="width:100%;padding:8px;text-align:center;font-size:16px;font-weight:700;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;">
+          </div>
+          <button class="tool-btn primary" style="padding:10px 18px;font-weight:700;background:#8a1a1a;" onclick="DmAttack.applyDamage()">APPLY DAMAGE</button>
+        </div>
+        <div id="dma-dmg-result" style="display:none;padding:12px;background:var(--surface);border-radius:4px;margin-top:10px;font-size:14px;line-height:1.6;"></div>
+      </div>
+      </div><!-- end dma-weapon-section -->
+
+      <!-- ═══ SPELL SECTION ═══ -->
+      <div id="dma-spell-section" style="display:none;">
+        <!-- Spell selector buttons -->
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;">Spell:</div>
+        <div id="dms-spells" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;max-height:120px;overflow-y:auto;"></div>
+        <div id="dms-spell-info" style="display:none;font-size:12px;padding:8px;background:var(--surface);border-radius:4px;margin-bottom:10px;line-height:1.5;"></div>
+
+        <!-- Attack roll spell -->
+        <div id="dms-attack-mode" style="display:none;">
+          <div style="display:flex;gap:10px;align-items:end;margin-bottom:10px;">
+            <div style="flex:1;">
+              <label style="font-size:11px;color:var(--text-dim);">Target</label>
+              <select id="dms-atk-target" style="width:100%;padding:8px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;font-size:14px;"></select>
+            </div>
+            <div style="width:90px;">
+              <label style="font-size:11px;color:var(--text-dim);">Raw d20</label>
+              <input id="dms-atk-d20" type="number" min="1" max="20" placeholder="d20" style="width:100%;padding:8px;text-align:center;font-size:16px;font-weight:700;background:var(--bg);border:1px solid var(--border);color:var(--gold);border-radius:4px;">
+            </div>
+            <button class="tool-btn primary" style="padding:10px 18px;font-weight:700;" onclick="DmSpell.resolveAttack()">RESOLVE</button>
+          </div>
+        </div>
+
+        <!-- Save spell -->
+        <div id="dms-save-mode" style="display:none;">
+          <div style="font-size:12px;color:var(--gold);margin-bottom:8px;">
+            <strong id="dms-save-type">DEX</strong> Save — DC <strong id="dms-save-dc">13</strong>
+          </div>
+          <!-- Target checkboxes for area spells / single select -->
+          <div id="dms-save-targets" style="margin-bottom:10px;"></div>
+          <button class="tool-btn primary" style="padding:10px 18px;font-weight:700;" onclick="DmSpell.resolveSave()">RESOLVE SAVES</button>
+        </div>
+
+        <!-- Condition-only spell (no damage) -->
+        <div id="dms-condition-mode" style="display:none;">
+          <div style="font-size:12px;color:var(--amber);margin-bottom:8px;" id="dms-condition-desc"></div>
+        </div>
+
+        <!-- Spell result -->
+        <div id="dms-result" style="display:none;padding:12px;background:var(--surface);border-radius:4px;margin-top:10px;font-size:14px;line-height:1.6;"></div>
+
+        <!-- Spell damage (after hit or failed save) -->
+        <div id="dms-damage-section" style="display:none;margin-top:10px;">
+          <div style="display:flex;gap:10px;align-items:end;">
+            <div style="flex:1;">
+              <label style="font-size:11px;color:var(--text-dim);">Raw Damage Dice Roll <span id="dms-dmg-dice" style="color:var(--gold);"></span></label>
+              <input id="dms-dmg-raw" type="number" min="0" placeholder="dice total" style="width:100%;padding:8px;text-align:center;font-size:16px;font-weight:700;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;">
+            </div>
+            <button class="tool-btn primary" style="padding:10px 18px;font-weight:700;background:#8a1a1a;" onclick="DmSpell.applyDamage()">APPLY DAMAGE</button>
+          </div>
+          <div id="dms-dmg-result" style="display:none;padding:12px;background:var(--surface);border-radius:4px;margin-top:10px;font-size:14px;line-height:1.6;"></div>
+        </div>
+      </div><!-- end dma-spell-section -->
+    </div>
+
     <!-- Addition 5 — manually add a token to active combat mid-fight -->
     <div id="add-to-combat-panel" style="margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:4px;">
       <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Add to Combat</div>
-      <div style="display:flex;gap:8px;">
-        <input id="add-combat-input" type="text" placeholder="Token name or NPC ID"
-          style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:4px;font-size:13px;">
-        <button class="tool-btn" onclick="addToCombat()">Add</button>
+      <div style="display:flex;gap:8px;position:relative;">
+        <div style="flex:1;position:relative;">
+          <input id="add-combat-input" type="text" placeholder="Type name... (e.g. Tomas, Vladislav)"
+            style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:4px;font-size:13px;"
+            oninput="AddCombat.search(this.value)" onkeydown="AddCombat.keydown(event)" autocomplete="off">
+          <div id="add-combat-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:50;background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;max-height:180px;overflow-y:auto;"></div>
+        </div>
+        <button class="tool-btn" onclick="AddCombat.add()">Add</button>
       </div>
       <div id="add-combat-status" style="font-size:11px;color:var(--text-dim);margin-top:6px;"></div>
     </div>
@@ -884,7 +1022,7 @@ function renderPlayerCard(pid, p) {
     }
   }
 
-  var lightInfo = computeLightSource(ch.inventory || []);
+  var lightInfo = computeLightSource(ch.inventory || [], ch);
   var languages = (ch.languages || []).join(', ') || 'Common';
   var conds = (p.conditions || []).filter(Boolean);
   var statusLine = conds.length ? conds.join(', ') : 'none';
@@ -930,8 +1068,10 @@ function renderPlayerCard(pid, p) {
     '</div>';
 }
 
-function computeLightSource(inventory) {
+function computeLightSource(inventory, character) {
   var lights = ['torch', 'lantern', 'lamp', 'candle'];
+  // 1) Equipped physical light source wins — it's bright light regardless of
+  // darkvision. Show fuel remaining.
   for (var i = 0; i < inventory.length; i++) {
     var item = inventory[i];
     var name = (item.name || '').toLowerCase();
@@ -943,6 +1083,36 @@ function computeLightSource(inventory) {
         }
       }
     }
+  }
+  // 2) No physical light — check the character's senses. Darkvision turns
+  // dark into dim (disadvantage on perception but no auto-fail, attacks
+  // unaffected out to the darkvision range). Read from senses.darkvision
+  // first, fall back to a senses string, then to race defaults.
+  var dvRange = 0;
+  var blind = 0;
+  if (character) {
+    var s = character.senses;
+    if (s && typeof s === 'object') {
+      if (typeof s.darkvision === 'number') dvRange = s.darkvision;
+      if (typeof s.blindsight === 'number') blind = s.blindsight;
+    } else if (typeof s === 'string') {
+      var m = s.match(/darkvision\s+(\d+)/i);
+      if (m) dvRange = parseInt(m[1], 10);
+      var b = s.match(/blindsight\s+(\d+)/i);
+      if (b) blind = parseInt(b[1], 10);
+    }
+    if (!dvRange) {
+      var race = (character.race || '').toLowerCase();
+      if (['elf','half-elf','dwarf','gnome','half-orc','tiefling','drow','kobold'].some(function(r){ return race.indexOf(r) !== -1; })) {
+        dvRange = 60;
+      }
+    }
+  }
+  if (blind > 0) {
+    return { text: 'Blindsight ' + blind + 'ft', warn: false };
+  }
+  if (dvRange > 0) {
+    return { text: 'Darkvision ' + dvRange + 'ft', warn: false };
   }
   return { text: 'No light source — DARK', warn: true };
 }
@@ -1020,25 +1190,72 @@ function openPlayerSheet(pid) {
   var init = ch.initiative;
   var profBonus = ch.proficiencyBonus;
 
+  var editMode = !!(window.__sheetEditMode && window.__sheetEditMode[pid]);
+  window.__currentSheetPid = pid;
+
   var html = '<div class="ov-title">' + esc(ch.name || pid) + '</div>' +
     '<div class="ov-subtitle"><span>' + esc(ch.race || '—') + ' ' + esc(ch.class || '—') + ' ' + dash(ch.level) + '</span><span>' + esc(ch.background || '') + '</span></div>';
 
+  // Addition 6 — DM tools strip (edit mode + award item)
+  html += '<div class="ov-section" style="background:rgba(200,168,32,0.06);border-left:3px solid var(--gold);">' +
+    '<h3 style="margin-bottom:6px;">DM Tools</h3>' +
+    '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
+      '<button class="tool-btn" onclick="DmCharEdit.toggleEdit(\'' + pid + '\')">' + (editMode ? '💾 DONE EDITING' : '✏️ EDIT MODE') + '</button>' +
+      '<button class="tool-btn" onclick="DmCharEdit.openAwardForm(\'' + pid + '\')">🎁 AWARD ITEM</button>' +
+    '</div>' +
+    '<div id="dm-award-form-' + pid + '" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px;margin-top:6px;">' +
+      '<input id="dm-award-name-' + pid + '"   placeholder="Item name"                     style="width:100%;margin-bottom:4px;padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />' +
+      '<input id="dm-award-desc-' + pid + '"   placeholder="Description (player-facing)"  style="width:100%;margin-bottom:4px;padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />' +
+      '<input id="dm-award-effect-' + pid + '" placeholder="Mechanical effect (DM notes)" style="width:100%;margin-bottom:4px;padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />' +
+      '<div style="display:flex;gap:12px;align-items:center;font-size:12px;color:var(--text-dim);margin:4px 0 8px;">' +
+        '<label><input type="checkbox" id="dm-award-magical-' + pid + '" /> Magical</label>' +
+        '<label><input type="checkbox" id="dm-award-cursed-'  + pid + '" /> Cursed (hidden flavor)</label>' +
+        '<label>Qty <input type="number" id="dm-award-qty-' + pid + '" value="1" min="1" style="width:60px;margin-left:4px;padding:2px 4px;" /></label>' +
+      '</div>' +
+      '<button class="tool-btn" onclick="DmCharEdit.award(\'' + pid + '\')">Grant to ' + esc(ch.name || pid) + '</button>' +
+      '<button class="tool-btn" onclick="DmCharEdit.closeAwardForm(\'' + pid + '\')" style="margin-left:6px;">Cancel</button>' +
+    '</div>' +
+  '</div>';
+
+  function editableNum(label, path, value, suffix) {
+    if (!editMode) {
+      return '<div class="ov-stat-block"><div class="lab">' + label + '</div><div class="num">' + dash(value) + (suffix || '') + '</div></div>';
+    }
+    return '<div class="ov-stat-block"><div class="lab">' + label + '</div>' +
+      '<input type="number" value="' + (value == null ? '' : value) + '" ' +
+      'onblur="DmCharEdit.saveField(\'' + pid + '\',\'' + path + '\',this.value,\'number\')" ' +
+      'style="width:100%;text-align:center;background:var(--bg);color:var(--gold);border:1px solid var(--border);font-size:18px;font-weight:700;padding:4px;" /></div>';
+  }
+
   // Combat stats
   html += '<div class="ov-section"><h3>Combat</h3><div class="ov-grid-3">';
-  html += '<div class="ov-stat-block"><div class="lab">HP</div><div class="num">' + dash(hp.current) + '/' + dash(hp.max) + '</div></div>';
-  html += '<div class="ov-stat-block"><div class="lab">AC</div><div class="num">' + dash(ac) + '</div></div>';
-  html += '<div class="ov-stat-block"><div class="lab">Speed</div><div class="num">' + dash(speed) + '</div></div>';
-  html += '<div class="ov-stat-block"><div class="lab">Initiative</div><div class="num">' + dash(init >= 0 ? '+' + init : init) + '</div></div>';
-  html += '<div class="ov-stat-block"><div class="lab">Prof Bonus</div><div class="num">' + dash(profBonus >= 0 ? '+' + profBonus : profBonus) + '</div></div>';
+  if (editMode) {
+    html += editableNum('HP Current', 'hp.current', hp.current);
+    html += editableNum('HP Max',     'hp.max',     hp.max);
+  } else {
+    html += '<div class="ov-stat-block"><div class="lab">HP</div><div class="num">' + dash(hp.current) + '/' + dash(hp.max) + '</div></div>';
+  }
+  html += editableNum('AC', 'ac', ac);
+  html += editableNum('Speed', 'speed', speed);
+  html += editableNum('Initiative', 'initiative', init);
+  html += editableNum('Prof Bonus', 'proficiencyBonus', profBonus);
   var ppGet = ch.passivePerception || (ch.senses && ch.senses.passivePerception) || '—';
-  html += '<div class="ov-stat-block"><div class="lab">Passive PP</div><div class="num">' + ppGet + '</div></div>';
+  html += editableNum('Passive PP', 'passivePerception', ppGet);
   html += '</div></div>';
 
   // Abilities
-  html += '<div class="ov-section"><h3>Abilities</h3><div class="ov-grid-3">';
+  html += '<div class="ov-section"><h3>Abilities' + (editMode ? ' <span style="font-size:11px;color:var(--text-dim);font-weight:normal;">— score changes auto-recalculate modifier + save DC + passive perception</span>' : '') + '</h3><div class="ov-grid-3">';
   ['str','dex','con','int','wis','cha'].forEach(function(k) {
     var a = getAb(k);
-    html += '<div class="ov-stat-block"><div class="lab">' + k.toUpperCase() + '</div><div class="num">' + a.score + '</div><div class="mod">' + a.mod + '</div></div>';
+    if (editMode) {
+      html += '<div class="ov-stat-block"><div class="lab">' + k.toUpperCase() + '</div>' +
+        '<input type="number" value="' + (a.score === '—' ? '' : a.score) + '" ' +
+        'onblur="DmCharEdit.saveField(\'' + pid + '\',\'abilities.' + k + '.score\',this.value,\'number\')" ' +
+        'style="width:100%;text-align:center;background:var(--bg);color:var(--gold);border:1px solid var(--border);font-size:18px;font-weight:700;padding:4px;" />' +
+        '<div class="mod">' + a.mod + '</div></div>';
+    } else {
+      html += '<div class="ov-stat-block"><div class="lab">' + k.toUpperCase() + '</div><div class="num">' + a.score + '</div><div class="mod">' + a.mod + '</div></div>';
+    }
   });
   html += '</div></div>';
 
@@ -1124,6 +1341,158 @@ function openPlayerSheet(pid) {
       return '<div>• ' + esc(i.name || '?') + qty + '</div>';
     }).join('');
     html += '</div></div>';
+  }
+
+  // Addition 9 — DM INVENTORY MANAGEMENT (edit mode only). Full superset of
+  // the player inventory panel: per-item note, flag toggles (equipped,
+  // magical, cursed, silver, attuned), weapon mechanical fields, and remove.
+  if (editMode) {
+    var allItems = ch.inventory || [];
+    html += '<div class="ov-section" style="background:rgba(200,168,32,0.04);border-left:3px solid var(--gold);">';
+    html += '<h3 style="margin-bottom:6px;">DM Inventory Mgmt (' + allItems.length + ')</h3>';
+    html += '<div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">Toggle flags, edit notes, set weapon mechanics. Changes save on blur / click.</div>';
+
+    if (!allItems.length) {
+      html += '<div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">(no items)</div>';
+    }
+
+    // Count items missing ids and warn — should be zero after the server
+    // migration runs on startup. If the DM ever sees this banner the server
+    // failed to persist ids (usually a file write permission issue).
+    var missingIds = allItems.filter(function(i) { return i && !i.id; }).length;
+    if (missingIds > 0) {
+      html += '<div style="background:rgba(200,80,32,0.15);color:#ffb088;border:1px solid #a05030;padding:6px 8px;margin-bottom:6px;border-radius:3px;font-size:11px;">' +
+              '⚠ ' + missingIds + ' item(s) without id — DM edit disabled for those rows. ' +
+              'Restart the container to trigger id migration.</div>';
+    }
+
+    allItems.forEach(function(item, idx) {
+      if (!item) return;
+      if (!item.id) {
+        // Graceful fallback — show the name + qty so the DM knows it exists.
+        var qn = item.quantity > 1 ? ' ×' + item.quantity : '';
+        html += '<div style="border:1px dashed var(--border);background:rgba(0,0,0,0.2);padding:6px 8px;margin-bottom:6px;border-radius:3px;color:var(--text-dim);font-size:12px;">' +
+                esc(item.name || '?') + qn + ' <span style="color:#ff9060;font-size:10px;">(no id — not editable)</span></div>';
+        return;
+      }
+      var iid = esc(item.id);
+      var nm = esc(item.name || '?');
+      var qty = item.quantity > 1 ? ' ×' + item.quantity : '';
+      var badges = '';
+      if (item.equipped) badges += '<span style="background:#2a5a2a;color:#aaffaa;padding:1px 6px;border-radius:3px;font-size:10px;margin-left:4px;">EQUIPPED</span>';
+      if (item.magical)  badges += '<span style="background:#5a3a2a;color:#ffd088;padding:1px 6px;border-radius:3px;font-size:10px;margin-left:4px;">MAGICAL</span>';
+      if (item.cursed)   badges += '<span style="background:#5a2a2a;color:#ff8888;padding:1px 6px;border-radius:3px;font-size:10px;margin-left:4px;">CURSED</span>';
+      if (item.silver)   badges += '<span style="background:#3a4a5a;color:#c0d0e0;padding:1px 6px;border-radius:3px;font-size:10px;margin-left:4px;">SILVER</span>';
+      if (item.attuned)  badges += '<span style="background:#3a2a5a;color:#d0b0ff;padding:1px 6px;border-radius:3px;font-size:10px;margin-left:4px;">ATTUNED</span>';
+      if (item.awardedByDM) badges += '<span style="background:#2a3a5a;color:#a0c0ff;padding:1px 6px;border-radius:3px;font-size:10px;margin-left:4px;">DM</span>';
+
+      html += '<div style="border:1px solid var(--border);background:var(--bg);padding:8px;margin-bottom:6px;border-radius:3px;">';
+
+      // Header row — name/qty/badges + Remove
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
+      html += '<div style="color:var(--text);font-weight:600;font-size:13px;">' + nm + qty + badges + '</div>';
+      html += '<button class="tool-btn" style="background:#4a2020;color:#ffaaaa;font-size:11px;padding:3px 8px;" ' +
+              'onclick="DmCharEdit.removeItem(\'' + pid + '\',\'' + iid + '\',' + (item.cursed ? 'true' : 'false') + ')">Remove</button>';
+      html += '</div>';
+
+      // Text fields — name, description, type, mechanical (all click-to-edit)
+      html += '<div style="display:grid;grid-template-columns:2fr 3fr;gap:4px;margin-bottom:4px;">';
+      html += '<div><div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Name</div>' +
+              '<input type="text" value="' + esc(item.name || '') + '" ' +
+              'onblur="DmCharEdit.saveWeaponField(\'' + pid + '\',\'' + iid + '\',\'name\',this.value)" ' +
+              'style="width:100%;padding:4px 6px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:12px;" /></div>';
+      html += '<div><div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Type</div>' +
+              '<input type="text" value="' + esc(item.type || '') + '" placeholder="gear / weapon / armor / consumable" ' +
+              'onblur="DmCharEdit.saveWeaponField(\'' + pid + '\',\'' + iid + '\',\'type\',this.value)" ' +
+              'style="width:100%;padding:4px 6px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:12px;" /></div>';
+      html += '</div>';
+
+      html += '<div style="margin-bottom:4px;">';
+      html += '<div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Description (player-facing)</div>' +
+              '<input type="text" value="' + esc(item.description || '') + '" ' +
+              'onblur="DmCharEdit.saveWeaponField(\'' + pid + '\',\'' + iid + '\',\'description\',this.value)" ' +
+              'style="width:100%;padding:4px 6px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:11px;" />';
+      html += '</div>';
+
+      html += '<div style="margin-bottom:4px;">';
+      html += '<div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Mechanical (DM notes)</div>' +
+              '<input type="text" value="' + esc(item.mechanical || '') + '" ' +
+              'onblur="DmCharEdit.saveWeaponField(\'' + pid + '\',\'' + iid + '\',\'mechanical\',this.value)" ' +
+              'style="width:100%;padding:4px 6px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:11px;" />';
+      html += '</div>';
+
+      // Flag toggles row
+      html += '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:11px;color:var(--text-dim);margin:4px 0 6px;">';
+      ['equipped','attuned','magical','cursed','silver'].forEach(function(flag) {
+        var checked = item[flag] ? 'checked' : '';
+        html += '<label style="cursor:pointer;"><input type="checkbox" ' + checked +
+                ' onchange="DmCharEdit.toggleItemFlag(\'' + pid + '\',\'' + iid + '\',\'' + flag + '\',this.checked)" /> ' + flag + '</label>';
+      });
+      html += '</div>';
+
+      // Weapon mechanical fields (damage, damageType, attackBonus, damageBonus)
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;margin-bottom:4px;">';
+      html += '<div><div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Damage</div>' +
+              '<input type="text" value="' + esc(item.damage || '') + '" placeholder="e.g. 1d8" ' +
+              'onblur="DmCharEdit.saveWeaponField(\'' + pid + '\',\'' + iid + '\',\'damage\',this.value)" ' +
+              'style="width:100%;padding:3px 5px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:11px;" /></div>';
+      html += '<div><div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Dmg Type</div>' +
+              '<input type="text" value="' + esc(item.damageType || '') + '" placeholder="e.g. slashing" ' +
+              'onblur="DmCharEdit.saveWeaponField(\'' + pid + '\',\'' + iid + '\',\'damageType\',this.value)" ' +
+              'style="width:100%;padding:3px 5px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:11px;" /></div>';
+      html += '<div><div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Atk Bonus</div>' +
+              '<input type="number" value="' + (item.attackBonus != null ? item.attackBonus : '') + '" ' +
+              'onblur="DmCharEdit.saveWeaponField(\'' + pid + '\',\'' + iid + '\',\'attackBonus\',this.value,\'number\')" ' +
+              'style="width:100%;padding:3px 5px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:11px;" /></div>';
+      html += '<div><div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Dmg Bonus</div>' +
+              '<input type="number" value="' + (item.damageBonus != null ? item.damageBonus : '') + '" ' +
+              'onblur="DmCharEdit.saveWeaponField(\'' + pid + '\',\'' + iid + '\',\'damageBonus\',this.value,\'number\')" ' +
+              'style="width:100%;padding:3px 5px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:11px;" /></div>';
+      html += '</div>';
+
+      // Quantity + notes
+      html += '<div style="display:flex;gap:6px;align-items:center;">';
+      html += '<label style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Qty</label>' +
+              '<input type="number" value="' + (item.quantity != null ? item.quantity : 1) + '" min="0" ' +
+              'onblur="DmCharEdit.saveWeaponField(\'' + pid + '\',\'' + iid + '\',\'quantity\',this.value,\'number\')" ' +
+              'style="width:60px;padding:3px 5px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:11px;" />';
+      html += '<input type="text" value="' + esc(item.notes || '') + '" placeholder="Notes (player-visible)" ' +
+              'onblur="DmCharEdit.saveItemNote(\'' + pid + '\',\'' + iid + '\',this.value)" ' +
+              'style="flex:1;padding:3px 5px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);font-size:11px;" />';
+      html += '</div>';
+      html += '</div>'; // end item card
+    });
+
+    // Add Item form (full fields) — collapsible
+    html += '<div style="margin-top:10px;">';
+    html += '<button class="tool-btn" onclick="DmCharEdit.openInvAdd(\'' + pid + '\')">+ Add Item</button>';
+    html += '<div id="dm-inv-add-' + pid + '" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px;margin-top:6px;">';
+    html += '<div style="font-size:11px;color:var(--gold);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.08em;">Add Item — full DM fields</div>';
+    html += '<input id="dm-inv-add-name-' + pid + '"        placeholder="Item name (required)"                   style="width:100%;margin-bottom:4px;padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />';
+    html += '<input id="dm-inv-add-desc-' + pid + '"        placeholder="Description (player-facing)"            style="width:100%;margin-bottom:4px;padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />';
+    html += '<input id="dm-inv-add-notes-' + pid + '"       placeholder="Notes (secret / mechanical)"            style="width:100%;margin-bottom:4px;padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:4px;">';
+    html += '<input id="dm-inv-add-type-'    + pid + '" placeholder="Type (gear/weapon/armor)" value="gear" style="padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />';
+    html += '<input id="dm-inv-add-qty-'     + pid + '" type="number" placeholder="Qty" value="1" min="1"   style="padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />';
+    html += '<input id="dm-inv-add-mech-'    + pid + '" placeholder="Mechanical (short)"                    style="padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />';
+    html += '</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;margin-bottom:4px;">';
+    html += '<input id="dm-inv-add-damage-' + pid + '"  placeholder="Damage (e.g. 1d8)"  style="padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />';
+    html += '<input id="dm-inv-add-dtype-'  + pid + '"  placeholder="Damage type"        style="padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />';
+    html += '<input id="dm-inv-add-atk-'    + pid + '"  type="number" placeholder="Atk bonus"   style="padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />';
+    html += '<input id="dm-inv-add-dmg-'    + pid + '"  type="number" placeholder="Dmg bonus"   style="padding:6px 8px;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);" />';
+    html += '</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:12px;color:var(--text-dim);margin:6px 0 8px;">';
+    ['equipped','attuned','magical','cursed','silver'].forEach(function(flag) {
+      html += '<label><input type="checkbox" id="dm-inv-add-' + flag + '-' + pid + '" /> ' + flag + '</label>';
+    });
+    html += '</div>';
+    html += '<button class="tool-btn" onclick="DmCharEdit.addInvItem(\'' + pid + '\')">Add to Inventory</button>';
+    html += '<button class="tool-btn" onclick="DmCharEdit.closeInvAdd(\'' + pid + '\')" style="margin-left:6px;">Cancel</button>';
+    html += '</div>';
+    html += '</div>';
+
+    html += '</div>'; // end DM Inventory section
   }
 
   // Features and traits
@@ -1225,6 +1594,207 @@ function closeOverlay() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// ADDITION 6 — DM character edit + item award
+// ═══════════════════════════════════════════════════════════════
+window.__sheetEditMode = window.__sheetEditMode || {};
+var DmCharEdit = {
+  toggleEdit: function(pid) {
+    window.__sheetEditMode[pid] = !window.__sheetEditMode[pid];
+    openPlayerSheet(pid);
+  },
+  saveField: function(pid, path, rawVal, kind) {
+    var value = rawVal;
+    if (kind === 'number') {
+      var n = parseInt(rawVal, 10);
+      if (isNaN(n)) { alert('Value must be a number'); return; }
+      value = n;
+    }
+    fetch('/api/characters/' + pid + '/field', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: path, value: value })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (!d.ok) { alert('Save failed: ' + (d.error || 'unknown')); return; }
+      // Mirror into local state so re-render reflects new value without full refetch.
+      if (!stateData.players[pid]) stateData.players[pid] = {};
+      if (!stateData.players[pid].character) stateData.players[pid].character = {};
+      DmCharEdit._setNested(stateData.players[pid].character, path, value);
+      if (path.indexOf('abilities.') === 0 && path.indexOf('.score') !== -1) {
+        // Server auto-recalcs derived stats — re-open to fetch full state.
+        fetch('/api/state').then(function(r){return r.json();}).then(function(s){
+          if (s && s.players && s.players[pid]) {
+            stateData.players[pid] = s.players[pid];
+            openPlayerSheet(pid);
+          }
+        });
+      } else {
+        openPlayerSheet(pid);
+      }
+    }).catch(function(e) { alert('Save failed: ' + e.message); });
+  },
+  _setNested: function(obj, path, value) {
+    var parts = path.split('.');
+    for (var i = 0; i < parts.length - 1; i++) {
+      if (obj[parts[i]] == null || typeof obj[parts[i]] !== 'object') obj[parts[i]] = {};
+      obj = obj[parts[i]];
+    }
+    obj[parts[parts.length - 1]] = value;
+  },
+  openAwardForm: function(pid) {
+    var form = document.getElementById('dm-award-form-' + pid);
+    if (form) form.style.display = 'block';
+  },
+  closeAwardForm: function(pid) {
+    var form = document.getElementById('dm-award-form-' + pid);
+    if (form) form.style.display = 'none';
+  },
+  award: function(pid) {
+    var nameEl = document.getElementById('dm-award-name-' + pid);
+    if (!nameEl || !nameEl.value.trim()) { alert('Item name required'); return; }
+    var payload = {
+      playerId: pid,
+      item: {
+        name: nameEl.value.trim(),
+        description: (document.getElementById('dm-award-desc-' + pid) || {}).value || '',
+        mechanical:  (document.getElementById('dm-award-effect-' + pid) || {}).value || '',
+        quantity: parseInt((document.getElementById('dm-award-qty-' + pid) || {}).value || '1', 10) || 1,
+        magical: !!(document.getElementById('dm-award-magical-' + pid) || {}).checked,
+        cursed:  !!(document.getElementById('dm-award-cursed-'  + pid) || {}).checked,
+        equipped: false, attuned: false,
+        notes: 'Awarded by DM'
+      }
+    };
+    fetch('/api/characters/award-item', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function(r){return r.json();}).then(function(d){
+      if (d.ok) {
+        DmCharEdit.closeAwardForm(pid);
+        // Clear form for next award
+        nameEl.value = '';
+        var desc = document.getElementById('dm-award-desc-' + pid);   if (desc) desc.value = '';
+        var eff  = document.getElementById('dm-award-effect-' + pid); if (eff)  eff.value = '';
+        var mc   = document.getElementById('dm-award-magical-' + pid); if (mc) mc.checked = false;
+        var cu   = document.getElementById('dm-award-cursed-' + pid);  if (cu) cu.checked = false;
+        // Refresh the sheet to show the new item.
+        fetch('/api/state').then(function(r){return r.json();}).then(function(s){
+          if (s && s.players && s.players[pid]) {
+            stateData.players[pid] = s.players[pid];
+            openPlayerSheet(pid);
+          }
+        });
+      } else {
+        alert('Award failed: ' + (d.error || 'unknown'));
+      }
+    }).catch(function(e){ alert('Award failed: ' + e.message); });
+  },
+
+  // ─── Addition 9 — DM inventory management ────────────────────────
+  _refreshSheet: function(pid) {
+    fetch('/api/state').then(function(r){return r.json();}).then(function(s) {
+      if (s && s.players && s.players[pid]) {
+        stateData.players[pid] = s.players[pid];
+        openPlayerSheet(pid);
+      }
+    });
+  },
+  _invPost: function(pid, body, opts) {
+    opts = opts || {};
+    fetch('/api/characters/' + pid + '/inventory', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function(r){return r.json();}).then(function(d) {
+      if (d.ok) {
+        if (Array.isArray(d.inventory) && stateData.players[pid] && stateData.players[pid].character) {
+          stateData.players[pid].character.inventory = d.inventory;
+        }
+        if (typeof opts.onOk === 'function') opts.onOk(d);
+        // skipRerender lets text-field onblur saves keep the user's focus/
+        // cursor position. Re-render when a flag/badge/count would visually
+        // change, or when items are added/removed.
+        if (!opts.skipRerender) openPlayerSheet(pid);
+      } else {
+        alert('Inventory ' + (body.action || '') + ' failed: ' + (d.error || 'unknown'));
+      }
+    }).catch(function(e) { alert('Inventory ' + (body.action || '') + ' failed: ' + e.message); });
+  },
+  removeItem: function(pid, itemId, isCursed) {
+    var msg = isCursed
+      ? 'This item is CURSED. Remove anyway with DM override?'
+      : 'Remove this item from inventory?';
+    if (!confirm(msg)) return;
+    DmCharEdit._invPost(pid, { action: 'remove', itemId: itemId, dmOverride: !!isCursed });
+  },
+  saveItemNote: function(pid, itemId, note) {
+    DmCharEdit._invPost(pid, { action: 'note', itemId: itemId, note: String(note == null ? '' : note) }, { skipRerender: true });
+  },
+  toggleItemFlag: function(pid, itemId, flag, value) {
+    var patch = {};
+    patch[flag] = !!value;
+    // Flag changes update badges, so do re-render.
+    DmCharEdit._invPost(pid, { action: 'update', itemId: itemId, patch: patch });
+  },
+  saveWeaponField: function(pid, itemId, field, rawVal, kind) {
+    var value = rawVal;
+    if (kind === 'number') {
+      if (rawVal === '' || rawVal == null) {
+        value = null;
+      } else {
+        var n = parseInt(rawVal, 10);
+        if (isNaN(n)) { alert('Value must be a number'); return; }
+        value = n;
+      }
+    }
+    var patch = {};
+    patch[field] = value;
+    // Text/number fields save quietly — user may be tabbing to the next
+    // input; re-rendering would steal focus. State is mirrored in _invPost.
+    DmCharEdit._invPost(pid, { action: 'update', itemId: itemId, patch: patch }, { skipRerender: true });
+  },
+  openInvAdd: function(pid) {
+    var box = document.getElementById('dm-inv-add-' + pid);
+    if (box) box.style.display = 'block';
+  },
+  closeInvAdd: function(pid) {
+    var box = document.getElementById('dm-inv-add-' + pid);
+    if (box) box.style.display = 'none';
+  },
+  addInvItem: function(pid) {
+    function val(id) { var e = document.getElementById(id); return e ? e.value : ''; }
+    function chk(id) { var e = document.getElementById(id); return !!(e && e.checked); }
+    var name = (val('dm-inv-add-name-' + pid) || '').trim();
+    if (!name) { alert('Item name required'); return; }
+    var atkRaw = val('dm-inv-add-atk-' + pid);
+    var dmgRaw = val('dm-inv-add-dmg-' + pid);
+    var item = {
+      name: name,
+      description: val('dm-inv-add-desc-' + pid),
+      notes: val('dm-inv-add-notes-' + pid),
+      type: val('dm-inv-add-type-' + pid) || 'gear',
+      mechanical: val('dm-inv-add-mech-' + pid),
+      quantity: parseInt(val('dm-inv-add-qty-' + pid), 10) || 1,
+      damage: val('dm-inv-add-damage-' + pid),
+      damageType: val('dm-inv-add-dtype-' + pid),
+      equipped: chk('dm-inv-add-equipped-' + pid),
+      attuned:  chk('dm-inv-add-attuned-'  + pid),
+      magical:  chk('dm-inv-add-magical-'  + pid),
+      cursed:   chk('dm-inv-add-cursed-'   + pid),
+      silver:   chk('dm-inv-add-silver-'   + pid)
+    };
+    if (atkRaw !== '') { var na = parseInt(atkRaw, 10); if (!isNaN(na)) item.attackBonus = na; }
+    if (dmgRaw !== '') { var nd = parseInt(dmgRaw, 10); if (!isNaN(nd)) item.damageBonus = nd; }
+    // Strip empty-string optionals the server treats as meaningful
+    if (!item.damage) delete item.damage;
+    if (!item.damageType) delete item.damageType;
+    if (!item.mechanical) delete item.mechanical;
+    DmCharEdit._invPost(pid, { action: 'add', item: item }, { onOk: function() {
+      DmCharEdit.closeInvAdd(pid);
+    }});
+  }
+};
+window.DmCharEdit = DmCharEdit;
+
+// ═══════════════════════════════════════════════════════════════
 // ENCOUNTER PROPOSAL — ambient-life-service
 // ═══════════════════════════════════════════════════════════════
 var Encounter = {
@@ -1280,30 +1850,111 @@ setTimeout(Encounter.refresh, 1500);
 // COMBAT TRACKER
 // ═══════════════════════════════════════════════════════════════
 
-// Addition 5 — manually inject a token into active combat from the
-// "Add to Combat" panel. Calls /api/combat/add-combatant with the
-// trimmed input (matched server-side against token name or actorSlug).
-function addToCombat() {
-  var input = document.getElementById('add-combat-input');
-  var status = document.getElementById('add-combat-status');
-  var name = input && input.value ? input.value.trim() : '';
-  if (!name || !status) return;
+// Addition 5 — Add to Combat with typeahead autocomplete.
+var AddCombat = {
+  _timer: null,
+  _results: [],
+  _selectedIdx: -1,
 
-  status.textContent = 'Adding...';
-  fetch('/api/combat/add-combatant', {
+  search: function(q) {
+    clearTimeout(AddCombat._timer);
+    var suggest = document.getElementById('add-combat-suggest');
+    if (!q || q.length < 2) { suggest.style.display = 'none'; return; }
+    AddCombat._timer = setTimeout(function() {
+      fetch('/api/combat/search?q=' + encodeURIComponent(q))
+        .then(function(r) { return r.json(); })
+        .then(function(results) {
+          AddCombat._results = results;
+          AddCombat._selectedIdx = -1;
+          if (!results.length) { suggest.style.display = 'none'; return; }
+          suggest.innerHTML = results.map(function(r, i) {
+            var typeTag = r.type === 'pc' ? '<span style="color:var(--green);font-size:10px;">PC</span>' : '<span style="color:var(--amber);font-size:10px;">NPC</span>';
+            return '<div class="suggest-item" style="padding:6px 10px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;display:flex;justify-content:space-between;align-items:center;" ' +
+              'onmousedown="AddCombat.pick(' + i + ')" onmouseenter="this.style.background=\'var(--surface2)\'" onmouseleave="this.style.background=\'transparent\'">' +
+              '<span>' + esc(r.name) + '</span>' + typeTag + '</div>';
+          }).join('');
+          suggest.style.display = '';
+        }).catch(function() { suggest.style.display = 'none'; });
+    }, 150);
+  },
+
+  pick: function(idx) {
+    var r = AddCombat._results[idx];
+    if (!r) return;
+    var input = document.getElementById('add-combat-input');
+    input.value = r.name;
+    document.getElementById('add-combat-suggest').style.display = 'none';
+  },
+
+  keydown: function(e) {
+    var suggest = document.getElementById('add-combat-suggest');
+    if (suggest.style.display === 'none') {
+      if (e.key === 'Enter') { AddCombat.add(); e.preventDefault(); }
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      AddCombat._selectedIdx = Math.min(AddCombat._selectedIdx + 1, AddCombat._results.length - 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      AddCombat._selectedIdx = Math.max(AddCombat._selectedIdx - 1, 0);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (AddCombat._selectedIdx >= 0) AddCombat.pick(AddCombat._selectedIdx);
+      else AddCombat.add();
+      suggest.style.display = 'none';
+    } else if (e.key === 'Escape') {
+      suggest.style.display = 'none';
+    }
+  },
+
+  add: function() {
+    var input = document.getElementById('add-combat-input');
+    var status = document.getElementById('add-combat-status');
+    var name = input && input.value ? input.value.trim() : '';
+    if (!name || !status) return;
+    document.getElementById('add-combat-suggest').style.display = 'none';
+
+    status.textContent = 'Adding...';
+    fetch('/api/combat/add-combatant', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d && d.ok) {
+        status.textContent = (d.name || name) + ' added at initiative ' + d.initiative;
+        input.value = '';
+      } else {
+        status.textContent = (d && d.error) || ('Not found: ' + name);
+      }
+    }).catch(function(e) {
+      status.textContent = 'Error — ' + (e && e.message || 'check server');
+    });
+  }
+};
+
+var combatExpandedId = null;
+
+function toggleCombatExpand(id) {
+  combatExpandedId = combatExpandedId === id ? null : id;
+  renderCombat();
+}
+
+function combatHp(id, delta) {
+  fetch('/api/combat/hp', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: name })
-  }).then(function(r) { return r.json(); }).then(function(d) {
-    if (d && d.ok) {
-      status.textContent = (d.name || name) + ' added at initiative ' + d.initiative;
-      input.value = '';
-    } else {
-      status.textContent = (d && d.error) || ('Not found: ' + name);
-    }
-  }).catch(function(e) {
-    status.textContent = 'Error — ' + (e && e.message || 'check server');
-  });
+    body: JSON.stringify({ combatantId: id, delta: delta })
+  }).catch(function() {});
+}
+
+function combatHpCustom(id, heal) {
+  var input = document.getElementById('combat-hp-custom-' + id);
+  if (!input) return;
+  var val = parseInt(input.value, 10);
+  if (isNaN(val) || val <= 0) return;
+  combatHp(id, heal ? val : -val);
+  input.value = '';
 }
 
 function renderCombat() {
@@ -1313,6 +1964,7 @@ function renderCombat() {
   if (!combat || !combat.active || !combat.turnOrder || !combat.turnOrder.length) {
     el.innerHTML = '<div id="combat-empty">No active combat</div>';
     meta.textContent = '';
+    combatExpandedId = null;
     return;
   }
   var visible = combat.turnOrder.filter(function(c) {
@@ -1325,23 +1977,641 @@ function renderCombat() {
     var isCurrent = i === combat.currentTurn;
     var conds = (c.conditions || []).join(', ');
     var hp = c.hp || {};
-    var hpPct = hp.max ? Math.round((hp.current / hp.max) * 100) : 0;
-    var woundLabel = hpPct === 0 ? 'unconscious' : hpPct < 25 ? 'bloodied' : hpPct < 50 ? 'wounded' : '';
+    var hpCur = (typeof hp.current === 'number') ? hp.current : 0;
+    var hpMax = (typeof hp.max === 'number') ? hp.max : 0;
+    var hpPct = hpMax > 0 ? Math.round((hpCur / hpMax) * 100) : 0;
+    var hpColor = hpPct <= 0 ? '#e04040' : hpPct <= 25 ? '#c05030' : hpPct <= 50 ? '#c88040' : '#40b060';
+    var woundLabel = hpMax > 0 && hpCur === 0 ? 'unconscious' : hpPct < 25 ? 'bloodied' : hpPct < 50 ? 'wounded' : '';
     var tags = [];
     if (woundLabel) tags.push(woundLabel);
     if (conds) tags.push(conds);
-    return '<div class="init-row' + (isCurrent ? ' current' : '') + '">' +
+    var expanded = combatExpandedId === c.id;
+
+    var rowHtml = '<div class="init-row' + (isCurrent ? ' current' : '') + (expanded ? ' expanded' : '') +
+        '" onclick="toggleCombatExpand(\'' + c.id + '\')">' +
       '<div class="turn-arrow">' + (isCurrent ? '▶' : '') + '</div>' +
       '<div class="iname">' + esc(c.name || c.id) + '</div>' +
       (tags.length ? '<div class="iconds">[' + esc(tags.join(', ')) + ']</div>' : '') +
+      '<div class="ihp-bar"><div class="ihp-fill" style="width:' + hpPct + '%;background:' + hpColor + ';"></div></div>' +
+      '<div class="ihp" style="color:' + hpColor + ';">' + hpCur + '/' + hpMax + '</div>' +
       '<div class="iinit">' + (c.initiative != null ? c.initiative : '?') + '</div>' +
       '</div>';
+
+    if (!expanded) return rowHtml;
+
+    var detailHtml = '<div class="init-detail" onclick="event.stopPropagation()">' +
+      '<div class="idt-row"><label>HP</label>' +
+        '<strong style="color:' + hpColor + ';">' + hpCur + ' / ' + hpMax + '</strong>' +
+        (c.ac != null ? '<label style="margin-left:16px;">AC</label><strong>' + c.ac + '</strong>' : '') +
+        (c.initiative != null ? '<label style="margin-left:16px;">Init</label><strong>' + c.initiative + '</strong>' : '') +
+      '</div>' +
+      '<div class="idt-row"><label>Damage</label></div>' +
+      '<div class="idt-presets">' +
+        '<button class="idt-btn dmg" onclick="event.stopPropagation();combatHp(\'' + c.id + '\',-1)">-1</button>' +
+        '<button class="idt-btn dmg" onclick="event.stopPropagation();combatHp(\'' + c.id + '\',-5)">-5</button>' +
+        '<button class="idt-btn dmg" onclick="event.stopPropagation();combatHp(\'' + c.id + '\',-10)">-10</button>' +
+        '<button class="idt-btn dmg" onclick="event.stopPropagation();combatHp(\'' + c.id + '\',-25)">-25</button>' +
+      '</div>' +
+      '<div class="idt-row"><label>Healing</label></div>' +
+      '<div class="idt-presets">' +
+        '<button class="idt-btn heal" onclick="event.stopPropagation();combatHp(\'' + c.id + '\',1)">+1</button>' +
+        '<button class="idt-btn heal" onclick="event.stopPropagation();combatHp(\'' + c.id + '\',5)">+5</button>' +
+        '<button class="idt-btn heal" onclick="event.stopPropagation();combatHp(\'' + c.id + '\',10)">+10</button>' +
+        '<button class="idt-btn heal" onclick="event.stopPropagation();combatHp(\'' + c.id + '\',25)">+25</button>' +
+      '</div>' +
+      '<div class="idt-custom">' +
+        '<input type="number" id="combat-hp-custom-' + c.id + '" placeholder="amount" min="1" onclick="event.stopPropagation()">' +
+        '<button class="idt-btn dmg" onclick="event.stopPropagation();combatHpCustom(\'' + c.id + '\',false)">Dmg</button>' +
+        '<button class="idt-btn heal" onclick="event.stopPropagation();combatHpCustom(\'' + c.id + '\',true)">Heal</button>' +
+      '</div>' +
+    '</div>';
+
+    return rowHtml + detailHtml;
   }).join('');
   html += '<button id="next-turn-btn" onclick="nextTurn()">▶ NEXT TURN</button>';
   el.innerHTML = html;
+  DmAttack.refresh();
 }
 
 function nextTurn() { fetch('/api/combat/next', { method: 'POST' }).catch(function() {}); }
+
+// ═══════════════════════════════════════════════════════════════
+// DM ATTACK RESOLVER — physical dice workflow
+// ═══════════════════════════════════════════════════════════════
+var DmAttack = {
+  _weapon: null,
+  _lastHit: null,
+
+  refresh: function() {
+    var panel = $('dm-attack-panel');
+    var combat = stateData.combat;
+    if (!panel) return;
+    if (!combat || !combat.active || combat.turnOrder.length === 0) {
+      panel.style.display = 'none';
+      return;
+    }
+    var current = combat.turnOrder[combat.currentTurn];
+    if (!current || current.type !== 'pc') {
+      panel.style.display = 'none';
+      return;
+    }
+    panel.style.display = '';
+    $('dma-attacker-name').textContent = current.name;
+    DmAttack._weapon = null;
+    $('dma-result').style.display = 'none';
+    $('dma-damage-section').style.display = 'none';
+    $('dma-dmg-result').style.display = 'none';
+    $('dma-d20').value = '';
+    $('dma-dmg-raw').value = '';
+
+    // NPC reference strip — name + AC for DM eyes
+    var npcs = combat.turnOrder.filter(function(c) { return c.type !== 'pc' && c.isAlive; });
+    $('dma-npc-ref').innerHTML = npcs.map(function(n) {
+      return '<span style="font-size:11px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:3px;color:var(--text-dim);">' +
+        esc(n.name) + ' <strong style="color:var(--gold);">AC ' + n.ac + '</strong></span>';
+    }).join('');
+
+    // Target dropdown — non-player combatants only
+    var sel = $('dma-target');
+    sel.innerHTML = '<option value="">Select target...</option>';
+    npcs.forEach(function(n) {
+      var opt = document.createElement('option');
+      opt.value = n.id;
+      opt.textContent = n.name + ' (AC ' + n.ac + ')';
+      sel.appendChild(opt);
+    });
+
+    // Weapon selector — attacker's equipped weapons as buttons
+    var pid = current.id;
+    var p = stateData.players[pid];
+    var char = p && p.character;
+    var weapons = [];
+    if (char && char.attacks && char.attacks.length) {
+      weapons = char.attacks.map(function(a) {
+        var dmgStr = a.damage || '1d4';
+        var dmgMod = 0;
+        var dmgMatch = dmgStr.match(/^(\d+d\d+)([+-]\d+)?$/);
+        if (dmgMatch && dmgMatch[2]) { dmgMod = parseInt(dmgMatch[2]); dmgStr = dmgMatch[1]; }
+        return { name: a.name, toHit: a.toHit || 0, damage: dmgStr, dmgMod: dmgMod, damageType: a.damageType || '', magical: true, silvered: false };
+      });
+    }
+    if (char && char.inventory) {
+      char.inventory.forEach(function(w) {
+        if (!w.equipped || !w.type || w.type.toLowerCase() !== 'weapon') return;
+        if (weapons.some(function(a) { return a.name.toLowerCase() === w.name.toLowerCase(); })) return;
+        var propsLower = (w.properties || []).map(function(p) { return p.toLowerCase(); });
+        var fin = propsLower.indexOf('finesse') >= 0;
+        var ranged = (w.subtype || '').toLowerCase().indexOf('ranged') >= 0;
+        var sm = char.abilities && char.abilities.str ? char.abilities.str.modifier : 0;
+        var dm = char.abilities && char.abilities.dex ? char.abilities.dex.modifier : 0;
+        var stat = ranged ? 'dex' : (fin ? (dm >= sm ? 'dex' : 'str') : 'str');
+        var mod = stat === 'dex' ? dm : sm;
+        var prof = char.proficiencyBonus || 2;
+        var magic = (typeof w.attackBonus === 'number') ? w.attackBonus : 0;
+        var dmgMagic = (typeof w.damageBonus === 'number') ? w.damageBonus : 0;
+        weapons.push({
+          name: w.name, toHit: mod + prof + magic, damage: w.damage || '1d4',
+          damageType: w.damageType || '', dmgMod: mod + dmgMagic,
+          magical: !!w.magical, silvered: !!w.silver
+        });
+      });
+    }
+    $('dma-weapons').innerHTML = weapons.length ? weapons.map(function(w, i) {
+      return '<button class="tool-btn' + (i === 0 ? ' primary' : '') + '" style="font-size:12px;padding:6px 12px;" ' +
+        'onclick="DmAttack.selectWeapon(' + i + ')" data-wpn="' + i + '">' +
+        esc(w.name) + ' <span style="color:var(--gold);">' + (w.toHit >= 0 ? '+' : '') + w.toHit + '</span>' +
+        (w.magical ? ' ✦' : '') + (w.silvered ? ' ☽' : '') +
+        '</button>';
+    }).join('') : '<span style="font-size:12px;color:var(--text-dim);font-style:italic;">No weapons equipped</span>';
+    DmAttack._weapons = weapons;
+    if (weapons.length) DmAttack.selectWeapon(0);
+  },
+
+  selectWeapon: function(idx) {
+    DmAttack._weapon = DmAttack._weapons[idx] || null;
+    var btns = $('dma-weapons').querySelectorAll('button');
+    btns.forEach(function(b, i) {
+      b.className = 'tool-btn' + (i === idx ? ' primary' : '');
+    });
+  },
+
+  resolve: function() {
+    var combat = stateData.combat;
+    if (!combat || !combat.active) return;
+    var current = combat.turnOrder[combat.currentTurn];
+    if (!current) return;
+    var targetId = $('dma-target').value;
+    var d20 = parseInt($('dma-d20').value, 10);
+    var w = DmAttack._weapon;
+    if (!targetId) { alert('Select a target'); return; }
+    if (isNaN(d20) || d20 < 1 || d20 > 20) { alert('Enter the d20 result (1-20)'); return; }
+    if (!w) { alert('Select a weapon'); return; }
+
+    var target = combat.turnOrder.find(function(c) { return c.id === targetId; });
+    if (!target) return;
+
+    var totalRoll = d20 + w.toHit;
+    var crit = d20 === 20;
+    var fumble = d20 === 1;
+    var hit = crit || (!fumble && totalRoll >= target.ac);
+
+    var resultEl = $('dma-result');
+    var dmgSection = $('dma-damage-section');
+
+    if (fumble) {
+      resultEl.innerHTML = '<div style="color:var(--red);font-weight:700;font-size:16px;">MISS — Natural 1</div>' +
+        '<div style="color:var(--text-dim);font-size:12px;">d20(1) + ' + w.toHit + ' = ' + totalRoll + ' vs AC ' + target.ac + '</div>' +
+        '<div id="dma-narrative" style="font-style:italic;color:var(--amber);margin-top:8px;">Generating...</div>';
+      resultEl.style.display = '';
+      dmgSection.style.display = 'none';
+      DmAttack._narrateMiss(current.name, target.name, w.name);
+    } else if (!hit) {
+      resultEl.innerHTML = '<div style="color:var(--text-dim);font-weight:700;font-size:16px;">MISS — ' + totalRoll + ' vs AC ' + target.ac + '</div>' +
+        '<div style="color:var(--text-dim);font-size:12px;">d20(' + d20 + ') + ' + w.toHit + ' = ' + totalRoll + '</div>' +
+        '<div id="dma-narrative" style="font-style:italic;color:var(--amber);margin-top:8px;">Generating...</div>';
+      resultEl.style.display = '';
+      dmgSection.style.display = 'none';
+      DmAttack._narrateMiss(current.name, target.name, w.name);
+    } else {
+      // Check immunity before showing HIT
+      fetch('/api/combat/attack', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          attackerId: current.id, targetId: targetId,
+          attackRoll: totalRoll, damage: 0, damageType: w.damageType,
+          crit: crit, magical: w.magical, silvered: w.silvered, weaponName: w.name,
+          dryRun: true
+        })
+      }).then(function(r) { return r.json(); }).then(function(r) {
+        if (r.immunityReason) {
+          resultEl.innerHTML = '<div style="color:#6a3a8a;font-weight:700;font-size:16px;">IMMUNE</div>' +
+            '<div style="color:var(--text-dim);font-size:12px;">d20(' + d20 + ') + ' + w.toHit + ' = ' + totalRoll + ' vs AC ' + target.ac + ' — HIT, but...</div>' +
+            '<div id="dma-narrative" style="font-style:italic;color:#6a3a8a;margin-top:8px;">Generating...</div>';
+          resultEl.style.display = '';
+          dmgSection.style.display = 'none';
+          DmAttack._narrateImmunity(current.name, target.name, w.name);
+        } else {
+          var critLabel = crit ? ' — CRITICAL HIT!' : '';
+          resultEl.innerHTML = '<div style="color:var(--green);font-weight:700;font-size:16px;">HIT' + critLabel + '</div>' +
+            '<div style="color:var(--text-dim);font-size:12px;">d20(' + d20 + ') + ' + w.toHit + ' = ' + totalRoll + ' vs AC ' + target.ac + '</div>';
+          resultEl.style.display = '';
+          dmgSection.style.display = '';
+          $('dma-dmg-dice').textContent = '(' + w.damage + (crit ? ' × 2' : '') + ')';
+          DmAttack._lastHit = {
+            attackerId: current.id, targetId: targetId, totalRoll: totalRoll,
+            weapon: w, crit: crit, attackerName: current.name, targetName: target.name
+          };
+        }
+      }).catch(function() {
+        // Fallback: assume no immunity
+        var critLabel = crit ? ' — CRITICAL HIT!' : '';
+        resultEl.innerHTML = '<div style="color:var(--green);font-weight:700;font-size:16px;">HIT' + critLabel + '</div>' +
+          '<div style="color:var(--text-dim);font-size:12px;">d20(' + d20 + ') + ' + w.toHit + ' = ' + totalRoll + ' vs AC ' + target.ac + '</div>';
+        resultEl.style.display = '';
+        dmgSection.style.display = '';
+        $('dma-dmg-dice').textContent = '(' + w.damage + (crit ? ' × 2' : '') + ')';
+        DmAttack._lastHit = {
+          attackerId: current.id, targetId: targetId, totalRoll: totalRoll,
+          weapon: w, crit: crit, attackerName: current.name, targetName: target.name
+        };
+      });
+    }
+  },
+
+  applyDamage: function() {
+    var h = DmAttack._lastHit;
+    if (!h) return;
+    var rawDmg = parseInt($('dma-dmg-raw').value, 10);
+    if (isNaN(rawDmg) || rawDmg < 0) { alert('Enter the damage dice total'); return; }
+    var dmgMod = h.weapon.dmgMod || 0;
+    var totalDmg = Math.max(1, rawDmg + dmgMod);
+
+    fetch('/api/combat/attack', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        attackerId: h.attackerId, targetId: h.targetId,
+        attackRoll: h.totalRoll, damage: totalDmg, damageType: h.weapon.damageType,
+        crit: h.crit, magical: h.weapon.magical, silvered: h.weapon.silvered,
+        weaponName: h.weapon.name
+      })
+    }).then(function(r) { return r.json(); }).then(function(r) {
+      var appliedDmg = r.damage || totalDmg;
+      var hpAfter = r.targetHpAfter || {};
+      $('dma-dmg-result').innerHTML =
+        '<div style="font-weight:700;color:var(--red);">' + appliedDmg + ' ' + esc(h.weapon.damageType) + ' damage applied</div>' +
+        '<div style="font-size:12px;color:var(--text-dim);">Dice(' + rawDmg + ') + mod(' + dmgMod + ') = ' + totalDmg +
+        (appliedDmg !== totalDmg ? ' → ' + appliedDmg + ' (resistance)' : '') + '</div>' +
+        '<div style="font-size:12px;">' + esc(h.targetName) + ': ' + (hpAfter.current || 0) + '/' + (hpAfter.max || 0) + ' HP</div>' +
+        '<div id="dma-hit-narrative" style="font-style:italic;color:var(--amber);margin-top:8px;">Generating...</div>';
+      $('dma-dmg-result').style.display = '';
+      DmAttack._narrateHit(h.attackerName, h.targetName, h.weapon.name, appliedDmg, h.weapon.damageType, hpAfter);
+    }).catch(function(e) {
+      $('dma-dmg-result').innerHTML = '<div style="color:var(--red);">Error applying damage: ' + esc(e.message || 'server error') + '</div>';
+      $('dma-dmg-result').style.display = '';
+    });
+  },
+
+  // Shared: display narrative in the panel AND dispatch to room speaker.
+  // Vivid narrative → room (all players hear). Mechanical details stay earbud-only.
+  _showAndSpeak: function(elId, text, fallback) {
+    var narrative = text || fallback || '';
+    var el = document.getElementById(elId);
+    if (el) el.textContent = narrative;
+    if (narrative && ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: 'codm:read_aloud', data: { text: narrative } }));
+    }
+  },
+
+  _narrateMiss: function(attacker, target, weapon) {
+    fetch('/api/hal/query', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: 'Narrate a vivid combat miss. ' + attacker + ' swings ' + weapon + ' at ' + target + ' and misses. One sentence, gothic horror tone, specific to the weapon and target. Never say "you missed." Describe the physical moment.' })
+    }).then(function(r) { return r.json(); }).then(function(r) {
+      DmAttack._showAndSpeak('dma-narrative', r.response, 'The blow goes wide.');
+    }).catch(function() {});
+  },
+
+  _narrateHit: function(attacker, target, weapon, damage, dmgType, hpAfter) {
+    var severity = (hpAfter.max > 0 && hpAfter.current <= 0) ? 'killing blow' : (damage >= 15 ? 'devastating' : damage >= 8 ? 'solid' : 'glancing');
+    fetch('/api/hal/query', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: 'Narrate a ' + severity + ' combat hit. ' + attacker + ' hits ' + target + ' with ' + weapon + ' for ' + damage + ' ' + dmgType + ' damage. One sentence, gothic horror tone, vivid and physical. Never state numbers. Describe what the weapon does to the body.' })
+    }).then(function(r) { return r.json(); }).then(function(r) {
+      DmAttack._showAndSpeak('dma-hit-narrative', r.response, 'The blade finds its mark.');
+    }).catch(function() {});
+  },
+
+  _narrateImmunity: function(attacker, target, weapon) {
+    fetch('/api/hal/query', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: 'Narrate weapon immunity. ' + attacker + ' strikes ' + target + ' with ' + weapon + ' — the weapon passes through or bounces off harmlessly. ' + target + ' is immune to nonmagical weapons. One sentence, gothic horror, describe the uncanny moment of realization.' })
+    }).then(function(r) { return r.json(); }).then(function(r) {
+      DmAttack._showAndSpeak('dma-narrative', r.response, 'The weapon has no effect.');
+    }).catch(function() {});
+  }
+};
+
+
+// ═══════════════════════════════════════════════════════════════
+// DM SPELL RESOLVER
+// ═══════════════════════════════════════════════════════════════
+var _srdSpellCache = null;
+function _getSrdSpells(cb) {
+  if (_srdSpellCache) return cb(_srdSpellCache);
+  fetch('/api/spells/search?limit=500').then(function(r){return r.json();}).then(function(d) {
+    _srdSpellCache = Array.isArray(d) ? d : d.spells || [];
+    cb(_srdSpellCache);
+  }).catch(function(){ cb([]); });
+}
+
+var DmSpell = {
+  _spell: null,
+  _targets: [],
+  _saveResults: [],
+  _casterId: null,
+
+  refresh: function(casterId) {
+    DmSpell._casterId = casterId;
+    DmSpell._spell = null;
+    var p = stateData.players[casterId];
+    var char = p && p.character;
+    var spells = (char && char.spells) || [];
+    var container = $('dms-spells');
+    if (!spells.length) {
+      container.innerHTML = '<span style="font-size:12px;color:var(--text-dim);font-style:italic;">No spells known</span>';
+      return;
+    }
+    // Group: cantrips first, then by level
+    var sorted = spells.slice().sort(function(a,b){ return (a.level||0)-(b.level||0) || a.name.localeCompare(b.name); });
+    container.innerHTML = sorted.map(function(s, i) {
+      var lvl = s.level === 0 ? 'C' : 'L'+s.level;
+      var col = s.level === 0 ? 'var(--text-dim)' : 'var(--gold)';
+      return '<button class="tool-btn" style="font-size:11px;padding:3px 8px;" onclick="DmSpell.selectSpell('+i+')" data-sidx="'+i+'">' +
+        '<span style="color:'+col+';font-size:9px;">'+lvl+'</span> '+esc(s.name)+'</button>';
+    }).join('');
+    DmSpell._sortedSpells = sorted;
+  },
+
+  selectSpell: function(idx) {
+    var s = DmSpell._sortedSpells[idx];
+    if (!s) return;
+    DmSpell._spell = s;
+    // Highlight selected
+    var btns = $('dms-spells').querySelectorAll('button');
+    btns.forEach(function(b,i){ b.className = 'tool-btn' + (i===idx?' primary':''); });
+    // Enrich from SRD
+    _getSrdSpells(function(srd) {
+      var match = srd.find(function(x){ return x.name.toLowerCase() === s.name.toLowerCase(); });
+      if (match) { for (var k in match) { if (!(k in s) || !s[k]) s[k] = match[k]; } }
+      DmSpell._showSpellUI(s);
+    });
+  },
+
+  _showSpellUI: function(s) {
+    var casterId = DmSpell._casterId;
+    var p = stateData.players[casterId];
+    var char = p && p.character;
+    var sa = (char && char.spellcastingAbility) || 'cha';
+    var sm = char && char.abilities && char.abilities[sa] ? char.abilities[sa].modifier : 0;
+    var prof = (char && char.proficiencyBonus) || 2;
+    var atkMod = sm + prof;
+    var saveDC = 8 + sm + prof;
+    var isAttack = /spell attack/i.test(s.description || '');
+    var isSave = !!s.save;
+    var isAoe = !!s.areaOfEffect;
+    var hasDamage = !!s.damage;
+    var isCondition = !hasDamage && isSave;
+
+    // Spell info
+    var info = '<strong>'+esc(s.name)+'</strong>';
+    info += ' <span style="color:var(--text-dim);">'+(s.level===0?'Cantrip':'Level '+s.level)+' '+esc(s.school||'')+'</span>';
+    if (s.concentration) info += ' <span style="color:var(--blue);">[C]</span>';
+    if (hasDamage) info += '<br>Damage: <strong>'+esc(s.damage)+'</strong> '+esc(s.damageType||'');
+    if (isAttack) info += '<br>Spell Attack: <strong>'+esc(sa.toUpperCase())+' '+((atkMod>=0?'+':'')+atkMod)+'</strong>';
+    if (isSave) info += '<br>Save: <strong>'+esc(s.save)+'</strong> DC <strong>'+saveDC+'</strong>';
+    if (isAoe) info += '<br>Area: '+esc(s.areaOfEffect.type)+' '+s.areaOfEffect.size+'ft';
+    info += '<br><span style="font-size:11px;color:var(--text-dim);">'+esc((s.description||'').substring(0,200))+'</span>';
+    $('dms-spell-info').innerHTML = info;
+    $('dms-spell-info').style.display = '';
+
+    var combat = stateData.combat;
+    var npcs = (combat && combat.turnOrder || []).filter(function(c){ return c.type!=='pc' && c.isAlive; });
+
+    // Show appropriate mode
+    $('dms-attack-mode').style.display = isAttack ? '' : 'none';
+    $('dms-save-mode').style.display = isSave ? '' : 'none';
+    $('dms-condition-mode').style.display = isCondition ? '' : 'none';
+    $('dms-result').style.display = 'none';
+    $('dms-damage-section').style.display = 'none';
+
+    if (isAttack) {
+      var sel = $('dms-atk-target');
+      sel.innerHTML = '<option value="">Select target...</option>';
+      npcs.forEach(function(n) {
+        var opt = document.createElement('option');
+        opt.value = n.id; opt.textContent = n.name + ' (AC ' + n.ac + ')';
+        sel.appendChild(opt);
+      });
+      $('dms-atk-d20').value = '';
+    }
+
+    if (isSave) {
+      $('dms-save-type').textContent = s.save;
+      $('dms-save-dc').textContent = saveDC;
+      // Build target list with checkboxes (AOE) or radio (single)
+      var multi = isAoe;
+      $('dms-save-targets').innerHTML = npcs.map(function(n) {
+        var saveKey = (s.save || 'dex').toLowerCase();
+        var saveMod = 0;
+        // Try to get NPC save modifier from actor data
+        return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:4px 8px;background:var(--surface);border-radius:3px;">' +
+          '<input type="'+(multi?'checkbox':'radio')+'" name="dms-save-tgt" value="'+n.id+'" style="accent-color:var(--gold);"'+(multi?'':'')+' onclick="event.stopPropagation()">' +
+          '<span style="flex:1;font-size:13px;">'+esc(n.name)+'</span>' +
+          '<input type="number" id="dms-save-roll-'+n.id+'" min="1" max="20" placeholder="d20" style="width:60px;padding:4px;text-align:center;font-size:14px;font-weight:700;background:var(--bg);border:1px solid var(--border);color:var(--gold);border-radius:3px;" onclick="event.stopPropagation()">' +
+          '</div>';
+      }).join('');
+    }
+
+    if (isCondition && !isSave) {
+      $('dms-condition-desc').textContent = 'This spell applies an effect without a save. Describe the result.';
+    }
+  },
+
+  resolveAttack: function() {
+    var s = DmSpell._spell; if (!s) return;
+    var targetId = $('dms-atk-target').value;
+    var d20 = parseInt($('dms-atk-d20').value, 10);
+    if (!targetId) { alert('Select a target'); return; }
+    if (isNaN(d20) || d20 < 1 || d20 > 20) { alert('Enter d20 (1-20)'); return; }
+
+    var casterId = DmSpell._casterId;
+    var p = stateData.players[casterId]; var char = p && p.character;
+    var sa = (char && char.spellcastingAbility) || 'cha';
+    var sm = char && char.abilities && char.abilities[sa] ? char.abilities[sa].modifier : 0;
+    var prof = (char && char.proficiencyBonus) || 2;
+    var atkMod = sm + prof;
+    var totalRoll = d20 + atkMod;
+    var crit = d20 === 20, fumble = d20 === 1;
+
+    var combat = stateData.combat;
+    var target = combat && combat.turnOrder.find(function(c){return c.id===targetId;});
+    if (!target) return;
+    var hit = crit || (!fumble && totalRoll >= target.ac);
+    var casterName = char && char.name || casterId;
+
+    var resEl = $('dms-result');
+    if (!hit) {
+      resEl.innerHTML = '<div style="color:'+(fumble?'var(--red)':'var(--text-dim)')+';font-weight:700;font-size:16px;">MISS'+(fumble?' — Natural 1':'')+'</div>' +
+        '<div style="font-size:12px;color:var(--text-dim);">'+esc(s.name)+': d20('+d20+') +'+atkMod+' = '+totalRoll+' vs AC '+target.ac+'</div>' +
+        '<div id="dms-narrative" style="font-style:italic;color:var(--amber);margin-top:8px;">Generating...</div>';
+      resEl.style.display = '';
+      $('dms-damage-section').style.display = 'none';
+      fetch('/api/hal/query',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({query:'Narrate a spell miss. '+casterName+' casts '+s.name+' at '+target.name+' and misses. One sentence, gothic horror, vivid. Describe the spell energy going astray in the tavern.'})
+      }).then(function(r){return r.json();}).then(function(r){
+        DmAttack._showAndSpeak('dms-narrative', r.response, 'The spell fizzles.');
+      }).catch(function(){});
+    } else {
+      resEl.innerHTML = '<div style="color:var(--green);font-weight:700;font-size:16px;">HIT'+(crit?' — CRITICAL!':'')+'</div>' +
+        '<div style="font-size:12px;color:var(--text-dim);">'+esc(s.name)+': d20('+d20+') +'+atkMod+' = '+totalRoll+' vs AC '+target.ac+'</div>';
+      resEl.style.display = '';
+      if (s.damage) {
+        $('dms-dmg-dice').textContent = '('+s.damage+(crit?' × 2':'')+')';
+        $('dms-damage-section').style.display = '';
+        $('dms-dmg-raw').value = '';
+        DmSpell._pendingDmg = { targetId:targetId, targetName:target.name, casterName:casterName, spell:s, crit:crit, totalRoll:totalRoll };
+      }
+    }
+  },
+
+  resolveSave: function() {
+    var s = DmSpell._spell; if (!s) return;
+    var casterId = DmSpell._casterId;
+    var p = stateData.players[casterId]; var char = p && p.character;
+    var sa = (char && char.spellcastingAbility) || 'cha';
+    var sm = char && char.abilities && char.abilities[sa] ? char.abilities[sa].modifier : 0;
+    var prof = (char && char.proficiencyBonus) || 2;
+    var saveDC = 8 + sm + prof;
+    var casterName = char && char.name || casterId;
+
+    var checks = document.querySelectorAll('[name="dms-save-tgt"]:checked');
+    if (!checks.length) { alert('Select at least one target'); return; }
+
+    var combat = stateData.combat;
+    var results = [];
+    checks.forEach(function(chk) {
+      var tid = chk.value;
+      var target = combat && combat.turnOrder.find(function(c){return c.id===tid;});
+      var tName = target ? target.name : tid;
+      var rollInput = document.getElementById('dms-save-roll-'+tid);
+      var d20 = rollInput ? parseInt(rollInput.value, 10) : NaN;
+      if (isNaN(d20)) { results.push({id:tid, name:tName, pass:false, error:'no roll entered'}); return; }
+      // NPC save modifier: rough estimate from ability score if available
+      var saveMod = 0; // simplified — full NPC save mods would need actor data lookup
+      var total = d20 + saveMod;
+      var pass = total >= saveDC;
+      results.push({ id:tid, name:tName, d20:d20, total:total, pass:pass });
+    });
+
+    DmSpell._saveResults = results;
+    var html = '<div style="font-weight:700;color:var(--gold);margin-bottom:8px;">'+esc(s.save)+' Save DC '+saveDC+' — '+esc(s.name)+'</div>';
+    results.forEach(function(r) {
+      var col = r.pass ? 'var(--green)' : 'var(--red)';
+      var label = r.pass ? 'PASS' : 'FAIL';
+      html += '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:13px;">' +
+        '<span>'+esc(r.name)+'</span>' +
+        '<span style="color:'+col+';font-weight:700;">'+r.d20+' → '+label+'</span></div>';
+    });
+    var failCount = results.filter(function(r){return !r.pass;}).length;
+    var passCount = results.filter(function(r){return r.pass;}).length;
+    html += '<div style="margin-top:6px;font-size:12px;color:var(--text-dim);">'+failCount+' failed, '+passCount+' passed</div>';
+
+    if (s.damage && failCount > 0) {
+      html += '<div id="dms-save-narrative" style="font-style:italic;color:var(--amber);margin-top:8px;">Generating...</div>';
+      $('dms-dmg-dice').textContent = '('+s.damage+')';
+      $('dms-damage-section').style.display = '';
+      $('dms-dmg-raw').value = '';
+      DmSpell._pendingDmg = { targets:results, casterName:casterName, spell:s, crit:false, saveDC:saveDC, isAoe:true };
+    } else if (!s.damage) {
+      // Condition spell — apply conditions to failures
+      var condName = s.save === 'WIS' ? 'Charmed' : s.save === 'DEX' ? 'Restrained' : 'Incapacitated';
+      if (/hold person|paralyz/i.test(s.name)) condName = 'Paralyzed';
+      if (/charm/i.test(s.name)) condName = 'Charmed';
+      if (/command/i.test(s.name)) condName = 'Commanded';
+      if (/frighten|fear/i.test(s.name)) condName = 'Frightened';
+      if (/sleep|laughter/i.test(s.name)) condName = 'Incapacitated';
+      results.filter(function(r){return !r.pass;}).forEach(function(r){
+        fetch('/api/combat/condition',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({combatantId:r.id,condition:condName,action:'add'})
+        }).catch(function(){});
+      });
+      html += '<div style="margin-top:8px;color:var(--amber);font-weight:700;">'+condName+' applied to '+failCount+' target(s)</div>';
+      if (s.concentration) html += '<div style="font-size:11px;color:var(--blue);margin-top:4px;">⟐ Concentration active on '+casterName+'</div>';
+    }
+
+    $('dms-result').innerHTML = html;
+    $('dms-result').style.display = '';
+
+    // Narrative
+    var targetNames = results.map(function(r){return r.name;}).join(', ');
+    fetch('/api/hal/query',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({query:'Narrate '+casterName+' casting '+s.name+' on '+targetNames+'. '+failCount+' failed the save, '+passCount+' passed. One or two sentences, gothic horror, vivid. Describe the spell effect in the tavern setting.'})
+    }).then(function(r){return r.json();}).then(function(r){
+      DmAttack._showAndSpeak('dms-save-narrative', r.response, '');
+    }).catch(function(){});
+  },
+
+  applyDamage: function() {
+    var pd = DmSpell._pendingDmg; if (!pd) return;
+    var rawDmg = parseInt($('dms-dmg-raw').value, 10);
+    if (isNaN(rawDmg) || rawDmg < 0) { alert('Enter damage dice total'); return; }
+    var s = pd.spell;
+    var crit = pd.crit;
+    var fullDmg = rawDmg; // for spells, damage modifier is usually 0 at this level
+
+    var resultHtml = '';
+    if (pd.isAoe) {
+      // AOE: full damage to failed saves, half (floor) to passed
+      (pd.targets || []).forEach(function(t) {
+        var applied = t.pass ? Math.floor(fullDmg / 2) : fullDmg;
+        if (applied > 0) {
+          fetch('/api/combat/hp',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({combatantId:t.id, delta:-applied})
+          }).catch(function(){});
+        }
+        resultHtml += '<div style="font-size:13px;">'+esc(t.name)+': '+(t.pass?applied+' (half — saved)':applied+' (full — failed)')+'</div>';
+      });
+    } else {
+      // Single target spell attack
+      fetch('/api/combat/attack',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          attackerId:DmSpell._casterId, targetId:pd.targetId,
+          attackRoll:pd.totalRoll, damage:fullDmg, damageType:s.damageType||'',
+          crit:crit, magical:true, weaponName:s.name
+        })
+      }).then(function(r){return r.json();}).then(function(r){
+        var applied = r.damage || fullDmg;
+        var hpAfter = r.targetHpAfter || {};
+        $('dms-dmg-result').innerHTML =
+          '<div style="font-weight:700;color:var(--red);">'+applied+' '+esc(s.damageType||'')+' damage</div>' +
+          '<div style="font-size:12px;">'+esc(pd.targetName)+': '+hpAfter.current+'/'+hpAfter.max+' HP</div>' +
+          '<div id="dms-hit-narr" style="font-style:italic;color:var(--amber);margin-top:8px;">Generating...</div>';
+        $('dms-dmg-result').style.display = '';
+        fetch('/api/hal/query',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({query:'Narrate '+pd.casterName+' hitting '+pd.targetName+' with '+s.name+' for '+applied+' '+s.damageType+' damage. One sentence, gothic horror, describe the magical impact.'})
+        }).then(function(r2){return r2.json();}).then(function(r2){
+          DmAttack._showAndSpeak('dms-hit-narr', r2.response, '');
+        }).catch(function(){});
+      }).catch(function(){});
+      return;
+    }
+    resultHtml += '<div id="dms-aoe-narr" style="font-style:italic;color:var(--amber);margin-top:8px;">Generating...</div>';
+    $('dms-dmg-result').innerHTML = resultHtml;
+    $('dms-dmg-result').style.display = '';
+    if (s.concentration) {
+      $('dms-dmg-result').innerHTML += '<div style="font-size:11px;color:var(--blue);margin-top:4px;">⟐ Concentration active</div>';
+    }
+    var targetNames = (pd.targets||[]).map(function(t){return t.name;}).join(', ');
+    fetch('/api/hal/query',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({query:'Narrate '+pd.casterName+' casting '+s.name+' hitting '+targetNames+' for '+fullDmg+' '+s.damageType+' damage in the tavern. One sentence, gothic horror, describe the area effect.'})
+    }).then(function(r){return r.json();}).then(function(r){
+      DmAttack._showAndSpeak('dms-aoe-narr', r.response, '');
+    }).catch(function(){});
+  }
+};
+
+// Mode toggle for weapon/spell
+DmAttack._setMode = function(mode) {
+  $('dma-weapon-section').style.display = mode === 'weapon' ? '' : 'none';
+  $('dma-spell-section').style.display = mode === 'spell' ? '' : 'none';
+  $('dma-mode-weapon').className = 'tool-btn' + (mode === 'weapon' ? ' primary' : '');
+  $('dma-mode-spell').className = 'tool-btn' + (mode === 'spell' ? ' primary' : '');
+  if (mode === 'spell') {
+    var combat = stateData.combat;
+    var current = combat && combat.turnOrder && combat.turnOrder[combat.currentTurn];
+    if (current && current.type === 'pc') DmSpell.refresh(current.id);
+  }
+};
 
 // ═══════════════════════════════════════════════════════════════
 // NPC POSITIONS
@@ -2054,9 +3324,23 @@ var AudioDevices = {
       AudioDevices._setStatus('Failed to save: ' + e.message);
     }
   },
-  testRoom: function() { AudioDevices._playTone(AudioDevices.selected.roomSpeaker, 440, 'Room speaker'); },
-  testEarbud: function() { AudioDevices._playTone(AudioDevices.selected.earbud, 660, 'DM earbud'); },
+  testRoom: function() {
+    console.log('[AudioDevices] testRoom click — deviceId:', AudioDevices.selected.roomSpeaker || '(none)');
+    AudioDevices._playTone(AudioDevices.selected.roomSpeaker, 440, 'Room speaker');
+  },
+  testEarbud: function() {
+    console.log('[AudioDevices] testEarbud click — deviceId:', AudioDevices.selected.earbud || '(none)');
+    AudioDevices._playTone(AudioDevices.selected.earbud, 660, 'DM earbud');
+  },
   _playTone: function(deviceId, freq, label) {
+    console.log('[AudioDevices] _playTone', { label, freq, deviceId: deviceId || '(empty — system default)', setSinkIdSupported: !!(new Audio()).setSinkId });
+    // Early warning when no device is selected. Without this the user
+    // sees "silent failure" because audio routes to the system default,
+    // which on this PC is NOT the room speaker / TOZO earbud.
+    if (!deviceId) {
+      AudioDevices._setStatus('⚠ ' + label + ' test: NO device selected. Pick one in the dropdown, click "Save Audio Config", then test again. Tone will play on system default.');
+      console.warn('[AudioDevices] ' + label + ' has no deviceId saved — tone will go to system default, not the intended device');
+    }
     var audio = new Audio();
     // Generate a 0.6s sine WAV inline so we don't need an external asset
     var sampleRate = 44100;
@@ -2081,23 +3365,31 @@ var AudioDevices = {
     audio.src = URL.createObjectURL(blob);
     var play = function() {
       audio.play().then(function() {
-        AudioDevices._setStatus('Playing test tone on ' + label);
+        console.log('[AudioDevices] tone PLAYING for', label);
+        AudioDevices._setStatus('Playing test tone on ' + label + (deviceId ? '' : ' (system default — no deviceId)'));
       }).catch(function(e) {
-        AudioDevices._setStatus(label + ' test failed: ' + e.message);
+        console.error('[AudioDevices] play() failed for', label, ':', e.name, e.message);
+        AudioDevices._setStatus('⚠ ' + label + ' test FAILED: ' + e.name + ' — ' + e.message);
       });
     };
     if (deviceId && audio.setSinkId) {
-      audio.setSinkId(deviceId).then(play).catch(function(e) {
-        AudioDevices._setStatus(label + ' setSinkId failed (' + e.message + '), playing on default');
+      audio.setSinkId(deviceId).then(function() {
+        console.log('[AudioDevices] setSinkId OK — sink now:', String(deviceId).slice(0, 12) + '…');
+        play();
+      }).catch(function(e) {
+        console.warn('[AudioDevices] setSinkId REJECTED for', label, ':', e.name, e.message, '— falling through to default');
+        AudioDevices._setStatus('⚠ ' + label + ' setSinkId rejected (' + e.name + ': ' + e.message + '). Device may be gone. Refresh Devices → re-pick → Save.');
         play();
       });
     } else {
+      if (!audio.setSinkId) console.warn('[AudioDevices] browser has no HTMLAudioElement.setSinkId — always playing on default');
       play();
     }
   },
   _setStatus: function(text) {
     var el = $('audio-devices-status');
     if (el) el.textContent = text;
+    console.log('[AudioDevices]', text);
   }
 };
 window.AudioDevices = AudioDevices;

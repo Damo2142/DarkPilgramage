@@ -180,6 +180,19 @@ class CombatService {
       const manualVal = manualInit[id] || manualInit[tokenId];
       const total = manualVal !== undefined ? manualVal : roll + initMod;
 
+      // Pull immunities/resistances from actor config so processAttack can
+      // enforce them (werewolf: nonmagical weapons, vampire: poison, etc.)
+      const actorSlug = token.actorSlug || token.slug || null;
+      let immunities = null, resistances = null;
+      if (actorSlug) {
+        const mapSvc = this.orchestrator.getService('map');
+        const actor = mapSvc?.customActors?.get(actorSlug) || mapSvc?.srdMonsters?.find(m => m.slug === actorSlug);
+        if (actor) {
+          immunities = actor.immunities || null;
+          resistances = actor.resistances || null;
+        }
+      }
+
       combatants.push({
         id: tokenId,
         name: token.name || tokenId,
@@ -187,10 +200,12 @@ class CombatService {
         initiative: total,
         initRoll: roll,
         initMod,
-        hp: { ...(token.hp || { current: 10, max: 10 }) },
-        ac: token.ac || 10,
+        hp: this._resolveCombatantHp(token),
+        ac: this._resolveCombatantAc(token),
         conditions: [],
-        actorSlug: token.actorSlug || token.slug || null,
+        actorSlug,
+        immunities,
+        resistances,
         isAlive: true,
         deathSaves: { successes: 0, failures: 0 }
       });
@@ -286,16 +301,13 @@ class CombatService {
       });
     }
 
-    // Build 7 — auto-combat. If the upcoming combatant is not a PC, fire
-    // its turn automatically after a short delay so the turn-announcement
-    // audio lands first. PCs (including Spurt, which spurt-agent.js owns)
-    // are left alone — type === 'pc' combatants never auto-run here.
-    if (upcomingNext && upcomingNext.type !== 'pc' && upcomingNext.isAlive) {
-      setTimeout(() => {
-        try { this._autoNpcTurn(upcomingNext); }
-        catch (e) { console.warn('[CombatService] auto-npc turn error:', e.message); }
-      }, 1500);
-    }
+    // NPC turn execution is owned by the combat:next_turn bus subscriber
+    // (_npcTacticalAI → _executeNpcCombatAction → processAttack) so the
+    // wound system, hit-location narration, and trust-level gate fire
+    // consistently. Previously a setTimeout here also ran _autoNpcTurn,
+    // which raced the bus subscriber: two target selections per turn, two
+    // damage applications, and a mismatch where the announcement named
+    // one PC while the wound landed on another.
 
     return combat;
   }
@@ -359,6 +371,10 @@ class CombatService {
       } else {
         // NPCs die at 0
         c.isAlive = false;
+        // Persist death flag outside combat state so scene re-population
+        // (which may fire after map activation wipes map.tokens) doesn't
+        // resurrect the corpse at full HP.
+        this.state.set(`npcs.${combatantId}.dead`, true);
       }
       this.bus.dispatch('dm:whisper', {
         text: `${c.name} is down.`,
@@ -508,6 +524,21 @@ class CombatService {
 
     const idx = c.conditions.indexOf(condition);
     const wasAdded = idx < 0; // adding vs removing
+    // Addition 8 — condition immunity check on ADD path only. Removal is
+    // always allowed (the condition is somehow on the token — let the DM
+    // clear it). Applies to both actor configs and SRD creature configs via
+    // the shared _creatureConfigFor helper.
+    if (wasAdded) {
+      const cfg = this._creatureConfigFor(c.actorSlug);
+      const imms = (cfg && cfg.immunities && cfg.immunities.conditions) || [];
+      if (imms.map(s => String(s).toLowerCase()).includes(String(condition).toLowerCase())) {
+        this.bus.dispatch('dm:whisper', {
+          text: `${c.name} is immune to ${condition} — condition not applied.`,
+          priority: 2, category: 'combat'
+        });
+        return c;
+      }
+    }
     if (idx >= 0) {
       c.conditions.splice(idx, 1);
     } else {
@@ -719,7 +750,7 @@ class CombatService {
   /**
    * Process an attack: check hit vs AC, apply damage if hit
    */
-  processAttack(attackerId, targetId, attackRoll, damage, damageType, crit = false) {
+  processAttack(attackerId, targetId, attackRoll, damage, damageType, crit = false, weaponName = null, magical = false, silvered = false) {
     const combat = this._getCombatState();
     const attacker = combat.turnOrder.find(x => x.id === attackerId);
     const target = combat.turnOrder.find(x => x.id === targetId);
@@ -727,9 +758,57 @@ class CombatService {
 
     const hit = crit || attackRoll >= target.ac;
     let appliedDamage = 0;
+    let immunityReason = null;
     if (hit) {
       appliedDamage = damage;
-      this.modifyHp(targetId, -damage);
+
+      // ── Damage immunity / resistance from actor config ────────────
+      // NPC immunities live on the actor json (config/actors/<slug>.json)
+      // and get merged onto the combatant as `combatant.immunities` when the
+      // combatant is spawned from a token. Check three things:
+      //   1. damage_types list (e.g. poison) — hard immunity
+      //   2. nonmagical_weapons true — physical attacks need magical=true
+      //      (silver satisfies this if silver_bypasses is true and the
+      //      attack is silvered)
+      //   3. resistances.damage_types — halve damage
+      const imm = target.immunities || (target.actor && target.actor.immunities) || null;
+      const res = target.resistances || (target.actor && target.actor.resistances) || null;
+      const dType = (damageType || '').toLowerCase();
+      const isPhysical = ['slashing', 'piercing', 'bludgeoning'].includes(dType);
+      if (imm) {
+        if (Array.isArray(imm.damage_types) && imm.damage_types.map(s => s.toLowerCase()).includes(dType)) {
+          appliedDamage = 0;
+          immunityReason = `${target.name} is immune to ${dType} damage.`;
+        } else if (imm.nonmagical_weapons && isPhysical && !magical && !(imm.silver_bypasses && silvered)) {
+          appliedDamage = 0;
+          immunityReason = `${target.name} is immune to nonmagical ${dType} — ${weaponName || 'this weapon'} has no effect.`;
+        }
+      }
+      if (appliedDamage > 0 && res && Array.isArray(res.damage_types) && res.damage_types.map(s => s.toLowerCase()).includes(dType)) {
+        const halved = Math.floor(appliedDamage / 2);
+        this.bus.dispatch('dm:whisper', {
+          text: `${target.name} resists ${dType}: ${appliedDamage} → ${halved}`,
+          priority: 2, category: 'combat'
+        });
+        appliedDamage = halved;
+      }
+      if (immunityReason) {
+        this.bus.dispatch('dm:whisper', { text: immunityReason, priority: 1, category: 'combat' });
+      }
+
+      // Addition 3 — Rage resistance (Bear Totem: all damage except psychic)
+      if (target.type === 'pc') {
+        const targetAbilities = this.state.get('players.' + targetId + '.abilities');
+        if (targetAbilities && targetAbilities.rage_active && damageType !== 'psychic') {
+          const halved = Math.floor(appliedDamage / 2);
+          this.bus.dispatch('dm:whisper', {
+            text: `${target.name} raging (Bear Totem) — ${damageType || 'physical'} damage halved: ${appliedDamage} → ${halved}`,
+            priority: 1, category: 'combat'
+          });
+          appliedDamage = halved;
+        }
+      }
+      if (appliedDamage > 0) this.modifyHp(targetId, -appliedDamage);
     }
 
     const result = {
@@ -743,6 +822,7 @@ class CombatService {
       crit,
       damage: appliedDamage,
       damageType: damageType || 'untyped',
+      immunityReason: immunityReason || null,
       targetHpAfter: this._getCombatState().turnOrder.find(x => x.id === targetId)?.hp
     };
 
@@ -750,7 +830,7 @@ class CombatService {
 
     // ── Hit Location, Bleeding, Massive Damage, Morale ──
     if (hit && appliedDamage > 0 && target) {
-      this._processHitLocation(attackerId, targetId, appliedDamage, damageType, crit);
+      this._processHitLocation(attackerId, targetId, appliedDamage, damageType, crit, weaponName);
       this._checkMassiveDamage(targetId, appliedDamage);
       this._checkMorale(targetId, combat);
     }
@@ -762,10 +842,12 @@ class CombatService {
   _rollD6() { return Math.floor(Math.random() * 6) + 1; }
   _rollD4() { return Math.floor(Math.random() * 4) + 1; }
 
-  _processHitLocation(attackerId, targetId, damage, damageType, crit) {
+  _processHitLocation(attackerId, targetId, damage, damageType, crit, weaponName = null) {
     const combat = this._getCombatState();
     const target = combat.turnOrder.find(x => x.id === targetId);
     if (!target) return;
+    const attacker = combat.turnOrder.find(x => x.id === attackerId);
+    const attackerName = attacker ? attacker.name : (attackerId || 'someone');
 
     const currentHp = target.hp.current + damage; // HP before this hit was applied
     const pct = damage / currentHp;
@@ -778,8 +860,8 @@ class CombatService {
     // Graze = narrative only
     if (severity === 'graze') {
       this.bus.dispatch('combat:hit_location', {
-        attackerId, targetId, targetName: target.name, damage, severity,
-        location: null, consequence: null
+        attackerId, attackerName, targetId, targetName: target.name, damage, severity,
+        location: null, consequence: null, damageType, weaponName
       });
       return;
     }
@@ -803,13 +885,15 @@ class CombatService {
 
     // Dispatch for AI narration and DM whisper
     this.bus.dispatch('combat:hit_location', {
-      attackerId, targetId, targetName: target.name,
-      damage, severity, location, consequence, damageType
+      attackerId, attackerName, targetId, targetName: target.name,
+      damage, severity, location, consequence, damageType, weaponName
     });
 
-    // Whisper mechanical effect to DM
+    // Whisper mechanical effect to DM — include WHO + WEAPON so the DM
+    // (and Max's narration) know who took what wound from whom with what.
+    const weaponClause = weaponName ? ` with ${weaponName}` : '';
     this.bus.dispatch('dm:whisper', {
-      text: `${severity.toUpperCase()} hit on ${target.name}'s ${location}. ${consequence.mechanical}`,
+      text: `${severity.toUpperCase()} hit on ${target.name}'s ${location} from ${attackerName}${weaponClause}. ${consequence.mechanical}`,
       priority: 2, category: 'combat'
     });
 
@@ -1165,18 +1249,56 @@ class CombatService {
 
   async _executeNpcCombatAction(combatant, decision) {
     const rollResult = this.rollNpcAction(combatant.id, decision.actionIndex);
-    if (!rollResult || rollResult.error) return;
-
-    if (decision.targetId) {
-      const result = this.processAttack(
-        combatant.id, decision.targetId,
-        rollResult.attackRoll, rollResult.damage,
-        rollResult.dmgType, rollResult.crit
-      );
-      if (result) {
-        console.log(`[CombatService] ${combatant.name} attacks ${result.targetName}: ${result.hit ? 'HIT' : 'MISS'} (${rollResult.attackRoll} vs AC ${result.targetAC})${result.hit ? `, ${result.damage} ${result.damageType}` : ''}`);
-      }
+    if (!rollResult || rollResult.error) {
+      // Pre-attack failure — surface it so the DM knows the NPC turn fizzled
+      // rather than being silent.
+      this.bus.dispatch('dm:whisper', {
+        text: `[COMBAT] ${combatant.name} turn skipped — could not roll action (${rollResult?.error || 'no action parsed'}).`,
+        priority: 1, category: 'combat', source: 'combat-service'
+      });
+      return;
     }
+
+    if (!decision.targetId) {
+      this.bus.dispatch('dm:whisper', {
+        text: `[COMBAT] ${combatant.name} uses ${rollResult.actionName} — no target selected.`,
+        priority: 1, category: 'combat', source: 'combat-service'
+      });
+      return;
+    }
+
+    const result = this.processAttack(
+      combatant.id, decision.targetId,
+      rollResult.attackRoll, rollResult.damage,
+      rollResult.dmgType, rollResult.crit,
+      rollResult.actionName
+    );
+    if (!result) {
+      this.bus.dispatch('dm:whisper', {
+        text: `[COMBAT] ${combatant.name} attack failed — target ${decision.targetId} not found in combat.`,
+        priority: 1, category: 'combat', source: 'combat-service'
+      });
+      return;
+    }
+
+    // Whisper every NPC attack to the DM earbud. Before this, _executeNpcCombatAction
+    // only console.log'd — so auto-combat was silent on the earbud after commit
+    // a5ef09b removed the setTimeout → _autoNpcTurn path (which had been the
+    // whisper-producing path).
+    const attackerToHit = rollResult.toHitBonus ?? 0;
+    const hitMiss = result.hit ? (result.crit ? 'CRIT HIT' : 'HIT') : 'MISS';
+    const damageFragment = result.hit
+      ? ` — ${result.damage} ${result.damageType || 'damage'} applied`
+      : '';
+    this.bus.dispatch('dm:whisper', {
+      text:
+        `[COMBAT] ${combatant.name} → ${result.targetName} with ${rollResult.actionName || 'attack'} ` +
+        `— rolled ${rollResult.d20 ?? '?'} + ${attackerToHit >= 0 ? '+' : ''}${attackerToHit} = ${result.attackRoll} ` +
+        `vs AC ${result.targetAC} — ${hitMiss}${damageFragment}`,
+      priority: 1, category: 'combat', source: 'combat-service'
+    });
+
+    console.log(`[CombatService] ${combatant.name} attacks ${result.targetName}: ${hitMiss} (${rollResult.attackRoll} vs AC ${result.targetAC})${result.hit ? `, ${result.damage} ${result.damageType}` : ''}`);
   }
 
   // ── Build 7 — auto-combat for non-PC combatants ─────────────────
@@ -1267,6 +1389,68 @@ class CombatService {
         priority: 1, category: 'combat'
       });
     }
+  }
+
+  // Resolve HP for a combatant. Strategy: look up the actor config's authoritative
+  // max (via hit_points / hp.max / srd-monsters). If token.hp.max matches that
+  // authoritative max, the token is carrying mid-combat HP — use token.hp.current.
+  // Otherwise the token has the 10/10 default and we seed from the actor config.
+  // Fixes F3 (Vladislav 10/10 instead of 144/144).
+  _resolveCombatantHp(token) {
+    const authoritativeMax = this._resolveAuthoritativeHpMax(token);
+    if (authoritativeMax && Number.isFinite(authoritativeMax)) {
+      const tokHp = token && token.hp;
+      if (tokHp && Number.isFinite(tokHp.max) && tokHp.max === authoritativeMax && Number.isFinite(tokHp.current)) {
+        return { current: tokHp.current, max: authoritativeMax };
+      }
+      return { current: authoritativeMax, max: authoritativeMax };
+    }
+    if (token && token.hp && Number.isFinite(token.hp.max) && Number.isFinite(token.hp.current)) {
+      return { current: token.hp.current, max: token.hp.max };
+    }
+    return { current: 10, max: 10 };
+  }
+
+  _resolveAuthoritativeHpMax(token) {
+    const slug = token && (token.actorSlug || token.slug);
+    if (!slug) return null;
+    const cfg = this._creatureConfigFor(slug);
+    if (cfg) {
+      if (cfg.hp && Number.isFinite(cfg.hp.max)) return cfg.hp.max;
+      if (Number.isFinite(cfg.hit_points)) return cfg.hit_points;
+    }
+    try {
+      const mapSvc = this.orchestrator.getService('map');
+      // Guard against falsy slug matching SRD entries with undefined id via
+      // `undefined === undefined` — the whole branch is already behind `!slug`
+      // returning null above, but keep the explicit guard for defense.
+      if (slug) {
+        const srd = mapSvc?.srdMonsters?.find(m => m && ((m.slug && m.slug === slug) || (m.id && m.id === slug)));
+        if (srd && Number.isFinite(srd.hit_points)) return srd.hit_points;
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  _resolveCombatantAc(token) {
+    const slug = token && (token.actorSlug || token.slug);
+    const cfg = slug ? this._creatureConfigFor(slug) : null;
+    if (cfg) {
+      if (Number.isFinite(cfg.ac)) return cfg.ac;
+      if (Number.isFinite(cfg.armor_class)) return cfg.armor_class;
+    }
+    // Only consult the SRD monster table when we actually have a slug —
+    // `find(m.id === undefined)` silently matches the first SRD entry whose
+    // id is missing, which poisoned PC AC with aboleth's 17.
+    if (slug) {
+      try {
+        const mapSvc = this.orchestrator.getService('map');
+        const srd = mapSvc?.srdMonsters?.find(m => m && ((m.slug && m.slug === slug) || (m.id && m.id === slug)));
+        if (srd && Number.isFinite(srd.armor_class)) return srd.armor_class;
+      } catch (e) {}
+    }
+    if (token && Number.isFinite(token.ac) && token.ac > 0) return token.ac;
+    return 10;
   }
 
   _creatureConfigFor(actorSlug) {
@@ -1375,18 +1559,16 @@ class CombatService {
       const { name, tokenId } = req.body || {};
       if (!name && !tokenId) return res.status(400).json({ error: 'name or tokenId required' });
 
-      const tokens = this.state.get('map.tokens') || {};
-      const entry = tokenId
-        ? [tokenId, tokens[tokenId]]
-        : Object.entries(tokens).find(([, t]) =>
-            (t && t.name && t.name.toLowerCase().includes(String(name).toLowerCase())) ||
-            (t && t.actorSlug && t.actorSlug.toLowerCase().includes(String(name).toLowerCase()))
-          );
-      if (!entry || !entry[1]) {
-        return res.status(404).json({ error: `Token not found: ${name || tokenId}` });
+      // Use _resolveToken for the full 5-level fallback: exact ID, actor
+      // slug, player ID with virtual token, NPC config, fuzzy partial match.
+      // The old inline search only checked map.tokens and missed NPCs that
+      // were in config/actors but not yet placed on the map.
+      const resolved = this._resolveToken(name || tokenId);
+      if (!resolved) {
+        return res.status(404).json({ error: `Not found: "${name || tokenId}". Try the full name or token ID.` });
       }
 
-      const [tid, token] = entry;
+      const [tid, token] = [resolved.tokenId, resolved.token];
       if ((combat.turnOrder || []).some(c => c && c.id === tid)) {
         return res.status(400).json({ error: `${token.name} is already in combat` });
       }
@@ -1428,6 +1610,38 @@ class CombatService {
       });
 
       res.json({ ok: true, name: token.name, initiative, tokenId: tid });
+    });
+
+    // GET /api/combat/search?q=tom — typeahead for Add to Combat. Returns
+    // names from map tokens, NPC config, player characters, and actor files.
+    app.get('/api/combat/search', (req, res) => {
+      const q = (req.query.q || '').toLowerCase().trim();
+      if (!q) return res.json([]);
+      const results = [];
+      const seen = new Set();
+      const tokens = this.state.get('map.tokens') || {};
+      for (const [tid, t] of Object.entries(tokens)) {
+        const name = t.name || tid;
+        if (name.toLowerCase().includes(q) || tid.toLowerCase().includes(q) ||
+            (t.actorSlug || '').toLowerCase().includes(q)) {
+          if (!seen.has(tid)) { seen.add(tid); results.push({ id: tid, name, type: t.type || 'npc' }); }
+        }
+      }
+      const players = this.state.get('players') || {};
+      for (const [pid, p] of Object.entries(players)) {
+        const cn = p.character?.name || pid;
+        if ((cn.toLowerCase().includes(q) || pid.includes(q)) && !seen.has(pid)) {
+          seen.add(pid); results.push({ id: pid, name: cn, type: 'pc' });
+        }
+      }
+      const npcs = this.state.get('npcs') || {};
+      for (const [nid, n] of Object.entries(npcs)) {
+        const nn = n.name || nid;
+        if ((nn.toLowerCase().includes(q) || nid.includes(q)) && !seen.has(nid)) {
+          seen.add(nid); results.push({ id: nid, name: nn, type: 'npc' });
+        }
+      }
+      res.json(results.slice(0, 10));
     });
 
     // Addition 3 — POST /api/combat/initiate
@@ -1481,20 +1695,50 @@ class CombatService {
       res.json({ ok: true, targetId, initiatorId, combatantIds, combat });
     });
 
-    // PHASE 6 — POST /api/combat/start-scene — one-click combat start with
-    // every visible token currently on the active map. NPC initiative is
-    // rolled by combat-service; player initiative is left blank for the
-    // DM to fill in (Max prompts the DM to collect physical d20 results).
+    // PHASE 6 — POST /api/combat/start-scene — start combat with present
+    // PCs + NPCs whose config has combatJoins:true (conditions met).
+    // Does NOT add every visible token — Piotr in the cellar, patrons,
+    // gas spore, and other bystanders stay out unless the DM explicitly
+    // adds them mid-combat via /api/combat/add-combatant.
+    // Optional body.combatantIds overrides the auto-selection entirely.
     app.post('/api/combat/start-scene', (req, res) => {
       const tokens = this.state.get('map.tokens') || {};
+      const players = this.state.get('players') || {};
+
+      // If the DM sent an explicit list, use it directly
+      if (req.body?.combatantIds && Array.isArray(req.body.combatantIds) && req.body.combatantIds.length) {
+        const combat = this.startCombat(req.body.combatantIds, req.body.manualInit || {});
+        return res.json({ ok: true, combat, combatantIds: req.body.combatantIds });
+      }
+
       const ids = [];
+      // All present PCs (not absent, not hidden, has a token on the map)
       for (const [tid, t] of Object.entries(tokens)) {
         if (!t || t.hidden) continue;
-        ids.push(tid);
+        if (t.type === 'pc') {
+          const ps = players[tid];
+          if (ps?.absent || ps?.notYetArrived) continue;
+          ids.push(tid);
+        }
       }
-      if (!ids.length) return res.status(400).json({ error: 'no tokens on map' });
-      const combat = this.startCombat(ids, {});
-      res.json({ ok: true, combat, combatantIds: ids });
+      // NPCs with combatJoins:true + conditions met (same logic as /initiate)
+      const sessionNpcs = (this.config && this.config.npcs) || {};
+      const ambient = this.orchestrator.getService('ambient-life');
+      for (const [npcId, npc] of Object.entries(sessionNpcs)) {
+        if (npc?.combatJoins !== true) continue;
+        if (npc.combatJoinsCondition === 'only-when-transformed') {
+          const tomasTransformed = ambient && ambient._tomasState && ambient._tomasState.transformed;
+          if (npcId === 'tomas' && !tomasTransformed) continue;
+        }
+        const npcTokenId = Object.keys(tokens).find(tid =>
+          tokens[tid].actorSlug === npcId || tid === npcId
+        );
+        if (npcTokenId && !ids.includes(npcTokenId)) ids.push(npcTokenId);
+      }
+
+      if (!ids.length) return res.status(400).json({ error: 'no eligible combatants — use body.combatantIds to override' });
+      const combat = this.startCombat(ids, req.body?.manualInit || {});
+      res.json({ ok: true, combat, combatantIds: ids, autoSelected: true });
     });
 
     // POST /api/combat/end — end combat
@@ -1674,38 +1918,61 @@ class CombatService {
 Current state: ${JSON.stringify(context)}
 
 Pick the BEST action. Consider:
-- Target the weakest/most dangerous enemy
+- Who is in reach or line of sight (prefer closest reachable target)
 - Use conditions/abilities strategically
 - Protect allies if possible
 - If badly wounded, consider defensive play
+- Do not automatically pile onto the lowest-HP enemy; consider position and threat
 
 Respond with JSON only: { "actionIndex": <number>, "targetId": "<enemy id>", "reasoning": "<brief tactical note>" }
 Available targets: ${enemies.map(e => `"${e.name}" (id: check turnOrder)`).join(', ')}`;
 
       const result = await aiEngine.gemini.generateJSON(
         'You are a D&D 5e combat tactician. Respond with valid JSON only.',
-        prompt
+        prompt,
+        { maxTokens: 800, temperature: 0.7 }
       );
 
+      console.log('[CombatService] AI tactical result for ' + combatant.name + ':', JSON.stringify(result));
       if (result?.actionIndex !== undefined) {
-        // Map target by name if needed
-        let targetId = result.targetId;
-        if (!targetId || !combat.turnOrder.find(c => c.id === targetId)) {
-          // Pick lowest HP enemy
-          const sorted = enemies.sort((a, b) => a.hp.current - b.hp.current);
-          targetId = sorted[0]?.id;
+        // Validate the AI picked a rollable action — Multiattack/saves-only
+        // actions (canRoll === false) can't be executed via rollNpcAction.
+        const picked = actions.actions[result.actionIndex];
+        if (!picked || !picked.canRoll) {
+          console.warn('[CombatService] AI picked unrollable action #' + result.actionIndex + ' (' + (picked?.name || 'missing') + ') — falling back to basic tactics');
+        } else {
+          // Resolve targetId: exact id match → name match → fallback picker.
+          // The AI often returns a character name ("Zarina Firethorn") or
+          // a map token id ("hooded-stranger"); match either, otherwise
+          // fall back to the 30/70 picker so a missing match doesn't
+          // retarget the AI's intent onto a random combatant.
+          let targetId = result.targetId;
+          if (targetId && !combat.turnOrder.find(c => c.id === targetId)) {
+            const lower = String(targetId).toLowerCase();
+            const byName = combat.turnOrder.find(c => c.type === 'pc' && c.isAlive && (c.name || '').toLowerCase() === lower);
+            const byPartial = byName || combat.turnOrder.find(c => c.type === 'pc' && c.isAlive && (c.name || '').toLowerCase().includes(lower));
+            if (byPartial) targetId = byPartial.id;
+            else targetId = null;
+          }
+          if (!targetId) {
+            targetId = this._pickTarget(combatant, enemies)?.id;
+          }
+          return {
+            actionIndex: result.actionIndex,
+            targetId,
+            reasoning: result.reasoning || 'AI tactical decision'
+          };
         }
-        return {
-          actionIndex: result.actionIndex,
-          targetId,
-          reasoning: result.reasoning || 'AI tactical decision'
-        };
+      } else {
+        console.warn('[CombatService] AI tactical returned no actionIndex — falling back for ' + combatant.name);
       }
     } catch (err) {
       console.error('[CombatService] AI tactics error:', err.message);
     }
 
-    return this._basicNpcTactics(combatant, combat);
+    const basic = this._basicNpcTactics(combatant, combat);
+    console.log('[CombatService] basicNpcTactics for ' + combatant.name + ':', JSON.stringify(basic));
+    return basic;
   }
 
   _basicNpcTactics(combatant, combat) {
@@ -1716,13 +1983,55 @@ Available targets: ${enemies.map(e => `"${e.name}" (id: check turnOrder)`).join(
     const enemies = combat.turnOrder.filter(c => c.type === 'pc' && c.isAlive);
     if (!enemies.length) return null;
 
-    // Basic: use first available attack on lowest-HP enemy
-    const target = enemies.sort((a, b) => a.hp.current - b.hp.current)[0];
+    const target = this._pickTarget(combatant, enemies);
+    if (!target) return null;
     return {
       actionIndex: rollable[0].index,
       targetId: target.id,
-      reasoning: 'Basic tactics: attack weakest enemy'
+      reasoning: target._pickMode === 'random'
+        ? `Target ${target.name} (random pick)`
+        : `Target ${target.name} (nearest by map position)`
     };
+  }
+
+  /**
+   * Target selection for NPC AI: 30% random / 70% nearest-by-map-position.
+   * Returns the selected enemy (with a _pickMode tag for logging) or null.
+   * Falls back to random if no map token coords are available for the
+   * combatant (e.g. creature placed mid-combat without a token).
+   */
+  _pickTarget(combatant, enemies) {
+    if (!enemies || !enemies.length) return null;
+    const rollRandom = Math.random() < 0.3;
+    if (rollRandom) {
+      const pick = enemies[Math.floor(Math.random() * enemies.length)];
+      if (pick) pick._pickMode = 'random';
+      return pick;
+    }
+    const selfTok = this.state.get(`map.tokens.${combatant.id}`);
+    if (!selfTok || typeof selfTok.x !== 'number' || typeof selfTok.y !== 'number') {
+      // No position info — fall back to a random pick rather than defaulting
+      // to the lowest-HP PC (Bug 1 convergence on Spurt).
+      const pick = enemies[Math.floor(Math.random() * enemies.length)];
+      if (pick) pick._pickMode = 'random';
+      return pick;
+    }
+    let best = null, bestDist = Infinity;
+    for (const e of enemies) {
+      const tok = this.state.get(`map.tokens.${e.id}`);
+      if (!tok || typeof tok.x !== 'number' || typeof tok.y !== 'number') continue;
+      const dx = tok.x - selfTok.x, dy = tok.y - selfTok.y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < bestDist) { bestDist = d; best = e; }
+    }
+    if (!best) {
+      // No enemy has a token — random fallback.
+      const pick = enemies[Math.floor(Math.random() * enemies.length)];
+      if (pick) pick._pickMode = 'random';
+      return pick;
+    }
+    best._pickMode = 'nearest';
+    return best;
   }
 
   // ── Condition Duration Tracking (Feature 53) ────────────────────────────
@@ -1763,6 +2072,19 @@ Available targets: ${enemies.map(e => `"${e.name}" (id: check turnOrder)`).join(
     if (!c) return null;
 
     const wasNew = !c.conditions.includes(condition);
+    // Addition 8 — condition immunity check on add path (same logic as
+    // toggleCondition). If already present we never hit this branch.
+    if (wasNew) {
+      const cfg = this._creatureConfigFor(c.actorSlug);
+      const imms = (cfg && cfg.immunities && cfg.immunities.conditions) || [];
+      if (imms.map(s => String(s).toLowerCase()).includes(String(condition).toLowerCase())) {
+        this.bus.dispatch('dm:whisper', {
+          text: `${c.name} is immune to ${condition} — condition not applied.`,
+          priority: 2, category: 'combat'
+        });
+        return c;
+      }
+    }
     if (wasNew) c.conditions.push(condition);
     if (!c._conditionDurations) c._conditionDurations = {};
     c._conditionDurations[condition] = {
@@ -1966,14 +2288,27 @@ Respond with JSON: { "items": [{ "name": "...", "description": "...", "type": "w
       // NPC tactical AI
       if (current.type === 'npc') {
         const trustLevel = this.state.get('session.aiTrustLevel') || 'manual';
-        const decision = await this._npcTacticalAI(current, combat);
+        let decision = null;
+        try {
+          decision = await this._npcTacticalAI(current, combat);
+        } catch (err) {
+          console.error(`[CombatService] _npcTacticalAI threw for ${current.name}:`, err.message);
+          this.bus.dispatch('dm:whisper', {
+            text: `[COMBAT] ${current.name}: tactical AI crashed (${err.message}) — manual resolution required`,
+            priority: 1, category: 'combat', source: 'combat-service'
+          });
+        }
+
+        if (!decision) {
+          try { decision = this._basicNpcTactics(current, combat); } catch (e) {
+            console.error(`[CombatService] _basicNpcTactics threw for ${current.name}:`, e.message);
+          }
+        }
 
         if (decision) {
           if (trustLevel === 'autopilot') {
-            // Auto-execute
             await this._executeNpcCombatAction(current, decision);
           } else {
-            // Queue for DM approval
             this.bus.dispatch('combat:npc_suggestion', {
               combatantId: current.id,
               combatantName: current.name,
@@ -1984,6 +2319,12 @@ Respond with JSON: { "items": [{ "name": "...", "description": "...", "type": "w
               priority: 2, category: 'combat'
             });
           }
+        } else {
+          // Surface the silent failure to the DM so turns never silently skip.
+          this.bus.dispatch('dm:whisper', {
+            text: `[COMBAT] ${current.name}'s turn — no AI decision available (no actions parsed for actorSlug="${current.actorSlug}"). Resolve manually or use /api/combat/npc-execute.`,
+            priority: 1, category: 'combat', source: 'combat-service'
+          });
         }
       }
     }, 'combat');

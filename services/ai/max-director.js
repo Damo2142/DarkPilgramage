@@ -93,9 +93,17 @@ class MaxDirector {
   }
 
   init() {
+    // Collect unsubscribe handles so stop() can cleanly detach every
+    // listener. Without this, an ai-engine restart leaves the previous
+    // MaxDirector's subscriptions orphaned on the bus — each dm:whisper
+    // fires BOTH instances' enqueue paths, doubling _deliver, doubling
+    // voice:speak, and doubling the audio played on the DM earbud.
+    // (This was the "rage activation doubles audio" bug on 2026-04-15.)
+    this._unsubs = [];
+
     // Whisper interception: when ai-engine or other services dispatch a
     // dm:whisper, route through queue UNLESS it has bypass:true.
-    this.bus.subscribe('dm:whisper', (env) => {
+    this._unsubs.push(this.bus.subscribe('dm:whisper', (env) => {
       const d = env.data || env;
       if (d._maxRouted) return; // already processed
       if (d.bypass) return;     // explicit bypass
@@ -110,28 +118,28 @@ class MaxDirector {
         category: d.category || 'general',
         sourceData: d
       });
-    }, 'max-director');
+    }, 'max-director'));
 
     // Track transcript activity for silence detection
-    this.bus.subscribe('transcript:segment', (env) => {
+    this._unsubs.push(this.bus.subscribe('transcript:segment', (env) => {
       this.lastTranscriptAt = Date.now();
       this._checkLanguageGate(env.data);
       this._checkStagingMention(env.data);
-    }, 'max-director');
+    }, 'max-director'));
 
     // Track timed events to update expected positions
-    this.bus.subscribe('world:timed_event', (env) => {
+    this._unsubs.push(this.bus.subscribe('world:timed_event', (env) => {
       this._updateExpectedPositions(env.data);
-    }, 'max-director');
+    }, 'max-director'));
 
     // Combat end — clear stale ack gate so the first post-combat whisper
     // doesn't wait for the DM to press spacebar.
-    this.bus.subscribe('combat:ended', () => {
+    this._unsubs.push(this.bus.subscribe('combat:ended', () => {
       this.waitingForAck = false;
-    }, 'max-director');
+    }, 'max-director'));
 
     // Load NPC languages from state when available
-    this.bus.subscribe('init', () => this._refreshLanguageCache(), 'max-director');
+    this._unsubs.push(this.bus.subscribe('init', () => this._refreshLanguageCache(), 'max-director'));
 
     // Tick queue every 5 seconds
     this.tickInterval = setInterval(() => this._tick(), 5000);
@@ -143,8 +151,18 @@ class MaxDirector {
   }
 
   stop() {
-    if (this.tickInterval) clearInterval(this.tickInterval);
-    if (this.driftInterval) clearInterval(this.driftInterval);
+    if (this.tickInterval) { clearInterval(this.tickInterval); this.tickInterval = null; }
+    if (this.driftInterval) { clearInterval(this.driftInterval); this.driftInterval = null; }
+    // Detach every bus subscription taken in init(). Without this, a
+    // restarted ai-engine leaves an orphan MaxDirector listening to
+    // dm:whisper — causing the double-audio / duplicate [COMBAT] log bug.
+    if (Array.isArray(this._unsubs)) {
+      for (const off of this._unsubs) { try { off(); } catch (e) { /* ignore */ } }
+      this._unsubs = [];
+    }
+    // Clear any pending work so a fresh director starts from zero.
+    this.queue = [];
+    this.waitingForAck = false;
   }
 
   // ─── Pause control ────────────────────────────────────────────

@@ -77,37 +77,10 @@
        BODY ZONE — 220px
        ══════════════════════════════════════════ */
     #zone-body{
-      height:200px;min-height:200px;max-height:200px;flex-shrink:0;
+      height:220px;min-height:220px;max-height:220px;flex-shrink:0;
       background:#161210;border-bottom:1px solid #3a3028;
       display:flex;flex-direction:column;align-items:center;justify-content:center;
       position:relative;
-    }
-    /* ── Chromebook redesign 2026-04-16 ──
-       Short-viewport Chromebooks (typ. 1366x768, 1280x800): shrink fixed chrome
-       so tab content has breathing room. Applies at both 768 and 800 vertical. */
-    @media (max-height: 820px){
-      #topbar{height:42px;min-height:42px;max-height:42px;padding:0 14px;}
-      .char-title{font-size:16px;}
-      .char-sub{font-size:11px;}
-      #zone-observation{height:30px;min-height:30px;max-height:30px;}
-      #observation-text{font-size:13px;}
-      #zone-body{height:160px;min-height:160px;max-height:160px;}
-      #wound-overlay svg{height:130px !important;width:auto !important;}
-      #body-narrative{font-size:12px;margin-top:2px;}
-      #tab-bar .tab-btn{padding:8px 12px;font-size:11px;}
-      #input-bar{height:48px;min-height:48px;max-height:48px;}
-      #speak-input{height:32px;font-size:13px;}
-      .journal-btn{width:38px;height:38px;font-size:18px;}
-      #wound-overlay-detail{top:210px;}
-      #grimoire-content{padding:14px 16px;}
-      /* Two-column ability/save grid on wider laptops to use horizontal space */
-      #abgrid.abg{grid-template-columns:repeat(6,1fr);}
-      #sklist{column-count:2;column-gap:16px;}
-      #sklist > *{break-inside:avoid;}
-    }
-    /* Wide viewports (external monitor) can use even more columns */
-    @media (min-width: 1400px) and (max-height: 820px){
-      #grimoire-content{padding:14px 28px;}
     }
     #wound-overlay{cursor:pointer;transition:opacity 0.2s;}
     #body-narrative{
@@ -664,8 +637,7 @@
 <div id="app">
 
   <!-- OBSERVATION ZONE — italic fade-in messages, auto-remove after 45s -->
-  <!-- Floating observation toasts: sit below topbar so the character name doesn't vanish under them. -->
-  <div id="observation-zone" style="position:fixed;top:52px;left:0;right:0;z-index:200;pointer-events:none;padding:6px 12px;display:flex;flex-direction:column;gap:6px;"></div>
+  <div id="observation-zone" style="position:fixed;top:0;left:0;right:0;z-index:200;pointer-events:none;padding:12px 20px;display:flex;flex-direction:column;gap:6px;"></div>
 
   <!-- TOP BAR — 48px -->
   <div id="topbar">
@@ -705,22 +677,22 @@
   <!-- FIX3B — Map touch hint shown briefly when own token is selected -->
   <div id="map-touch-hint">TAP DESTINATION TO MOVE</div>
 
-  <!-- TAB BAR — Chromebook redesign 2026-04-16: Map tab removed (table map handles location).
-       Chat is the default tab. Tabs sized for 1366x768 / 1280x800 Chromebooks. -->
+  <!-- TAB BAR — PHASE 5A: CHAT is the second tab -->
   <div id="tab-bar">
-    <button class="tab-btn active" data-tab="chat" onclick="switchTab('chat')">Chat</button>
-    <button class="tab-btn" data-tab="numbers" onclick="switchTab('numbers')">Combat</button>
-    <button class="tab-btn" data-tab="magic" onclick="switchTab('magic')">Spells</button>
-    <button class="tab-btn" data-tab="arms" onclick="switchTab('arms')">Inventory</button>
-    <button class="tab-btn" data-tab="abilities" onclick="switchTab('abilities')">Abilities</button>
+    <button class="tab-btn active" data-tab="map" onclick="switchTab('map')">Map</button>
+    <button class="tab-btn" data-tab="chat" onclick="switchTab('chat')">Chat</button>
     <button class="tab-btn" data-tab="condition" onclick="switchTab('condition')">Condition</button>
+    <button class="tab-btn" data-tab="abilities" onclick="switchTab('abilities')">Abilities</button>
+    <button class="tab-btn" data-tab="arms" onclick="switchTab('arms')">Arms &amp; Armor</button>
+    <button class="tab-btn" data-tab="magic" onclick="switchTab('magic')">Gifts &amp; Magic</button>
     <button class="tab-btn" data-tab="soul" onclick="switchTab('soul')">Soul</button>
+    <button class="tab-btn" data-tab="numbers" onclick="switchTab('numbers')">Numbers</button>
   </div>
 
   <!-- GRIMOIRE CONTENT — scrollable, fills remaining -->
   <div id="grimoire-content">
-    <!-- TAB: MAP — hidden in Chromebook redesign 2026-04-16. DOM kept so JS refs (PlayerMap, player-map-canvas) don't crash; never shown. -->
-    <div class="gtab" id="gtab-map" style="display:none !important;padding:0;height:calc(100vh - 100px);">
+    <!-- TAB: MAP — complete rewrite: IMG + CSS transform + DOM tokens -->
+    <div class="gtab active" id="gtab-map" style="padding:0;height:calc(100vh - 100px);">
       <div id="panel-map" style="position:relative;overflow:hidden;width:100%;height:100%;background:#000;touch-action:none;">
         <img id="player-map-img" style="position:absolute;transform-origin:0 0;user-select:none;-webkit-user-drag:none;" draggable="false">
         <div id="player-grid-overlay" style="position:absolute;transform-origin:0 0;pointer-events:none;z-index:1;opacity:0.12;"></div>
@@ -730,8 +702,10 @@
       </div>
     </div>
 
-    <!-- TAB: CHAT — default tab after 2026-04-16 redesign (map removed for table play). -->
-    <div class="gtab active" id="gtab-chat">
+    <!-- TAB: CHAT — PHASE 5C / FIX-K1: dedicated full-screen chat interface
+         No inline display:none — that was overriding the .gtab.active rule
+         and leaving the panel blank when CHAT was selected. -->
+    <div class="gtab" id="gtab-chat">
       <div id="chat-history">
         <div id="chat-empty-state" style="margin:auto;text-align:center;color:#6a5a48;font-style:italic;padding:24px;">Speak to Max, an NPC, or another player...</div>
       </div>
@@ -887,16 +861,6 @@
       </div>
       <div class="panel" id="panel-skills"><div id="sklist"></div></div>
       <div class="panel" id="panel-combat">
-        <!-- Stamina bar — mirrors the ring on the body silhouette but in a
-             compact horizontal bar so it's visible while in the Combat tab
-             without scrolling up to the wound overlay. -->
-        <div id="combat-stamina-bar" style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 10px;background:#161210;border-radius:6px;border:1px solid #3a3028;">
-          <span style="font-size:11px;color:#6a5a48;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;">Stamina</span>
-          <div style="flex:1;background:#2a2218;border-radius:3px;height:10px;overflow:hidden;">
-            <div id="combat-stamina-fill" style="height:100%;width:100%;background:#e8c060;border-radius:3px;transition:width 0.4s,background 0.4s;"></div>
-          </div>
-          <span id="combat-stamina-label" style="font-size:11px;color:#8a7a62;min-width:40px;text-align:right;">—</span>
-        </div>
         <div id="your-turn-banner"><div class="ytb-label">Your Turn!</div><div class="ytb-sub">Choose an action below</div></div>
         <div id="attack-notification"></div>
         <div id="combat-tracker-player" style="display:none;margin-bottom:12px;">
@@ -1276,54 +1240,6 @@ const SKILL_AB={acrobatics:'dex','animal-handling':'wis',arcana:'int',athletics:
 
 function $(id){return document.getElementById(id);}
 
-// ── Chromebook Audio Cues ────────────────────────────────────
-// Short Web Audio API tones — no MP3 files, just distinct signals
-// so players know something happened even when not looking at screen.
-var AudioCue = {
-  _ctx: null,
-  _getCtx: function() {
-    if (!this._ctx) try { this._ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){}
-    return this._ctx;
-  },
-  _tone: function(freq, dur, type, vol) {
-    var ctx = this._getCtx(); if (!ctx) return;
-    if (ctx.state === 'suspended') ctx.resume();
-    var osc = ctx.createOscillator();
-    var gain = ctx.createGain();
-    osc.type = type || 'sine';
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(vol || 0.15, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (dur || 0.3));
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(); osc.stop(ctx.currentTime + (dur || 0.3));
-  },
-  perception: function() {
-    // Soft ascending chime — two quick notes
-    this._tone(660, 0.15, 'sine', 0.12);
-    setTimeout(function(){ AudioCue._tone(880, 0.2, 'sine', 0.1); }, 120);
-  },
-  yourTurn: function() {
-    // Distinct three-note ascending fanfare
-    this._tone(523, 0.12, 'triangle', 0.18);
-    setTimeout(function(){ AudioCue._tone(659, 0.12, 'triangle', 0.18); }, 130);
-    setTimeout(function(){ AudioCue._tone(784, 0.25, 'triangle', 0.15); }, 260);
-  },
-  itemReceived: function() {
-    // Positive sparkle — high quick ascending
-    this._tone(880, 0.1, 'sine', 0.12);
-    setTimeout(function(){ AudioCue._tone(1100, 0.1, 'sine', 0.1); }, 80);
-    setTimeout(function(){ AudioCue._tone(1320, 0.15, 'sine', 0.08); }, 160);
-  },
-  npcSpeech: function() {
-    // Low warm note — someone is talking to you
-    this._tone(330, 0.25, 'sine', 0.1);
-  },
-  observation: function() {
-    // Same as perception — you noticed something
-    this.perception();
-  }
-};
-
 // Observation zone — italic fade-in, auto-remove after duration
 function showObservation(text, durationMs) {
   const zone = document.getElementById('observation-zone');
@@ -1341,17 +1257,23 @@ function showObservation(text, durationMs) {
 
 // Tab switching
 function switchTab(tabName) {
-  // Chromebook redesign 2026-04-16: map removed. Any legacy switchTab('map')
-  // (e.g. from AOE spell visualization) silently becomes combat — players use the table map.
-  if (tabName === 'map') tabName = 'numbers';
   document.querySelectorAll('.gtab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   const tab = document.getElementById('gtab-' + tabName);
   if (tab) tab.classList.add('active');
   const btn = document.querySelector('.tab-btn[data-tab="' + tabName + '"]');
   if (btn) btn.classList.add('active');
-  document.body.classList.remove('map-fullscreen', 'tabs-hidden');
-  if (_tabsHideTimer) clearTimeout(_tabsHideTimer);
+  // FIX3A — MAP tab full screen mode
+  if (tabName === 'map') {
+    document.body.classList.add('map-fullscreen');
+    _scheduleTabsAutoHide();
+    if (window.PlayerMap) {
+      setTimeout(() => { try { PlayerMap.resize(); PlayerMap.render(); } catch (e) {} }, 50);
+    }
+  } else {
+    document.body.classList.remove('map-fullscreen', 'tabs-hidden');
+    if (_tabsHideTimer) clearTimeout(_tabsHideTimer);
+  }
 }
 
 // FIX3A — auto-hide tab bar after 3s in MAP mode; reappears on tap.
@@ -1485,14 +1407,14 @@ function handle(m){
     case 'stamina:updated': if(m.data) StaminaRing.update(m.data); break;
     case 'horror:effect': applyHorror(m.effect,m.payload,m.durationMs); break;
     case 'horror:clear': clearHorror(); break;
-    case 'perception:flash': showPerceptionFlash(m.description); AudioCue.perception(); break;
+    case 'perception:flash': showPerceptionFlash(m.description); break;
     case 'npc:dialogue': showToast(m.npc||'NPC',m.text,8000); break;
-    case 'npc:speech': handleNpcSpeech(m); AudioCue.npcSpeech(); break;
-    case 'npc:audio': handlePrivateNpcAudio(m); AudioCue.npcSpeech(); break;
+    case 'npc:speech': handleNpcSpeech(m); break;
+    case 'npc:audio': handlePrivateNpcAudio(m); break;
     case 'chat:p2p': handleP2P(m); break;
     case 'narrator:whisper': handleNarratorWhisper(m); break;
     case 'dm:private_message':
-      if (m.style === 'observation') { showObservation(m.text, m.durationMs || 45000); AudioCue.observation(); }
+      if (m.style === 'observation') { showObservation(m.text, m.durationMs || 45000); }
       else { showToast('DM', m.text, m.durationMs || 8000); }
       break;
     case 'chat:party': addChat(m.fromName||m.from,'[Party] '+m.text,'var(--accent)'); if(m.from!==PID) showToast(m.fromName||m.from,m.text,4000); break;
@@ -1521,7 +1443,7 @@ function handle(m){
       break;
     case 'inspiration:gain': showInspiration(m); break;
     case 'ability:bardic_inspiration': showBardicInspirationFlash(m.die || 'd6', m.from); break;
-    case 'item:received': showItemReceivedFlash(m.itemName, m.description); AudioCue.itemReceived(); break;
+    case 'item:received': showItemReceivedFlash(m.itemName, m.description); break;
     case 'character:abilities_update':
       if (m.playerId === PID && m.abilities) {
         _abilityState = _abilityState || {}; _abilityState[PID] = m.abilities;
@@ -1555,7 +1477,7 @@ function handle(m){
     case 'combat:wound_update':     displayWoundUpdate(m.description); break;
     case 'combat:save_required':    displaySaveRequired(m.saveType, m.cause); break;
     case 'combat:condition_update': displayConditionUpdate(m.condition, m.narrative, m.active); break;
-    case 'combat:your_turn':        displayYourTurn(m.spellStatus, m.movementFeet); AudioCue.yourTurn(); break;
+    case 'combat:your_turn':        displayYourTurn(m.spellStatus, m.movementFeet); break;
     // Addition 2 — telepathy contact (Vladislav / Letavec / Page)
     case 'telepathy:touch':         displayTelepathyTouch(m.style, m.text); break;
     // Audio streaming for remote players
@@ -1601,14 +1523,11 @@ function loadChar(c){
   $('vprof').textContent='+'+(c.proficiencyBonus||2);
   $('vinsp').textContent=c.inspiration?'★':'☆';
   // Populate attacks from DDB sync data (format: {name,toHit,damage,damageType,range})
-  // Tag _ddb so rebuildWeaponAtks can preserve them instead of recomputing.
-  // DDB toHit is authoritative — it handles class features, magic items,
-  // multiclass, Hexblade, Jack of All Trades, etc.
   if(c.attacks&&c.attacks.length){
     attacks=c.attacks.map(a=>{
       let dmgDice='',dmgMod=0;
       if(a.damage){const m=a.damage.match(/^(\d+d\d+)([+-]\d+)?$/);if(m){dmgDice=m[1];dmgMod=parseInt(m[2]||'0');}else{dmgDice=a.damage;}}
-      return{name:a.name,toHit:a.toHit||0,dmgDice,dmgMod,dmgType:a.damageType||'',range:a.range||'5ft',_ddb:true};
+      return{name:a.name,toHit:a.toHit||0,dmgDice,dmgMod,dmgType:a.damageType||'',range:a.range||'5ft'};
     });
   }
   // Populate spells from DDB sync data — keep all fields
@@ -1924,16 +1843,12 @@ function buildAtks(){
   if(!char.inventory)return[];
   const prof=char.proficiencyBonus||2, sm=abilMod('str'), dm=abilMod('dex');
   return char.inventory.filter(i=>i.type&&i.type.toLowerCase()==='weapon').map(w=>{
-    const propsLower=(w.properties||[]).map(p=>p.toLowerCase());
-    const fin=propsLower.includes('finesse');
-    const ranged=(w.subtype||'').toLowerCase().includes('ranged');
-    const statKey=ranged?'dex':(fin?(dm>=sm?'dex':'str'):'str');
-    const mod=abilMod(statKey);
-    let toHit=mod+prof, dmgMod=mod;
-    if(typeof w.attackBonus==='number') toHit+=w.attackBonus;
-    if(typeof w.damageBonus==='number') dmgMod+=w.damageBonus;
-    return{name:w.name,toHit,dmgDice:w.damage||'1d4',dmgMod,dmgType:w.damageType||'bludgeoning',range:w.range||'5ft',
-      _magical:!!w.magical,_silvered:!!w.silver};
+    let toHit=sm+prof,dmgDice='1d4',dmgMod=sm,dmgType='bludgeoning',range='5ft';
+    const n=w.name.toLowerCase();
+    if(n.includes('dagger')){toHit=dm+prof;dmgMod=dm;dmgDice='1d4';dmgType='piercing';range='20/60ft';}
+    else if(n.includes('staff')){dmgDice='1d6';dmgType='bludgeoning';}
+    else if(n.includes('unarmed')||n.includes('strike')){dmgDice='—';dmgMod=Math.max(1,1+sm);dmgType='bludgeoning';}
+    return{name:w.name,toHit,dmgDice,dmgMod,dmgType,range};
   });
 }
 
@@ -1959,165 +1874,55 @@ function isMyTurn(){
   return cur>=0 && order[cur] && order[cur].id===PID;
 }
 
-// ── 5e Advantage/Disadvantage + Condition engine ──────────────────
-// Returns {advantage:bool, disadvantage:bool, reasons:[]} for the
-// current attack context. Called before rolling d20.
-function _getAdvDisadv(attacker, targetId) {
-  const adv = [], disadv = [];
-  const abilities = (_abilityState && _abilityState[PID]) || {};
-  const conds = (combatState && combatState.turnOrder || []).find(c => c.id === PID)?.conditions || [];
-  const targetConds = (combatState && combatState.turnOrder || []).find(c => c.id === targetId)?.conditions || [];
-  // Blinded attacker → disadvantage
-  if (conds.includes('Blinded') || conds.includes('blinded')) disadv.push('Blinded');
-  // Poisoned attacker → disadvantage on attacks
-  if (conds.includes('Poisoned') || conds.includes('poisoned')) disadv.push('Poisoned');
-  // Frightened attacker → disadvantage (simplified: always applies if condition present)
-  if (conds.includes('Frightened') || conds.includes('frightened')) disadv.push('Frightened');
-  // Prone target + melee → advantage; Prone target + ranged beyond 5ft → disadvantage
-  if (targetConds.includes('Prone') || targetConds.includes('prone')) {
-    const ranged = (attacker.range || '').includes('/') || parseInt(attacker.range) > 5;
-    if (ranged) disadv.push('Target prone (ranged)');
-    else adv.push('Target prone (melee)');
-  }
-  // Paralyzed/Unconscious target + melee = advantage + auto-crit
-  if (targetConds.includes('Paralyzed') || targetConds.includes('paralyzed') ||
-      targetConds.includes('Unconscious') || targetConds.includes('unconscious')) {
-    adv.push('Target incapacitated');
-  }
-  // Invisible attacker → advantage (if we ever track this)
-  if (conds.includes('Invisible') || conds.includes('invisible')) adv.push('Invisible');
-  const hasA = adv.length > 0, hasD = disadv.length > 0;
-  const label = (hasA && !hasD) ? 'ADV' : (hasD && !hasA) ? 'DIS' : '';
-  return { advantage: hasA, disadvantage: hasD, advReasons: adv, disadvReasons: disadv, label };
-}
-
-// Roll d20 with advantage/disadvantage. Returns {d20, roll1, roll2, hadAdvantage, hadDisadvantage, label}
-function _rollD20WithAdvDisadv(advState) {
-  const r1 = Math.floor(Math.random() * 20) + 1;
-  const r2 = Math.floor(Math.random() * 20) + 1;
-  const hasAdv = advState.advantage && !advState.disadvantage;
-  const hasDisadv = advState.disadvantage && !advState.advantage;
-  // Both cancel out → normal roll
-  let d20 = r1;
-  let label = '';
-  if (hasAdv) { d20 = Math.max(r1, r2); label = 'ADV'; }
-  else if (hasDisadv) { d20 = Math.min(r1, r2); label = 'DIS'; }
-  return { d20, roll1: r1, roll2: r2, hadAdvantage: hasAdv, hadDisadvantage: hasDisadv, label };
-}
-
-// ── Class bonus damage ──────────────────────────────────────────
-// Returns {bonus:N, dice:'XdY', label:''} for additional damage on hit.
-function _getBonusDamage(a, crit) {
-  const abilities = (_abilityState && _abilityState[PID]) || {};
-  const cls = (char.class || '').toLowerCase();
-  let bonus = 0, dice = '', label = '';
-
-  // Barbarian Rage: +2 melee damage (Bear Totem at L3)
-  if (abilities.rage_active && cls.includes('barbarian')) {
-    const ranged = (a.range || '').includes('/') && parseInt(a.range) > 5;
-    if (!ranged) { bonus += 2; label += ' Rage+2'; }
-  }
-
-  // Rogue Sneak Attack: 2d6 at L3 (once per turn, when advantage OR ally adjacent)
-  // Simplified: if the attack has advantage, or if combat has 2+ PCs on the
-  // same side, allow sneak attack on finesse/ranged weapons.
-  if (cls.includes('rogue') && (a._ddb || (a.range||'').includes('/') ||
-      (char.inventory||[]).some(w=>w.name===a.name && (w.properties||[]).map(p=>p.toLowerCase()).includes('finesse')))) {
-    const lvl = char.level || 3;
-    const sneakDice = Math.ceil(lvl / 2); // 1d6 at L1, 2d6 at L3, 3d6 at L5
-    dice = (crit ? sneakDice * 2 : sneakDice) + 'd6';
-    label += ' Sneak' + sneakDice + 'd6';
-  }
-
-  return { bonus, dice, label };
-}
-
 function rollAtk(i){
   if(combatState && combatState.active && !isMyTurn()){
     showToast('Combat','It is not your turn!',3000);
     return;
   }
   const a=attacks[i];
-  // Determine advantage/disadvantage from conditions
-  const targetId = $('attack-target-select') ? $('attack-target-select').value : '';
-  const advState = _getAdvDisadv(a, targetId);
-
   if(usePhysicalDice){
-    promptDiceRoll(a.name+' — Attack Roll'+(advState.label?' ('+advState.label+')':''), 'd20').then(d20 => {
+    promptDiceRoll(a.name+' — Attack Roll', 'd20').then(d20 => {
       if(d20 === null) return;
+      // For physical dice, also prompt for damage
       const crit=d20===20, miss=d20===1;
       if(!miss && a.dmgDice && a.dmgDice!=='—'){
         const dmgLabel = crit ? a.dmgDice+' (CRIT — roll double!)' : a.dmgDice;
         promptDiceRoll(a.name+' — Damage ('+dmgLabel+')', a.dmgDice).then(dmgRoll => {
           if(dmgRoll === null) dmgRoll = 0;
-          _finishRollAtk(a, d20, physDmg, advState);
+          _finishRollAtk(a, d20, dmgRoll);
         });
       } else {
-        _finishRollAtk(a, d20, null, advState);
+        _finishRollAtk(a, d20, null);
       }
     });
   } else {
-    const roll = _rollD20WithAdvDisadv(advState);
-    _finishRollAtk(a, roll.d20, null, advState, roll);
+    const d20=Math.floor(Math.random()*20)+1;
+    _finishRollAtk(a, d20, null);
   }
 }
-function _finishRollAtk(a, d20, physDmg, advState, rollInfo){
-  advState = advState || { advantage:false, disadvantage:false, advReasons:[], disadvReasons:[], label:'' };
-  rollInfo = rollInfo || {};
-  // Paralyzed/Unconscious target in melee: auto-crit on hit
-  const targetId = $('attack-target-select') ? $('attack-target-select').value : '';
-  const targetConds = (combatState && combatState.turnOrder || []).find(c => c.id === targetId)?.conditions || [];
-  const autoCrit = (targetConds.includes('Paralyzed')||targetConds.includes('paralyzed')||
-    targetConds.includes('Unconscious')||targetConds.includes('unconscious'));
-  const crit = d20===20 || (autoCrit && d20 !== 1);
-  const miss = d20===1;
-  const toHit = d20 + (a.toHit||0);
-
-  // Bonus damage (rage +2, sneak attack dice)
-  const bonusDmg = _getBonusDamage(a, crit);
-
+function _finishRollAtk(a, d20, physDmg){
+  const crit=d20===20, miss=d20===1, toHit=d20+(a.toHit||0);
   let dmgN=0,dmgS='';
   if(physDmg !== null && physDmg !== undefined){
-    dmgN = physDmg + (a.dmgMod||0) + bonusDmg.bonus;
+    // Physical dice — player entered total damage dice, add modifier
+    dmgN = physDmg + (a.dmgMod||0);
     dmgS = physDmg+(a.dmgMod?(a.dmgMod>=0?'+':'')+a.dmgMod:'')+'=<strong>'+dmgN+'</strong>';
   } else if(a.dmgDice&&a.dmgDice!=='—'){
     const[cnt,sid]=a.dmgDice.split('d').map(Number);
     const rs=Array.from({length:crit?cnt*2:cnt},()=>Math.floor(Math.random()*sid)+1);
-    dmgN=rs.reduce((s,r)=>s+r,0)+(a.dmgMod||0)+bonusDmg.bonus;
-    dmgS='['+rs.join(',')+']'+(a.dmgMod?(a.dmgMod>=0?'+':'')+a.dmgMod:'');
-    // Roll bonus dice (sneak attack)
-    if(bonusDmg.dice){
-      const[bc,bs]=bonusDmg.dice.split('d').map(Number);
-      const brs=Array.from({length:bc},()=>Math.floor(Math.random()*bs)+1);
-      const bTotal=brs.reduce((s,r)=>s+r,0);
-      dmgN+=bTotal;
-      dmgS+='+['+brs.join(',')+']('+bonusDmg.label.trim()+')';
-    }
-    if(bonusDmg.bonus) dmgS+='+'+bonusDmg.bonus+'('+bonusDmg.label.trim()+')';
-    dmgS+='=<strong>'+dmgN+'</strong>';
-  }else{dmgN=Math.max(1,(a.dmgMod||1)+bonusDmg.bonus);dmgS='<strong>'+dmgN+'</strong>';}
+    dmgN=rs.reduce((s,r)=>s+r,0)+(a.dmgMod||0);
+    dmgS='['+rs.join(',')+']'+(a.dmgMod?(a.dmgMod>=0?'+':'')+a.dmgMod:'')+'=<strong>'+dmgN+'</strong>';
+  }else{dmgN=Math.max(1,a.dmgMod||1);dmgS='<strong>'+dmgN+'</strong>';}
   const col=crit?'#f1c40f':miss?'var(--red)':'var(--text)';
-  const modLabel=fmt(a.toHit||0);
-  // Last Roll section: show d20 prominently, breakdown below.
-  // NEVER display the total in "to hit" format here — that's the weapon
-  // card's job (static modifier). This section shows the ROLL + breakdown.
-  // Advantage/disadvantage display
-  const advTag = (advState.label==='ADV') ? ' <span style="color:#3a8a3a;font-size:10px;">[ADV]</span>' :
-                 (advState.label==='DIS') ? ' <span style="color:#aa2a1a;font-size:10px;">[DIS]</span>' : '';
-  const rollDetail = rollInfo && rollInfo.roll2 && advState.label ?
-    'd20('+rollInfo.roll1+','+rollInfo.roll2+')→'+d20 : 'd20('+d20+')';
-  $('combatres').innerHTML='<div style="font-family:Cinzel,serif;font-size:1.8rem;color:'+col+';font-weight:700;">'+(crit?'CRIT!':miss?'MISS':toHit)+advTag+'</div>'
-    +'<div style="font-size:12px;color:var(--text-dim);">'+esc(a.name)+': '+(crit?'Natural 20!':miss?'Natural 1':(rollDetail+' '+modLabel+' = '+toHit+' vs AC'))+'</div>'
+  $('combatres').innerHTML='<div style="font-family:Cinzel,serif;font-size:1.8rem;color:'+col+';font-weight:700;">'+(crit?'20!':miss?'1':d20)+'</div>'
+    +'<div style="font-size:12px;color:var(--text-dim);">'+esc(a.name)+': '+(crit?'CRITICAL HIT!':miss?'Miss!':fmt(toHit)+' to hit')+'</div>'
     +(!miss&&dmgS?'<div style="font-size:12px;margin-top:4px;">'+esc(a.dmgType||'')+': '+dmgS+'</div>':'');
-  addRH(a.name+': d20='+d20+' '+modLabel+' = '+(crit?'CRIT':miss?'MISS':toHit)+(miss?'':' / dmg='+dmgN));
+  addRH(a.name+': d20='+d20+' → '+(crit?'CRIT':miss?'MISS':toHit)+(miss?'':' / dmg='+dmgN));
   send({type:'roll:result',rollType:'attack',formula:'1d20',result:[d20],total:toHit});
   if(!miss && combatState && combatState.active){
-    pendingAttack={attackRoll:toHit,damage:Math.max(1,dmgN),damageType:a.dmgType||'untyped',crit,attackName:a.name,
-      magical:!!a._magical||!!a._ddb,silvered:!!a._silvered,weaponName:a.name};
+    pendingAttack={attackRoll:toHit,damage:Math.max(1,dmgN),damageType:a.dmgType||'untyped',crit,attackName:a.name};
     updateTargetSection();
-    // Attack result area: show the roll breakdown, not just the total.
-    $('attack-result-area').innerHTML='<div style="font-weight:700;font-size:14px;color:'+(crit?'#b8860b':'var(--text)')+';">'+toHit+' total'+(crit?' (CRIT!)':'')+'</div>'
-      +'<div style="font-size:11px;color:var(--text-dim);">d20('+d20+') '+modLabel+'</div>'
+    $('attack-result-area').innerHTML='<div style="font-weight:700;font-size:14px;color:'+(crit?'#b8860b':'var(--text)')+';">'+toHit+' to hit'+(crit?' (CRIT!)':'')+'</div>'
       +'<div style="font-size:13px;margin-top:2px;">'+dmgN+' '+esc(a.dmgType||'')+' damage</div>'
       +'<div style="font-size:10px;color:var(--text-dim);margin-top:2px;">Select target and apply</div>';
     $('apply-damage-btn').style.display='';
@@ -2197,13 +2002,7 @@ function spRow(s,i){
     +(s.concentration?' <span style="font-size:9px;color:var(--blue);background:rgba(41,128,185,.15);border-radius:2px;padding:1px 4px;">C</span>':'')
     +(s.ritual?' <span style="font-size:9px;color:var(--green);background:rgba(39,174,96,.15);border-radius:2px;padding:1px 4px;">R</span>':'')
     +'</div>'
-    +(function(){
-      if(s.level>0){
-        var sk='level'+s.level,sl=(char.spellSlots||{})[sk],rem=slotState[sk]!==undefined?slotState[sk]:(sl?(sl.remaining||0):0);
-        if(rem<=0) return '<button style="font-size:10px;padding:2px 8px;background:#3a2818;color:#6a5a48;border:none;border-radius:3px;cursor:not-allowed;white-space:nowrap;" onclick="event.stopPropagation();castSpell('+i+')" title="No slots remaining">⚡ No Slots</button>';
-      }
-      return '<button style="font-size:10px;padding:2px 8px;background:var(--accent-dim);color:#fff;border:none;border-radius:3px;cursor:pointer;white-space:nowrap;" onclick="event.stopPropagation();castSpell('+i+')">⚡ Cast</button>';
-    }())
+    +'<button style="font-size:10px;padding:2px 8px;background:var(--accent-dim);color:#fff;border:none;border-radius:3px;cursor:pointer;white-space:nowrap;" onclick="event.stopPropagation();castSpell('+i+')">⚡ Cast</button>'
     +'<span style="cursor:pointer;color:var(--text-dim);font-size:11px;margin-left:4px;" onclick="event.stopPropagation();rmSpell('+i+')">✕</span></div>'
     +(badges?'<div style="padding:0 8px 2px;">'+badges+'</div>':'')
     +descHtml;
@@ -2404,8 +2203,8 @@ function castSpell(idx){
     if(sl){
       const rem=slotState[slotKey]!==undefined?slotState[slotKey]:(sl.remaining||sl.total||0);
       if(rem<=0){
-        showToast('Spell','No Level '+s.level+' spell slots remaining. Take a rest to recover slots.',4000);
-        return;
+        if(!confirm('No Level '+s.level+' slots remaining! Cast anyway?'))return;
+        // Casting anyway — don't decrement, don't POST (no slot to consume).
       } else {
         slotState[slotKey]=rem-1;
         if(char.spellSlots[slotKey]){
@@ -2788,26 +2587,16 @@ function togEq(idx){
 
 function rebuildWeaponAtks(){
   const prof=char.proficiencyBonus||2, sm=abilMod('str'), dm=abilMod('dex');
-  // Keep DDB-sourced attacks (authoritative toHit), custom, and spell attacks.
-  // Only recompute for equipped weapons that DDB doesn't already cover
-  // (DM-awarded items, manually added weapons).
-  attacks=attacks.filter(a=>a._custom||a._spell||a._ddb);
-  const ddbNames=new Set(attacks.filter(a=>a._ddb).map(a=>a.name.toLowerCase()));
+  // Remove auto-generated weapon attacks (keep custom/spell attacks)
+  attacks=attacks.filter(a=>a._custom||a._spell);
+  // Add attacks for equipped weapons
   for(const w of (char.inventory||[])){
     if(!w.equipped||!w.type||w.type.toLowerCase()!=='weapon') continue;
-    if(ddbNames.has(w.name.toLowerCase())) continue;
-    const propsLower=(w.properties||[]).map(p=>p.toLowerCase());
-    const fin=propsLower.includes('finesse');
-    const ranged=(w.subtype||'').toLowerCase().includes('ranged');
+    const fin=(w.properties||[]).includes('finesse');
+    const ranged=(w.subtype||'').includes('ranged');
     const statKey=ranged?'dex':(fin?(dm>=sm?'dex':'str'):'str');
     const mod=abilMod(statKey);
-    let toHit=mod+prof;
-    let dmgMod=mod;
-    // Magic weapon bonus from item-level attackBonus/damageBonus fields
-    if(typeof w.attackBonus==='number') toHit+=w.attackBonus;
-    if(typeof w.damageBonus==='number') dmgMod+=w.damageBonus;
-    attacks.push({name:w.name,toHit,dmgDice:w.damage||'1d4',dmgMod,dmgType:w.damageType||'',range:w.range||'5ft',
-      _magical:!!w.magical,_silvered:!!w.silver});
+    attacks.push({name:w.name,toHit:mod+prof,dmgDice:w.damage||'1d4',dmgMod:mod,dmgType:w.damageType||'',range:w.range||'5ft'});
   }
   renderAtks();
 }
@@ -3518,9 +3307,7 @@ async function applyPendingDamage(){
   try{
     const resp=await fetch('/api/combat/attack',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({attackerId:PID,targetId,attackRoll:pendingAttack.attackRoll,damage:pendingAttack.damage,
-        damageType:pendingAttack.damageType,crit:pendingAttack.crit,
-        magical:!!pendingAttack.magical,silvered:!!pendingAttack.silvered,weaponName:pendingAttack.weaponName||null})
+      body:JSON.stringify({attackerId:PID,targetId,attackRoll:pendingAttack.attackRoll,damage:pendingAttack.damage,damageType:pendingAttack.damageType,crit:pendingAttack.crit})
     });
     const result=await resp.json();
     const hitText=result.hit?'HIT! '+result.damage+' '+esc(result.damageType)+' damage':'MISS (AC '+result.targetAC+')';
@@ -4904,16 +4691,6 @@ const StaminaRing = {
     else if (data.state === 'exhausted') overlay.classList.add('stam-exhausted');
     else if (data.state === 'spent') overlay.classList.add('stam-spent');
     else if (data.state === 'collapsed') overlay.classList.add('stam-collapsed');
-
-    // Mirror to the combat-tab stamina bar
-    const fill = document.getElementById('combat-stamina-fill');
-    const lbl = document.getElementById('combat-stamina-label');
-    if (fill) {
-      fill.style.width = (pct * 100).toFixed(0) + '%';
-      const colors = { fresh:'#e8c060', winded:'#e89040', exhausted:'#c85020', spent:'#aa2a1a', collapsed:'#4a2018' };
-      fill.style.background = colors[data.state] || colors.fresh;
-    }
-    if (lbl) lbl.textContent = data.current + '/' + data.max;
   }
 };
 

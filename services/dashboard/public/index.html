@@ -2026,8 +2026,10 @@
         break;
       case 'spurt:dialogue':
         if (msg.data) {
+          // Only populate the Spurt panel; the npc:approved handler above
+          // already writes to transcript and earbud. Adding it here too
+          // produces the duplicate "[NPC] ... [Spurt] ... Spurt: ..." lines.
           SpurtPanel.addDialogue({ text: msg.data.text, dreadTier: msg.data.dreadTier, dread: msg.data.dread, time: Date.now() });
-          addTranscript({ speaker: 'Spurt', text: msg.data.text });
         }
         break;
       case 'spurt:combat_action':

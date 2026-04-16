@@ -14,7 +14,7 @@
   "background": "Criminal",
   "alignment": "TN",
   "hp": {
-    "current": 29,
+    "current": 17,
     "max": 17,
     "temp": 0
   },
@@ -154,7 +154,18 @@
       "proficiency": "none"
     }
   },
-  "spellSlots": null,
+  "spellSlots": {
+    "level1": {
+      "total": 4,
+      "used": 0,
+      "remaining": 4
+    },
+    "level2": {
+      "total": 2,
+      "used": 0,
+      "remaining": 2
+    }
+  },
   "spells": [
     {
       "name": "Dancing Lights",
@@ -285,46 +296,6 @@
   },
   "inventory": [
     {
-      "name": "Dagger, +1",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Weapon",
-      "weight": 1,
-      "rarity": "Uncommon",
-      "magic": true,
-      "damage": "1d4",
-      "damageType": "Piercing",
-      "subtype": "melee",
-      "properties": [
-        "finesse",
-        "light",
-        "thrown",
-        "nick"
-      ],
-      "range": "20/60ft",
-      "modifiers": {}
-    },
-    {
-      "name": "Dagger, +1",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Weapon",
-      "weight": 1,
-      "rarity": "Uncommon",
-      "magic": true,
-      "damage": "1d4",
-      "damageType": "Piercing",
-      "subtype": "melee",
-      "properties": [
-        "finesse",
-        "light",
-        "thrown",
-        "nick"
-      ],
-      "range": "20/60ft",
-      "modifiers": {}
-    },
-    {
       "name": "Nine Lives Stealer Dagger",
       "quantity": 1,
       "equipped": true,
@@ -333,18 +304,30 @@
       "rarity": "Very Rare",
       "magic": true,
       "damage": "1d4",
-      "damageType": "Piercing",
+      "damageType": "piercing",
       "subtype": "melee",
       "properties": [
-        "finesse",
-        "light",
-        "thrown",
-        "nick"
+        "Finesse",
+        "Light",
+        "Thrown"
       ],
       "range": "20/60ft",
       "attunement": true,
       "attuned": false,
-      "modifiers": {}
+      "modifiers": {},
+      "magical": true,
+      "silver": false,
+      "attackBonus": 1,
+      "damageBonus": 1,
+      "special_effect": {
+        "name": "Nine Lives Stealer",
+        "trigger": "target_reduced_to_0_hp",
+        "condition": "target_has_souls_remaining",
+        "effect": "DC 15 Constitution save or die outright",
+        "souls_max": 9,
+        "dmWhisper": "Nine Lives Stealer triggered — target at 0 HP. DC 15 CON save or die. Track souls remaining on this weapon."
+      },
+      "id": "inv-nine-lives-stealer-dagge-mnys8ji4fo5m"
     },
     {
       "name": "Leather",
@@ -355,18 +338,8 @@
       "rarity": "Common",
       "magic": false,
       "ac": 11,
-      "acType": "light"
-    },
-    {
-      "name": "Leather",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Armor",
-      "weight": 10,
-      "rarity": "Common",
-      "magic": false,
-      "ac": 11,
-      "acType": "light"
+      "acType": "light",
+      "id": "inv-leather-mo0lsjkvwkua"
     },
     {
       "name": "Dagger",
@@ -385,7 +358,10 @@
         "thrown",
         "nick"
       ],
-      "range": "20/60ft"
+      "range": "20/60ft",
+      "magical": false,
+      "silver": false,
+      "id": "inv-dagger-mo0lsjkvh0do"
     },
     {
       "name": "Dagger",
@@ -404,7 +380,10 @@
         "thrown",
         "nick"
       ],
-      "range": "20/60ft"
+      "range": "20/60ft",
+      "magical": false,
+      "silver": false,
+      "id": "inv-dagger-mo0lumosk49h"
     },
     {
       "name": "Dagger",
@@ -423,7 +402,10 @@
         "thrown",
         "nick"
       ],
-      "range": "20/60ft"
+      "range": "20/60ft",
+      "magical": false,
+      "silver": false,
+      "id": "inv-dagger-mo0lumosqufy"
     },
     {
       "name": "Dagger",
@@ -442,45 +424,10 @@
         "thrown",
         "nick"
       ],
-      "range": "20/60ft"
-    },
-    {
-      "name": "Dagger",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Weapon",
-      "weight": 1,
-      "rarity": "Common",
-      "magic": false,
-      "damage": "1d4",
-      "damageType": "Piercing",
-      "subtype": "melee",
-      "properties": [
-        "finesse",
-        "light",
-        "thrown",
-        "nick"
-      ],
-      "range": "20/60ft"
-    },
-    {
-      "name": "Dagger",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Weapon",
-      "weight": 1,
-      "rarity": "Common",
-      "magic": false,
-      "damage": "1d4",
-      "damageType": "Piercing",
-      "subtype": "melee",
-      "properties": [
-        "finesse",
-        "light",
-        "thrown",
-        "nick"
-      ],
-      "range": "20/60ft"
+      "range": "20/60ft",
+      "magical": false,
+      "silver": false,
+      "id": "inv-dagger-mo0lumos4jya"
     },
     {
       "name": "Backpack",
@@ -489,16 +436,8 @@
       "type": "Other Gear",
       "weight": 5,
       "rarity": "Common",
-      "magic": false
-    },
-    {
-      "name": "Backpack",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 5,
-      "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-backpack-mo0lsjkvrhr2"
     },
     {
       "name": "Pouch",
@@ -507,7 +446,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-pouch-mo0lsjkv60lh"
     },
     {
       "name": "Pouch",
@@ -516,7 +456,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-pouch-mo0lumosxh3j"
     },
     {
       "name": "Playing Cards",
@@ -525,7 +466,8 @@
       "type": "Other Gear",
       "weight": 0,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-playing-cards-mnys8ji4dexs"
     },
     {
       "name": "Lute",
@@ -534,16 +476,8 @@
       "type": "Other Gear",
       "weight": 2,
       "rarity": "Common",
-      "magic": false
-    },
-    {
-      "name": "Lyre",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 2,
-      "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-lute-mnys8ji4ejhm"
     },
     {
       "name": "Thieves' Tools",
@@ -552,7 +486,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-thieves-tools-mnys8ji4uil2"
     },
     {
       "name": "Crowbar",
@@ -561,7 +496,8 @@
       "type": "Other Gear",
       "weight": 5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-crowbar-mnys8ji4zcnw"
     },
     {
       "name": "Traveler's Clothes",
@@ -570,7 +506,8 @@
       "type": "Other Gear",
       "weight": 4,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-traveler-s-clothes-mnys8ji4gcsr"
     },
     {
       "name": "Oil",
@@ -579,7 +516,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-oil-mo0lsjkvgbu2"
     },
     {
       "name": "Rations",
@@ -588,7 +526,8 @@
       "type": "Other Gear",
       "weight": 2,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-rations-mo0lsjkve95z"
     },
     {
       "name": "Bedroll",
@@ -597,7 +536,8 @@
       "type": "Other Gear",
       "weight": 7,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-bedroll-mo0lsjkvylzy"
     },
     {
       "name": "Bell",
@@ -606,7 +546,8 @@
       "type": "Other Gear",
       "weight": 0,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-bell-mo0lsjkvz0gf"
     },
     {
       "name": "Tinderbox",
@@ -615,7 +556,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-tinderbox-mo0lsjkvn9h7"
     },
     {
       "name": "Waterskin",
@@ -624,7 +566,8 @@
       "type": "Other Gear",
       "weight": 5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-waterskin-mo0lsjkv1hhc"
     },
     {
       "name": "Mirror",
@@ -633,7 +576,8 @@
       "type": "Other Gear",
       "weight": 0.5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-mirror-mo0lsjkv37do"
     },
     {
       "name": "Bullseye Lantern",
@@ -642,7 +586,8 @@
       "type": "Other Gear",
       "weight": 2,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-bullseye-lantern-mo0lsjkvik5e"
     },
     {
       "name": "Costume",
@@ -651,97 +596,8 @@
       "type": "Other Gear",
       "weight": 4,
       "rarity": "Common",
-      "magic": false
-    },
-    {
-      "name": "Oil",
-      "quantity": 8,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 1,
-      "rarity": "Common",
-      "magic": false
-    },
-    {
-      "name": "Rations",
-      "quantity": 9,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 2,
-      "rarity": "Common",
-      "magic": false
-    },
-    {
-      "name": "Bedroll",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 7,
-      "rarity": "Common",
-      "magic": false
-    },
-    {
-      "name": "Bell",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 0,
-      "rarity": "Common",
-      "magic": false
-    },
-    {
-      "name": "Tinderbox",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 1,
-      "rarity": "Common",
-      "magic": false
-    },
-    {
-      "name": "Waterskin",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 5,
-      "rarity": "Common",
-      "magic": false
-    },
-    {
-      "name": "Mirror",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 0.5,
-      "rarity": "Common",
-      "magic": false
-    },
-    {
-      "name": "Bullseye Lantern",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 2,
-      "rarity": "Common",
-      "magic": false
-    },
-    {
-      "name": "Costume",
-      "quantity": 3,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 4,
-      "rarity": "Common",
-      "magic": false
-    },
-    {
-      "name": "Bedroll",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 7,
-      "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-costume-mo0lsjkvdfo6"
     },
     {
       "name": "Mess Kit",
@@ -750,16 +606,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
-    },
-    {
-      "name": "Rations (1 day)",
-      "quantity": 10,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 2,
-      "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-mess-kit-mnys8ji4q65s"
     },
     {
       "name": "Rope, Hempen (50 feet)",
@@ -768,16 +616,8 @@
       "type": "Other Gear",
       "weight": 10,
       "rarity": "Common",
-      "magic": false
-    },
-    {
-      "name": "Tinderbox",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 1,
-      "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-rope-hempen-50-feet--mnys8ji49fnx"
     },
     {
       "name": "Torch",
@@ -786,16 +626,75 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-torch-mnys8ji4fpdm"
     },
     {
-      "name": "Waterskin",
+      "name": "Dagger, +1",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Weapon",
+      "weight": 1,
+      "rarity": "Uncommon",
+      "magic": true,
+      "damage": "1d4",
+      "damageType": "Piercing",
+      "subtype": "melee",
+      "properties": [
+        "finesse",
+        "light",
+        "thrown",
+        "nick"
+      ],
+      "range": "20/60ft",
+      "modifiers": {},
+      "magical": true,
+      "silver": true,
+      "notes": "Blessed by Aldric",
+      "description": "Silvered blade",
+      "awardedByDM": true,
+      "id": "inv-dagger-1-mo0lsjkvtlga"
+    },
+    {
+      "name": "Dagger, +1",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Weapon",
+      "weight": 1,
+      "rarity": "Uncommon",
+      "magic": true,
+      "damage": "1d4",
+      "damageType": "Piercing",
+      "subtype": "melee",
+      "properties": [
+        "finesse",
+        "light",
+        "thrown",
+        "nick"
+      ],
+      "range": "20/60ft",
+      "modifiers": {},
+      "id": "inv-dagger-1-mo0lumosnlqa"
+    },
+    {
+      "name": "Lyre",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 5,
+      "weight": 2,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-lyre-mnys8ji4usa7"
+    },
+    {
+      "name": "Rations (1 day)",
+      "quantity": 10,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 2,
+      "rarity": "Common",
+      "magic": false,
+      "id": "inv-rations-1-day--mnys8ji4pu7d"
     }
   ],
   "conditions": [],
@@ -835,7 +734,7 @@
     "description": null
   },
   "patron": "College of Lore",
-  "_syncedAt": "2026-04-13T09:06:55.304Z",
+  "_syncedAt": "2026-04-16T18:56:00.505Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/164256380"
 }

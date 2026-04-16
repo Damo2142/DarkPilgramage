@@ -18,7 +18,7 @@
     "max": 22,
     "temp": 0
   },
-  "ac": 15,
+  "ac": 13,
   "speed": 30,
   "initiative": 3,
   "proficiencyBonus": 2,
@@ -154,7 +154,13 @@
       "proficiency": "none"
     }
   },
-  "spellSlots": null,
+  "spellSlots": {
+    "level1": {
+      "total": 2,
+      "used": 0,
+      "remaining": 2
+    }
+  },
   "spells": [],
   "attacks": [],
   "features": [
@@ -211,7 +217,8 @@
       "weight": 0.5,
       "rarity": "Common",
       "magic": true,
-      "modifiers": {}
+      "modifiers": {},
+      "id": "inv-potion-of-healing-mnys8ji5e5q8"
     },
     {
       "name": "Shield",
@@ -222,7 +229,7 @@
       "rarity": "Common",
       "magic": false,
       "ac": 2,
-      "acType": "shield"
+      "id": "inv-shield-mnys8ji5bmwk"
     },
     {
       "name": "Chain Mail",
@@ -232,7 +239,8 @@
       "weight": 55,
       "rarity": "Common",
       "magic": false,
-      "ac": 16
+      "ac": 16,
+      "id": "inv-chain-mail-mnys8ji590ms"
     },
     {
       "name": "Dagger",
@@ -251,7 +259,9 @@
         "thrown",
         "nick"
       ],
-      "range": "20/60ft"
+      "range": "20/60ft",
+      "magical": false,
+      "id": "inv-dagger-mnys8ji5a21a"
     },
     {
       "name": "Longsword",
@@ -268,7 +278,9 @@
         "versatile",
         "sap"
       ],
-      "range": "5/5ft"
+      "range": "5/5ft",
+      "magical": false,
+      "id": "inv-longsword-mnys8ji5wfk4"
     },
     {
       "name": "Crossbow, Light",
@@ -288,7 +300,9 @@
         "two-handed",
         "slow"
       ],
-      "range": "80/320ft"
+      "range": "80/320ft",
+      "magical": false,
+      "id": "inv-crossbow-light-mnys8ji58np6"
     },
     {
       "name": "Maul",
@@ -306,7 +320,9 @@
         "two-handed",
         "topple"
       ],
-      "range": "5/5ft"
+      "range": "5/5ft",
+      "magical": false,
+      "id": "inv-maul-mnys8ji533dr"
     },
     {
       "name": "Crossbow Bolts",
@@ -315,7 +331,8 @@
       "type": "Other Gear",
       "weight": 1.5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-crossbow-bolts-mnys8ji5aiq6"
     },
     {
       "name": "Backpack",
@@ -324,7 +341,8 @@
       "type": "Other Gear",
       "weight": 5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-backpack-mnys8ji52x1g"
     },
     {
       "name": "Chalk (1 piece)",
@@ -333,7 +351,8 @@
       "type": "Other Gear",
       "weight": 0,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-chalk-1-piece--mnys8ji5wq85"
     },
     {
       "name": "Clothes, Common",
@@ -342,7 +361,8 @@
       "type": "Other Gear",
       "weight": 3,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-clothes-common-mnys8ji5s1dw"
     },
     {
       "name": "Clothes, Fine",
@@ -351,7 +371,8 @@
       "type": "Other Gear",
       "weight": 6,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-clothes-fine-mnys8ji5x7q6"
     },
     {
       "name": "Playing Card Set",
@@ -360,7 +381,8 @@
       "type": "Other Gear",
       "weight": 0,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-playing-card-set-mnys8ji5ed7i"
     },
     {
       "name": "Antitoxin",
@@ -369,7 +391,8 @@
       "type": "Other Gear",
       "weight": 0,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-antitoxin-mnys8ji5vcsf"
     },
     {
       "name": "Crowbar",
@@ -378,7 +401,8 @@
       "type": "Other Gear",
       "weight": 5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-crowbar-mnys8ji5ppsp"
     },
     {
       "name": "Hammer",
@@ -387,7 +411,8 @@
       "type": "Other Gear",
       "weight": 3,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-hammer-mnys8ji57wiq"
     },
     {
       "name": "Piton",
@@ -396,7 +421,8 @@
       "type": "Other Gear",
       "weight": 0.25,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-piton-mnys8ji5o1vs"
     },
     {
       "name": "Rations (1 day)",
@@ -405,7 +431,8 @@
       "type": "Other Gear",
       "weight": 2,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-rations-1-day--mnys8ji51ouy"
     },
     {
       "name": "Rope, Hempen (50 feet)",
@@ -414,7 +441,8 @@
       "type": "Other Gear",
       "weight": 10,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-rope-hempen-50-feet--mnys8ji5i7ey"
     },
     {
       "name": "Tinderbox",
@@ -423,7 +451,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-tinderbox-mnys8ji5ja0c"
     },
     {
       "name": "Torch",
@@ -432,7 +461,8 @@
       "type": "Other Gear",
       "weight": 1,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-torch-mnys8ji5ocgx"
     },
     {
       "name": "Waterskin",
@@ -441,7 +471,48 @@
       "type": "Other Gear",
       "weight": 5,
       "rarity": "Common",
-      "magic": false
+      "magic": false,
+      "id": "inv-waterskin-mnys8ji5pamt"
+    },
+    {
+      "id": "item-1776175635883-1425",
+      "name": "Smoke Test Potion",
+      "description": "For testing only",
+      "mechanical": "",
+      "quantity": 1,
+      "type": "gear",
+      "equipped": false,
+      "attuned": false,
+      "magical": false,
+      "cursed": false,
+      "notes": "Awarded by DM",
+      "awardedByDM": true
+    },
+    {
+      "id": "item-1776281650409-tk54",
+      "name": "Test Smoke Pellet",
+      "description": "Creates smoke",
+      "quantity": 1,
+      "type": "gear",
+      "equipped": false,
+      "attuned": false,
+      "magical": false,
+      "cursed": false,
+      "notes": ""
+    },
+    {
+      "id": "item-1776281677538-e9s1",
+      "name": "Test Sword",
+      "description": "",
+      "mechanical": "",
+      "quantity": 1,
+      "type": "gear",
+      "equipped": false,
+      "attuned": false,
+      "magical": true,
+      "cursed": false,
+      "notes": "Awarded by DM",
+      "awardedByDM": true
     }
   ],
   "conditions": [],
@@ -481,7 +552,8 @@
     "description": null
   },
   "patron": "Eldritch Knight",
-  "_syncedAt": "2026-04-12T21:14:06.041Z",
+  "_syncedAt": "2026-04-16T18:56:00.455Z",
   "_source": "ddb",
-  "_ddbUrl": "https://www.dndbeyond.com/characters/164126673"
+  "_ddbUrl": "https://www.dndbeyond.com/characters/164126673",
+  "notes": "smoke test note"
 }

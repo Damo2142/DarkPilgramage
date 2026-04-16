@@ -141,19 +141,77 @@ function computeAC(data, abilityScores) {
 }
 
 // ── Spell slots ───────────────────────────────────────────────────────────────
-function getSpellSlots(data) {
-  if (!data.spellSlots) return null;
+// Full caster slot table, indexed [casterLevel][spellLevel-1]
+const FULL_CASTER_SLOTS = {
+  1: [2], 2: [3], 3: [4,2], 4: [4,3], 5: [4,3,2],
+  6: [4,3,3], 7: [4,3,3,1], 8: [4,3,3,2], 9: [4,3,3,3,1], 10: [4,3,3,3,2],
+  11: [4,3,3,3,2,1], 12: [4,3,3,3,2,1], 13: [4,3,3,3,2,1,1], 14: [4,3,3,3,2,1,1],
+  15: [4,3,3,3,2,1,1,1], 16: [4,3,3,3,2,1,1,1], 17: [4,3,3,3,2,1,1,1,1],
+  18: [4,3,3,3,3,1,1,1,1], 19: [4,3,3,3,3,2,1,1,1], 20: [4,3,3,3,3,2,2,1,1]
+};
+// Warlock pact magic: [slotCount, slotLevel]
+const WARLOCK_SLOTS = {
+  1: [1,1], 2: [2,1], 3: [2,2], 4: [2,2], 5: [2,3], 6: [2,3],
+  7: [2,4], 8: [2,4], 9: [2,5], 10: [2,5], 11: [3,5], 12: [3,5],
+  13: [3,5], 14: [3,5], 15: [3,5], 16: [3,5], 17: [4,5], 18: [4,5],
+  19: [4,5], 20: [4,5]
+};
+const FULL_CASTERS = new Set(['Bard','Cleric','Druid','Sorcerer','Wizard']);
+const HALF_CASTERS = new Set(['Paladin','Ranger','Artificer']);
+const THIRD_CASTER_SUBS = new Set(['Eldritch Knight','Arcane Trickster']);
+
+function computeCasterLevel(classes) {
+  let full = 0, half = 0, third = 0;
+  for (const c of classes || []) {
+    const name = c.name || '';
+    const sub = c.subclass || '';
+    if (name === 'Warlock') continue; // handled separately
+    if (FULL_CASTERS.has(name)) full += c.level;
+    else if (HALF_CASTERS.has(name)) half += c.level;
+    else if (THIRD_CASTER_SUBS.has(sub)) third += c.level;
+  }
+  // Multiclass formula (PHB 164): full + floor(half/2) + floor(third/3)
+  return full + Math.floor(half/2) + Math.floor(third/3);
+}
+
+function computeSpellSlots(classes, usedMap = {}) {
   const slots = {};
-  for (const slot of data.spellSlots) {
-    if (slot.available > 0 || slot.used > 0) {
-      slots[`level${slot.level}`] = {
-        total: slot.available + slot.used,
-        used: slot.used,
-        remaining: slot.available
-      };
+  // Regular slots from full/half/third casters
+  const casterLevel = computeCasterLevel(classes);
+  if (casterLevel > 0) {
+    const table = FULL_CASTER_SLOTS[casterLevel] || [];
+    table.forEach((total, idx) => {
+      const key = `level${idx+1}`;
+      const used = Math.min(total, usedMap[key]?.used || 0);
+      slots[key] = { total, used, remaining: total - used };
+    });
+  }
+  // Warlock pact magic (separate slot pool)
+  const warlock = (classes || []).find(c => c.name === 'Warlock');
+  if (warlock && warlock.level > 0) {
+    const [count, lvl] = WARLOCK_SLOTS[warlock.level] || [0,0];
+    if (count > 0) {
+      const key = `level${lvl}`;
+      // If this level already has slots from other classes, add pact on top
+      const existing = slots[key] || { total: 0, used: 0, remaining: 0 };
+      const total = existing.total + count;
+      const used = Math.min(total, usedMap[key]?.used || existing.used);
+      slots[key] = { total, used, remaining: total - used };
     }
   }
   return Object.keys(slots).length ? slots : null;
+}
+
+function getSpellSlots(data, classes) {
+  // Build used-map from DDB's current usage, if any
+  const usedMap = {};
+  for (const slot of (data.spellSlots || [])) {
+    if (slot.used > 0) usedMap[`level${slot.level}`] = { used: slot.used };
+  }
+  for (const slot of (data.pactMagic || [])) {
+    if (slot.used > 0) usedMap[`level${slot.level}`] = { used: slot.used };
+  }
+  return computeSpellSlots(classes, usedMap);
 }
 
 // ── Map inventory ─────────────────────────────────────────────────────────────
@@ -233,7 +291,7 @@ function mapCharacter(ddbData, ddbId) {
   const ac = computeAC(d, abilityScores);
 
   // Spell slots
-  const spellSlots = getSpellSlots(d);
+  const spellSlots = getSpellSlots(d, classes);
 
   // Backstory, traits, appearance, allies
   const traits = d.traits || {};

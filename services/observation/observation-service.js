@@ -24,6 +24,14 @@ class ObservationService {
 
     // Track which observations have been fired (prevent duplicates)
     this.firedObservations = new Set();
+
+    // Active-look pacing — queue reveals per player to avoid flooding the
+    // Chromebook with 30 simultaneous observation toasts when a PC beats
+    // many DCs at once (e.g. Zarina rolls 23 and hits everything ≤ 23).
+    this._activeLookQueues = new Map(); // playerId -> [{obs, dc, eventId, rollTotal}]
+    this._activeLookTimers = new Map(); // playerId -> interval timer
+    this.ACTIVE_LOOK_MAX_PER_ROLL = 8;   // cap highest-DC reveals per look
+    this.ACTIVE_LOOK_SPACING_MS = 1500;  // 1.5s between each reveal
   }
 
   async init(orchestrator) {
@@ -180,6 +188,121 @@ class ObservationService {
       for (const obs of eventObs) {
         this._fireObservation(obs, eventId);
       }
+    }
+  }
+
+  // Enqueue an active-check reveal attempt. Buffers per player so we
+  // can cap the number of simultaneous reveals and space them out on
+  // the player's Chromebook. The actual reveal (DC check + dispatch)
+  // happens in _drainActiveLookQueue.
+  _queueForActiveCheck(obs, eventId, playerId, rollTotal) {
+    const dc = obs.dc || 10;
+    const obsKey = `active-${playerId}-${eventId}-${obs.id || obs.tier}-${dc}`;
+    if (this.firedObservations.has(obsKey)) return;   // already revealed to this player
+    if (rollTotal < dc) {
+      // Miss — whisper DM once, don't clutter queue
+      const charName = this.state.get(`players.${playerId}.character.name`) || playerId;
+      this.bus.dispatch('dm:whisper', {
+        text: `${charName} missed DC${dc} (rolled ${rollTotal}): "${(obs.text || '').substring(0, 60)}"`,
+        priority: 5,
+        category: 'observation'
+      });
+      return;
+    }
+
+    if (!this._activeLookQueues.has(playerId)) this._activeLookQueues.set(playerId, []);
+    const q = this._activeLookQueues.get(playerId);
+    q.push({ obs, eventId, rollTotal, dc, obsKey });
+
+    if (!this._activeLookTimers.get(playerId)) {
+      // Claim the drain slot immediately so same-tick enqueues don't
+      // schedule a second, racing drain (would break 1.5s pacing and
+      // double-sort the queue).
+      const sentinel = setTimeout(() => this._drainActiveLookQueue(playerId), 10);
+      this._activeLookTimers.set(playerId, sentinel);
+    }
+  }
+
+  _drainActiveLookQueue(playerId) {
+    const q = this._activeLookQueues.get(playerId);
+    if (!q || q.length === 0) {
+      this._activeLookQueues.delete(playerId);
+      return;
+    }
+
+    // Sort by DC descending so the highest-DC (most impressive) reveals
+    // are delivered first, and cap to ACTIVE_LOOK_MAX_PER_ROLL.
+    q.sort((a, b) => b.dc - a.dc);
+    const excess = q.splice(this.ACTIVE_LOOK_MAX_PER_ROLL);
+    if (excess.length) {
+      const charName = this.state.get(`players.${playerId}.character.name`) || playerId;
+      this.bus.dispatch('dm:whisper', {
+        text: `${charName} would also notice ${excess.length} more detail(s) — capped at ${this.ACTIVE_LOOK_MAX_PER_ROLL} per active look to avoid flooding the player.`,
+        priority: 4,
+        category: 'observation'
+      });
+      // Leave them un-fired so they may still reveal on a future look.
+    }
+
+    const fireNext = () => {
+      const next = q.shift();
+      if (!next) {
+        clearTimeout(this._activeLookTimers.get(playerId));
+        this._activeLookTimers.delete(playerId);
+        this._activeLookQueues.delete(playerId);
+        return;
+      }
+      this._fireForActiveCheck(next.obs, next.eventId, playerId, next.rollTotal);
+      const t = setTimeout(fireNext, this.ACTIVE_LOOK_SPACING_MS);
+      this._activeLookTimers.set(playerId, t);
+    };
+    fireNext();
+  }
+
+  // Active-check variant: fire the observation for one specific player
+  // based on their rolled total vs DC. Beats dedup so the same player
+  // can keep looking and find different DC-tiered things over time, but
+  // per-observation dedup still applies per player.
+  _fireForActiveCheck(obs, eventId, playerId, rollTotal) {
+    const dc = obs.dc || 10;
+    const charName = this.state.get(`players.${playerId}.character.name`) || playerId;
+    const obsKey = `active-${playerId}-${eventId}-${obs.id || obs.tier}-${dc}`;
+    if (this.firedObservations.has(obsKey)) return;
+
+    const text = (obs.text || '').trim();
+    // DM instruction notes (start with "If ") are guidance for the DM,
+    // not player-facing observations. Route to dm:whisper only.
+    if (text.startsWith('If ') || text.startsWith('if ')) {
+      this.firedObservations.add(obsKey);
+      this.bus.dispatch('dm:whisper', {
+        text: `[DM NOTE] ${charName} qualified for DC${dc}: "${text.substring(0, 120)}"`,
+        priority: 4, category: 'observation'
+      });
+      return;
+    }
+
+    if (rollTotal >= dc) {
+      this.firedObservations.add(obsKey);
+      this.bus.dispatch('dm:private_message', {
+        playerId,
+        text,
+        durationMs: 45000,
+        style: 'observation',
+        linkedSecret: obs.linkedSecret || null
+      });
+      this.bus.dispatch('dm:whisper', {
+        text: `${charName} found (DC${dc}, rolled ${rollTotal}): "${(obs.text || '').substring(0, 80)}"`,
+        priority: 3,
+        category: 'observation'
+      });
+      console.log(`[Observation] ActiveCheck DC${dc}: ${charName} rolled ${rollTotal} — REVEAL: ${(obs.text || '').substring(0, 60)}`);
+    } else {
+      // Don't reveal — but whisper DM so they know what was missed.
+      this.bus.dispatch('dm:whisper', {
+        text: `${charName} missed DC${dc} (rolled ${rollTotal}): "${(obs.text || '').substring(0, 60)}"`,
+        priority: 5,
+        category: 'observation'
+      });
     }
   }
 
@@ -348,6 +471,21 @@ class ObservationService {
   _onObservationTrigger(d) {
     if (!d || !d.id) return;
 
+    // Active check path — player actively looked. Use their rolled d20 +
+    // perception instead of passive perception, and restrict reveals to
+    // that player. Each registered observation is tested against the roll
+    // and then queued for paced delivery (see _drainActiveLookQueue) so
+    // 30 reveals don't flood the Chromebook in a single frame.
+    if (d.activeCheck && d.targetPlayer && typeof d.perceptionRoll === 'number') {
+      if (!d.text && this.observations.has(d.id)) {
+        const eventObs = this.observations.get(d.id);
+        for (const obs of eventObs) {
+          this._queueForActiveCheck(obs, d.id, d.targetPlayer, d.perceptionRoll);
+        }
+      }
+      return;
+    }
+
     // Reference path: { id } only — look up registered observation
     if (!d.text && this.observations.has(d.id)) {
       const eventObs = this.observations.get(d.id);
@@ -459,11 +597,21 @@ class ObservationService {
       res.json({ ok: true, dispatched: d });
     });
 
+    // POST /api/debug/player-chat — dispatch a player:chat event to exercise
+    // the full routing pipeline (active perception detection etc.) without
+    // needing a WebSocket client.
+    app.post('/api/debug/player-chat', (req, res) => {
+      const { playerId, text, channel } = req.body || {};
+      if (!playerId || !text) return res.status(400).json({ error: 'playerId and text required' });
+      this.bus.dispatch('player:chat', { playerId, text, channel: channel || 'party' });
+      res.json({ ok: true, playerId, text });
+    });
+
     // POST /api/debug/npc-speak — dispatch literal NPC dialogue for testing
     // Fires npc:approved → voice-service → ElevenLabs → room speaker
-    // body: { npcId, text, private?: boolean, toPlayerId?: string }
+    // body: { npcId, text, private?: boolean, toPlayerId?: string, languageId?: string }
     app.post('/api/debug/npc-speak', (req, res) => {
-      const { npcId, text, private: isPrivate, toPlayerId } = req.body || {};
+      const { npcId, text, private: isPrivate, toPlayerId, languageId } = req.body || {};
       if (!npcId || !text) return res.status(400).json({ error: 'npcId and text required' });
       const npcState = this.state.get(`npcs.${npcId}`) || {};
       const patron = this.config && this.config[npcId];
@@ -471,6 +619,7 @@ class ObservationService {
       const voiceCode = npcState.voiceCode || (patron && patron.voiceCode);
       this.bus.dispatch('npc:approved', {
         id: 'debug-' + Date.now(),
+        languageId: languageId || null,
         npc: npcName,
         npcId,
         text,

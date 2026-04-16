@@ -315,8 +315,90 @@ class VoiceService {
       return;
     }
 
+    // Language gate — if the NPC is speaking something other than Common,
+    // the room speaker (and everyone who doesn't speak it) should hear
+    // only indistinct speech. The player(s) who understand get the real
+    // audio routed privately to their Chromebook via
+    // `npc:audio:private_to_speakers`. The room still gets a text cue and,
+    // if available, a generic "muffled speech" sound so the table isn't
+    // dead silent.
+    const spokenLang = this._detectSpokenLanguage(data);
+    const isNonCommon = spokenLang && spokenLang !== 'common';
+    if (isNonCommon) {
+      this._speakNpcNonCommon(text, npc || npcId || 'NPC', this._npcVoiceId(data), npcId, spokenLang).catch(e => {
+        console.error('[VoiceService] _speakNpcNonCommon error:', e.message);
+      });
+      return;
+    }
+
     // Public NPC dialogue → room speaker
     this._speakNpcPublic(text, npc || npcId || 'NPC', this._npcVoiceId(data), npcId);
+  }
+
+  // Extract the language this line is being spoken in. Prefer the explicit
+  // languageId on the dialogue (set by scripted events + comm-router's DM
+  // narration parser), fall back to the NPC's configured primary language.
+  _detectSpokenLanguage(data) {
+    if (data && data.languageId) return String(data.languageId).toLowerCase();
+    const npcId = data && data.npcId;
+    if (!npcId) return 'common';
+    const npcState = this.state && this.state.get(`npcs.${npcId}`);
+    const npcCfg = (this.config && (this.config.npcs && this.config.npcs[npcId])) || (this.config && this.config[npcId]) || null;
+    const primary = (npcState && npcState.primaryLanguage) || (npcCfg && npcCfg.primaryLanguage) || 'common';
+    return String(primary).toLowerCase();
+  }
+
+  // Non-Common routing:
+  // 1. Build the list of players whose character speaks the language.
+  // 2. Generate ONE MP3 via ElevenLabs and route it privately to each of
+  //    those players via npc:audio:player.
+  // 3. Room speaker gets a short "muffled speech" cue (no intelligible
+  //    words) and the DM earbud gets a tell so Dave knows audio is gated.
+  async _speakNpcNonCommon(text, npcName, voiceId, npcId, langId) {
+    const durationMs = this._estimateSpeechMs(text);
+    if (npcId) {
+      this.bus.dispatch('token:speaking', { tokenId: npcId, npc: npcName, durationMs });
+    }
+    const understanders = this._playersWhoSpeak(langId);
+    const langLabel = langId.charAt(0).toUpperCase() + langId.slice(1);
+
+    // Generate one private MP3 (shared across understanders)
+    let url = null;
+    if (voiceId && understanders.length) {
+      url = await this._elevenLabsToFile(text, voiceId, this.npcCacheDir, 'priv');
+    }
+    for (const playerId of understanders) {
+      this.bus.dispatch('npc:audio:player', {
+        playerId, npc: npcName, npcId, text, url, channel: 'player',
+        languageId: langId, durationMs
+      });
+    }
+
+    // Room speaker + non-understanders: unintelligible cue only
+    this.bus.dispatch('npc:audio:speak', {
+      text: `[${npcName} speaks in ${langLabel} — ${understanders.length} player(s) understand]`,
+      channel: 'room', fallback: true, npc: npcName, languageId: langId, muffled: true
+    });
+
+    this.bus.dispatch('dm:whisper', {
+      text: `[LANG GATE] ${npcName} speaking ${langId}. Private audio to: ${understanders.join(', ') || '(no one at table)'}. Room speaker muffled.`,
+      priority: 4, category: 'language', source: 'voice-service'
+    });
+  }
+
+  _playersWhoSpeak(langId) {
+    const ids = [];
+    const players = (this.state && this.state.get('players')) || {};
+    for (const [pid, p] of Object.entries(players)) {
+      if (!p || !p.character) continue;
+      const langs = [];
+      if (Array.isArray(p.character.languages)) langs.push(...p.character.languages.map(l => String(l).toLowerCase()));
+      if (Array.isArray(p.character.languageStructured)) {
+        langs.push(...p.character.languageStructured.map(l => String(l.id || l.displayName || '').toLowerCase()));
+      }
+      if (langs.some(l => l === langId || l.includes(langId))) ids.push(pid);
+    }
+    return ids;
   }
 
   /**

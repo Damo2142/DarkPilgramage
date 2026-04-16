@@ -532,6 +532,7 @@
   <div id="max-controls" style="flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:10px 24px;background:#1e1a14;border-bottom:1px solid var(--border);">
     <button id="btn-max-pause" class="session-btn danger large" onclick="MaxControls.togglePause()" style="min-width:160px;">⏸ PAUSE MAX (5m)</button>
     <button class="session-btn muted" onclick="ackMaxDelivery()" style="padding:10px 18px;font-size:14px;" title="SPACEBAR also works">→ MAX NEXT</button>
+    <button class="session-btn muted" onclick="MaxControls.testAudio()" style="padding:10px 14px;font-size:12px;" title="Dispatch a test Max audio event through the full browser path">🔊 TEST MAX</button>
     <span id="max-queue-count" style="font-family:monospace;font-size:11px;color:var(--text-dim);min-width:24px;text-align:center;" title="Max queue depth">0</span>
     <span id="max-pause-countdown" style="font-family:monospace;font-size:12px;color:var(--text-dim);min-width:90px;"></span>
     <!-- PHASE 6 — combat start button -->
@@ -571,6 +572,9 @@
     <div id="max-input-area">
       <input type="text" id="max-input" placeholder="Type a question for Max..." onkeydown="if(event.key==='Enter')sendMax()">
       <button id="max-send" onclick="sendMax()">SEND</button>
+      <button id="dm-ptt-btn" onmousedown="DmPTT.start()" onmouseup="DmPTT.stop()" ontouchstart="DmPTT.start();event.preventDefault()" ontouchend="DmPTT.stop()"
+        style="background:none;border:2px solid var(--border);color:var(--text-dim);padding:8px 14px;border-radius:4px;cursor:pointer;font-size:14px;white-space:nowrap;user-select:none;"
+        title="Hold to speak to Max">🎙 HOLD</button>
     </div>
   </div>
 
@@ -879,6 +883,76 @@ function sendMax() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// DM PTT → MAX (hold to speak, release to send to Max)
+// ═══════════════════════════════════════════════════════════════
+var DmPTT = {
+  _active: false,
+  _stream: null,
+  _context: null,
+  _processor: null,
+  _waitingForTranscript: false,
+
+  async start() {
+    if (this._active) return;
+    var btn = $('dm-ptt-btn');
+    try {
+      this._stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 16000 }
+      });
+      this._context = new AudioContext({ sampleRate: 16000 });
+      var source = this._context.createMediaStreamSource(this._stream);
+      this._processor = this._context.createScriptProcessor(4096, 1, 1);
+      this._processor.onaudioprocess = function(e) {
+        if (!DmPTT._active) return;
+        var f32 = e.inputBuffer.getChannelData(0);
+        var i16 = new Int16Array(f32.length);
+        for (var i = 0; i < f32.length; i++) i16[i] = Math.max(-32768, Math.min(32767, Math.round(f32[i] * 32767)));
+        if (ws && ws.readyState === 1) {
+          ws.send(JSON.stringify({ type: 'audio:dm_chunk', data: { audio: Array.from(i16), sampleRate: 16000, playerId: 'dm' } }));
+        }
+      };
+      source.connect(this._processor);
+      this._processor.connect(this._context.destination);
+      this._active = true;
+      this._waitingForTranscript = true;
+      if (btn) { btn.style.borderColor = 'var(--red-bright,#e04040)'; btn.style.color = '#e04040'; btn.textContent = '🎙 LISTENING...'; }
+    } catch (e) {
+      console.error('[DmPTT] Mic failed:', e.message);
+      if (btn) btn.textContent = '🎙 MIC ERROR';
+    }
+  },
+
+  stop() {
+    this._active = false;
+    if (this._processor) { this._processor.disconnect(); this._processor = null; }
+    if (this._context) { this._context.close(); this._context = null; }
+    if (this._stream) { this._stream.getTracks().forEach(function(t) { t.stop(); }); this._stream = null; }
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: 'audio:dm_flush' }));
+    }
+    var btn = $('dm-ptt-btn');
+    if (btn) { btn.style.borderColor = 'var(--border)'; btn.style.color = 'var(--text-dim)'; btn.textContent = '🎙 HOLD'; }
+  },
+
+  onTranscript(text) {
+    if (!this._waitingForTranscript || !text) return;
+    this._waitingForTranscript = false;
+    addWhisper({ tag: 'YOU', text: text });
+    var btn = $('dm-ptt-btn');
+    if (btn) { btn.textContent = '🎙 SENDING...'; }
+    fetch('/api/hal/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: text, source: 'voice' })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d && (d.text || d.response)) addWhisper({ tag: 'MAX', text: d.text || d.response });
+    }).catch(function() {}).then(function() {
+      if (btn) btn.textContent = '🎙 HOLD';
+    });
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════
 // SESSION MODE — Start Campaign / Start Session / Stop / Pause
 // ═══════════════════════════════════════════════════════════════
 var SessionMode = {
@@ -996,6 +1070,11 @@ var MaxControls = {
       var saved = JSON.parse(localStorage.getItem('codm.audioDevices.v1') || '{}');
       MaxControls._earbudSinkId = saved.earbud || localStorage.getItem('dp_earbud_output') || null;
     } catch (e) {}
+    if (!MaxControls._earbudSinkId) {
+      try {
+        addWhisper({ tag: 'AUDIO', text: '⚠ No DM earbud saved — go to /dm/ref → Audio Devices → pick earbud → click "Save Audio Config" → then reload /dm. Max will play on the system default until then.' });
+      } catch (x) {}
+    }
     // Restore saved volume
     try {
       var v = parseFloat(localStorage.getItem('codm.maxVolume'));
@@ -1074,10 +1153,31 @@ var MaxControls = {
       if (cd) cd.textContent = '';
     }
   },
+  // Re-read the earbud sink id from localStorage every time we need it. The
+  // DM may save a new device in /dm/ref AUDIO DEVICES after /dm was already
+  // open; without this MaxControls would play to the stale sink (often the
+  // default speaker) and the DM hears nothing. Low cost — just a JSON parse.
+  _reloadEarbudSink: function() {
+    try {
+      var saved = JSON.parse(localStorage.getItem('codm.audioDevices.v1') || '{}');
+      var next = saved.earbud || localStorage.getItem('dp_earbud_output') || null;
+      if (next !== MaxControls._earbudSinkId) {
+        console.log('[MaxControls] earbud sink updated:', String(next || 'null').slice(0, 12));
+        MaxControls._earbudSinkId = next;
+      }
+    } catch (e) {}
+  },
   // FIX-C1 — handle max:audio events from voice-service
   handleMaxAudio: function(d) {
-    if (!d || !d.url) return;
+    if (!d || !d.url) {
+      try { addWhisper({ tag: 'AUDIO', text: 'Max audio event ignored: no url in payload' }); } catch (x) {}
+      return;
+    }
     if (MaxControls.paused) { console.log('[MaxControls] paused — dropping audio'); return; }
+
+    // Always re-read the earbud sink id in case it changed since page load.
+    MaxControls._reloadEarbudSink();
+
     // Stop any previously-queued Max audio so successive whispers don't overlap
     if (MaxControls._audio) {
       try { MaxControls._audio.pause(); MaxControls._audio.src = ''; } catch (e) {}
@@ -1085,35 +1185,62 @@ var MaxControls = {
     var audio = new Audio(d.url);
     audio.volume = MaxControls.volume;
     var text = d.text || '';
+    var url = d.url;
     var sinkUsed = 'default';
+    var configuredSink = MaxControls._earbudSinkId;
+    // Surface arrival in the whisper log so the DM can see the pipeline
+    // reached the browser at all. AUDIO tag = browser audio diagnostics.
+    try {
+      addWhisper({
+        tag: 'AUDIO',
+        text: 'Max audio received: ' + (text ? '"' + text.slice(0, 40) + '" ' : '') +
+              '→ ' + (configuredSink ? 'earbud ' + String(configuredSink).slice(0, 8) + '…' : 'DEFAULT (no earbud configured — save in /dm/ref Audio Devices + reload)')
+      });
+    } catch (x) {}
+
     var play = function() {
       audio.play().then(function() {
         console.log('[MaxControls] playing on', sinkUsed, '—', text.slice(0, 60));
+        try { addWhisper({ tag: 'AUDIO', text: 'Max audio playing on ' + sinkUsed }); } catch (x) {}
       }).catch(function(e) {
         // Autoplay blocked, device gone, or other playback failure.
         // Fall back to speechSynthesis so Max stays audible rather than
         // silently vanishing. Surface in the whisper log so the DM sees it.
         console.warn('[MaxControls] audio play failed on', sinkUsed, ':', e.message, '— falling back to browser TTS');
         try {
-          addWhisper({ tag: 'AUDIO', text: 'Max audio play failed on ' + sinkUsed + ' (' + e.message + ') — speechSynthesis fallback' });
+          addWhisper({ tag: 'AUDIO', text: '⚠ Max audio play FAILED on ' + sinkUsed + ' — ' + e.message + ' — speechSynthesis fallback' });
         } catch (x) {}
         if (text) MaxControls.handleMaxFallback({ text: text });
       });
     };
-    if (MaxControls._earbudSinkId && audio.setSinkId) {
-      audio.setSinkId(MaxControls._earbudSinkId).then(function() {
-        sinkUsed = 'earbud (' + String(MaxControls._earbudSinkId).slice(0, 8) + '…)';
+    if (configuredSink && audio.setSinkId) {
+      audio.setSinkId(configuredSink).then(function() {
+        sinkUsed = 'earbud (' + String(configuredSink).slice(0, 8) + '…)';
         play();
       }).catch(function(err) {
         console.warn('[MaxControls] setSinkId failed (' + err.message + ') — using default sink');
-        sinkUsed = 'default (setSinkId rejected: ' + err.message + ')';
+        sinkUsed = 'default (setSinkId REJECTED: ' + err.message + ')';
+        try {
+          addWhisper({ tag: 'AUDIO', text: '⚠ Max earbud setSinkId rejected: ' + err.message + ' — falling through to default device' });
+        } catch (x) {}
         play();
       });
     } else {
-      sinkUsed = MaxControls._earbudSinkId ? 'default (no setSinkId support)' : 'default (no earbud configured)';
+      sinkUsed = configuredSink ? 'default (browser has no setSinkId support)' : 'default (no earbud configured)';
       play();
     }
     MaxControls._audio = audio;
+  },
+  // Diagnostic — fire a test Max audio event using a pre-existing MP3 file
+  // so the DM can verify the browser-side audio path independently of
+  // ElevenLabs. Hits the server, which dispatches the normal max:audio WS
+  // event back. Bypasses the max-director queue + throttle.
+  testAudio: function() {
+    MaxControls._reloadEarbudSink();
+    try { addWhisper({ tag: 'AUDIO', text: 'Max test — reading earbud sink: ' + (MaxControls._earbudSinkId ? String(MaxControls._earbudSinkId).slice(0, 12) + '…' : 'NONE — configure in /dm/ref Audio Devices') }); } catch (x) {}
+    fetch('/api/max/test-audio', { method: 'POST' }).then(function(r){return r.json();}).then(function(d) {
+      if (!d.ok) addWhisper({ tag: 'AUDIO', text: 'Max test dispatch failed: ' + (d.error || 'unknown') });
+    }).catch(function(e) { addWhisper({ tag: 'AUDIO', text: 'Max test request failed: ' + e.message }); });
   },
   // FIX-C1 — browser-TTS fallback when ElevenLabs is unavailable
   handleMaxFallback: function(d) {
@@ -1203,8 +1330,13 @@ var RoomAudio = {
   // FIX-D — handle npc:audio events and play on the configured room sink
   handleNpcAudio: function(d) {
     if (!d || !d.url) return;
-    // Stop any previously-playing NPC line so rapid dialogue doesn't overlap
+    // Stop any previously-playing NPC line so rapid dialogue doesn't overlap.
+    // Mark it canceled so the pending setSinkId→play chain bails out
+    // instead of calling play() on an audio element whose src we just
+    // cleared — that was the source of "The element has no supported sources"
+    // errors when two NPC lines dispatched back-to-back.
     if (RoomAudio._audio) {
+      RoomAudio._audio.__rdCanceled = true;
       try { RoomAudio._audio.pause(); RoomAudio._audio.src = ''; } catch (e) {}
     }
     var audio = new Audio(d.url);
@@ -1213,9 +1345,13 @@ var RoomAudio = {
     var text = d.text || '';
     var sinkUsed = 'default';
     var play = function() {
+      if (audio.__rdCanceled) return; // superseded by a later NPC line
       audio.play().then(function() {
         console.log('[RoomAudio] NPC playing on', sinkUsed, '—', npcLabel, ':', text.slice(0, 60));
       }).catch(function(e) {
+        // If we were canceled by the next dispatch, don't warn or fall
+        // back — the replacement line is already playing.
+        if (audio.__rdCanceled) return;
         // Autoplay blocked or sink gone. Fall back to speechSynthesis so
         // the line is still audible, surface it in the whisper log so
         // the DM sees the fallback happened.
@@ -1228,6 +1364,8 @@ var RoomAudio = {
         }
       });
     };
+    RoomAudio._audio = audio; // stored BEFORE async setSinkId so a later
+                              // dispatch that arrives mid-chain can cancel us.
     if (RoomAudio._roomSinkId && audio.setSinkId) {
       audio.setSinkId(RoomAudio._roomSinkId).then(function() {
         sinkUsed = 'room (' + String(RoomAudio._roomSinkId).slice(0, 8) + '…)';
@@ -1241,13 +1379,57 @@ var RoomAudio = {
       sinkUsed = RoomAudio._roomSinkId ? 'default (no setSinkId support)' : 'default (no room sink configured)';
       play();
     }
-    RoomAudio._audio = audio;
     addWhisper({ tag: 'NPC', text: '[' + npcLabel + '] ' + text.slice(0, 80) });
   },
-  // FIX-D — silent text-only fallback when ElevenLabs is unavailable
+  // FIX-D — silent text-only fallback when ElevenLabs is unavailable,
+  // and language-gated fallback: when the NPC is speaking a non-Common
+  // language the room speaker should get indistinct speech so players
+  // who don't speak it can't follow the dialogue even at the table.
   handleNpcFallback: function(d) {
     if (!d || !d.text) return;
+    if (d.muffled) {
+      // Log the routing tell for the DM's whisper feed.
+      addWhisper({ tag: 'LANG', text: d.text });
+      // Browser speechSynthesis is the closest approximation to muffled
+      // speech we have on a bare-metal install. Use random phonetic
+      // syllables so no listener can reconstruct the line from the
+      // rhythm alone.
+      if ('speechSynthesis' in window) {
+        try {
+          var gibb = RoomAudio._gibberishFor(d.text || '', d.languageId);
+          var u = new SpeechSynthesisUtterance(gibb);
+          u.volume = Math.max(0.25, (RoomAudio._volume || 0.85) * 0.55);
+          u.rate = 0.9;
+          u.pitch = 0.85;
+          window.speechSynthesis.speak(u);
+        } catch (e) { console.warn('[RoomAudio] muffled fallback failed:', e.message); }
+      }
+      return;
+    }
     addWhisper({ tag: 'NPC', text: '[' + (d.npc || 'NPC') + ' silent] ' + d.text });
+  },
+
+  // Build a gibberish string of roughly the same syllable count as the
+  // source text so the "muffled" muttering has the right cadence without
+  // leaking any words.
+  _gibberishFor: function(text, langId) {
+    var PALETTES = {
+      slovak:  ['pre','tro','sla','mni','vy','kry','do','ne','zra','chu','mi','ste','ho','lo','pa'],
+      draconic:['kri','vo','sath','ixen','kyr','thur','uth','arax','vy','saur','kest','oth','rhy','mar'],
+      orcish:  ['grak','mog','zug','rakh','mur','kaz','nog','thar','bruk','gor','urk'],
+      undercommon:['zh','xu','vri','nesh','kyth','sul','dor','myl','quor'],
+      default: ['mur','um','nth','vo','sha','el','mo','ra','li','ka','en','so','tur','po']
+    };
+    var pal = PALETTES[(langId || '').toLowerCase()] || PALETTES.default;
+    var wordCount = Math.max(3, Math.min(20, Math.round((text || '').split(/\s+/).length * 0.7)));
+    var out = [];
+    for (var i = 0; i < wordCount; i++) {
+      var syllables = 1 + Math.floor(Math.random() * 3);
+      var w = '';
+      for (var j = 0; j < syllables; j++) w += pal[Math.floor(Math.random() * pal.length)];
+      out.push(w);
+    }
+    return out.join(' ');
   }
 };
 window.RoomAudio = RoomAudio;
@@ -1576,6 +1758,15 @@ function handleMsg(msg) {
       var c = msg.data || msg;
       var name2 = c.combatant && c.combatant.name;
       if (name2) addWhisper({ tag: 'COMBAT', text: name2 + "'s turn" });
+    }
+    return;
+  }
+
+  // DM voice transcript → route to DmPTT for auto-Max-query
+  if (t === 'transcript:segment') {
+    var ts = msg.data || msg;
+    if (ts.speaker === 'dm' && ts.text && DmPTT._waitingForTranscript) {
+      DmPTT.onTranscript(ts.text);
     }
     return;
   }

@@ -668,21 +668,22 @@ class PlayerBridgeService {
     }, 'player-bridge');
 
     this.bus.subscribe('dm:private_message', (env) => {
-      const { playerId, text, durationMs } = env.data;
+      const { playerId, text, durationMs, style, linkedSecret } = env.data;
+      const payload = { type: 'dm:private_message', text, durationMs, style, linkedSecret };
       if (playerId === 'all') {
-        this._broadcast({ type: 'dm:private_message', text, durationMs });
+        this._broadcast(payload);
       } else {
-        this._sendToPlayer(playerId, { type: 'dm:private_message', text, durationMs });
+        this._sendToPlayer(playerId, payload);
       }
     }, 'player-bridge');
 
-    this.bus.subscribe('npc:approved', (env) => {
-      this._broadcast({
-        type: 'npc:dialogue',
-        npc: env.data.npc,
-        text: env.data.text
-      });
-    }, 'player-bridge');
+    // NPC dialogue is routed per-player by comm-router via the
+    // `player:npc_speech` handler above (applies proximity + language
+    // filters). The previous broadcast of `npc:dialogue` to every player
+    // duplicated the message — each player saw one overlay from the
+    // routed event and another from this broadcast. Collapsed into the
+    // per-player route so each player sees exactly one entry per line.
+    // (Room-speaker audio still fires via voice-service on npc:approved.)
 
     // Ambient life events — broadcast to all players
     this.bus.subscribe('ambient:observation', (env) => {
@@ -762,6 +763,28 @@ class PlayerBridgeService {
     this.bus.subscribe('npc:chat_reply', (env) => {
       const { playerId, npcId, npcName, text } = env.data;
       this._sendToPlayer(playerId, { type: 'npc:chat_reply', npcId, npcName, text });
+    }, 'player-bridge');
+
+    // Addition 2 — player-to-player ability notifications
+    // (bardic inspiration target flash, item-received flash, etc).
+    // character-service dispatches { playerId, type, ...payload }; we
+    // forward the payload as a WS message of the given type to that player.
+    this.bus.subscribe('player:notification', (env) => {
+      const d = env.data || {};
+      if (!d.playerId || !d.type) return;
+      const msg = { ...d };
+      const target = msg.playerId;
+      msg.type = d.type;
+      delete msg.playerId;
+      this._sendToPlayer(target, msg);
+    }, 'player-bridge');
+
+    // Addition 2 — ability state sync (use-counts, active flags).
+    // Forward to the owning player so their Chromebook UI can refresh.
+    this.bus.subscribe('character:abilities_update', (env) => {
+      const { playerId, abilities } = env.data || {};
+      if (!playerId) return;
+      this._sendToPlayer(playerId, { type: 'character:abilities_update', playerId, abilities });
     }, 'player-bridge');
 
     // Handout distribution (Feature 50) — with language gating
@@ -1524,10 +1547,16 @@ class PlayerBridgeService {
   }
 
   _broadcastPlayerList() {
+    // List ALL assigned players (from state), not just connected WS
+    // clients. Bardic Inspiration, whisper targets, and other UI dropdowns
+    // need the full party — a player doesn't need to be online to be a
+    // valid target for inspiration or a whisper.
+    const allPlayers = this.state.get('players') || {};
     const players = [];
-    for (const [id, player] of this.players) {
-      const charName = this.state.get(`players.${id}.character.name`);
-      players.push({ id, name: charName || id });
+    for (const [id, p] of Object.entries(allPlayers)) {
+      if (p.absent) continue;
+      const charName = p.character?.name || id;
+      players.push({ id, name: charName, connected: this.players.has(id) });
     }
     this._broadcast({ type: 'player:list', players });
   }

@@ -7,7 +7,33 @@ const DEDUP_SKIP_EVENTS = new Set([
   'audio:chunk', 'audio:dm_chunk', 'audio:player_stream_start', 'audio:player_stream_stop',
   'transcript:silence', 'player:camera_frame', 'world:time_update',
   'state:change', 'map:token_moved', 'token:move',
-  'system:error', '*'
+  // Map activation — re-loading the same map should always re-trigger
+  // scene-population (NPC reset). Deduping would suppress this.
+  'map:activated',
+  'system:error', '*',
+  // Combat lifecycle events — each turn/round/attack is a discrete event that
+  // must never be collapsed with a prior one. Without these exclusions, the
+  // second combat:next_turn fingerprint-matches the first within 5s and is
+  // dropped, leaving _npcTacticalAI / _executeNpcCombatAction silent for
+  // every turn after the first (root cause of F1 in production).
+  'combat:next_turn', 'combat:prev_turn', 'combat:started', 'combat:ended',
+  'combat:attack_result', 'combat:hp_changed', 'combat:hit_location',
+  'combat:condition_changed', 'combat:initiative_changed',
+  'combat:combatant_added', 'combat:combatant_removed',
+  'combat:death_save', 'combat:morale_break', 'combat:save_required',
+  'combat:shock_save_passed', 'combat:shock_failed',
+  'combat:player_initiated', 'combat:player_joins',
+  'combat:npc_suggestion', 'combat:forced_movement', 'combat:bleeding_tick',
+  // Session lifecycle events — two long rests for the same player in the
+  // same 5s window (test harness, back-to-back /api/characters/:pid/rest,
+  // or DM clicking twice) otherwise fingerprint-match and the second gets
+  // dropped, leaving horror decay / ability restores silently skipped.
+  'session:long_rest', 'session:short_rest', 'session:started', 'session:ended',
+  'session:paused', 'session:resumed', 'state:session_reset', 'state:session_loaded',
+  // Private messages and observation triggers — each dispatch is a distinct
+  // observation for a distinct player. Dedup fingerprint (text+playerId)
+  // would collapse rapid-fire active-look reveals into a single delivery.
+  'dm:private_message', 'observation:trigger', 'dm:whisper'
 ]);
 
 class EventBus extends EventEmitter {
@@ -31,6 +57,11 @@ class EventBus extends EventEmitter {
     // is expensive and large objects are rarely literal duplicates anyway.
     if (!data || typeof data !== 'object') return event;
     const parts = [event];
+    // `id` is critical for events where the id IS the discriminator —
+    // observation:trigger, combat events keyed on combatant id, etc.
+    // Without it, 21 distinct observation:trigger dispatches for different
+    // eventIds collapse to one and 20 are silently dropped.
+    if (data.id != null)           parts.push('id=' + data.id);
     if (data.text != null)         parts.push('t=' + String(data.text).slice(0, 200));
     if (data.message != null)      parts.push('m=' + String(data.message).slice(0, 200));
     if (data.npcId != null)        parts.push('n=' + data.npcId);
@@ -43,6 +74,9 @@ class EventBus extends EventEmitter {
     if (data.category != null)     parts.push('cat=' + data.category);
     if (data.profile != null)      parts.push('pf=' + data.profile);
     if (data.zoneId != null)       parts.push('z=' + data.zoneId);
+    // For observation:trigger, targetPlayer scopes the fanout; include it
+    // so active-look from Kim and Nick produce distinct fingerprints.
+    if (data.targetPlayer != null) parts.push('tp=' + data.targetPlayer);
     return parts.join('|');
   }
 

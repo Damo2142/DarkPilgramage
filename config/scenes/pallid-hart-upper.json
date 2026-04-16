@@ -1,8 +1,8 @@
 {
   "id": "pallid-hart-upper",
-  "name": "Pallid Hart — Upper Floor",
+  "name": "Pallid Hart \u2014 Upper Floor",
   "map": "pallidheart2",
-  "_mapNotes": "Grid 140px, 4200×2800. Upper hallway y≈1960. Guest rooms y≈490. Coord anchors derived from zone centers in config/maps/pallidheart2.json.",
+  "_mapNotes": "Grid 140px, 4200\u00d72800. Upper hallway y\u22481960. Guest rooms y\u2248490. Coord anchors derived from zone centers in config/maps/pallidheart2.json.",
   "tokens": [
     {
       "id": "pieter-body",
@@ -12,7 +12,10 @@
       "x": 1330,
       "y": 490,
       "hidden": false,
-      "hp": { "current": 0, "max": 0 },
+      "hp": {
+        "current": 0,
+        "max": 0
+      },
       "ac": 0,
       "image": "dead-body.webp",
       "publicName": "Man in Bed",
@@ -26,7 +29,10 @@
       "x": 560,
       "y": 1960,
       "hidden": true,
-      "hp": { "current": 82, "max": 82 },
+      "hp": {
+        "current": 82,
+        "max": 82
+      },
       "ac": 15,
       "image": "vampire-spawn.webp",
       "publicName": "",
@@ -40,7 +46,10 @@
       "x": 2450,
       "y": 1960,
       "hidden": true,
-      "hp": { "current": 82, "max": 82 },
+      "hp": {
+        "current": 82,
+        "max": 82
+      },
       "ac": 15,
       "image": "vampire-spawn.webp",
       "publicName": "",
@@ -53,17 +62,25 @@
       "name": "Silver Dagger",
       "description": "Well-maintained. Recently sharpened. This was his primary tool.",
       "findDC": 8,
-      "x": 1330, "y": 490,
+      "x": 1330,
+      "y": 490,
       "hidden": false,
-      "mechanical": "+1 to attack rolls against undead. Counts as magical.",
-      "importance": "KEY"
+      "mechanical": "+1 to attack rolls against undead. Counts as magical for damage resistance. Silver \u2014 bypasses lycanthrope immunity.",
+      "importance": "KEY",
+      "magical": true,
+      "silver": true,
+      "attackBonus": 4,
+      "damageBonus": 2,
+      "damage": "1d4",
+      "damageType": "piercing"
     },
     {
       "id": "holy-water-x3",
       "name": "Holy Water x3",
       "description": "Three vials, wax-sealed, marked with different ecclesiastical seals.",
       "findDC": 8,
-      "x": 1330, "y": 490,
+      "x": 1330,
+      "y": 490,
       "hidden": false,
       "mechanical": "2d6 radiant damage to undead. Destroys vampire spawn at 0 HP.",
       "importance": "KEY"
@@ -73,7 +90,8 @@
       "name": "Wooden Stakes x6",
       "description": "Hawthorn. Carved by hand. He made these himself.",
       "findDC": 8,
-      "x": 1330, "y": 490,
+      "x": 1330,
+      "y": 490,
       "hidden": false,
       "mechanical": "Paralyzes vampire or spawn reduced to 0 HP. Prevents regeneration while staked.",
       "importance": "KEY"
@@ -83,7 +101,8 @@
       "name": "Healer's Kit (2 uses)",
       "description": "Good quality. Two uses remaining.",
       "findDC": 8,
-      "x": 1330, "y": 490,
+      "x": 1330,
+      "y": 490,
       "hidden": false,
       "mechanical": "Stabilize dying creature without Medicine check.",
       "importance": "USEFUL"
@@ -93,7 +112,8 @@
       "name": "Pieter's Journal",
       "description": "Leather-bound. Heavily used. Twenty years of notes. Maps of Orava and Houska. The final entry stops mid-sentence.",
       "findDC": 8,
-      "x": 1330, "y": 490,
+      "x": 1330,
+      "y": 490,
       "hidden": false,
       "mechanical": "Contains Orava and Houska maps. Key campaign item.",
       "importance": "KEY",
@@ -106,7 +126,8 @@
       "description": "Sewn into the lining of the pack. Not paper. Something else. Warm.",
       "findDC": 14,
       "findMethod": "Active search of pack lining specifically",
-      "x": 1330, "y": 490,
+      "x": 1330,
+      "y": 490,
       "hidden": true,
       "mechanical": "Artifact. Sets carrier via POST /api/artifact/page-carrier and begins influence tracking (see ambient-life-service).",
       "importance": "KEY",
@@ -122,16 +143,21 @@
       "id": "spawn-hunting-upper",
       "trigger": "condition",
       "condition": "time:after:00:00 AND player-alone-upstairs",
-      "creatureIds": ["vampire-spawn-upper-1", "vampire-spawn-upper-2"],
+      "creatureIds": [
+        "vampire-spawn-upper-1",
+        "vampire-spawn-upper-2"
+      ],
       "automatic": false,
-      "maxWhisper": "Spawn hunting trigger — player alone upstairs after midnight. Alert spawn tokens."
+      "maxWhisper": "Spawn hunting trigger \u2014 player alone upstairs after midnight. Alert spawn tokens."
     }
   ],
   "onEnter": {
-    "maxWhisper": "Players are on the upper floor. Pieter's body in room-2 — door unlocked. Vampire spawn tokens placed hidden in hallway west and east. Dispatch creature:player_upstairs to alert spawn state machine.",
+    "maxWhisper": "Players are on the upper floor. Pieter's body in room-2 \u2014 door unlocked. Vampire spawn tokens placed hidden in hallway west and east. Dispatch creature:player_upstairs to alert spawn state machine.",
     "atmosphereProfile": "tavern_tense",
     "observationId": "upper-floor-entry",
     "horrorDelta": 5,
-    "dispatchOnEnter": ["creature:player_upstairs"]
+    "dispatchOnEnter": [
+      "creature:player_upstairs"
+    ]
   }
 }

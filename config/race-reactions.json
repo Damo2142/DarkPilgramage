@@ -1,0 +1,149 @@
+{
+  "_title": "DARK PILGRIMAGE — RACE REACTIONS CONFIG",
+  "_date": "April 13, 2026",
+  "_instruction": "Add raceReactions to config/setting-authenticity.json or as new file config/race-reactions.json. Add maxBehavior section to prompts/hal-codm.md. All additions only.",
+  "_philosophy": "One reaction per character per location. Background texture not mechanical obstacle. Three tiers: noticed, discomfort, active problem. Tier 3 never fires automatically — Max flags it, DM decides. The storm and Vladislav make everyone practical tonight.",
+
+  "tiers": {
+    "1": {
+      "name": "Noticed",
+      "description": "A glance. Someone moves their chair. A child stares. Life continues.",
+      "mechanical": "None. DM weaves into description naturally.",
+      "maxBehavior": "Whisper once on arrival. Do not repeat."
+    },
+    "2": {
+      "name": "Visible discomfort",
+      "description": "Hands don't stop moving. No eye contact. Merchant asks to see coin first. Nothing blocks the session.",
+      "mechanical": "None. Background texture.",
+      "maxBehavior": "Whisper once on arrival. Flag if relevant to an NPC interaction."
+    },
+    "3": {
+      "name": "Active problem",
+      "description": "Priest refuses entry. Guard asks character to cover face. Mob risk if someone starts shouting.",
+      "mechanical": "DM discretion only. Never fires automatically.",
+      "maxBehavior": "Flag as possibility only. Never trigger without DM confirmation."
+    }
+  },
+
+  "characters": {
+    "nick": {
+      "characterName": "Chazz Merry Tunes Mortimer",
+      "race": "Tiefling",
+      "europeanReception": {
+        "baseline": "Tier 2 everywhere. Crimson skin and horns read as devil in 1274 Central Europe. This is not exotic — this is literally what the church says evil looks like.",
+        "management": "Chazz has 40 years of strategies. He knows exactly which gestures, which words, which posture reduces Tier 2 to Tier 1. He does this automatically. It costs him something every time.",
+        "educated": "Scholars, merchants, Vladislav — curious not fearful. Still wary.",
+        "church": "Priests will be hostile. Churches are difficult. This has shaped his relationship with religion.",
+        "why_he_survives": "He has been in Europe 40 years. He is still alive. He is very good at managing this."
+      },
+      "pallidHart": {
+        "tier": 1,
+        "marta": "Serves him without incident. Uncomfortable and does not hide it well. Has seen Vladislav for years — her threshold for wrong is higher than most.",
+        "gregor": "Makes the sign of the cross when Chazz first enters. Does not repeat it. Goes back to watching the door.",
+        "henryk": "Stares briefly. Recovers quickly. German enough to have heard stories but educated enough to know stories are stories.",
+        "aldric": "No reaction. The friar has seen a great deal. His theology is complicated.",
+        "aldous": "Brief double-take. Then back to his drinks. He has larger problems tonight.",
+        "katya": "Genuinely delighted. A tiefling bard from the Americas is three songs minimum.",
+        "maxWhisper": "The room notices Chazz when he enters. A beat of silence. Marta's hands tighten on the glass she is polishing. Then life continues. He has seen this before. He always sees this."
+      },
+      "orava": { "tier": 2, "note": "Castle staff professional but cool. Guards watch him more than others." },
+      "houska": { "tier": 2, "note": "Priests at Houska will be hostile. Do not let him near the chapel alone." },
+      "village": { "tier": 2, "note": "Rural Slovak villages — Tier 2 shading toward 3 if a priest is present." }
+    },
+
+    "jen": {
+      "characterName": "Marfire 2.0",
+      "race": "Firbolg",
+      "europeanReception": {
+        "baseline": "Tier 2 in towns, Tier 1-2 in cities. 7'6\" blue-skinned giant-kin reads as forest spirit, giant-blood, or divine test depending on who is looking.",
+        "animals": "Animals are calm around her rather than spooked. This is itself unsettling to locals who expect large unknown creatures to frighten livestock.",
+        "reverence": "Some rural people will leave offerings. Not because they like her — because you leave offerings for things that might be spirits. Just in case.",
+        "avoidance": "People do not look her in the eye. They speak to whoever is nearest rather than address her directly. This is not hostility — it is the specific Slovak peasant response to something that might be fey."
+      },
+      "pallidHart": {
+        "tier": 1,
+        "marta": "Does not look directly at her. Brings food without being asked. Leaves quickly.",
+        "gregor": "Will not acknowledge her presence at all. This is not rudeness — this is the old way of dealing with forest things. You do not draw their attention.",
+        "henryk": "Moved his chair slightly when she sat down. Trying to be subtle about it. Failing.",
+        "aldric": "Gives her a long measured look and then nods as if confirming something he already knew.",
+        "aldous": "Patently unbothered. He has been running from something all evening. A large blue person is not his current problem.",
+        "katya": "Has been watching her since she arrived. The way she watched Vladislav — cataloguing.",
+        "maxWhisper": "Marfire enters and the room rearranges itself slightly. Nobody leaves. Nobody says anything. They just create slightly more space around her than the room requires. Gregor does not look up."
+      },
+      "village": { "tier": 2, "note": "Offerings left outside her door by morning. Nobody admits to leaving them." },
+      "orava": { "tier": 1, "note": "Castle has hosted stranger things. Staff professional." },
+      "forest": { "tier": 0, "note": "In forests and wild places she is in her element. Animals approach. Plants seem to lean toward her. This is correct and right." }
+    },
+
+    "ed": {
+      "characterName": "Spurt the Sorcerer",
+      "race": "Kobold",
+      "europeanReception": {
+        "baseline": "Tier 1-2 in German-speaking areas specifically. The kobold is Germanic folklore. A literal kobold walking into a German inn causes terrified recognition — not what is that but I know what that is.",
+        "germanic": "Germans and Dutch: folklore-specific fear. The stories say kobolds curse households, steal children, cause fires. The stories are wrong about Spurt specifically but nobody knows that yet.",
+        "slavic": "Czechs and Slovaks have similar creatures but different names. Less specific recognition, more general wariness about small strange things.",
+        "practical": "Four months in Europe has taught Spurt exactly which behaviors reduce fear and which increase it. He has optimized for food acquisition and not being attacked.",
+        "ozone": "The faint smell of ozone around him adds to the supernatural read. Lightning-smell on something that looks like a household spirit is not reassuring."
+      },
+      "pallidHart": {
+        "tier": 1,
+        "marta": "Brings him extra food unprompted. This is either kindness or an offering. Possibly both.",
+        "gregor": "Has gone very still since Spurt arrived. Watching him the way you watch something you do not want to startle.",
+        "henryk": "German. Knows the stories. His grandmother told him. He is trying very hard to look normal and failing.",
+        "aldric": "Interested. The friar's theology has apparently already accommodated kobolds.",
+        "aldous": "Nodded at Spurt when he arrived. Practical acknowledgment. Not his problem tonight.",
+        "katya": "Asked Spurt where he came from within five minutes of his arrival. Has been asking follow-up questions since.",
+        "maxWhisper": "Henryk the German merchant has gone quiet since Spurt arrived. He keeps glancing at him. He grew up with stories about kobolds. None of the stories ended well for the humans."
+      },
+      "german_inn": { "tier": 2, "note": "Innkeeper may refuse service. Henryk-type reaction scaled up." },
+      "slavic_village": { "tier": 1, "note": "Wary but not specific. Strange small thing from the forest — concerning but not folkloric." }
+    },
+
+    "kim": {
+      "characterName": "Zarina Firethorn",
+      "race": "Mark of Detection Half-Elf",
+      "europeanReception": {
+        "baseline": "Tier 1 almost everywhere. Half-elf reads as human with unusual features. Pointed ears might get a second look.",
+        "dragonmark": "The mark on her hand will be mistaken for a birthmark or brand by most people. Scholars and mages who know what dragonmarks are — very rare in 1274 Europe — will react with significant interest.",
+        "americas_elvish": "The moment she speaks Americas Elvish anyone with folklore knowledge will know she is not from here. European Elvish communities exist but they speak differently.",
+        "passing": "She can pass as human with a hood up. This is the easiest member of the party."
+      },
+      "pallidHart": {
+        "tier": 1,
+        "general": "No significant reactions. She reads as a foreign human soldier. The chain mail and weapons get more attention than her ears.",
+        "vladislav": "Will notice the dragonmark. Will not say so immediately.",
+        "maxWhisper": "Zarina draws no particular reaction from the room. She looks like what she is — a foreign soldier who knows how to handle herself. The mark on her hand goes unnoticed. For now."
+      }
+    },
+
+    "jerome": {
+      "characterName": "Barry Goodfellow Frascht",
+      "race": "Human",
+      "europeanReception": {
+        "baseline": "Tier 0. He's human. He looks like he belongs in Central Europe.",
+        "tell": "His Americas accent in Latin marks him as foreign. Not wrong — just not from here.",
+        "advantage": "In any situation where the party needs a face, Barry is the face."
+      },
+      "pallidHart": {
+        "tier": 0,
+        "general": "No reactions. He is absent tonight anyway.",
+        "maxWhisper": null
+      }
+    }
+  },
+
+  "generalRules": {
+    "onArrival": "Max whispers DM the room reaction for non-human characters once when they enter a new location. One whisper. Not repeated unless something changes.",
+    "npcInteractions": "If a non-human character initiates conversation with an NPC, Max checks the character's tier for that location and the NPC's specific note. Weaves it into NPC behavior naturally.",
+    "tier3Gate": "Max never triggers Tier 3 automatically. Max flags it as available if conditions are right — priest present, character has done something visible, crowd is agitated. DM decides.",
+    "stormOverride": "At the Pallid Hart tonight the storm overrides normal social behavior. Everyone here is trapped together. Survival makes people practical. Tier 2 reactions are muted. Tier 3 is unavailable tonight unless DM specifically wants it.",
+    "vladislavOverride": "Vladislav in the corner is more frightening than anything the party is wearing. Anyone who has noticed him — Gregor, Henryk — is using their fear budget on him. Less left over for the party.",
+    "katya": "Katya is immune to race reactions. She collects stories. Every non-human in this room is three songs minimum. She will approach all of them before the night is over.",
+    "chazzManagement": "Chazz has 40 years of European experience. He manages reactions automatically. Max does not narrate his management unless a player asks — it is invisible competence, not a performance."
+  },
+
+  "maxPromptAddition": {
+    "_instruction": "Append to prompts/hal-codm.md after existing content",
+    "content": "## RACE REACTIONS — 1274 CENTRAL EUROPE\n\nOne whisper per character per location on arrival. Background texture not mechanical obstacle. Tier 3 never fires without DM confirmation.\n\n- **Chazz (Tiefling)**: Tier 2 baseline. Room notices, beat of silence, life continues. He manages it automatically — 40 years of practice. Do not narrate his management.\n- **Marfire (Firbolg)**: Tier 1-2. Room rearranges itself slightly. Gregor will not acknowledge her. Animals are calm around her which unsettles people.\n- **Spurt (Kobold)**: Tier 1 generally, Tier 2 with Germans specifically. Henryk knows the stories. His grandmother told him.\n- **Zarina (Half-Elf)**: Tier 1. Reads as foreign human soldier. Dragonmark unnoticed for now.\n- **Barry (Human)**: Tier 0. Absent tonight anyway.\n\nStorm override active at Pallid Hart — everyone is practical, Tier 2 muted, Tier 3 unavailable. Vladislav in the corner is using everyone's fear budget."
+  }
+}

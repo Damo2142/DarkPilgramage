@@ -548,147 +548,216 @@
       "image": "jen.webp",
       "visible": true,
       "hp": {
-        "current": 26,
+        "current": 16,
         "max": 26
       },
       "ac": 12,
       "nameRevealedToPlayers": false
     },
+    "ed": {
+      "name": "FrostyCritter's Character",
+      "type": "pc",
+      "x": 2170,
+      "y": 1890,
+      "image": "ed.webp",
+      "visible": true,
+      "hp": {
+        "current": 8,
+        "max": 18,
+        "temp": 0
+      },
+      "ac": 10,
+      "nameRevealedToPlayers": false
+    },
+    "piotr-kowalski": {
+      "tokenId": "piotr-kowalski",
+      "actorSlug": "piotr-kowalski",
+      "name": "Piotr Kowalski",
+      "type": "npc",
+      "x": 1100,
+      "y": 1280,
+      "hidden": false,
+      "visible": true,
+      "hp": {
+        "current": 52,
+        "max": 52
+      },
+      "ac": 14,
+      "image": "vampire-spawn.webp",
+      "publicName": "Chained Figure",
+      "nameRevealedToPlayers": false,
+      "scenePlaced": true
+    },
+    "gas-spore-cellar": {
+      "tokenId": "gas-spore-cellar",
+      "actorSlug": "gas-spore",
+      "name": "Something in the Dark",
+      "type": "creature",
+      "x": 1400,
+      "y": 1280,
+      "hidden": false,
+      "visible": true,
+      "hp": {
+        "current": 1,
+        "max": 1
+      },
+      "ac": 5,
+      "image": "beholder-silhouette.webp",
+      "publicName": "Something in the Dark",
+      "nameRevealedToPlayers": true,
+      "scenePlaced": true
+    },
     "marta": {
+      "tokenId": "marta",
       "actorSlug": "marta",
       "name": "Marta Kowalski",
       "type": "npc",
-      "x": 3977.942143326759,
-      "y": 1335.568704799474,
-      "image": "marta.webp",
-      "visible": true,
+      "x": 3990,
+      "y": 1470,
       "hidden": false,
+      "visible": true,
       "hp": {
-        "current": 10,
-        "max": 10
+        "current": 8,
+        "max": 8
       },
       "ac": 10,
+      "image": "marta.webp",
+      "publicName": "The Innkeeper",
       "nameRevealedToPlayers": false,
-      "publicName": ""
+      "scenePlaced": true
     },
     "tomas": {
+      "tokenId": "tomas",
       "actorSlug": "tomas",
       "name": "Tomas Birkov",
       "type": "npc",
-      "x": 3717.58711374096,
-      "y": 1735.3057199211046,
-      "image": "tomas.webp",
-      "visible": true,
+      "x": 3710,
+      "y": 1750,
       "hidden": false,
+      "visible": true,
       "hp": {
-        "current": 10,
-        "max": 10
+        "current": 58,
+        "max": 58
       },
-      "ac": 10,
+      "ac": 11,
+      "image": "tomas.webp",
+      "publicName": "The Trapper",
       "nameRevealedToPlayers": false,
-      "publicName": ""
+      "scenePlaced": true
     },
     "hooded-stranger": {
+      "tokenId": "hooded-stranger",
       "actorSlug": "hooded-stranger",
       "name": "Vladislav Dragan",
       "type": "npc",
-      "x": 1050.7429803303355,
-      "y": 1853.5460814718745,
-      "image": "hooded-stranger.webp",
-      "visible": true,
+      "x": 1050,
+      "y": 1890,
       "hidden": false,
-      "hp": {
-        "current": 10,
-        "max": 10
-      },
-      "ac": 10,
-      "nameRevealedToPlayers": false,
-      "publicName": ""
-    },
-    "aldous-kern": {
-      "actorSlug": "aldous-kern",
-      "name": "Aldous Kern",
-      "type": "npc",
-      "x": 2313.4871200322277,
-      "y": 777.6090406732494,
-      "image": "aldous-kern.webp",
       "visible": true,
-      "hidden": false,
       "hp": {
-        "current": 10,
-        "max": 10
+        "current": 144,
+        "max": 144
       },
-      "ac": 10,
+      "ac": 16,
+      "image": "vladislav.webp",
+      "publicName": "The Hooded Stranger",
       "nameRevealedToPlayers": false,
-      "publicName": ""
-    },
-    "patron-farmer": {
-      "actorSlug": "patron-farmer",
-      "name": "Old Gregor",
-      "type": "npc",
-      "x": 3436.12593555667,
-      "y": 1485.3205499798576,
-      "image": "patron-farmer.webp",
-      "visible": true,
-      "hidden": false,
-      "hp": {
-        "current": 10,
-        "max": 10
-      },
-      "ac": 10,
-      "nameRevealedToPlayers": false,
-      "publicName": ""
-    },
-    "patron-merchant": {
-      "actorSlug": "patron-merchant",
-      "name": "Henryk the Merchant",
-      "type": "npc",
-      "x": 3567.2501492099245,
-      "y": 1338.030337383051,
-      "image": "patron-merchant.webp",
-      "visible": true,
-      "hidden": false,
-      "hp": {
-        "current": 10,
-        "max": 10
-      },
-      "ac": 10,
-      "nameRevealedToPlayers": false,
-      "publicName": ""
-    },
-    "patron-pilgrim": {
-      "actorSlug": "patron-pilgrim",
-      "name": "Brother Aldric",
-      "type": "npc",
-      "x": 2699.6748725726356,
-      "y": 1169.1854595281748,
-      "image": "patron-pilgrim.webp",
-      "visible": true,
-      "hidden": false,
-      "hp": {
-        "current": 10,
-        "max": 10
-      },
-      "ac": 10,
-      "nameRevealedToPlayers": false,
-      "publicName": ""
+      "scenePlaced": true
     },
     "patron-minstrel": {
+      "tokenId": "patron-minstrel",
       "actorSlug": "patron-minstrel",
       "name": "Katya Voss",
       "type": "npc",
-      "x": 2719.433315725866,
-      "y": 2000.8362940686814,
-      "image": "patron-minstrel.webp",
-      "visible": true,
+      "x": 2730,
+      "y": 1890,
       "hidden": false,
+      "visible": true,
       "hp": {
-        "current": 10,
-        "max": 10
+        "current": 16,
+        "max": 16
+      },
+      "ac": 12,
+      "image": "katya.webp",
+      "publicName": "The Minstrel",
+      "nameRevealedToPlayers": false,
+      "scenePlaced": true
+    },
+    "patron-farmer": {
+      "tokenId": "patron-farmer",
+      "actorSlug": "patron-farmer",
+      "name": "Old Gregor",
+      "type": "npc",
+      "x": 3570,
+      "y": 1330,
+      "hidden": false,
+      "visible": true,
+      "hp": {
+        "current": 11,
+        "max": 11
       },
       "ac": 10,
+      "image": "gregor.webp",
+      "publicName": "Old Farmer",
       "nameRevealedToPlayers": false,
-      "publicName": ""
+      "scenePlaced": true
+    },
+    "patron-merchant": {
+      "tokenId": "patron-merchant",
+      "actorSlug": "patron-merchant",
+      "name": "Henryk the Merchant",
+      "type": "npc",
+      "x": 3430,
+      "y": 1470,
+      "hidden": false,
+      "visible": true,
+      "hp": {
+        "current": 9,
+        "max": 9
+      },
+      "ac": 10,
+      "image": "henryk.webp",
+      "publicName": "Traveling Merchant",
+      "nameRevealedToPlayers": false,
+      "scenePlaced": true
+    },
+    "patron-pilgrim": {
+      "tokenId": "patron-pilgrim",
+      "actorSlug": "patron-pilgrim",
+      "name": "Brother Aldric",
+      "type": "npc",
+      "x": 2590,
+      "y": 1050,
+      "hidden": false,
+      "visible": true,
+      "hp": {
+        "current": 11,
+        "max": 11
+      },
+      "ac": 10,
+      "image": "aldric.webp",
+      "publicName": "The Pilgrim",
+      "nameRevealedToPlayers": false,
+      "scenePlaced": true
+    },
+    "aldous-kern": {
+      "tokenId": "aldous-kern",
+      "actorSlug": "aldous-kern",
+      "name": "Aldous Kern",
+      "type": "npc",
+      "x": 2170,
+      "y": 910,
+      "hidden": false,
+      "visible": true,
+      "hp": {
+        "current": 8,
+        "max": 8
+      },
+      "ac": 10,
+      "image": "aldous.webp",
+      "publicName": "The Quiet Man",
+      "nameRevealedToPlayers": false,
+      "scenePlaced": true
     }
   },
   "floorLinks": [
@@ -705,10 +774,22 @@
   ],
   "playerSpawns": {
     "spread": [
-      { "x": 4550, "y": 2590 },
-      { "x": 4690, "y": 2590 },
-      { "x": 4550, "y": 2730 },
-      { "x": 4690, "y": 2730 }
+      {
+        "x": 4550,
+        "y": 2590
+      },
+      {
+        "x": 4690,
+        "y": 2590
+      },
+      {
+        "x": 4550,
+        "y": 2730
+      },
+      {
+        "x": 4690,
+        "y": 2730
+      }
     ],
     "default": {
       "x": 4736,

@@ -387,6 +387,37 @@ class DashboardService {
       } catch (e) { res.status(500).json({ error: e.message }); }
     });
 
+    // Diagnostic — exercise the browser-side Max audio path using a
+    // pre-existing MP3 from the cache. Bypasses the max-director queue,
+    // throttle, and ElevenLabs. Returns the URL dispatched so the DM can
+    // verify it in the whisper log + browser console.
+    this.app.post('/api/max/test-audio', (req, res) => {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const maxDir = path.join(__dirname, '..', '..', 'assets', 'sounds', 'max');
+        let filename = null;
+        if (fs.existsSync(maxDir)) {
+          const files = fs.readdirSync(maxDir).filter(f => f.endsWith('.mp3'));
+          if (files.length) filename = files.sort().reverse()[0]; // latest by name/time
+        }
+        if (!filename) {
+          return res.status(404).json({ ok: false, error: 'no max MP3s available — send one real Max line first' });
+        }
+        const url = '/assets/sounds/max/' + filename;
+        if (this.bus) {
+          this.bus.dispatch('max:audio', {
+            url,
+            text: 'TEST — browser audio pipeline diagnostic',
+            priority: 'high',
+            source: 'max-test',
+            latencyMs: 0
+          });
+        }
+        res.json({ ok: true, url, filename });
+      } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+    });
+
     // ─── ElevenLabs / Voice palette health API ─────────────────
     this.app.get('/api/voice/health', (req, res) => {
       try {
@@ -1014,11 +1045,11 @@ Answer concisely (2-4 sentences). If it's a rules question, give the D&D 5e rule
     this.app.post('/api/combat/attack', (req, res) => {
       const combatSvc = this.orchestrator.getService('combat');
       if (!combatSvc) return res.status(503).json({ error: 'Combat service unavailable' });
-      const { attackerId, targetId, attackRoll, damage, damageType, crit } = req.body || {};
+      const { attackerId, targetId, attackRoll, damage, damageType, crit, weaponName, magical, silvered } = req.body || {};
       if (!attackerId || !targetId || typeof attackRoll !== 'number' || typeof damage !== 'number') {
         return res.status(400).json({ error: 'attackerId, targetId, attackRoll, and damage required' });
       }
-      const result = combatSvc.processAttack(attackerId, targetId, attackRoll, damage, damageType, crit);
+      const result = combatSvc.processAttack(attackerId, targetId, attackRoll, damage, damageType, crit, weaponName || null, !!magical, !!silvered);
       if (!result) return res.status(404).json({ error: 'Attacker or target not found in combat' });
       res.json(result);
     });
@@ -1170,6 +1201,9 @@ Answer concisely (2-4 sentences). If it's a rules question, give the D&D 5e rule
         break;
       case 'audio:sfx':
         this.bus.dispatch('audio:sfx', { effect: msg.effect, device: msg.device, surround: msg.surround });
+        break;
+      case 'codm:read_aloud':
+        this.bus.dispatch('codm:read_aloud', { text: (msg.data && msg.data.text) || msg.text || '' });
         break;
       case 'audio:dm_chunk':
         this.bus.dispatch('audio:dm_chunk', msg.data || msg);

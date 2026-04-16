@@ -269,11 +269,23 @@ class ObservationService {
     const obsKey = `active-${playerId}-${eventId}-${obs.id || obs.tier}-${dc}`;
     if (this.firedObservations.has(obsKey)) return;
 
+    const text = (obs.text || '').trim();
+    // DM instruction notes (start with "If ") are guidance for the DM,
+    // not player-facing observations. Route to dm:whisper only.
+    if (text.startsWith('If ') || text.startsWith('if ')) {
+      this.firedObservations.add(obsKey);
+      this.bus.dispatch('dm:whisper', {
+        text: `[DM NOTE] ${charName} qualified for DC${dc}: "${text.substring(0, 120)}"`,
+        priority: 4, category: 'observation'
+      });
+      return;
+    }
+
     if (rollTotal >= dc) {
       this.firedObservations.add(obsKey);
       this.bus.dispatch('dm:private_message', {
         playerId,
-        text: obs.text,
+        text,
         durationMs: 45000,
         style: 'observation',
         linkedSecret: obs.linkedSecret || null

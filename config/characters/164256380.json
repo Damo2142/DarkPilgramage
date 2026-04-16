@@ -14,7 +14,7 @@
   "background": "Criminal",
   "alignment": "TN",
   "hp": {
-    "current": 29,
+    "current": 17,
     "max": 17,
     "temp": 0
   },
@@ -154,7 +154,18 @@
       "proficiency": "none"
     }
   },
-  "spellSlots": null,
+  "spellSlots": {
+    "level1": {
+      "total": 4,
+      "used": 0,
+      "remaining": 4
+    },
+    "level2": {
+      "total": 2,
+      "used": 0,
+      "remaining": 2
+    }
+  },
   "spells": [
     {
       "name": "Dancing Lights",
@@ -208,7 +219,7 @@
       "ritual": false,
       "concentration": false,
       "prepared": false,
-      "description": "You touch a creature. The target’s Speed increases by 10 feet until the spell ends.\r\nUsing a Higher-Level Spell Slot. You can target one additional creature for each spell slot level above 1."
+      "description": "You touch a creature. The target\u2019s Speed increases by 10 feet until the spell ends.\r\nUsing a Higher-Level Spell Slot. You can target one additional creature for each spell slot level above 1."
     },
     {
       "name": "Identify",
@@ -217,7 +228,7 @@
       "ritual": true,
       "concentration": false,
       "prepared": false,
-      "description": "You touch an object throughout the spell’s casting. If the object is a magic item or some other magical object, you learn its properties and how to use them, whether it requires Attunement, and how ma"
+      "description": "You touch an object throughout the spell\u2019s casting. If the object is a magic item or some other magical object, you learn its properties and how to use them, whether it requires Attunement, and how ma"
     },
     {
       "name": "Enhance Ability",
@@ -306,15 +317,15 @@
       "modifiers": {},
       "magical": true,
       "silver": false,
-      "attackBonus": 7,
-      "damageBonus": 5,
+      "attackBonus": 1,
+      "damageBonus": 1,
       "special_effect": {
         "name": "Nine Lives Stealer",
         "trigger": "target_reduced_to_0_hp",
         "condition": "target_has_souls_remaining",
         "effect": "DC 15 Constitution save or die outright",
         "souls_max": 9,
-        "dmWhisper": "Nine Lives Stealer triggered — target at 0 HP. DC 15 CON save or die. Track souls remaining on this weapon."
+        "dmWhisper": "Nine Lives Stealer triggered \u2014 target at 0 HP. DC 15 CON save or die. Track souls remaining on this weapon."
       },
       "id": "inv-nine-lives-stealer-dagge-mnys8ji4fo5m"
     },
@@ -328,7 +339,7 @@
       "magic": false,
       "ac": 11,
       "acType": "light",
-      "id": "inv-leather-mnys8ji4lsis"
+      "id": "inv-leather-mo0lsjkvwkua"
     },
     {
       "name": "Dagger",
@@ -350,7 +361,7 @@
       "range": "20/60ft",
       "magical": false,
       "silver": false,
-      "id": "inv-dagger-mnys8ji4xym0"
+      "id": "inv-dagger-mo0lsjkvh0do"
     },
     {
       "name": "Dagger",
@@ -372,7 +383,7 @@
       "range": "20/60ft",
       "magical": false,
       "silver": false,
-      "id": "inv-dagger-mnys8jvwb5wb"
+      "id": "inv-dagger-mo0lumosk49h"
     },
     {
       "name": "Dagger",
@@ -394,7 +405,7 @@
       "range": "20/60ft",
       "magical": false,
       "silver": false,
-      "id": "inv-dagger-mnys8jvwwt10"
+      "id": "inv-dagger-mo0lumosqufy"
     },
     {
       "name": "Dagger",
@@ -416,51 +427,7 @@
       "range": "20/60ft",
       "magical": false,
       "silver": false,
-      "id": "inv-dagger-mnys8jvw6rxd"
-    },
-    {
-      "name": "Dagger",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Weapon",
-      "weight": 1,
-      "rarity": "Common",
-      "magic": false,
-      "damage": "1d4",
-      "damageType": "Piercing",
-      "subtype": "melee",
-      "properties": [
-        "finesse",
-        "light",
-        "thrown",
-        "nick"
-      ],
-      "range": "20/60ft",
-      "magical": false,
-      "silver": false,
-      "id": "inv-dagger-mnys8jvwy27b"
-    },
-    {
-      "name": "Dagger",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Weapon",
-      "weight": 1,
-      "rarity": "Common",
-      "magic": false,
-      "damage": "1d4",
-      "damageType": "Piercing",
-      "subtype": "melee",
-      "properties": [
-        "finesse",
-        "light",
-        "thrown",
-        "nick"
-      ],
-      "range": "20/60ft",
-      "magical": false,
-      "silver": false,
-      "id": "inv-dagger-mnys8jvwb6c6"
+      "id": "inv-dagger-mo0lumos4jya"
     },
     {
       "name": "Backpack",
@@ -470,7 +437,7 @@
       "weight": 5,
       "rarity": "Common",
       "magic": false,
-      "id": "inv-backpack-mnys8jvw2tok"
+      "id": "inv-backpack-mo0lsjkvrhr2"
     },
     {
       "name": "Pouch",
@@ -480,7 +447,7 @@
       "weight": 1,
       "rarity": "Common",
       "magic": false,
-      "id": "inv-pouch-mnys8ji4zpse"
+      "id": "inv-pouch-mo0lsjkv60lh"
     },
     {
       "name": "Pouch",
@@ -490,7 +457,7 @@
       "weight": 1,
       "rarity": "Common",
       "magic": false,
-      "id": "inv-pouch-mnys8jvwwvom"
+      "id": "inv-pouch-mo0lumosxh3j"
     },
     {
       "name": "Playing Cards",
@@ -511,16 +478,6 @@
       "rarity": "Common",
       "magic": false,
       "id": "inv-lute-mnys8ji4ejhm"
-    },
-    {
-      "name": "Lyre",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 2,
-      "rarity": "Common",
-      "magic": false,
-      "id": "inv-lyre-mnys8ji4usa7"
     },
     {
       "name": "Thieves' Tools",
@@ -560,7 +517,7 @@
       "weight": 1,
       "rarity": "Common",
       "magic": false,
-      "id": "inv-oil-mnys8ji4bicb"
+      "id": "inv-oil-mo0lsjkvgbu2"
     },
     {
       "name": "Rations",
@@ -570,7 +527,7 @@
       "weight": 2,
       "rarity": "Common",
       "magic": false,
-      "id": "inv-rations-mnys8ji4xuhv"
+      "id": "inv-rations-mo0lsjkve95z"
     },
     {
       "name": "Bedroll",
@@ -580,7 +537,7 @@
       "weight": 7,
       "rarity": "Common",
       "magic": false,
-      "id": "inv-bedroll-mnys8ji4vy07"
+      "id": "inv-bedroll-mo0lsjkvylzy"
     },
     {
       "name": "Bell",
@@ -590,7 +547,7 @@
       "weight": 0,
       "rarity": "Common",
       "magic": false,
-      "id": "inv-bell-mnys8ji48l6e"
+      "id": "inv-bell-mo0lsjkvz0gf"
     },
     {
       "name": "Tinderbox",
@@ -600,7 +557,7 @@
       "weight": 1,
       "rarity": "Common",
       "magic": false,
-      "id": "inv-tinderbox-mnys8ji4qvk7"
+      "id": "inv-tinderbox-mo0lsjkvn9h7"
     },
     {
       "name": "Waterskin",
@@ -610,7 +567,7 @@
       "weight": 5,
       "rarity": "Common",
       "magic": false,
-      "id": "inv-waterskin-mnys8ji437ij"
+      "id": "inv-waterskin-mo0lsjkv1hhc"
     },
     {
       "name": "Mirror",
@@ -620,7 +577,7 @@
       "weight": 0.5,
       "rarity": "Common",
       "magic": false,
-      "id": "inv-mirror-mnys8ji4dp1f"
+      "id": "inv-mirror-mo0lsjkv37do"
     },
     {
       "name": "Bullseye Lantern",
@@ -630,7 +587,7 @@
       "weight": 2,
       "rarity": "Common",
       "magic": false,
-      "id": "inv-bullseye-lantern-mnys8ji4p5c0"
+      "id": "inv-bullseye-lantern-mo0lsjkvik5e"
     },
     {
       "name": "Costume",
@@ -640,107 +597,7 @@
       "weight": 4,
       "rarity": "Common",
       "magic": false,
-      "id": "inv-costume-mnys8ji4mqdj"
-    },
-    {
-      "name": "Oil",
-      "quantity": 8,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 1,
-      "rarity": "Common",
-      "magic": false,
-      "id": "inv-oil-mnys8jvwjwyw"
-    },
-    {
-      "name": "Rations",
-      "quantity": 9,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 2,
-      "rarity": "Common",
-      "magic": false,
-      "id": "inv-rations-mnys8jvws87t"
-    },
-    {
-      "name": "Bedroll",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 7,
-      "rarity": "Common",
-      "magic": false,
-      "id": "inv-bedroll-mnys8jvwd7xe"
-    },
-    {
-      "name": "Bell",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 0,
-      "rarity": "Common",
-      "magic": false,
-      "id": "inv-bell-mnys8jvwaalb"
-    },
-    {
-      "name": "Tinderbox",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 1,
-      "rarity": "Common",
-      "magic": false,
-      "id": "inv-tinderbox-mnys8jvw4b7e"
-    },
-    {
-      "name": "Waterskin",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 5,
-      "rarity": "Common",
-      "magic": false,
-      "id": "inv-waterskin-mnys8jvwpfw0"
-    },
-    {
-      "name": "Mirror",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 0.5,
-      "rarity": "Common",
-      "magic": false,
-      "id": "inv-mirror-mnys8jvwbze9"
-    },
-    {
-      "name": "Bullseye Lantern",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 2,
-      "rarity": "Common",
-      "magic": false,
-      "id": "inv-bullseye-lantern-mnys8jvwpuw7"
-    },
-    {
-      "name": "Costume",
-      "quantity": 3,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 4,
-      "rarity": "Common",
-      "magic": false,
-      "id": "inv-costume-mnys8jvwprxc"
-    },
-    {
-      "name": "Bedroll",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 7,
-      "rarity": "Common",
-      "magic": false,
-      "id": "inv-bedroll-mnys8jvwsxja"
+      "id": "inv-costume-mo0lsjkvdfo6"
     },
     {
       "name": "Mess Kit",
@@ -753,16 +610,6 @@
       "id": "inv-mess-kit-mnys8ji4q65s"
     },
     {
-      "name": "Rations (1 day)",
-      "quantity": 10,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 2,
-      "rarity": "Common",
-      "magic": false,
-      "id": "inv-rations-1-day--mnys8ji4pu7d"
-    },
-    {
       "name": "Rope, Hempen (50 feet)",
       "quantity": 1,
       "equipped": false,
@@ -771,16 +618,6 @@
       "rarity": "Common",
       "magic": false,
       "id": "inv-rope-hempen-50-feet--mnys8ji49fnx"
-    },
-    {
-      "name": "Tinderbox",
-      "quantity": 1,
-      "equipped": false,
-      "type": "Other Gear",
-      "weight": 1,
-      "rarity": "Common",
-      "magic": false,
-      "id": "inv-tinderbox-mnys8jvwohx9"
     },
     {
       "name": "Torch",
@@ -793,14 +630,71 @@
       "id": "inv-torch-mnys8ji4fpdm"
     },
     {
-      "name": "Waterskin",
+      "name": "Dagger, +1",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Weapon",
+      "weight": 1,
+      "rarity": "Uncommon",
+      "magic": true,
+      "damage": "1d4",
+      "damageType": "Piercing",
+      "subtype": "melee",
+      "properties": [
+        "finesse",
+        "light",
+        "thrown",
+        "nick"
+      ],
+      "range": "20/60ft",
+      "modifiers": {},
+      "magical": true,
+      "silver": true,
+      "notes": "Blessed by Aldric",
+      "description": "Silvered blade",
+      "awardedByDM": true,
+      "id": "inv-dagger-1-mo0lsjkvtlga"
+    },
+    {
+      "name": "Dagger, +1",
+      "quantity": 1,
+      "equipped": false,
+      "type": "Weapon",
+      "weight": 1,
+      "rarity": "Uncommon",
+      "magic": true,
+      "damage": "1d4",
+      "damageType": "Piercing",
+      "subtype": "melee",
+      "properties": [
+        "finesse",
+        "light",
+        "thrown",
+        "nick"
+      ],
+      "range": "20/60ft",
+      "modifiers": {},
+      "id": "inv-dagger-1-mo0lumosnlqa"
+    },
+    {
+      "name": "Lyre",
       "quantity": 1,
       "equipped": false,
       "type": "Other Gear",
-      "weight": 5,
+      "weight": 2,
       "rarity": "Common",
       "magic": false,
-      "id": "inv-waterskin-mnys8jvwvbl5"
+      "id": "inv-lyre-mnys8ji4usa7"
+    },
+    {
+      "name": "Rations (1 day)",
+      "quantity": 10,
+      "equipped": false,
+      "type": "Other Gear",
+      "weight": 2,
+      "rarity": "Common",
+      "magic": false,
+      "id": "inv-rations-1-day--mnys8ji4pu7d"
     }
   ],
   "conditions": [],
@@ -823,9 +717,9 @@
   ],
   "backstory": {
     "personalityTraits": "Acts like a cat, at one moment could be your friend, the next could be completely unpredictable. He wants to do good most of the time, just can be persuaded into sowing chaos",
-    "ideals": "He used to be a musician, the heart of a party. The sex icon. All the warm bodies and good drinks he could want, but he’s well past his prime. Most people wouldn’t recognize him now adays. But he doesn’t hold ill will, he just wants some of that money and glory back",
-    "bonds": "His cat Juno, his dog Cleo, and his niece Jane. Her bother Chet is accepted by James but he’s not fond of his carefree lifestyle",
-    "flaws": "He has massive nerve damage. He can only feel pain in his shoulder. Able to do a lot if you are able to direct or focus him, as he’s not able to resist temptations",
+    "ideals": "He used to be a musician, the heart of a party. The sex icon. All the warm bodies and good drinks he could want, but he\u2019s well past his prime. Most people wouldn\u2019t recognize him now adays. But he doesn\u2019t hold ill will, he just wants some of that money and glory back",
+    "bonds": "His cat Juno, his dog Cleo, and his niece Jane. Her bother Chet is accepted by James but he\u2019s not fond of his carefree lifestyle",
+    "flaws": "He has massive nerve damage. He can only feel pain in his shoulder. Able to do a lot if you are able to direct or focus him, as he\u2019s not able to resist temptations",
     "backstoryText": null,
     "allies": null,
     "organizations": null,
@@ -835,7 +729,7 @@
   "appearance": {
     "gender": "Male",
     "age": 87,
-    "height": "4’11”",
+    "height": "4\u201911\u201d",
     "weight": 135,
     "size": null,
     "eyes": "Yellow",
@@ -845,7 +739,7 @@
     "description": null
   },
   "patron": "College of Lore",
-  "_syncedAt": "2026-04-14T15:35:25.528Z",
+  "_syncedAt": "2026-04-16T18:35:30.532Z",
   "_source": "ddb",
   "_ddbUrl": "https://www.dndbeyond.com/characters/164256380",
   "purse": {
@@ -870,13 +764,13 @@
     {
       "id": "aglarondan",
       "displayName": "Aglarondan",
-      "fluency": "fluent — native",
+      "fluency": "fluent \u2014 native",
       "note": "Americas origin language."
     },
     {
       "id": "chondathan",
       "displayName": "Chondathan",
-      "fluency": "fluent — native",
+      "fluency": "fluent \u2014 native",
       "note": "Americas origin language."
     },
     {
@@ -906,9 +800,9 @@
     {
       "id": "infernal",
       "displayName": "Infernal",
-      "fluency": "instinctive — unknown to character",
+      "fluency": "instinctive \u2014 unknown to character",
       "note": "Chazz can read and understand Infernal without having formally learned it. He does not know he can do this. First revealed at Houska when he reads binding-script before realizing he is reading it. Max whispers DM when this triggers: 'Chazz can read this. Watch.'"
     }
   ],
-  "languageNote": "Chazz has been in Europe for 40 years — he is the party's primary translator for Central European languages. He gets information first when translating. His Infernal literacy is instinctive and unknown to him — a tiefling bloodline gift he has never had reason to discover."
+  "languageNote": "Chazz has been in Europe for 40 years \u2014 he is the party's primary translator for Central European languages. He gets information first when translating. His Infernal literacy is instinctive and unknown to him \u2014 a tiefling bloodline gift he has never had reason to discover."
 }

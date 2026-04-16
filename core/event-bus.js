@@ -29,7 +29,11 @@ const DEDUP_SKIP_EVENTS = new Set([
   // or DM clicking twice) otherwise fingerprint-match and the second gets
   // dropped, leaving horror decay / ability restores silently skipped.
   'session:long_rest', 'session:short_rest', 'session:started', 'session:ended',
-  'session:paused', 'session:resumed', 'state:session_reset', 'state:session_loaded'
+  'session:paused', 'session:resumed', 'state:session_reset', 'state:session_loaded',
+  // Private messages and observation triggers — each dispatch is a distinct
+  // observation for a distinct player. Dedup fingerprint (text+playerId)
+  // would collapse rapid-fire active-look reveals into a single delivery.
+  'dm:private_message', 'observation:trigger', 'dm:whisper'
 ]);
 
 class EventBus extends EventEmitter {

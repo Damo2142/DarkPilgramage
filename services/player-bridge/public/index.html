@@ -1911,56 +1911,165 @@ function isMyTurn(){
   return cur>=0 && order[cur] && order[cur].id===PID;
 }
 
+// ── 5e Advantage/Disadvantage + Condition engine ──────────────────
+// Returns {advantage:bool, disadvantage:bool, reasons:[]} for the
+// current attack context. Called before rolling d20.
+function _getAdvDisadv(attacker, targetId) {
+  const adv = [], disadv = [];
+  const abilities = (_abilityState && _abilityState[PID]) || {};
+  const conds = (combatState && combatState.turnOrder || []).find(c => c.id === PID)?.conditions || [];
+  const targetConds = (combatState && combatState.turnOrder || []).find(c => c.id === targetId)?.conditions || [];
+  // Blinded attacker → disadvantage
+  if (conds.includes('Blinded') || conds.includes('blinded')) disadv.push('Blinded');
+  // Poisoned attacker → disadvantage on attacks
+  if (conds.includes('Poisoned') || conds.includes('poisoned')) disadv.push('Poisoned');
+  // Frightened attacker → disadvantage (simplified: always applies if condition present)
+  if (conds.includes('Frightened') || conds.includes('frightened')) disadv.push('Frightened');
+  // Prone target + melee → advantage; Prone target + ranged beyond 5ft → disadvantage
+  if (targetConds.includes('Prone') || targetConds.includes('prone')) {
+    const ranged = (attacker.range || '').includes('/') || parseInt(attacker.range) > 5;
+    if (ranged) disadv.push('Target prone (ranged)');
+    else adv.push('Target prone (melee)');
+  }
+  // Paralyzed/Unconscious target + melee = advantage + auto-crit
+  if (targetConds.includes('Paralyzed') || targetConds.includes('paralyzed') ||
+      targetConds.includes('Unconscious') || targetConds.includes('unconscious')) {
+    adv.push('Target incapacitated');
+  }
+  // Invisible attacker → advantage (if we ever track this)
+  if (conds.includes('Invisible') || conds.includes('invisible')) adv.push('Invisible');
+  const hasA = adv.length > 0, hasD = disadv.length > 0;
+  const label = (hasA && !hasD) ? 'ADV' : (hasD && !hasA) ? 'DIS' : '';
+  return { advantage: hasA, disadvantage: hasD, advReasons: adv, disadvReasons: disadv, label };
+}
+
+// Roll d20 with advantage/disadvantage. Returns {d20, roll1, roll2, hadAdvantage, hadDisadvantage, label}
+function _rollD20WithAdvDisadv(advState) {
+  const r1 = Math.floor(Math.random() * 20) + 1;
+  const r2 = Math.floor(Math.random() * 20) + 1;
+  const hasAdv = advState.advantage && !advState.disadvantage;
+  const hasDisadv = advState.disadvantage && !advState.advantage;
+  // Both cancel out → normal roll
+  let d20 = r1;
+  let label = '';
+  if (hasAdv) { d20 = Math.max(r1, r2); label = 'ADV'; }
+  else if (hasDisadv) { d20 = Math.min(r1, r2); label = 'DIS'; }
+  return { d20, roll1: r1, roll2: r2, hadAdvantage: hasAdv, hadDisadvantage: hasDisadv, label };
+}
+
+// ── Class bonus damage ──────────────────────────────────────────
+// Returns {bonus:N, dice:'XdY', label:''} for additional damage on hit.
+function _getBonusDamage(a, crit) {
+  const abilities = (_abilityState && _abilityState[PID]) || {};
+  const cls = (char.class || '').toLowerCase();
+  let bonus = 0, dice = '', label = '';
+
+  // Barbarian Rage: +2 melee damage (Bear Totem at L3)
+  if (abilities.rage_active && cls.includes('barbarian')) {
+    const ranged = (a.range || '').includes('/') && parseInt(a.range) > 5;
+    if (!ranged) { bonus += 2; label += ' Rage+2'; }
+  }
+
+  // Rogue Sneak Attack: 2d6 at L3 (once per turn, when advantage OR ally adjacent)
+  // Simplified: if the attack has advantage, or if combat has 2+ PCs on the
+  // same side, allow sneak attack on finesse/ranged weapons.
+  if (cls.includes('rogue') && (a._ddb || (a.range||'').includes('/') ||
+      (char.inventory||[]).some(w=>w.name===a.name && (w.properties||[]).map(p=>p.toLowerCase()).includes('finesse')))) {
+    const lvl = char.level || 3;
+    const sneakDice = Math.ceil(lvl / 2); // 1d6 at L1, 2d6 at L3, 3d6 at L5
+    dice = (crit ? sneakDice * 2 : sneakDice) + 'd6';
+    label += ' Sneak' + sneakDice + 'd6';
+  }
+
+  return { bonus, dice, label };
+}
+
 function rollAtk(i){
   if(combatState && combatState.active && !isMyTurn()){
     showToast('Combat','It is not your turn!',3000);
     return;
   }
   const a=attacks[i];
+  // Determine advantage/disadvantage from conditions
+  const targetId = $('attack-target-select') ? $('attack-target-select').value : '';
+  const advState = _getAdvDisadv(a, targetId);
+
   if(usePhysicalDice){
-    promptDiceRoll(a.name+' — Attack Roll', 'd20').then(d20 => {
+    promptDiceRoll(a.name+' — Attack Roll'+(advState.label?' ('+advState.label+')':''), 'd20').then(d20 => {
       if(d20 === null) return;
-      // For physical dice, also prompt for damage
       const crit=d20===20, miss=d20===1;
       if(!miss && a.dmgDice && a.dmgDice!=='—'){
         const dmgLabel = crit ? a.dmgDice+' (CRIT — roll double!)' : a.dmgDice;
         promptDiceRoll(a.name+' — Damage ('+dmgLabel+')', a.dmgDice).then(dmgRoll => {
           if(dmgRoll === null) dmgRoll = 0;
-          _finishRollAtk(a, d20, dmgRoll);
+          _finishRollAtk(a, d20, physDmg, advState);
         });
       } else {
-        _finishRollAtk(a, d20, null);
+        _finishRollAtk(a, d20, null, advState);
       }
     });
   } else {
-    const d20=Math.floor(Math.random()*20)+1;
-    _finishRollAtk(a, d20, null);
+    const roll = _rollD20WithAdvDisadv(advState);
+    _finishRollAtk(a, roll.d20, null, advState, roll);
   }
 }
-function _finishRollAtk(a, d20, physDmg){
-  const crit=d20===20, miss=d20===1, toHit=d20+(a.toHit||0);
+function _finishRollAtk(a, d20, physDmg, advState, rollInfo){
+  advState = advState || { advantage:false, disadvantage:false, advReasons:[], disadvReasons:[], label:'' };
+  rollInfo = rollInfo || {};
+  // Paralyzed/Unconscious target in melee: auto-crit on hit
+  const targetId = $('attack-target-select') ? $('attack-target-select').value : '';
+  const targetConds = (combatState && combatState.turnOrder || []).find(c => c.id === targetId)?.conditions || [];
+  const autoCrit = (targetConds.includes('Paralyzed')||targetConds.includes('paralyzed')||
+    targetConds.includes('Unconscious')||targetConds.includes('unconscious'));
+  const crit = d20===20 || (autoCrit && d20 !== 1);
+  const miss = d20===1;
+  const toHit = d20 + (a.toHit||0);
+
+  // Bonus damage (rage +2, sneak attack dice)
+  const bonusDmg = _getBonusDamage(a, crit);
+
   let dmgN=0,dmgS='';
   if(physDmg !== null && physDmg !== undefined){
-    // Physical dice — player entered total damage dice, add modifier
-    dmgN = physDmg + (a.dmgMod||0);
+    dmgN = physDmg + (a.dmgMod||0) + bonusDmg.bonus;
     dmgS = physDmg+(a.dmgMod?(a.dmgMod>=0?'+':'')+a.dmgMod:'')+'=<strong>'+dmgN+'</strong>';
   } else if(a.dmgDice&&a.dmgDice!=='—'){
     const[cnt,sid]=a.dmgDice.split('d').map(Number);
     const rs=Array.from({length:crit?cnt*2:cnt},()=>Math.floor(Math.random()*sid)+1);
-    dmgN=rs.reduce((s,r)=>s+r,0)+(a.dmgMod||0);
-    dmgS='['+rs.join(',')+']'+(a.dmgMod?(a.dmgMod>=0?'+':'')+a.dmgMod:'')+'=<strong>'+dmgN+'</strong>';
-  }else{dmgN=Math.max(1,a.dmgMod||1);dmgS='<strong>'+dmgN+'</strong>';}
+    dmgN=rs.reduce((s,r)=>s+r,0)+(a.dmgMod||0)+bonusDmg.bonus;
+    dmgS='['+rs.join(',')+']'+(a.dmgMod?(a.dmgMod>=0?'+':'')+a.dmgMod:'');
+    // Roll bonus dice (sneak attack)
+    if(bonusDmg.dice){
+      const[bc,bs]=bonusDmg.dice.split('d').map(Number);
+      const brs=Array.from({length:bc},()=>Math.floor(Math.random()*bs)+1);
+      const bTotal=brs.reduce((s,r)=>s+r,0);
+      dmgN+=bTotal;
+      dmgS+='+['+brs.join(',')+']('+bonusDmg.label.trim()+')';
+    }
+    if(bonusDmg.bonus) dmgS+='+'+bonusDmg.bonus+'('+bonusDmg.label.trim()+')';
+    dmgS+='=<strong>'+dmgN+'</strong>';
+  }else{dmgN=Math.max(1,(a.dmgMod||1)+bonusDmg.bonus);dmgS='<strong>'+dmgN+'</strong>';}
   const col=crit?'#f1c40f':miss?'var(--red)':'var(--text)';
-  $('combatres').innerHTML='<div style="font-family:Cinzel,serif;font-size:1.8rem;color:'+col+';font-weight:700;">'+(crit?'20!':miss?'1':d20)+'</div>'
-    +'<div style="font-size:12px;color:var(--text-dim);">'+esc(a.name)+': '+(crit?'CRITICAL HIT!':miss?'Miss!':fmt(toHit)+' to hit')+'</div>'
+  const modLabel=fmt(a.toHit||0);
+  // Last Roll section: show d20 prominently, breakdown below.
+  // NEVER display the total in "to hit" format here — that's the weapon
+  // card's job (static modifier). This section shows the ROLL + breakdown.
+  // Advantage/disadvantage display
+  const advTag = (advState.label==='ADV') ? ' <span style="color:#3a8a3a;font-size:10px;">[ADV]</span>' :
+                 (advState.label==='DIS') ? ' <span style="color:#aa2a1a;font-size:10px;">[DIS]</span>' : '';
+  const rollDetail = rollInfo && rollInfo.roll2 && advState.label ?
+    'd20('+rollInfo.roll1+','+rollInfo.roll2+')→'+d20 : 'd20('+d20+')';
+  $('combatres').innerHTML='<div style="font-family:Cinzel,serif;font-size:1.8rem;color:'+col+';font-weight:700;">'+(crit?'CRIT!':miss?'MISS':toHit)+advTag+'</div>'
+    +'<div style="font-size:12px;color:var(--text-dim);">'+esc(a.name)+': '+(crit?'Natural 20!':miss?'Natural 1':(rollDetail+' '+modLabel+' = '+toHit+' vs AC'))+'</div>'
     +(!miss&&dmgS?'<div style="font-size:12px;margin-top:4px;">'+esc(a.dmgType||'')+': '+dmgS+'</div>':'');
-  addRH(a.name+': d20='+d20+' → '+(crit?'CRIT':miss?'MISS':toHit)+(miss?'':' / dmg='+dmgN));
+  addRH(a.name+': d20='+d20+' '+modLabel+' = '+(crit?'CRIT':miss?'MISS':toHit)+(miss?'':' / dmg='+dmgN));
   send({type:'roll:result',rollType:'attack',formula:'1d20',result:[d20],total:toHit});
   if(!miss && combatState && combatState.active){
     pendingAttack={attackRoll:toHit,damage:Math.max(1,dmgN),damageType:a.dmgType||'untyped',crit,attackName:a.name,
       magical:!!a._magical||!!a._ddb,silvered:!!a._silvered,weaponName:a.name};
     updateTargetSection();
-    $('attack-result-area').innerHTML='<div style="font-weight:700;font-size:14px;color:'+(crit?'#b8860b':'var(--text)')+';">'+toHit+' to hit'+(crit?' (CRIT!)':'')+'</div>'
+    // Attack result area: show the roll breakdown, not just the total.
+    $('attack-result-area').innerHTML='<div style="font-weight:700;font-size:14px;color:'+(crit?'#b8860b':'var(--text)')+';">'+toHit+' total'+(crit?' (CRIT!)':'')+'</div>'
+      +'<div style="font-size:11px;color:var(--text-dim);">d20('+d20+') '+modLabel+'</div>'
       +'<div style="font-size:13px;margin-top:2px;">'+dmgN+' '+esc(a.dmgType||'')+' damage</div>'
       +'<div style="font-size:10px;color:var(--text-dim);margin-top:2px;">Select target and apply</div>';
     $('apply-damage-btn').style.display='';

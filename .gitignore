@@ -6,3 +6,11 @@ sessions/
 __pycache__/
 *.pyc
 alexa-cookie.json
+
+# Runtime data — managed by DDB sync, gameplay state, or TTS cache
+config/characters/*.json
+sessions/campaign/*.json
+assets/sounds/npc/
+assets/sounds/max/
+entities.json
+mempalace.yaml

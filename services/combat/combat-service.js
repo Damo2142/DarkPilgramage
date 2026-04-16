@@ -822,6 +822,7 @@ class CombatService {
       crit,
       damage: appliedDamage,
       damageType: damageType || 'untyped',
+      immunityReason: immunityReason || null,
       targetHpAfter: this._getCombatState().turnOrder.find(x => x.id === targetId)?.hp
     };
 

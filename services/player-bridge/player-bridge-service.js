@@ -1547,10 +1547,16 @@ class PlayerBridgeService {
   }
 
   _broadcastPlayerList() {
+    // List ALL assigned players (from state), not just connected WS
+    // clients. Bardic Inspiration, whisper targets, and other UI dropdowns
+    // need the full party — a player doesn't need to be online to be a
+    // valid target for inspiration or a whisper.
+    const allPlayers = this.state.get('players') || {};
     const players = [];
-    for (const [id, player] of this.players) {
-      const charName = this.state.get(`players.${id}.character.name`);
-      players.push({ id, name: charName || id });
+    for (const [id, p] of Object.entries(allPlayers)) {
+      if (p.absent) continue;
+      const charName = p.character?.name || id;
+      players.push({ id, name: charName, connected: this.players.has(id) });
     }
     this._broadcast({ type: 'player:list', players });
   }

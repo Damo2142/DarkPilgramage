@@ -1559,18 +1559,16 @@ class CombatService {
       const { name, tokenId } = req.body || {};
       if (!name && !tokenId) return res.status(400).json({ error: 'name or tokenId required' });
 
-      const tokens = this.state.get('map.tokens') || {};
-      const entry = tokenId
-        ? [tokenId, tokens[tokenId]]
-        : Object.entries(tokens).find(([, t]) =>
-            (t && t.name && t.name.toLowerCase().includes(String(name).toLowerCase())) ||
-            (t && t.actorSlug && t.actorSlug.toLowerCase().includes(String(name).toLowerCase()))
-          );
-      if (!entry || !entry[1]) {
-        return res.status(404).json({ error: `Token not found: ${name || tokenId}` });
+      // Use _resolveToken for the full 5-level fallback: exact ID, actor
+      // slug, player ID with virtual token, NPC config, fuzzy partial match.
+      // The old inline search only checked map.tokens and missed NPCs that
+      // were in config/actors but not yet placed on the map.
+      const resolved = this._resolveToken(name || tokenId);
+      if (!resolved) {
+        return res.status(404).json({ error: `Not found: "${name || tokenId}". Try the full name or token ID.` });
       }
 
-      const [tid, token] = entry;
+      const [tid, token] = [resolved.tokenId, resolved.token];
       if ((combat.turnOrder || []).some(c => c && c.id === tid)) {
         return res.status(400).json({ error: `${token.name} is already in combat` });
       }
@@ -1612,6 +1610,38 @@ class CombatService {
       });
 
       res.json({ ok: true, name: token.name, initiative, tokenId: tid });
+    });
+
+    // GET /api/combat/search?q=tom — typeahead for Add to Combat. Returns
+    // names from map tokens, NPC config, player characters, and actor files.
+    app.get('/api/combat/search', (req, res) => {
+      const q = (req.query.q || '').toLowerCase().trim();
+      if (!q) return res.json([]);
+      const results = [];
+      const seen = new Set();
+      const tokens = this.state.get('map.tokens') || {};
+      for (const [tid, t] of Object.entries(tokens)) {
+        const name = t.name || tid;
+        if (name.toLowerCase().includes(q) || tid.toLowerCase().includes(q) ||
+            (t.actorSlug || '').toLowerCase().includes(q)) {
+          if (!seen.has(tid)) { seen.add(tid); results.push({ id: tid, name, type: t.type || 'npc' }); }
+        }
+      }
+      const players = this.state.get('players') || {};
+      for (const [pid, p] of Object.entries(players)) {
+        const cn = p.character?.name || pid;
+        if ((cn.toLowerCase().includes(q) || pid.includes(q)) && !seen.has(pid)) {
+          seen.add(pid); results.push({ id: pid, name: cn, type: 'pc' });
+        }
+      }
+      const npcs = this.state.get('npcs') || {};
+      for (const [nid, n] of Object.entries(npcs)) {
+        const nn = n.name || nid;
+        if ((nn.toLowerCase().includes(q) || nid.includes(q)) && !seen.has(nid)) {
+          seen.add(nid); results.push({ id: nid, name: nn, type: 'npc' });
+        }
+      }
+      res.json(results.slice(0, 10));
     });
 
     // Addition 3 — POST /api/combat/initiate

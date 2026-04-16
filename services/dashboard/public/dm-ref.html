@@ -591,10 +591,14 @@
     <!-- Addition 5 — manually add a token to active combat mid-fight -->
     <div id="add-to-combat-panel" style="margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:4px;">
       <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Add to Combat</div>
-      <div style="display:flex;gap:8px;">
-        <input id="add-combat-input" type="text" placeholder="Token name or NPC ID"
-          style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:4px;font-size:13px;">
-        <button class="tool-btn" onclick="addToCombat()">Add</button>
+      <div style="display:flex;gap:8px;position:relative;">
+        <div style="flex:1;position:relative;">
+          <input id="add-combat-input" type="text" placeholder="Type name... (e.g. Tomas, Vladislav)"
+            style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:4px;font-size:13px;"
+            oninput="AddCombat.search(this.value)" onkeydown="AddCombat.keydown(event)" autocomplete="off">
+          <div id="add-combat-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:50;background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;max-height:180px;overflow-y:auto;"></div>
+        </div>
+        <button class="tool-btn" onclick="AddCombat.add()">Add</button>
       </div>
       <div id="add-combat-status" style="font-size:11px;color:var(--text-dim);margin-top:6px;"></div>
     </div>
@@ -1783,31 +1787,88 @@ setTimeout(Encounter.refresh, 1500);
 // COMBAT TRACKER
 // ═══════════════════════════════════════════════════════════════
 
-// Addition 5 — manually inject a token into active combat from the
-// "Add to Combat" panel. Calls /api/combat/add-combatant with the
-// trimmed input (matched server-side against token name or actorSlug).
-function addToCombat() {
-  var input = document.getElementById('add-combat-input');
-  var status = document.getElementById('add-combat-status');
-  var name = input && input.value ? input.value.trim() : '';
-  if (!name || !status) return;
+// Addition 5 — Add to Combat with typeahead autocomplete.
+var AddCombat = {
+  _timer: null,
+  _results: [],
+  _selectedIdx: -1,
 
-  status.textContent = 'Adding...';
-  fetch('/api/combat/add-combatant', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: name })
-  }).then(function(r) { return r.json(); }).then(function(d) {
-    if (d && d.ok) {
-      status.textContent = (d.name || name) + ' added at initiative ' + d.initiative;
-      input.value = '';
-    } else {
-      status.textContent = (d && d.error) || ('Not found: ' + name);
+  search: function(q) {
+    clearTimeout(AddCombat._timer);
+    var suggest = document.getElementById('add-combat-suggest');
+    if (!q || q.length < 2) { suggest.style.display = 'none'; return; }
+    AddCombat._timer = setTimeout(function() {
+      fetch('/api/combat/search?q=' + encodeURIComponent(q))
+        .then(function(r) { return r.json(); })
+        .then(function(results) {
+          AddCombat._results = results;
+          AddCombat._selectedIdx = -1;
+          if (!results.length) { suggest.style.display = 'none'; return; }
+          suggest.innerHTML = results.map(function(r, i) {
+            var typeTag = r.type === 'pc' ? '<span style="color:var(--green);font-size:10px;">PC</span>' : '<span style="color:var(--amber);font-size:10px;">NPC</span>';
+            return '<div class="suggest-item" style="padding:6px 10px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;display:flex;justify-content:space-between;align-items:center;" ' +
+              'onmousedown="AddCombat.pick(' + i + ')" onmouseenter="this.style.background=\'var(--surface2)\'" onmouseleave="this.style.background=\'transparent\'">' +
+              '<span>' + esc(r.name) + '</span>' + typeTag + '</div>';
+          }).join('');
+          suggest.style.display = '';
+        }).catch(function() { suggest.style.display = 'none'; });
+    }, 150);
+  },
+
+  pick: function(idx) {
+    var r = AddCombat._results[idx];
+    if (!r) return;
+    var input = document.getElementById('add-combat-input');
+    input.value = r.name;
+    document.getElementById('add-combat-suggest').style.display = 'none';
+  },
+
+  keydown: function(e) {
+    var suggest = document.getElementById('add-combat-suggest');
+    if (suggest.style.display === 'none') {
+      if (e.key === 'Enter') { AddCombat.add(); e.preventDefault(); }
+      return;
     }
-  }).catch(function(e) {
-    status.textContent = 'Error — ' + (e && e.message || 'check server');
-  });
-}
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      AddCombat._selectedIdx = Math.min(AddCombat._selectedIdx + 1, AddCombat._results.length - 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      AddCombat._selectedIdx = Math.max(AddCombat._selectedIdx - 1, 0);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (AddCombat._selectedIdx >= 0) AddCombat.pick(AddCombat._selectedIdx);
+      else AddCombat.add();
+      suggest.style.display = 'none';
+    } else if (e.key === 'Escape') {
+      suggest.style.display = 'none';
+    }
+  },
+
+  add: function() {
+    var input = document.getElementById('add-combat-input');
+    var status = document.getElementById('add-combat-status');
+    var name = input && input.value ? input.value.trim() : '';
+    if (!name || !status) return;
+    document.getElementById('add-combat-suggest').style.display = 'none';
+
+    status.textContent = 'Adding...';
+    fetch('/api/combat/add-combatant', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d && d.ok) {
+        status.textContent = (d.name || name) + ' added at initiative ' + d.initiative;
+        input.value = '';
+      } else {
+        status.textContent = (d && d.error) || ('Not found: ' + name);
+      }
+    }).catch(function(e) {
+      status.textContent = 'Error — ' + (e && e.message || 'check server');
+    });
+  }
+};
 
 var combatExpandedId = null;
 

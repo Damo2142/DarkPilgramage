@@ -887,6 +887,16 @@
       </div>
       <div class="panel" id="panel-skills"><div id="sklist"></div></div>
       <div class="panel" id="panel-combat">
+        <!-- Stamina bar — mirrors the ring on the body silhouette but in a
+             compact horizontal bar so it's visible while in the Combat tab
+             without scrolling up to the wound overlay. -->
+        <div id="combat-stamina-bar" style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 10px;background:#161210;border-radius:6px;border:1px solid #3a3028;">
+          <span style="font-size:11px;color:#6a5a48;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;">Stamina</span>
+          <div style="flex:1;background:#2a2218;border-radius:3px;height:10px;overflow:hidden;">
+            <div id="combat-stamina-fill" style="height:100%;width:100%;background:#e8c060;border-radius:3px;transition:width 0.4s,background 0.4s;"></div>
+          </div>
+          <span id="combat-stamina-label" style="font-size:11px;color:#8a7a62;min-width:40px;text-align:right;">—</span>
+        </div>
         <div id="your-turn-banner"><div class="ytb-label">Your Turn!</div><div class="ytb-sub">Choose an action below</div></div>
         <div id="attack-notification"></div>
         <div id="combat-tracker-player" style="display:none;margin-bottom:12px;">
@@ -1543,11 +1553,14 @@ function loadChar(c){
   $('vprof').textContent='+'+(c.proficiencyBonus||2);
   $('vinsp').textContent=c.inspiration?'★':'☆';
   // Populate attacks from DDB sync data (format: {name,toHit,damage,damageType,range})
+  // Tag _ddb so rebuildWeaponAtks can preserve them instead of recomputing.
+  // DDB toHit is authoritative — it handles class features, magic items,
+  // multiclass, Hexblade, Jack of All Trades, etc.
   if(c.attacks&&c.attacks.length){
     attacks=c.attacks.map(a=>{
       let dmgDice='',dmgMod=0;
       if(a.damage){const m=a.damage.match(/^(\d+d\d+)([+-]\d+)?$/);if(m){dmgDice=m[1];dmgMod=parseInt(m[2]||'0');}else{dmgDice=a.damage;}}
-      return{name:a.name,toHit:a.toHit||0,dmgDice,dmgMod,dmgType:a.damageType||'',range:a.range||'5ft'};
+      return{name:a.name,toHit:a.toHit||0,dmgDice,dmgMod,dmgType:a.damageType||'',range:a.range||'5ft',_ddb:true};
     });
   }
   // Populate spells from DDB sync data — keep all fields
@@ -1863,12 +1876,16 @@ function buildAtks(){
   if(!char.inventory)return[];
   const prof=char.proficiencyBonus||2, sm=abilMod('str'), dm=abilMod('dex');
   return char.inventory.filter(i=>i.type&&i.type.toLowerCase()==='weapon').map(w=>{
-    let toHit=sm+prof,dmgDice='1d4',dmgMod=sm,dmgType='bludgeoning',range='5ft';
-    const n=w.name.toLowerCase();
-    if(n.includes('dagger')){toHit=dm+prof;dmgMod=dm;dmgDice='1d4';dmgType='piercing';range='20/60ft';}
-    else if(n.includes('staff')){dmgDice='1d6';dmgType='bludgeoning';}
-    else if(n.includes('unarmed')||n.includes('strike')){dmgDice='—';dmgMod=Math.max(1,1+sm);dmgType='bludgeoning';}
-    return{name:w.name,toHit,dmgDice,dmgMod,dmgType,range};
+    const propsLower=(w.properties||[]).map(p=>p.toLowerCase());
+    const fin=propsLower.includes('finesse');
+    const ranged=(w.subtype||'').toLowerCase().includes('ranged');
+    const statKey=ranged?'dex':(fin?(dm>=sm?'dex':'str'):'str');
+    const mod=abilMod(statKey);
+    let toHit=mod+prof, dmgMod=mod;
+    if(typeof w.attackBonus==='number') toHit+=w.attackBonus;
+    if(typeof w.damageBonus==='number') dmgMod+=w.damageBonus;
+    return{name:w.name,toHit,dmgDice:w.damage||'1d4',dmgMod,dmgType:w.damageType||'bludgeoning',range:w.range||'5ft',
+      _magical:!!w.magical,_silvered:!!w.silver};
   });
 }
 
@@ -1940,7 +1957,8 @@ function _finishRollAtk(a, d20, physDmg){
   addRH(a.name+': d20='+d20+' → '+(crit?'CRIT':miss?'MISS':toHit)+(miss?'':' / dmg='+dmgN));
   send({type:'roll:result',rollType:'attack',formula:'1d20',result:[d20],total:toHit});
   if(!miss && combatState && combatState.active){
-    pendingAttack={attackRoll:toHit,damage:Math.max(1,dmgN),damageType:a.dmgType||'untyped',crit,attackName:a.name};
+    pendingAttack={attackRoll:toHit,damage:Math.max(1,dmgN),damageType:a.dmgType||'untyped',crit,attackName:a.name,
+      magical:!!a._magical||!!a._ddb,silvered:!!a._silvered,weaponName:a.name};
     updateTargetSection();
     $('attack-result-area').innerHTML='<div style="font-weight:700;font-size:14px;color:'+(crit?'#b8860b':'var(--text)')+';">'+toHit+' to hit'+(crit?' (CRIT!)':'')+'</div>'
       +'<div style="font-size:13px;margin-top:2px;">'+dmgN+' '+esc(a.dmgType||'')+' damage</div>'
@@ -2607,16 +2625,26 @@ function togEq(idx){
 
 function rebuildWeaponAtks(){
   const prof=char.proficiencyBonus||2, sm=abilMod('str'), dm=abilMod('dex');
-  // Remove auto-generated weapon attacks (keep custom/spell attacks)
-  attacks=attacks.filter(a=>a._custom||a._spell);
-  // Add attacks for equipped weapons
+  // Keep DDB-sourced attacks (authoritative toHit), custom, and spell attacks.
+  // Only recompute for equipped weapons that DDB doesn't already cover
+  // (DM-awarded items, manually added weapons).
+  attacks=attacks.filter(a=>a._custom||a._spell||a._ddb);
+  const ddbNames=new Set(attacks.filter(a=>a._ddb).map(a=>a.name.toLowerCase()));
   for(const w of (char.inventory||[])){
     if(!w.equipped||!w.type||w.type.toLowerCase()!=='weapon') continue;
-    const fin=(w.properties||[]).includes('finesse');
-    const ranged=(w.subtype||'').includes('ranged');
+    if(ddbNames.has(w.name.toLowerCase())) continue;
+    const propsLower=(w.properties||[]).map(p=>p.toLowerCase());
+    const fin=propsLower.includes('finesse');
+    const ranged=(w.subtype||'').toLowerCase().includes('ranged');
     const statKey=ranged?'dex':(fin?(dm>=sm?'dex':'str'):'str');
     const mod=abilMod(statKey);
-    attacks.push({name:w.name,toHit:mod+prof,dmgDice:w.damage||'1d4',dmgMod:mod,dmgType:w.damageType||'',range:w.range||'5ft'});
+    let toHit=mod+prof;
+    let dmgMod=mod;
+    // Magic weapon bonus from item-level attackBonus/damageBonus fields
+    if(typeof w.attackBonus==='number') toHit+=w.attackBonus;
+    if(typeof w.damageBonus==='number') dmgMod+=w.damageBonus;
+    attacks.push({name:w.name,toHit,dmgDice:w.damage||'1d4',dmgMod,dmgType:w.damageType||'',range:w.range||'5ft',
+      _magical:!!w.magical,_silvered:!!w.silver});
   }
   renderAtks();
 }
@@ -3327,7 +3355,9 @@ async function applyPendingDamage(){
   try{
     const resp=await fetch('/api/combat/attack',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({attackerId:PID,targetId,attackRoll:pendingAttack.attackRoll,damage:pendingAttack.damage,damageType:pendingAttack.damageType,crit:pendingAttack.crit})
+      body:JSON.stringify({attackerId:PID,targetId,attackRoll:pendingAttack.attackRoll,damage:pendingAttack.damage,
+        damageType:pendingAttack.damageType,crit:pendingAttack.crit,
+        magical:!!pendingAttack.magical,silvered:!!pendingAttack.silvered,weaponName:pendingAttack.weaponName||null})
     });
     const result=await resp.json();
     const hitText=result.hit?'HIT! '+result.damage+' '+esc(result.damageType)+' damage':'MISS (AC '+result.targetAC+')';
@@ -4711,6 +4741,16 @@ const StaminaRing = {
     else if (data.state === 'exhausted') overlay.classList.add('stam-exhausted');
     else if (data.state === 'spent') overlay.classList.add('stam-spent');
     else if (data.state === 'collapsed') overlay.classList.add('stam-collapsed');
+
+    // Mirror to the combat-tab stamina bar
+    const fill = document.getElementById('combat-stamina-fill');
+    const lbl = document.getElementById('combat-stamina-label');
+    if (fill) {
+      fill.style.width = (pct * 100).toFixed(0) + '%';
+      const colors = { fresh:'#e8c060', winded:'#e89040', exhausted:'#c85020', spent:'#aa2a1a', collapsed:'#4a2018' };
+      fill.style.background = colors[data.state] || colors.fresh;
+    }
+    if (lbl) lbl.textContent = data.current + '/' + data.max;
   }
 };
 

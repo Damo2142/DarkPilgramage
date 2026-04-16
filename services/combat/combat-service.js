@@ -1664,20 +1664,50 @@ class CombatService {
       res.json({ ok: true, targetId, initiatorId, combatantIds, combat });
     });
 
-    // PHASE 6 — POST /api/combat/start-scene — one-click combat start with
-    // every visible token currently on the active map. NPC initiative is
-    // rolled by combat-service; player initiative is left blank for the
-    // DM to fill in (Max prompts the DM to collect physical d20 results).
+    // PHASE 6 — POST /api/combat/start-scene — start combat with present
+    // PCs + NPCs whose config has combatJoins:true (conditions met).
+    // Does NOT add every visible token — Piotr in the cellar, patrons,
+    // gas spore, and other bystanders stay out unless the DM explicitly
+    // adds them mid-combat via /api/combat/add-combatant.
+    // Optional body.combatantIds overrides the auto-selection entirely.
     app.post('/api/combat/start-scene', (req, res) => {
       const tokens = this.state.get('map.tokens') || {};
+      const players = this.state.get('players') || {};
+
+      // If the DM sent an explicit list, use it directly
+      if (req.body?.combatantIds && Array.isArray(req.body.combatantIds) && req.body.combatantIds.length) {
+        const combat = this.startCombat(req.body.combatantIds, req.body.manualInit || {});
+        return res.json({ ok: true, combat, combatantIds: req.body.combatantIds });
+      }
+
       const ids = [];
+      // All present PCs (not absent, not hidden, has a token on the map)
       for (const [tid, t] of Object.entries(tokens)) {
         if (!t || t.hidden) continue;
-        ids.push(tid);
+        if (t.type === 'pc') {
+          const ps = players[tid];
+          if (ps?.absent || ps?.notYetArrived) continue;
+          ids.push(tid);
+        }
       }
-      if (!ids.length) return res.status(400).json({ error: 'no tokens on map' });
-      const combat = this.startCombat(ids, {});
-      res.json({ ok: true, combat, combatantIds: ids });
+      // NPCs with combatJoins:true + conditions met (same logic as /initiate)
+      const sessionNpcs = (this.config && this.config.npcs) || {};
+      const ambient = this.orchestrator.getService('ambient-life');
+      for (const [npcId, npc] of Object.entries(sessionNpcs)) {
+        if (npc?.combatJoins !== true) continue;
+        if (npc.combatJoinsCondition === 'only-when-transformed') {
+          const tomasTransformed = ambient && ambient._tomasState && ambient._tomasState.transformed;
+          if (npcId === 'tomas' && !tomasTransformed) continue;
+        }
+        const npcTokenId = Object.keys(tokens).find(tid =>
+          tokens[tid].actorSlug === npcId || tid === npcId
+        );
+        if (npcTokenId && !ids.includes(npcTokenId)) ids.push(npcTokenId);
+      }
+
+      if (!ids.length) return res.status(400).json({ error: 'no eligible combatants — use body.combatantIds to override' });
+      const combat = this.startCombat(ids, req.body?.manualInit || {});
+      res.json({ ok: true, combat, combatantIds: ids, autoSelected: true });
     });
 
     // POST /api/combat/end — end combat

@@ -548,12 +548,21 @@
 
     <!-- ═══ DM ATTACK RESOLVER — physical dice workflow ═══ -->
     <div id="dm-attack-panel" style="display:none;margin-top:16px;padding:14px;background:#1a1510;border:2px solid var(--gold);border-radius:6px;">
-      <div style="font-size:13px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">
-        ⚔ Resolve Attack — <span id="dma-attacker-name" style="color:var(--text);text-transform:none;"></span>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+        <span style="font-size:13px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1px;">
+          Resolve — <span id="dma-attacker-name" style="color:var(--text);text-transform:none;"></span>
+        </span>
+        <div style="margin-left:auto;display:flex;gap:4px;">
+          <button id="dma-mode-weapon" class="tool-btn primary" style="font-size:11px;padding:4px 12px;" onclick="DmAttack._setMode('weapon')">⚔ Weapon</button>
+          <button id="dma-mode-spell" class="tool-btn" style="font-size:11px;padding:4px 12px;" onclick="DmAttack._setMode('spell')">✦ Spell</button>
+        </div>
       </div>
 
       <!-- NPC target list (name + AC for DM eyes) -->
       <div id="dma-npc-ref" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;"></div>
+
+      <!-- ═══ WEAPON SECTION (existing) ═══ -->
+      <div id="dma-weapon-section">
 
       <!-- Weapon selector buttons -->
       <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;">Weapon:</div>
@@ -586,6 +595,60 @@
         </div>
         <div id="dma-dmg-result" style="display:none;padding:12px;background:var(--surface);border-radius:4px;margin-top:10px;font-size:14px;line-height:1.6;"></div>
       </div>
+      </div><!-- end dma-weapon-section -->
+
+      <!-- ═══ SPELL SECTION ═══ -->
+      <div id="dma-spell-section" style="display:none;">
+        <!-- Spell selector buttons -->
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;">Spell:</div>
+        <div id="dms-spells" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;max-height:120px;overflow-y:auto;"></div>
+        <div id="dms-spell-info" style="display:none;font-size:12px;padding:8px;background:var(--surface);border-radius:4px;margin-bottom:10px;line-height:1.5;"></div>
+
+        <!-- Attack roll spell -->
+        <div id="dms-attack-mode" style="display:none;">
+          <div style="display:flex;gap:10px;align-items:end;margin-bottom:10px;">
+            <div style="flex:1;">
+              <label style="font-size:11px;color:var(--text-dim);">Target</label>
+              <select id="dms-atk-target" style="width:100%;padding:8px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;font-size:14px;"></select>
+            </div>
+            <div style="width:90px;">
+              <label style="font-size:11px;color:var(--text-dim);">Raw d20</label>
+              <input id="dms-atk-d20" type="number" min="1" max="20" placeholder="d20" style="width:100%;padding:8px;text-align:center;font-size:16px;font-weight:700;background:var(--bg);border:1px solid var(--border);color:var(--gold);border-radius:4px;">
+            </div>
+            <button class="tool-btn primary" style="padding:10px 18px;font-weight:700;" onclick="DmSpell.resolveAttack()">RESOLVE</button>
+          </div>
+        </div>
+
+        <!-- Save spell -->
+        <div id="dms-save-mode" style="display:none;">
+          <div style="font-size:12px;color:var(--gold);margin-bottom:8px;">
+            <strong id="dms-save-type">DEX</strong> Save — DC <strong id="dms-save-dc">13</strong>
+          </div>
+          <!-- Target checkboxes for area spells / single select -->
+          <div id="dms-save-targets" style="margin-bottom:10px;"></div>
+          <button class="tool-btn primary" style="padding:10px 18px;font-weight:700;" onclick="DmSpell.resolveSave()">RESOLVE SAVES</button>
+        </div>
+
+        <!-- Condition-only spell (no damage) -->
+        <div id="dms-condition-mode" style="display:none;">
+          <div style="font-size:12px;color:var(--amber);margin-bottom:8px;" id="dms-condition-desc"></div>
+        </div>
+
+        <!-- Spell result -->
+        <div id="dms-result" style="display:none;padding:12px;background:var(--surface);border-radius:4px;margin-top:10px;font-size:14px;line-height:1.6;"></div>
+
+        <!-- Spell damage (after hit or failed save) -->
+        <div id="dms-damage-section" style="display:none;margin-top:10px;">
+          <div style="display:flex;gap:10px;align-items:end;">
+            <div style="flex:1;">
+              <label style="font-size:11px;color:var(--text-dim);">Raw Damage Dice Roll <span id="dms-dmg-dice" style="color:var(--gold);"></span></label>
+              <input id="dms-dmg-raw" type="number" min="0" placeholder="dice total" style="width:100%;padding:8px;text-align:center;font-size:16px;font-weight:700;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;">
+            </div>
+            <button class="tool-btn primary" style="padding:10px 18px;font-weight:700;background:#8a1a1a;" onclick="DmSpell.applyDamage()">APPLY DAMAGE</button>
+          </div>
+          <div id="dms-dmg-result" style="display:none;padding:12px;background:var(--surface);border-radius:4px;margin-top:10px;font-size:14px;line-height:1.6;"></div>
+        </div>
+      </div><!-- end dma-spell-section -->
     </div>
 
     <!-- Addition 5 — manually add a token to active combat mid-fight -->
@@ -2220,6 +2283,327 @@ var DmAttack = {
   }
 };
 
+
+// ═══════════════════════════════════════════════════════════════
+// DM SPELL RESOLVER
+// ═══════════════════════════════════════════════════════════════
+var _srdSpellCache = null;
+function _getSrdSpells(cb) {
+  if (_srdSpellCache) return cb(_srdSpellCache);
+  fetch('/api/spells/search?limit=500').then(function(r){return r.json();}).then(function(d) {
+    _srdSpellCache = Array.isArray(d) ? d : d.spells || [];
+    cb(_srdSpellCache);
+  }).catch(function(){ cb([]); });
+}
+
+var DmSpell = {
+  _spell: null,
+  _targets: [],
+  _saveResults: [],
+  _casterId: null,
+
+  refresh: function(casterId) {
+    DmSpell._casterId = casterId;
+    DmSpell._spell = null;
+    var p = stateData.players[casterId];
+    var char = p && p.character;
+    var spells = (char && char.spells) || [];
+    var container = $('dms-spells');
+    if (!spells.length) {
+      container.innerHTML = '<span style="font-size:12px;color:var(--text-dim);font-style:italic;">No spells known</span>';
+      return;
+    }
+    // Group: cantrips first, then by level
+    var sorted = spells.slice().sort(function(a,b){ return (a.level||0)-(b.level||0) || a.name.localeCompare(b.name); });
+    container.innerHTML = sorted.map(function(s, i) {
+      var lvl = s.level === 0 ? 'C' : 'L'+s.level;
+      var col = s.level === 0 ? 'var(--text-dim)' : 'var(--gold)';
+      return '<button class="tool-btn" style="font-size:11px;padding:3px 8px;" onclick="DmSpell.selectSpell('+i+')" data-sidx="'+i+'">' +
+        '<span style="color:'+col+';font-size:9px;">'+lvl+'</span> '+esc(s.name)+'</button>';
+    }).join('');
+    DmSpell._sortedSpells = sorted;
+  },
+
+  selectSpell: function(idx) {
+    var s = DmSpell._sortedSpells[idx];
+    if (!s) return;
+    DmSpell._spell = s;
+    // Highlight selected
+    var btns = $('dms-spells').querySelectorAll('button');
+    btns.forEach(function(b,i){ b.className = 'tool-btn' + (i===idx?' primary':''); });
+    // Enrich from SRD
+    _getSrdSpells(function(srd) {
+      var match = srd.find(function(x){ return x.name.toLowerCase() === s.name.toLowerCase(); });
+      if (match) { for (var k in match) { if (!(k in s) || !s[k]) s[k] = match[k]; } }
+      DmSpell._showSpellUI(s);
+    });
+  },
+
+  _showSpellUI: function(s) {
+    var casterId = DmSpell._casterId;
+    var p = stateData.players[casterId];
+    var char = p && p.character;
+    var sa = (char && char.spellcastingAbility) || 'cha';
+    var sm = char && char.abilities && char.abilities[sa] ? char.abilities[sa].modifier : 0;
+    var prof = (char && char.proficiencyBonus) || 2;
+    var atkMod = sm + prof;
+    var saveDC = 8 + sm + prof;
+    var isAttack = /spell attack/i.test(s.description || '');
+    var isSave = !!s.save;
+    var isAoe = !!s.areaOfEffect;
+    var hasDamage = !!s.damage;
+    var isCondition = !hasDamage && isSave;
+
+    // Spell info
+    var info = '<strong>'+esc(s.name)+'</strong>';
+    info += ' <span style="color:var(--text-dim);">'+(s.level===0?'Cantrip':'Level '+s.level)+' '+esc(s.school||'')+'</span>';
+    if (s.concentration) info += ' <span style="color:var(--blue);">[C]</span>';
+    if (hasDamage) info += '<br>Damage: <strong>'+esc(s.damage)+'</strong> '+esc(s.damageType||'');
+    if (isAttack) info += '<br>Spell Attack: <strong>'+esc(sa.toUpperCase())+' '+((atkMod>=0?'+':'')+atkMod)+'</strong>';
+    if (isSave) info += '<br>Save: <strong>'+esc(s.save)+'</strong> DC <strong>'+saveDC+'</strong>';
+    if (isAoe) info += '<br>Area: '+esc(s.areaOfEffect.type)+' '+s.areaOfEffect.size+'ft';
+    info += '<br><span style="font-size:11px;color:var(--text-dim);">'+esc((s.description||'').substring(0,200))+'</span>';
+    $('dms-spell-info').innerHTML = info;
+    $('dms-spell-info').style.display = '';
+
+    var combat = stateData.combat;
+    var npcs = (combat && combat.turnOrder || []).filter(function(c){ return c.type!=='pc' && c.isAlive; });
+
+    // Show appropriate mode
+    $('dms-attack-mode').style.display = isAttack ? '' : 'none';
+    $('dms-save-mode').style.display = isSave ? '' : 'none';
+    $('dms-condition-mode').style.display = isCondition ? '' : 'none';
+    $('dms-result').style.display = 'none';
+    $('dms-damage-section').style.display = 'none';
+
+    if (isAttack) {
+      var sel = $('dms-atk-target');
+      sel.innerHTML = '<option value="">Select target...</option>';
+      npcs.forEach(function(n) {
+        var opt = document.createElement('option');
+        opt.value = n.id; opt.textContent = n.name + ' (AC ' + n.ac + ')';
+        sel.appendChild(opt);
+      });
+      $('dms-atk-d20').value = '';
+    }
+
+    if (isSave) {
+      $('dms-save-type').textContent = s.save;
+      $('dms-save-dc').textContent = saveDC;
+      // Build target list with checkboxes (AOE) or radio (single)
+      var multi = isAoe;
+      $('dms-save-targets').innerHTML = npcs.map(function(n) {
+        var saveKey = (s.save || 'dex').toLowerCase();
+        var saveMod = 0;
+        // Try to get NPC save modifier from actor data
+        return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:4px 8px;background:var(--surface);border-radius:3px;">' +
+          '<input type="'+(multi?'checkbox':'radio')+'" name="dms-save-tgt" value="'+n.id+'" style="accent-color:var(--gold);"'+(multi?'':'')+' onclick="event.stopPropagation()">' +
+          '<span style="flex:1;font-size:13px;">'+esc(n.name)+'</span>' +
+          '<input type="number" id="dms-save-roll-'+n.id+'" min="1" max="20" placeholder="d20" style="width:60px;padding:4px;text-align:center;font-size:14px;font-weight:700;background:var(--bg);border:1px solid var(--border);color:var(--gold);border-radius:3px;" onclick="event.stopPropagation()">' +
+          '</div>';
+      }).join('');
+    }
+
+    if (isCondition && !isSave) {
+      $('dms-condition-desc').textContent = 'This spell applies an effect without a save. Describe the result.';
+    }
+  },
+
+  resolveAttack: function() {
+    var s = DmSpell._spell; if (!s) return;
+    var targetId = $('dms-atk-target').value;
+    var d20 = parseInt($('dms-atk-d20').value, 10);
+    if (!targetId) { alert('Select a target'); return; }
+    if (isNaN(d20) || d20 < 1 || d20 > 20) { alert('Enter d20 (1-20)'); return; }
+
+    var casterId = DmSpell._casterId;
+    var p = stateData.players[casterId]; var char = p && p.character;
+    var sa = (char && char.spellcastingAbility) || 'cha';
+    var sm = char && char.abilities && char.abilities[sa] ? char.abilities[sa].modifier : 0;
+    var prof = (char && char.proficiencyBonus) || 2;
+    var atkMod = sm + prof;
+    var totalRoll = d20 + atkMod;
+    var crit = d20 === 20, fumble = d20 === 1;
+
+    var combat = stateData.combat;
+    var target = combat && combat.turnOrder.find(function(c){return c.id===targetId;});
+    if (!target) return;
+    var hit = crit || (!fumble && totalRoll >= target.ac);
+    var casterName = char && char.name || casterId;
+
+    var resEl = $('dms-result');
+    if (!hit) {
+      resEl.innerHTML = '<div style="color:'+(fumble?'var(--red)':'var(--text-dim)')+';font-weight:700;font-size:16px;">MISS'+(fumble?' — Natural 1':'')+'</div>' +
+        '<div style="font-size:12px;color:var(--text-dim);">'+esc(s.name)+': d20('+d20+') +'+atkMod+' = '+totalRoll+' vs AC '+target.ac+'</div>' +
+        '<div id="dms-narrative" style="font-style:italic;color:var(--amber);margin-top:8px;">Generating...</div>';
+      resEl.style.display = '';
+      $('dms-damage-section').style.display = 'none';
+      fetch('/api/hal/query',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({query:'Narrate a spell miss. '+casterName+' casts '+s.name+' at '+target.name+' and misses. One sentence, gothic horror, vivid. Describe the spell energy going astray in the tavern.'})
+      }).then(function(r){return r.json();}).then(function(r){
+        var el=document.getElementById('dms-narrative'); if(el) el.textContent=r.response||'The spell fizzles.';
+      }).catch(function(){});
+    } else {
+      resEl.innerHTML = '<div style="color:var(--green);font-weight:700;font-size:16px;">HIT'+(crit?' — CRITICAL!':'')+'</div>' +
+        '<div style="font-size:12px;color:var(--text-dim);">'+esc(s.name)+': d20('+d20+') +'+atkMod+' = '+totalRoll+' vs AC '+target.ac+'</div>';
+      resEl.style.display = '';
+      if (s.damage) {
+        $('dms-dmg-dice').textContent = '('+s.damage+(crit?' × 2':'')+')';
+        $('dms-damage-section').style.display = '';
+        $('dms-dmg-raw').value = '';
+        DmSpell._pendingDmg = { targetId:targetId, targetName:target.name, casterName:casterName, spell:s, crit:crit, totalRoll:totalRoll };
+      }
+    }
+  },
+
+  resolveSave: function() {
+    var s = DmSpell._spell; if (!s) return;
+    var casterId = DmSpell._casterId;
+    var p = stateData.players[casterId]; var char = p && p.character;
+    var sa = (char && char.spellcastingAbility) || 'cha';
+    var sm = char && char.abilities && char.abilities[sa] ? char.abilities[sa].modifier : 0;
+    var prof = (char && char.proficiencyBonus) || 2;
+    var saveDC = 8 + sm + prof;
+    var casterName = char && char.name || casterId;
+
+    var checks = document.querySelectorAll('[name="dms-save-tgt"]:checked');
+    if (!checks.length) { alert('Select at least one target'); return; }
+
+    var combat = stateData.combat;
+    var results = [];
+    checks.forEach(function(chk) {
+      var tid = chk.value;
+      var rollInput = document.getElementById('dms-save-roll-'+tid);
+      var d20 = rollInput ? parseInt(rollInput.value, 10) : NaN;
+      if (isNaN(d20)) { results.push({id:tid, name:'?', pass:false, error:'no roll'}); return; }
+      var target = combat && combat.turnOrder.find(function(c){return c.id===tid;});
+      var tName = target ? target.name : tid;
+      // NPC save modifier: rough estimate from ability score if available
+      var saveMod = 0; // simplified — full NPC save mods would need actor data lookup
+      var total = d20 + saveMod;
+      var pass = total >= saveDC;
+      results.push({ id:tid, name:tName, d20:d20, total:total, pass:pass });
+    });
+
+    DmSpell._saveResults = results;
+    var html = '<div style="font-weight:700;color:var(--gold);margin-bottom:8px;">'+esc(s.save)+' Save DC '+saveDC+' — '+esc(s.name)+'</div>';
+    results.forEach(function(r) {
+      var col = r.pass ? 'var(--green)' : 'var(--red)';
+      var label = r.pass ? 'PASS' : 'FAIL';
+      html += '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:13px;">' +
+        '<span>'+esc(r.name)+'</span>' +
+        '<span style="color:'+col+';font-weight:700;">'+r.d20+' → '+label+'</span></div>';
+    });
+    var failCount = results.filter(function(r){return !r.pass;}).length;
+    var passCount = results.filter(function(r){return r.pass;}).length;
+    html += '<div style="margin-top:6px;font-size:12px;color:var(--text-dim);">'+failCount+' failed, '+passCount+' passed</div>';
+
+    if (s.damage && failCount > 0) {
+      html += '<div id="dms-save-narrative" style="font-style:italic;color:var(--amber);margin-top:8px;">Generating...</div>';
+      $('dms-dmg-dice').textContent = '('+s.damage+')';
+      $('dms-damage-section').style.display = '';
+      $('dms-dmg-raw').value = '';
+      DmSpell._pendingDmg = { targets:results, casterName:casterName, spell:s, crit:false, saveDC:saveDC, isAoe:true };
+    } else if (!s.damage) {
+      // Condition spell — apply conditions to failures
+      var condName = s.save === 'WIS' ? 'Charmed' : s.save === 'DEX' ? 'Restrained' : 'Incapacitated';
+      if (/hold person|paralyz/i.test(s.name)) condName = 'Paralyzed';
+      if (/charm/i.test(s.name)) condName = 'Charmed';
+      if (/command/i.test(s.name)) condName = 'Commanded';
+      if (/frighten|fear/i.test(s.name)) condName = 'Frightened';
+      if (/sleep|laughter/i.test(s.name)) condName = 'Incapacitated';
+      results.filter(function(r){return !r.pass;}).forEach(function(r){
+        fetch('/api/combat/condition',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({combatantId:r.id,condition:condName,action:'add'})
+        }).catch(function(){});
+      });
+      html += '<div style="margin-top:8px;color:var(--amber);font-weight:700;">'+condName+' applied to '+failCount+' target(s)</div>';
+      if (s.concentration) html += '<div style="font-size:11px;color:var(--blue);margin-top:4px;">⟐ Concentration active on '+casterName+'</div>';
+    }
+
+    $('dms-result').innerHTML = html;
+    $('dms-result').style.display = '';
+
+    // Narrative
+    var targetNames = results.map(function(r){return r.name;}).join(', ');
+    fetch('/api/hal/query',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({query:'Narrate '+casterName+' casting '+s.name+' on '+targetNames+'. '+failCount+' failed the save, '+passCount+' passed. One or two sentences, gothic horror, vivid. Describe the spell effect in the tavern setting.'})
+    }).then(function(r){return r.json();}).then(function(r){
+      var el=document.getElementById('dms-save-narrative'); if(el) el.textContent=r.response||'';
+    }).catch(function(){});
+  },
+
+  applyDamage: function() {
+    var pd = DmSpell._pendingDmg; if (!pd) return;
+    var rawDmg = parseInt($('dms-dmg-raw').value, 10);
+    if (isNaN(rawDmg) || rawDmg < 0) { alert('Enter damage dice total'); return; }
+    var s = pd.spell;
+    var crit = pd.crit;
+    var fullDmg = rawDmg; // for spells, damage modifier is usually 0 at this level
+
+    var resultHtml = '';
+    if (pd.isAoe) {
+      // AOE: full damage to failed saves, half (floor) to passed
+      (pd.targets || []).forEach(function(t) {
+        var applied = t.pass ? Math.floor(fullDmg / 2) : fullDmg;
+        if (applied > 0) {
+          fetch('/api/combat/hp',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({combatantId:t.id, delta:-applied})
+          }).catch(function(){});
+        }
+        resultHtml += '<div style="font-size:13px;">'+esc(t.name)+': '+(t.pass?applied+' (half — saved)':applied+' (full — failed)')+'</div>';
+      });
+    } else {
+      // Single target spell attack
+      fetch('/api/combat/attack',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          attackerId:DmSpell._casterId, targetId:pd.targetId,
+          attackRoll:pd.totalRoll, damage:fullDmg, damageType:s.damageType||'',
+          crit:crit, magical:true, weaponName:s.name
+        })
+      }).then(function(r){return r.json();}).then(function(r){
+        var applied = r.damage || fullDmg;
+        var hpAfter = r.targetHpAfter || {};
+        $('dms-dmg-result').innerHTML =
+          '<div style="font-weight:700;color:var(--red);">'+applied+' '+esc(s.damageType||'')+' damage</div>' +
+          '<div style="font-size:12px;">'+esc(pd.targetName)+': '+hpAfter.current+'/'+hpAfter.max+' HP</div>' +
+          '<div id="dms-hit-narr" style="font-style:italic;color:var(--amber);margin-top:8px;">Generating...</div>';
+        $('dms-dmg-result').style.display = '';
+        fetch('/api/hal/query',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({query:'Narrate '+pd.casterName+' hitting '+pd.targetName+' with '+s.name+' for '+applied+' '+s.damageType+' damage. One sentence, gothic horror, describe the magical impact.'})
+        }).then(function(r2){return r2.json();}).then(function(r2){
+          var el=document.getElementById('dms-hit-narr'); if(el) el.textContent=r2.response||'';
+        }).catch(function(){});
+      }).catch(function(){});
+      return;
+    }
+    resultHtml += '<div id="dms-aoe-narr" style="font-style:italic;color:var(--amber);margin-top:8px;">Generating...</div>';
+    $('dms-dmg-result').innerHTML = resultHtml;
+    $('dms-dmg-result').style.display = '';
+    if (s.concentration) {
+      $('dms-dmg-result').innerHTML += '<div style="font-size:11px;color:var(--blue);margin-top:4px;">⟐ Concentration active</div>';
+    }
+    var targetNames = (pd.targets||[]).map(function(t){return t.name;}).join(', ');
+    fetch('/api/hal/query',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({query:'Narrate '+pd.casterName+' casting '+s.name+' hitting '+targetNames+' for '+fullDmg+' '+s.damageType+' damage in the tavern. One sentence, gothic horror, describe the area effect.'})
+    }).then(function(r){return r.json();}).then(function(r){
+      var el=document.getElementById('dms-aoe-narr'); if(el) el.textContent=r.response||'';
+    }).catch(function(){});
+  }
+};
+
+// Mode toggle for weapon/spell
+DmAttack._setMode = function(mode) {
+  $('dma-weapon-section').style.display = mode === 'weapon' ? '' : 'none';
+  $('dma-spell-section').style.display = mode === 'spell' ? '' : 'none';
+  $('dma-mode-weapon').className = 'tool-btn' + (mode === 'weapon' ? ' primary' : '');
+  $('dma-mode-spell').className = 'tool-btn' + (mode === 'spell' ? ' primary' : '');
+  if (mode === 'spell') {
+    var combat = stateData.combat;
+    var current = combat && combat.turnOrder && combat.turnOrder[combat.currentTurn];
+    if (current && current.type === 'pc') DmSpell.refresh(current.id);
+  }
+};
 
 // ═══════════════════════════════════════════════════════════════
 // NPC POSITIONS

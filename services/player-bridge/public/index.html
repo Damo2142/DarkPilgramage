@@ -1276,6 +1276,54 @@ const SKILL_AB={acrobatics:'dex','animal-handling':'wis',arcana:'int',athletics:
 
 function $(id){return document.getElementById(id);}
 
+// ── Chromebook Audio Cues ────────────────────────────────────
+// Short Web Audio API tones — no MP3 files, just distinct signals
+// so players know something happened even when not looking at screen.
+var AudioCue = {
+  _ctx: null,
+  _getCtx: function() {
+    if (!this._ctx) try { this._ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){}
+    return this._ctx;
+  },
+  _tone: function(freq, dur, type, vol) {
+    var ctx = this._getCtx(); if (!ctx) return;
+    if (ctx.state === 'suspended') ctx.resume();
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(vol || 0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (dur || 0.3));
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + (dur || 0.3));
+  },
+  perception: function() {
+    // Soft ascending chime — two quick notes
+    this._tone(660, 0.15, 'sine', 0.12);
+    setTimeout(function(){ AudioCue._tone(880, 0.2, 'sine', 0.1); }, 120);
+  },
+  yourTurn: function() {
+    // Distinct three-note ascending fanfare
+    this._tone(523, 0.12, 'triangle', 0.18);
+    setTimeout(function(){ AudioCue._tone(659, 0.12, 'triangle', 0.18); }, 130);
+    setTimeout(function(){ AudioCue._tone(784, 0.25, 'triangle', 0.15); }, 260);
+  },
+  itemReceived: function() {
+    // Positive sparkle — high quick ascending
+    this._tone(880, 0.1, 'sine', 0.12);
+    setTimeout(function(){ AudioCue._tone(1100, 0.1, 'sine', 0.1); }, 80);
+    setTimeout(function(){ AudioCue._tone(1320, 0.15, 'sine', 0.08); }, 160);
+  },
+  npcSpeech: function() {
+    // Low warm note — someone is talking to you
+    this._tone(330, 0.25, 'sine', 0.1);
+  },
+  observation: function() {
+    // Same as perception — you noticed something
+    this.perception();
+  }
+};
+
 // Observation zone — italic fade-in, auto-remove after duration
 function showObservation(text, durationMs) {
   const zone = document.getElementById('observation-zone');
@@ -1437,14 +1485,14 @@ function handle(m){
     case 'stamina:updated': if(m.data) StaminaRing.update(m.data); break;
     case 'horror:effect': applyHorror(m.effect,m.payload,m.durationMs); break;
     case 'horror:clear': clearHorror(); break;
-    case 'perception:flash': showPerceptionFlash(m.description); break;
+    case 'perception:flash': showPerceptionFlash(m.description); AudioCue.perception(); break;
     case 'npc:dialogue': showToast(m.npc||'NPC',m.text,8000); break;
-    case 'npc:speech': handleNpcSpeech(m); break;
-    case 'npc:audio': handlePrivateNpcAudio(m); break;
+    case 'npc:speech': handleNpcSpeech(m); AudioCue.npcSpeech(); break;
+    case 'npc:audio': handlePrivateNpcAudio(m); AudioCue.npcSpeech(); break;
     case 'chat:p2p': handleP2P(m); break;
     case 'narrator:whisper': handleNarratorWhisper(m); break;
     case 'dm:private_message':
-      if (m.style === 'observation') { showObservation(m.text, m.durationMs || 45000); }
+      if (m.style === 'observation') { showObservation(m.text, m.durationMs || 45000); AudioCue.observation(); }
       else { showToast('DM', m.text, m.durationMs || 8000); }
       break;
     case 'chat:party': addChat(m.fromName||m.from,'[Party] '+m.text,'var(--accent)'); if(m.from!==PID) showToast(m.fromName||m.from,m.text,4000); break;
@@ -1473,7 +1521,7 @@ function handle(m){
       break;
     case 'inspiration:gain': showInspiration(m); break;
     case 'ability:bardic_inspiration': showBardicInspirationFlash(m.die || 'd6', m.from); break;
-    case 'item:received': showItemReceivedFlash(m.itemName, m.description); break;
+    case 'item:received': showItemReceivedFlash(m.itemName, m.description); AudioCue.itemReceived(); break;
     case 'character:abilities_update':
       if (m.playerId === PID && m.abilities) {
         _abilityState = _abilityState || {}; _abilityState[PID] = m.abilities;
@@ -1507,7 +1555,7 @@ function handle(m){
     case 'combat:wound_update':     displayWoundUpdate(m.description); break;
     case 'combat:save_required':    displaySaveRequired(m.saveType, m.cause); break;
     case 'combat:condition_update': displayConditionUpdate(m.condition, m.narrative, m.active); break;
-    case 'combat:your_turn':        displayYourTurn(m.spellStatus, m.movementFeet); break;
+    case 'combat:your_turn':        displayYourTurn(m.spellStatus, m.movementFeet); AudioCue.yourTurn(); break;
     // Addition 2 — telepathy contact (Vladislav / Letavec / Page)
     case 'telepathy:touch':         displayTelepathyTouch(m.style, m.text); break;
     // Audio streaming for remote players

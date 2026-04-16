@@ -2473,11 +2473,11 @@ var DmSpell = {
     var results = [];
     checks.forEach(function(chk) {
       var tid = chk.value;
-      var rollInput = document.getElementById('dms-save-roll-'+tid);
-      var d20 = rollInput ? parseInt(rollInput.value, 10) : NaN;
-      if (isNaN(d20)) { results.push({id:tid, name:'?', pass:false, error:'no roll'}); return; }
       var target = combat && combat.turnOrder.find(function(c){return c.id===tid;});
       var tName = target ? target.name : tid;
+      var rollInput = document.getElementById('dms-save-roll-'+tid);
+      var d20 = rollInput ? parseInt(rollInput.value, 10) : NaN;
+      if (isNaN(d20)) { results.push({id:tid, name:tName, pass:false, error:'no roll entered'}); return; }
       // NPC save modifier: rough estimate from ability score if available
       var saveMod = 0; // simplified — full NPC save mods would need actor data lookup
       var total = d20 + saveMod;

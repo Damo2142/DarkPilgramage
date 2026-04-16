@@ -572,6 +572,9 @@
     <div id="max-input-area">
       <input type="text" id="max-input" placeholder="Type a question for Max..." onkeydown="if(event.key==='Enter')sendMax()">
       <button id="max-send" onclick="sendMax()">SEND</button>
+      <button id="dm-ptt-btn" onmousedown="DmPTT.start()" onmouseup="DmPTT.stop()" ontouchstart="DmPTT.start();event.preventDefault()" ontouchend="DmPTT.stop()"
+        style="background:none;border:2px solid var(--border);color:var(--text-dim);padding:8px 14px;border-radius:4px;cursor:pointer;font-size:14px;white-space:nowrap;user-select:none;"
+        title="Hold to speak to Max">🎙 HOLD</button>
     </div>
   </div>
 
@@ -878,6 +881,76 @@ function sendMax() {
     }, 3000);
   });
 }
+
+// ═══════════════════════════════════════════════════════════════
+// DM PTT → MAX (hold to speak, release to send to Max)
+// ═══════════════════════════════════════════════════════════════
+var DmPTT = {
+  _active: false,
+  _stream: null,
+  _context: null,
+  _processor: null,
+  _waitingForTranscript: false,
+
+  async start() {
+    if (this._active) return;
+    var btn = $('dm-ptt-btn');
+    try {
+      this._stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 16000 }
+      });
+      this._context = new AudioContext({ sampleRate: 16000 });
+      var source = this._context.createMediaStreamSource(this._stream);
+      this._processor = this._context.createScriptProcessor(4096, 1, 1);
+      this._processor.onaudioprocess = function(e) {
+        if (!DmPTT._active) return;
+        var f32 = e.inputBuffer.getChannelData(0);
+        var i16 = new Int16Array(f32.length);
+        for (var i = 0; i < f32.length; i++) i16[i] = Math.max(-32768, Math.min(32767, Math.round(f32[i] * 32767)));
+        if (ws && ws.readyState === 1) {
+          ws.send(JSON.stringify({ type: 'audio:dm_chunk', data: { audio: Array.from(i16), sampleRate: 16000, playerId: 'dm' } }));
+        }
+      };
+      source.connect(this._processor);
+      this._processor.connect(this._context.destination);
+      this._active = true;
+      this._waitingForTranscript = true;
+      if (btn) { btn.style.borderColor = 'var(--red-bright,#e04040)'; btn.style.color = '#e04040'; btn.textContent = '🎙 LISTENING...'; }
+    } catch (e) {
+      console.error('[DmPTT] Mic failed:', e.message);
+      if (btn) btn.textContent = '🎙 MIC ERROR';
+    }
+  },
+
+  stop() {
+    this._active = false;
+    if (this._processor) { this._processor.disconnect(); this._processor = null; }
+    if (this._context) { this._context.close(); this._context = null; }
+    if (this._stream) { this._stream.getTracks().forEach(function(t) { t.stop(); }); this._stream = null; }
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: 'audio:dm_flush' }));
+    }
+    var btn = $('dm-ptt-btn');
+    if (btn) { btn.style.borderColor = 'var(--border)'; btn.style.color = 'var(--text-dim)'; btn.textContent = '🎙 HOLD'; }
+  },
+
+  onTranscript(text) {
+    if (!this._waitingForTranscript || !text) return;
+    this._waitingForTranscript = false;
+    addWhisper({ tag: 'YOU', text: text });
+    var btn = $('dm-ptt-btn');
+    if (btn) { btn.textContent = '🎙 SENDING...'; }
+    fetch('/api/hal/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: text, source: 'voice' })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d && (d.text || d.response)) addWhisper({ tag: 'MAX', text: d.text || d.response });
+    }).catch(function() {}).then(function() {
+      if (btn) btn.textContent = '🎙 HOLD';
+    });
+  }
+};
 
 // ═══════════════════════════════════════════════════════════════
 // SESSION MODE — Start Campaign / Start Session / Stop / Pause
@@ -1685,6 +1758,15 @@ function handleMsg(msg) {
       var c = msg.data || msg;
       var name2 = c.combatant && c.combatant.name;
       if (name2) addWhisper({ tag: 'COMBAT', text: name2 + "'s turn" });
+    }
+    return;
+  }
+
+  // DM voice transcript → route to DmPTT for auto-Max-query
+  if (t === 'transcript:segment') {
+    var ts = msg.data || msg;
+    if (ts.speaker === 'dm' && ts.text && DmPTT._waitingForTranscript) {
+      DmPTT.onTranscript(ts.text);
     }
     return;
   }

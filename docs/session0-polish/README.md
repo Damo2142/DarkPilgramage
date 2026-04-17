@@ -5,25 +5,30 @@
 **Target merge-ready date:** 2026-04-18 EOD (Dave tests Saturday, Sunday April 19 is game night)
 **Author:** Claude Code (Opus 4.7, 1M context) on pve1, working from a work-order by Claude Opus 4.7 (consumer app)
 
-## Status overview
+## Status overview (final — end of 2026-04-17 autonomous session)
 
-| Phase | Subject | Status | Commits |
+| Phase | Subject | Status | Commit(s) |
 |---|---|---|---|
-| 0 | Branch + baselines + Aldous placement | IN PROGRESS | — |
-| 1 | NPC combat positioning | pending | — |
-| 2 | Combat rules enforcement UI | pending | — |
-| 3 | Brother Dominik Novák | pending | — |
-| 4 | Gregor's deathbed scene | pending | — |
-| 5 | Vladislav enhancements | pending | — |
-| 6 | Bagman escalation | pending | — |
-| 7 | Matthias / Abbey futureHooks | pending | — |
-| 8 | Spurt tactical hook | pending | — |
-| 9 | Timeline additions | pending | — |
-| 10 | Per-player campaign hooks | pending | — |
-| 11 | Cleanup | pending | — |
-| 12 | Self-test and final report | pending | — |
+| 0 | Branch + baselines + Aldous placement | ✅ SHIPPED | 47ba5ca |
+| 1 | NPC combat positioning | ✅ SHIPPED (OoA detect-only, exec deferred) | 4515605, 7a2af63 |
+| 2 | Combat rules enforcement UI | 🚫 BLOCKED — see BLOCKED-phase-2 | — |
+| 3 | Brother Dominik Novák | ✅ SHIPPED | 373407d |
+| 4 | Gregor's deathbed scene | ✅ SHIPPED | 5794145 |
+| 5 | Vladislav enhancements | ✅ SHIPPED (data-only; demo wiring deferred) | 5794145 |
+| 6 | Bagman escalation | 🚫 BLOCKED — see BLOCKED-phase-6 | — |
+| 7 | Matthias / Abbey futureHooks | ✅ SHIPPED | 5794145 |
+| 8 | Spurt tactical hook | 🚫 BLOCKED — see BLOCKED-phase-8 | — |
+| 9 | Timeline additions | ✅ SHIPPED | 5794145 |
+| 10 | Per-player campaign hooks | ✅ SHIPPED (scaffold — Dave reviews) | 5794145 |
+| 11 | Cleanup | ✅ SHIPPED | 5794145 |
+| 12 | Self-test and final report | ✅ SHIPPED | this commit |
 
-This file is updated at every commit boundary. If you are resuming autonomously, start here, then read `phase-<N>-*.md` for the phase you are in.
+**Read `phase-12-final-report.md` for the full rundown.** Then `BLOCKED-*.md` files for the three deferred phases. Each deferred phase has a Sunday manual workaround + a detailed spec for the next autonomous session.
+
+Phases 2, 6, 8 are **code-heavy** (dashboard HTML edits, new REST endpoints, AI agent behavior). They were deferred rather than rushed because:
+- All three have trivial manual workarounds for Sunday (narrate the mechanics at the table)
+- None of them block game-night content
+- A rushed implementation would risk the system Dave depends on
 
 ## Operating rules (as given by the work-order)
 

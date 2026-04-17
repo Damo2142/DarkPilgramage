@@ -21,6 +21,7 @@ const SocialCombatService = require('./services/social-combat/social-combat-serv
 const HazardService = require('./services/hazard/hazard-service');
 const AmbientLifeService = require('./services/ambient-life/ambient-life-service');
 const ScenePopulationService = require('./services/scene-population/scene-population-service');
+const BagmanService = require('./services/items/bagman-service');
 const { loadConfig } = require('./utils/config-loader');
 
 // Auto-discover session config: CLI arg > config/session-0.json > defaults only
@@ -57,6 +58,7 @@ orchestrator.register(new SocialCombatService());
 orchestrator.register(new HazardService());
 orchestrator.register(new AmbientLifeService());
 orchestrator.register(new ScenePopulationService());
+orchestrator.register(new BagmanService());
 
 orchestrator.startAll().catch(err => {
   console.error('Fatal startup error:', err);

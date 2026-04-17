@@ -2813,6 +2813,125 @@ Available targets: ${enemies.map(e => `"${e.name}" (id: check turnOrder)`).join(
     }
   }
 
+  // ── Task 9 (session0-polish follow-up) — combat auto-start ────────────
+
+  /**
+   * Handle a combat:auto_start bus event. Spawns NPCs at the requested
+   * positions (by dispatching npc:arrival → scene-population places
+   * the tokens) and starts combat including:
+   *   - all PCs currently on the same map
+   *   - the newly-spawned NPCs
+   *
+   * Payload:
+   *   { combatants: [{actorSlug, tokenId?, name?, x, y, hidden?, hp?, ac?,
+   *                   publicName?, nameRevealedToPlayers?}],
+   *     mapId?, narration? }
+   *
+   * Post-start, the narration (if present) is whispered to the DM earbud
+   * and dispatched to the room speaker via npc:scripted_speech for a
+   * Max-driven combat opener.
+   */
+  _handleCombatAutoStart(env) {
+    const data = env?.data || {};
+    const list = Array.isArray(data.combatants) ? data.combatants : [];
+    if (list.length === 0) {
+      this.bus.dispatch('dm:whisper', {
+        text: '[combat:auto_start] no combatants provided — skipping.',
+        priority: 2, category: 'combat'
+      });
+      return;
+    }
+
+    const mapSvc = this.orchestrator.getService('map');
+    const targetMapId = data.mapId || mapSvc?.activeMapId;
+
+    // Spawn each NPC: write its token directly into state.map.tokens so
+    // combat can start regardless of whether scene-population is loaded.
+    // Still dispatches npc:arrival as a notification so any interested
+    // subscribers (UI / scene-population) also see it — but combat-service
+    // owns the placement inline to avoid a load-order dependency.
+    const spawnedIds = [];
+    for (const c of list) {
+      if (!c || !c.actorSlug) continue;
+      const tokenId = c.tokenId || `${c.actorSlug}-${Date.now()}-${spawnedIds.length}`;
+      const existing = this.state.get(`map.tokens.${tokenId}`);
+      if (!existing) {
+        const token = {
+          id: tokenId, tokenId,
+          actorSlug: c.actorSlug,
+          name: c.name || c.actorSlug,
+          type: c.type || 'npc',
+          x: typeof c.x === 'number' ? c.x : 0,
+          y: typeof c.y === 'number' ? c.y : 0,
+          hidden: c.hidden === true,
+          visible: c.hidden !== true,
+          hp: c.hp || { current: 10, max: 10 },
+          ac: typeof c.ac === 'number' ? c.ac : 10,
+          image: c.image || `${c.actorSlug}.webp`,
+          publicName: c.publicName || '',
+          nameRevealedToPlayers: c.nameRevealedToPlayers === true,
+          arrivedAt: new Date().toISOString()
+        };
+        this.state.set(`map.tokens.${tokenId}`, token);
+        this.bus.dispatch('map:token_added', { tokenId, token });
+      }
+      // Still fire npc:arrival as a notification (idempotent — scene-pop
+      // handler guards against duplicate placement).
+      this.bus.dispatch('npc:arrival', {
+        actorSlug: c.actorSlug, tokenId,
+        name: c.name || c.actorSlug,
+        type: c.type || 'npc',
+        x: c.x, y: c.y, hidden: c.hidden === true,
+        hp: c.hp, ac: c.ac,
+        publicName: c.publicName, nameRevealedToPlayers: c.nameRevealedToPlayers,
+        image: c.image
+      });
+      spawnedIds.push(tokenId);
+    }
+
+    // Collect all PCs currently on the target map
+    const pcIds = [];
+    const allTokens = this.state.get('map.tokens') || {};
+    const playerMap = mapSvc?.playerMapAssignment || {};
+    for (const [tid, tok] of Object.entries(allTokens)) {
+      if (tok.type !== 'pc') continue;
+      const tokMap = playerMap[tid] || mapSvc?.activeMapId;
+      if (tokMap === targetMapId) pcIds.push(tid);
+    }
+
+    if (pcIds.length === 0) {
+      this.bus.dispatch('dm:whisper', {
+        text: '[combat:auto_start] no PCs on target map — aborting auto-start. Combatants spawned but combat not initiated.',
+        priority: 2, category: 'combat'
+      });
+      return;
+    }
+
+    const combatantIds = [...pcIds, ...spawnedIds];
+
+    // Start combat. If combat is already active, add the new combatants
+    // via addCombatant rather than blowing away the turn order.
+    const combat = this._getCombatState();
+    if (combat.active) {
+      for (const id of spawnedIds) {
+        try { this.addCombatant(id); } catch (e) { /* swallow */ }
+      }
+      this.bus.dispatch('dm:whisper', {
+        text: `[combat:auto_start] combat already active — added ${spawnedIds.length} combatant(s).`,
+        priority: 1, category: 'combat'
+      });
+    } else {
+      this.startCombat(combatantIds, {});
+    }
+
+    if (data.narration) {
+      this.bus.dispatch('dm:whisper', {
+        text: `[AUTO-COMBAT] ${data.narration}`,
+        priority: 1, category: 'combat', source: 'combat-service'
+      });
+    }
+  }
+
   _basicNpcTactics(combatant, combat) {
     const actions = this.getActions(combatant.id);
     const rollable = actions.actions.filter(a => a.canRoll);
@@ -3085,6 +3204,17 @@ Respond with JSON: { "items": [{ "name": "...", "description": "...", "type": "w
       if (combat.turnOrder.some(x => x.id === tokenId)) {
         this.removeCombatant(tokenId);
       }
+    }, 'combat');
+
+    // Task 9 (session0-polish follow-up) — combat:auto_start handler.
+    // Timed events (e.g. 21:45 wolves-through-window) dispatch this to
+    // spawn NPCs at a given location and auto-start combat with all PCs
+    // currently on the same map. Payload:
+    //   { combatants: [{ actorSlug, tokenId?, x, y, hidden?, publicName? }],
+    //     mapId?, narration? }
+    this.bus.subscribe('combat:auto_start', (env) => {
+      try { this._handleCombatAutoStart(env); }
+      catch (e) { console.error('[CombatService] combat:auto_start error:', e.message); }
     }, 'combat');
 
     // Task 2 (session0-polish follow-up) — PC→NPC opportunity attacks.

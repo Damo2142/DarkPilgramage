@@ -60,12 +60,40 @@
         "gameTime": "1274-10-15T21:45:00",
         "event": "dm:whisper",
         "data": {
-          "description": "Wolf crashes through window (was 20:30 in spec, moved per work order)",
-          "text": "A window shatters — glass scatters across the floor boards. A wolf (CR 1/4, 11 HP, AC 12, 2d4+2 bite) lands in the common room, snarls once, and is on whoever is closest. One round later a second window breaks behind the party — empty, distraction. The front door swings open in the wind. If party piles on the wolf and ignores the door: a second, larger wolf (same CR 1/4 but 16 HP, 2d4+3 bite) slips in the front door and attacks the back line — whoever has ranged weapons or low HP. If party holds positions and covers the door: second wolf retreats into the blizzard. Consequence for bad positioning: flanked PCs take claw damage (~8 HP) and disadvantage on movement checks for rest of session due to a shallow back-tendon slice.",
+          "description": "Wolf crashes through window at 21:45 — combat auto-starts",
+          "text": "A window shatters — glass scatters across the floor boards. A wolf (CR 1/4, 11 HP, AC 12) lands in the common room, snarls once, and is on whoever is closest. One round later a second wolf slips in through the front door — positioning-lesson trigger. Flanked PCs take claw damage (~8 HP) and disadvantage on movement for rest of session due to a shallow back-tendon slice.",
           "priority": 1,
           "category": "combat",
           "dispatchEvents": [
-            { "event": "combat:wolves_arrive", "data": { "ids": ["wolf-front", "wolf-rear"], "spawnAt": { "x": 2500, "y": 200 } } }
+            {
+              "event": "combat:auto_start",
+              "data": {
+                "mapId": "pallidhearfloor1",
+                "narration": "Glass explodes. A wolf in the common room, fangs and smell. Roll initiative.",
+                "combatants": [
+                  {
+                    "actorSlug": "wolf",
+                    "tokenId": "wolf-window",
+                    "name": "Wolf (window)",
+                    "x": 2500, "y": 700,
+                    "hp": { "current": 11, "max": 11 },
+                    "ac": 13,
+                    "publicName": "Wolf",
+                    "nameRevealedToPlayers": true
+                  },
+                  {
+                    "actorSlug": "wolf",
+                    "tokenId": "wolf-front-door",
+                    "name": "Wolf (front door)",
+                    "x": 4600, "y": 2100,
+                    "hp": { "current": 16, "max": 16 },
+                    "ac": 13,
+                    "publicName": "Larger Wolf",
+                    "nameRevealedToPlayers": true
+                  }
+                ]
+              }
+            }
           ]
         }
       },

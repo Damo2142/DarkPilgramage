@@ -794,6 +794,23 @@ class WorldClockService {
           this.bus.dispatch(evt.event, { ...evt.data, _timedEvent: evt.id });
         }
 
+        // Task 7 (session0-polish follow-up) — dispatchEvents support.
+        // Timed-event fragments can carry a nested dispatchEvents array,
+        // each { event, data }. Useful for side effects: npc:arrival,
+        // state:flag_set, token:move etc. Runs AFTER the outer event
+        // dispatch so handlers see consistent ordering.
+        if (Array.isArray(evt.data?.dispatchEvents)) {
+          for (const sub of evt.data.dispatchEvents) {
+            if (sub && sub.event) {
+              try {
+                this.bus.dispatch(sub.event, { ...(sub.data || {}), _timedEventParent: evt.id });
+              } catch (e) {
+                console.warn(`[WorldClock] dispatchEvents sub "${sub.event}" failed:`, e.message);
+              }
+            }
+          }
+        }
+
         // If the event carries an atmosphere profile, trigger the change (Feature 45)
         if (evt.data.profile) {
           this.bus.dispatch('atmo:change', {
@@ -1349,6 +1366,15 @@ class WorldClockService {
           gameTime: this.gameTime.toISOString()
         });
         if (evt.event) this.bus.dispatch(evt.event, { ...evt.data, _timedEvent: evt.id });
+        // Task 7 — dispatchEvents side effects (mirror of primary path)
+        if (Array.isArray(evt.data?.dispatchEvents)) {
+          for (const sub of evt.data.dispatchEvents) {
+            if (sub && sub.event) {
+              try { this.bus.dispatch(sub.event, { ...(sub.data || {}), _timedEventParent: evt.id }); }
+              catch (e) { console.warn(`[WorldClock] dispatchEvents sub "${sub.event}" failed:`, e.message); }
+            }
+          }
+        }
         if (evt.data && evt.data.profile) this.bus.dispatch('atmo:change', { profile: evt.data.profile });
         if (evt.repeating && evt.intervalMinutes) {
           evt.gameTime = new Date(evt.gameTime.getTime() + evt.intervalMinutes * 60000);

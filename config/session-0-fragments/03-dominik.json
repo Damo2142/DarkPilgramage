@@ -100,7 +100,23 @@
           "category": "story",
           "dmOnly": false,
           "dispatchEvents": [
-            { "event": "npc:arrival", "data": { "npcId": "brother-dominik-novak", "tokenId": "brother-dominik-novak", "x": 4600, "y": 1900 } }
+            {
+              "event": "npc:arrival",
+              "data": {
+                "actorSlug": "brother-dominik-novak",
+                "tokenId": "brother-dominik-novak",
+                "name": "Brother Dominik Novák",
+                "type": "npc",
+                "x": 4600,
+                "y": 1900,
+                "hidden": false,
+                "hp": { "current": 82, "max": 82 },
+                "ac": 15,
+                "publicName": "A Traveling Monk",
+                "nameRevealedToPlayers": false,
+                "image": "brother-dominik-novak.webp"
+              }
+            }
           ]
         }
       },

@@ -68,6 +68,53 @@ class ScenePopulationService {
       console.log('[ScenePop] populated state cleared on session reset');
     }, 'scene-population');
 
+    // Task 7 (session0-polish follow-up) — npc:arrival handler.
+    // Timed events fire npc:arrival when a new NPC enters the scene
+    // (e.g. Brother Dominik at 20:00). Payload: {actorSlug, tokenId,
+    // mapId?, x, y, hidden?, hp?, ac?, publicName?, nameRevealedToPlayers?}.
+    // We place the token into state.map.tokens + dispatch map:token_added.
+    // Also sets flag state.flags.<tokenId>_arrived for downstream gating.
+    this.bus.subscribe('npc:arrival', (env) => {
+      try {
+        const d = env?.data || {};
+        if (!d.actorSlug && !d.tokenId) return;
+        const tokenId = d.tokenId || d.actorSlug;
+        const existing = this.state.get(`map.tokens.${tokenId}`);
+        if (existing) {
+          console.log(`[ScenePop] npc:arrival ignored — token ${tokenId} already on map`);
+          return;
+        }
+        const token = {
+          id: tokenId,
+          tokenId,
+          actorSlug: d.actorSlug || tokenId,
+          name: d.name || d.actorSlug || tokenId,
+          type: d.type || 'npc',
+          x: typeof d.x === 'number' ? d.x : 0,
+          y: typeof d.y === 'number' ? d.y : 0,
+          hidden: d.hidden === true,
+          visible: d.hidden !== true,
+          hp: d.hp || { current: 10, max: 10 },
+          ac: typeof d.ac === 'number' ? d.ac : 10,
+          image: d.image || `${d.actorSlug || tokenId}.webp`,
+          publicName: d.publicName || '',
+          nameRevealedToPlayers: d.nameRevealedToPlayers === true,
+          arrivedAt: new Date().toISOString()
+        };
+        this.state.set(`map.tokens.${tokenId}`, token);
+        this.bus.dispatch('map:token_added', { tokenId, token });
+        this.state.set(`flags.${tokenId}_arrived`, true);
+        // Also set a friendlier alias flag for commonly referenced NPCs.
+        if (tokenId === 'brother-dominik-novak' || d.actorSlug === 'brother-dominik-novak') {
+          this.state.set('flags.dominik_arrived', true);
+        }
+        this._whisper(`[ARRIVAL] ${token.name} placed on map at (${token.x}, ${token.y}).`, 3, 'story');
+        console.log(`[ScenePop] npc:arrival placed token ${tokenId} at (${token.x}, ${token.y})`);
+      } catch (e) {
+        console.warn('[ScenePop] npc:arrival handler error:', e.message);
+      }
+    }, 'scene-population');
+
     console.log(`[ScenePop] ${this.scenes.size} scene(s) loaded`);
   }
 

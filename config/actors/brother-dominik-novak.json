@@ -1,0 +1,80 @@
+{
+  "slug": "brother-dominik-novak",
+  "name": "Brother Dominik Novák",
+  "custom": true,
+  "size": "Medium",
+  "type": "undead",
+  "subtype": "vampire spawn",
+  "alignment": "neutral evil",
+  "armor_class": 15,
+  "armor_desc": "natural armor",
+  "hit_points": 82,
+  "hit_dice": "11d8+33",
+  "speed": { "walk": 30, "climb": 30 },
+  "strength": 16,
+  "dexterity": 16,
+  "constitution": 16,
+  "intelligence": 11,
+  "wisdom": 10,
+  "charisma": 12,
+  "perception": 3,
+  "skills": { "perception": 3, "stealth": 6, "religion": 4, "insight": 3 },
+  "damage_resistances": "necrotic; bludgeoning, piercing, and slashing from nonmagical attacks",
+  "damage_immunities": "",
+  "damage_vulnerabilities": "",
+  "condition_immunities": "",
+  "senses": "darkvision 60 ft., passive Perception 13",
+  "languages": "Common (Latin), German, Slovak, Czech",
+  "challenge_rating": "5",
+  "int_tier_override_when_disguised": "TACTICAL",
+  "int_tier_when_revealed": "HUMANOID",
+  "disguise": {
+    "active": true,
+    "coverName": "Brother Dominik Novák",
+    "claimedOrder": "Cistercian",
+    "claimedAbbey": "Heiligenkreuz, Austria",
+    "claimedRoute": "Vienna to Prague, pilgrim mission",
+    "claimedBackstory": "Lost his horse to the cold three days ago, has been walking since, hoping to reach a village before another night.",
+    "appearance": "Tall, thin, approximately 35 years old, patched gray robes with a wooden rosary, Latin prayer book in his sleeve, pale from cold, sandals not boots, eyes slightly reflective in firelight.",
+    "voice": "Soft, educated accent, measured — listens more than speaks.",
+    "tells": [
+      { "id": "never-crosses-himself", "check": "religion", "dc": 13, "text": "He never crosses himself at meals or at mentions of evil. A real Cistercian would." },
+      { "id": "unconsecrated-cross", "check": "religion", "dc": 13, "trigger": "PC handles his cross", "text": "The cross lacks the weight of consecrated metal — it is ordinary, worn." },
+      { "id": "refuses-bread", "check": "perception", "dc": 12, "text": "He does not eat the bread Marta brings him. He thanks her warmly but sets it aside." },
+      { "id": "skin-cold", "check": "medicine", "dc": 10, "trigger": "PC touches his hand or arm", "text": "His skin is cold in a way that outdoor walking cannot fully explain." },
+      { "id": "necrotic-aura", "check": "automatic", "trigger": "zarina Mark of Detection within 30ft", "text": "A faint necrotic / undead aura. Zarina's mark hums against her skin." }
+    ]
+  },
+  "special_abilities": [
+    { "name": "Regeneration", "desc": "Regains 10 HP at the start of its turn if it has at least 1 HP and is not in sunlight or running water. If it takes radiant damage or damage from holy water, this trait doesn't function at the start of its next turn." },
+    { "name": "Spider Climb", "desc": "Can climb difficult surfaces, including upside down on ceilings, without needing to make an ability check." },
+    { "name": "Vampire Weaknesses", "desc": "Sunlight hypersensitivity — takes 20 radiant damage when it starts its turn in sunlight; disadvantage on attack rolls and ability checks while in sunlight. Running water — takes 20 acid damage if it ends its turn in running water. Stake to the heart — destroyed if a piercing weapon made of wood is driven into its heart while it is incapacitated in its resting place. Forbiddance — the Pallid Hart is a public inn, not a private dwelling, so the invitation rule does not bar him here." }
+  ],
+  "actions": [
+    { "name": "Multiattack", "desc": "Makes two attacks, only one of which can be a bite." },
+    { "name": "Claws", "desc": "Melee Weapon Attack: +6 to hit, reach 5 ft., one creature. Hit: 8 (2d4 + 3) slashing damage. Instead of dealing damage, Dominik can grapple the target (escape DC 13).", "attack_bonus": 6, "damage_dice": "2d4", "damage_bonus": 3, "damage_type": "slashing" },
+    { "name": "Bite", "desc": "Melee Weapon Attack: +6 to hit, reach 5 ft., one willing creature or one that is grappled, incapacitated, or restrained. Hit: 6 (1d6 + 3) piercing damage plus 7 (2d6) necrotic damage. The target's hit point maximum is reduced by an amount equal to the necrotic damage taken.", "attack_bonus": 6, "damage_dice": "1d6", "damage_bonus": 3, "damage_type": "piercing", "additional_damage": "2d6 necrotic" }
+  ],
+  "description": "A gaunt, quiet monk who arrives at the inn at full dark, shaking snow from his robes and thanking the innkeeper in measured Common. His disguise is careful. His interest in the party — particularly whichever PC speaks Slovak — is not immediately obvious.",
+  "trueNature": "Vampire spawn sent by an unnamed rival master to hunt Vladislav Dragan. Deep-cover scout — his orders are to identify Vladislav's routine, turn the party against him, and position for a strike. He cannot flee the inn because the Nocni Letavec outside terrifies him. He will wait for the right moment, or for a moment he can create. He is not the only spawn in the inn tonight — there is a second, nameless spawn upstairs guarding Pieter's corpse. Dominik knows of it. The party does not.",
+  "immunities": {
+    "damage_types": [],
+    "conditions": [],
+    "nonmagical_weapons": false,
+    "silver_bypasses": false
+  },
+  "resistances": {
+    "damage_types": [
+      "necrotic",
+      "bludgeoning_nonmagical",
+      "piercing_nonmagical",
+      "slashing_nonmagical"
+    ]
+  },
+  "immunityNarrative": {
+    "nonmagical_weapons": [
+      "The blow lands, but the wound heals itself closed in the space of a heartbeat. You have time to see it — which is worse than not seeing it.",
+      "He takes the strike without flinching. Where the blood should flow, there is only a dark fluid that is already drying."
+    ]
+  }
+}

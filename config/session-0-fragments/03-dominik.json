@@ -1,0 +1,236 @@
+{
+  "_fragment": "Phase 3 (session0-polish) — Brother Dominik Novák arrival, whispers, room request",
+  "_loadedBy": "utils/config-loader.js — array-concat deep merge",
+  "npcs": {
+    "brother-dominik-novak": {
+      "name": "Brother Dominik Novák",
+      "role": "disguised-vampire-spawn-monk",
+      "status": "active",
+      "disposition": "deceptively friendly",
+      "emotionalState": "calm, patient, watchful",
+      "tell": "Soft-spoken, listens more than speaks. Never crosses himself.",
+      "motivation": "Identify Vladislav's routine, turn the party against him, position for a strike.",
+      "threatLevel": "high but concealed",
+      "location": "arrives 20:00 via the front door",
+      "roomPosition": "wherever Ed ends up — he gravitates to the Slovak speaker",
+      "mirrorReflection": false,
+      "voiceCode": "M2",
+      "languages": ["common", "latin", "german", "slovak", "czech"],
+      "primaryLanguage": "common",
+      "languageNote": "Fluent in all. Uses Latin for religious color, German with Henryk, Slovak when talking to Ed alone. Czech only if cornered and confirming authenticity.",
+      "voiceProfileDetails": {
+        "character": "soft, educated accent, measured — listens more than speaks",
+        "rate": "deliberate, pauses mid-sentence to let silence work for him",
+        "pitch": "low, calm",
+        "elevenLabsVoiceId": "",
+        "fallbackEchoVoice": "Brian"
+      },
+      "knowledge": {
+        "vladislavIsVampire": true,
+        "ownMasterName": "REDACTED — future-DM to name post-session-0; for now the rival master is unnamed",
+        "whyHere": "hunting Vladislav for his own master",
+        "tomasIsWerewolf": false,
+        "gasSporeInCellar": false,
+        "pieterCorpseUpstairs": true,
+        "secondSpawnUpstairs": true,
+        "cantFleeOutside": "Nocni Letavec terrifies him"
+      },
+      "dispositions": {
+        "ed": "target — works Ed with whispers, tests his Slovak, tests his piety",
+        "nick": "peripheral — friendly monk veneer, light compliments",
+        "kim": "wary — her Mark of Detection will identify him; he avoids prolonged proximity",
+        "jen": "peripheral — treats her as a curiosity, no threat, no value",
+        "spurt-ai-pc": "peripheral — polite distaste for the kobold, hidden under monastic patience"
+      },
+      "whisperScript": [
+        {
+          "id": "opening",
+          "trigger": "ed_alone_with_dominik_first_time OR ed_within_10ft_for_2min",
+          "language": "slovak",
+          "text": "Priateľu, kráčal som po mnohých cestách. Pred dvoma nocami som prešiel dedinou, kde človek podobný vášmu kapucňovému spoločníkovi pýtal smer k tomuto hostincu. Na druhý deň ráno mala tá dedina tri pohreby.",
+          "narratorTranslation": "Friend, I have walked many roads. Two nights ago I passed through a village where a man matching your hooded companion's description asked for directions to this very inn. The village had three funerals the next morning.",
+          "deliveredVia": "private whisper to Ed's Chromebook"
+        },
+        {
+          "id": "middle",
+          "trigger": "ed_continues_talking_15min_after_opening",
+          "language": "slovak",
+          "text": "Cirkev nás učí, že zlo nosí tvár obyčajnosti. Modlím sa, aby som sa mýlil o ňom. Ale sledujte jeho ruky. Nezdvihne chlieb.",
+          "narratorTranslation": "The Church teaches us that evil wears the face of the ordinary. I pray I am wrong about him. But watch his hands. He does not pick up the bread.",
+          "deliveredVia": "private whisper to Ed's Chromebook"
+        },
+        {
+          "id": "close",
+          "trigger": "ed_continues_talking_30min_or_prompted",
+          "language": "slovak",
+          "text": "Ak vám dnes v noci ponúkne naliať, jemne odmietnite. Videl som, čo príde z takých láskavostí.",
+          "narratorTranslation": "If he offers to pour for you tonight, decline gently. I have seen what comes of such kindnesses.",
+          "deliveredVia": "private whisper to Ed's Chromebook"
+        }
+      ],
+      "combatLines": {
+        "revealed": [
+          "(flat, patient) 'Brother, is an echo. A sound made after the real thing is gone.'",
+          "(Latin) 'In manus tuas, Domine, commendo spiritum meum.'",
+          "(snarling) 'Your companion is not your companion. I was the kindness.'"
+        ],
+        "dying": [
+          "(whispered, relieved) '...he was not alone. Search the body.' — this is Dominik collapsing into his own dishonesty; he gives the party the clue about Spawn 1 upstairs without meaning to.",
+          "(Latin, choking) 'Requiem... aeternam...'"
+        ]
+      },
+      "disguiseResources": {
+        "crucifix": "Ordinary iron, not consecrated. PC handling it on DC 13 Religion: 'This is not the weight consecrated metal carries. He bought this or took it.'",
+        "prayerBook": "Latin, hand-copied, genuine — his master's library is older than any living abbey in the region.",
+        "rosary": "Wooden. Worn smooth. Plausibly monastic."
+      },
+      "dialogueHistory": []
+    }
+  },
+  "world": {
+    "timedEvents": [
+      {
+        "id": "dominik-arrival",
+        "gameTime": "1274-10-15T20:00:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "Brother Dominik Novák arrives — disguised vampire spawn",
+          "text": "The front door bangs open. Blizzard wind and snow boil in, and with them a thin monk in patched gray robes, sandaled feet already dark with frost. He closes the door with visible effort, leans against it, and says in measured Common: 'Forgive me. My horse died three days ago. I smelled the fire.' He is tall, perhaps thirty-five, pale in a way that could be the cold. He carries a worn prayer book and a wooden rosary. Marta stares at him with the look of a woman who has already seen one too many strangers tonight, then visibly softens — a monk is at least a kind of safety. Ambient-life will place his token at the front-door position; the AI should route his first few lines to Common for the room, but if Ed is within 10ft he should switch to Slovak quickly.",
+          "priority": 1,
+          "category": "story",
+          "dmOnly": false,
+          "dispatchEvents": [
+            { "event": "npc:arrival", "data": { "npcId": "brother-dominik-novak", "tokenId": "brother-dominik-novak", "x": 4600, "y": 1900 } }
+          ]
+        }
+      },
+      {
+        "id": "dominik-first-greeting",
+        "gameTime": "1274-10-15T20:02:00",
+        "event": "npc:scripted_speech",
+        "data": {
+          "npcId": "brother-dominik-novak",
+          "npc": "Brother Dominik Novák",
+          "languageId": "common",
+          "text": "Bless this house for sheltering me. Brother Dominik, of Heiligenkreuz — on my way to Prague, the Lord willing. I owe each of you for the fire.",
+          "narratorTranslation": null,
+          "languageNote": "Dominik speaks in measured Common. Marta, Henryk, and most PCs understand directly. His eyes find Ed — he marks the Slovak speaker early."
+        }
+      },
+      {
+        "id": "dominik-first-whisper-opening",
+        "gameTime": "1274-10-15T20:20:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "Dominik's opening whisper to Ed — Slovak, private",
+          "text": "IF Ed is within 10ft of Dominik and they have exchanged at least one line: fire the opening Slovak whisper from npcs.brother-dominik-novak.whisperScript.opening. Deliver to Ed's Chromebook only. Set flag state.flags.ed_has_been_whispered_by_dominik = true. If Ed is unavailable, DELAY 5 minutes and re-check; skip entirely if Ed never comes within range.",
+          "priority": 1,
+          "category": "story",
+          "dmOnly": true,
+          "checkFlag": "state.players.ed.absent === false"
+        }
+      },
+      {
+        "id": "dominik-requests-room",
+        "gameTime": "1274-10-15T20:30:00",
+        "event": "npc:scripted_speech",
+        "data": {
+          "npcId": "brother-dominik-novak",
+          "npc": "Brother Dominik Novák",
+          "languageId": "common",
+          "text": "Marta. If you have a room that is not yet spoken for, I would be grateful. My legs will not carry me another hour. Anything will do — a cell, a floor, a stable if you must.",
+          "narratorTranslation": null,
+          "followUp": {
+            "delaySeconds": 12,
+            "npcId": "marta",
+            "npc": "Marta",
+            "languageId": "common",
+            "text": "Take Room 3 up the stairs. It's small. It's dry. Don't mind the smell — it's the old wood. Fifteen pfennigs for the night, or whatever prayer you can spare."
+          }
+        }
+      },
+      {
+        "id": "dominik-goes-upstairs",
+        "gameTime": "1274-10-15T20:32:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "Dominik goes up to Room 3 briefly",
+          "text": "Dominik goes up the stairs. Move his token to the upper floor (pallidheart2) at approximately (1680, 490) — Room 3. He stays exactly 3-5 minutes. He's not resting — he's confirming no one in the upstairs hallway reports to Vladislav, and he's checking whether the other spawn (upstairs Room 5) knows he's here. Return him to the common room at 20:37.",
+          "priority": 2,
+          "category": "story",
+          "dmOnly": true,
+          "dispatchEvents": [
+            { "event": "token:move", "data": { "entityId": "brother-dominik-novak", "targetMap": "pallidheart2", "to": { "x": 1680, "y": 490 }, "duration": 1200 } }
+          ]
+        }
+      },
+      {
+        "id": "dominik-returns",
+        "gameTime": "1274-10-15T20:37:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "Dominik returns to common room",
+          "text": "Dominik comes back down. No visible change — he comes down exactly the way he went up, hands folded, eyes lowered. Move his token back to the ground floor common room. If Ed has moved, Dominik adjusts his position to be within conversation range. He picks up the conversation softly.",
+          "priority": 2,
+          "category": "story",
+          "dmOnly": true,
+          "dispatchEvents": [
+            { "event": "token:move", "data": { "entityId": "brother-dominik-novak", "targetMap": "pallidhearfloor1", "to": { "x": 4600, "y": 1900 }, "duration": 1200 } }
+          ]
+        }
+      },
+      {
+        "id": "dominik-second-whisper-middle",
+        "gameTime": "1274-10-15T20:45:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "Dominik's middle whisper to Ed — Slovak, private",
+          "text": "Fire whisperScript.middle to Ed's Chromebook. Only if the 'opening' whisper fired and flag state.flags.ed_has_been_whispered_by_dominik === true. Text: 'The Church teaches us that evil wears the face of the ordinary...' (see npcs.brother-dominik-novak.whisperScript.middle).",
+          "priority": 1,
+          "category": "story",
+          "dmOnly": true,
+          "checkFlag": "state.flags.ed_has_been_whispered_by_dominik === true"
+        }
+      },
+      {
+        "id": "dominik-close-whisper",
+        "gameTime": "1274-10-15T21:00:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "Dominik's close whisper to Ed — decline his drink",
+          "text": "Fire whisperScript.close. Only if middle whisper fired. Text: 'If he offers to pour for you tonight, decline gently...' See npcs.brother-dominik-novak.whisperScript.close.",
+          "priority": 1,
+          "category": "story",
+          "dmOnly": true,
+          "checkFlag": "state.flags.ed_has_been_whispered_by_dominik === true"
+        }
+      },
+      {
+        "id": "vladislav-recognizes-dominik",
+        "gameTime": "1274-10-15T21:15:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "Vladislav recognizes Dominik at 21:15",
+          "text": "Vladislav has recognized Brother Dominik as a rival vampire spawn. His eyes meet Dominik's across the room for a beat longer than politeness allows. Neither reacts visibly. Vladislav returns his gaze to the window. Set flag state.flags.vladislav_knows_about_dominik = true. This shifts Vladislav's awareness phase from 'sharpened_unease' to 'recognition' and then 'calculating' over the next five minutes. For any PC with passive perception ≥ 15 OR Zarina's Mark of Detection: surface a tier-3 observation — 'Two men across the room just looked at each other. Neither spoke. Both went back to what they were doing. It felt like two players of a game confirming the board.'",
+          "priority": 1,
+          "category": "story",
+          "dmOnly": true,
+          "dispatchEvents": [
+            { "event": "state:flag_set", "data": { "flag": "vladislav_knows_about_dominik", "value": true } }
+          ]
+        }
+      }
+    ]
+  },
+  "futureHooks": {
+    "dominiks-master": {
+      "type": "antagonist",
+      "plantedAt": "Session 0 — Dominik arrives at 20:00 and reveals he answers to a rival master, without naming them",
+      "description": "Dominik serves an unnamed rival master who hunts Vladislav. If Dominik dies without naming his master, the party has a loose thread — someone is sending vampire spawn after Vladislav. Dave names the master post-session-0.",
+      "revealConditions": [
+        "A surviving Dominik, interrogated, may partially give it up",
+        "Vladislav may name the master in the dawn speech if Dominik is dead and the party asks"
+      ]
+    }
+  }
+}

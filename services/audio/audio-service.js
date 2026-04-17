@@ -549,7 +549,7 @@ class AudioService {
       geminiReady: this._useGemini,
       activeStreams: this._playerStreaming.size,
       streamingPlayers: [...this._playerStreaming],
-      model: this._useGemini ? 'gemini-2.0-flash' : (process.env.WHISPER_MODEL || this.config.audio?.whisperModel || 'base.en')
+      model: this._useGemini ? 'gemini-2.5-flash' : (process.env.WHISPER_MODEL || this.config.audio?.whisperModel || 'base.en')
     };
   }
 

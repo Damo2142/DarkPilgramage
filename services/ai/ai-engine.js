@@ -542,7 +542,7 @@ Stay strictly within what ${npcName} knows. 1-3 sentences of dialogue typical.`;
     return {
       status: 'running',
       geminiAvailable: this.gemini.available,
-      geminiModel: this.config.ai?.gemini?.model || 'gemini-2.0-flash',
+      geminiModel: this.config.ai?.gemini?.model || 'gemini-2.5-flash',
       context: this.context.getStats(),
       npc: this.npc.getStats(),
       atmosphere: this.atmosphere.getStats(),

@@ -769,7 +769,69 @@ class CombatService {
     const target = combat.turnOrder.find(x => x.id === targetId);
     if (!attacker || !target) return null;
 
-    const hit = crit || attackRoll >= target.ac;
+    // Task 4 (session0-polish follow-up) — cover calculation.
+    // Pull attacker + target tokens; compute cover against other tokens
+    // and walls on the same map. effectiveAC = target.ac + coverBonus.
+    // Full cover = automatic miss. Kill switch: state.flags.useCover.
+    const useCover = this.state.get('flags.useCover') !== false;
+    let cover = { level: 'none', acBonus: 0, reason: 'disabled', units: 0 };
+    let effectiveAC = target.ac;
+    if (useCover) {
+      try {
+        const Cover = require('./cover');
+        const mapSvc = this.orchestrator.getService('map');
+        const attackerTok = this.state.get(`map.tokens.${attackerId}`);
+        const targetTok   = this.state.get(`map.tokens.${targetId}`);
+        if (attackerTok && targetTok && mapSvc) {
+          const mapId = mapSvc.playerMapAssignment?.[attackerId] || mapSvc.activeMapId;
+          const mapDef = mapSvc.maps?.get(mapId);
+          const gridSize = mapDef?.gridSize || 140;
+          const walls = (mapDef?.walls) || [];
+          // Build otherTokens with size for cover computation. Attach a
+          // `size` field from actor config when available. Defaults to
+          // 'Medium' which does not grant cover.
+          const allTokens = this.state.get('map.tokens') || {};
+          const otherTokens = [];
+          for (const [tid, tok] of Object.entries(allTokens)) {
+            if (tid === attackerId || tid === targetId) continue;
+            if (typeof tok.x !== 'number') continue;
+            const slug = tok.actorSlug || tok.slug;
+            const actorCfg = slug && (mapSvc.customActors?.get(slug)
+              || mapSvc.srdMonsters?.find(m => m.slug === slug));
+            const size = actorCfg?.size || 'Medium';
+            otherTokens.push({ id: tid, x: tok.x, y: tok.y, size });
+          }
+          cover = Cover.computeCover(attackerTok, targetTok, walls, otherTokens, gridSize);
+          if (cover.acBonus === Infinity) {
+            this.bus.dispatch('dm:whisper', {
+              text: `[COVER full] ${target.name} is out of sight (${cover.reason}) — ${attacker.name}'s attack cannot target.`,
+              priority: 1, category: 'combat'
+            });
+            return {
+              hit: false,
+              attackRoll,
+              targetAC: target.ac,
+              cover,
+              reason: 'full-cover-no-los',
+              targetId, targetName: target.name,
+              attackerId, attackerName: attacker.name
+            };
+          }
+          effectiveAC = target.ac + (cover.acBonus || 0);
+          if (cover.level !== 'none') {
+            this.bus.dispatch('dm:whisper', {
+              text: `[COVER ${cover.level}] ${target.name} +${cover.acBonus} AC (${cover.reason}) — effective AC ${effectiveAC}.`,
+              priority: 2, category: 'combat'
+            });
+          }
+        }
+      } catch (e) {
+        // Cover failures must not break combat. Fall through to no-cover.
+        console.error('[CombatService] cover computation failed:', e.message);
+      }
+    }
+
+    const hit = crit || attackRoll >= effectiveAC;
     let appliedDamage = 0;
     let immunityReason = null;
     if (hit) {
@@ -831,6 +893,8 @@ class CombatService {
       targetName: target.name,
       attackRoll,
       targetAC: target.ac,
+      effectiveAC,
+      cover,
       hit,
       crit,
       damage: appliedDamage,
@@ -1773,6 +1837,42 @@ class CombatService {
       res.json(combat);
     });
 
+    // Task 4 (session0-polish follow-up) — cover query endpoint.
+    // Lets DM Attack Resolver display a cover badge before rolling.
+    // GET /api/combat/cover/:attackerId/:targetId — returns the cover info
+    // that processAttack would use (same helper, same inputs).
+    app.get('/api/combat/cover/:attackerId/:targetId', (req, res) => {
+      try {
+        const { attackerId, targetId } = req.params;
+        const Cover = require('./cover');
+        const mapSvc = this.orchestrator.getService('map');
+        const attackerTok = this.state.get(`map.tokens.${attackerId}`);
+        const targetTok   = this.state.get(`map.tokens.${targetId}`);
+        if (!attackerTok || !targetTok) {
+          return res.status(404).json({ error: 'one or both tokens not on map' });
+        }
+        const mapId = mapSvc?.playerMapAssignment?.[attackerId] || mapSvc?.activeMapId;
+        const mapDef = mapSvc?.maps?.get(mapId);
+        const gridSize = mapDef?.gridSize || 140;
+        const walls = mapDef?.walls || [];
+        const allTokens = this.state.get('map.tokens') || {};
+        const otherTokens = [];
+        for (const [tid, tok] of Object.entries(allTokens)) {
+          if (tid === attackerId || tid === targetId) continue;
+          if (typeof tok.x !== 'number') continue;
+          const slug = tok.actorSlug || tok.slug;
+          const actorCfg = slug && (mapSvc.customActors?.get(slug)
+            || mapSvc.srdMonsters?.find(m => m.slug === slug));
+          const size = actorCfg?.size || 'Medium';
+          otherTokens.push({ id: tid, x: tok.x, y: tok.y, size });
+        }
+        const result = Cover.computeCover(attackerTok, targetTok, walls, otherTokens, gridSize);
+        res.json(result);
+      } catch (e) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
     // Task 3 (session0-polish follow-up) — shooting into melee endpoint.
     // Body mirrors processRangedAttack opts. Response includes the full
     // attack result plus disadvantage/d4/friendlyFire fields so the UI
@@ -1837,9 +1937,13 @@ class CombatService {
         this.state.set('flags.useOpportunityAttacks', body.useOpportunityAttacks);
         result.useOpportunityAttacks = body.useOpportunityAttacks;
       }
+      if (typeof body.useCover === 'boolean') {
+        this.state.set('flags.useCover', body.useCover);
+        result.useCover = body.useCover;
+      }
       if (Object.keys(result).length === 0) {
         return res.status(400).json({
-          error: 'body must set useTacticalPositioning and/or useOpportunityAttacks (boolean)'
+          error: 'body must set useTacticalPositioning, useOpportunityAttacks, or useCover (boolean)'
         });
       }
       res.json(result);

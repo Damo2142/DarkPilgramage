@@ -769,6 +769,73 @@ class CombatService {
     const target = combat.turnOrder.find(x => x.id === targetId);
     if (!attacker || !target) return null;
 
+    // Task 5 (session0-polish follow-up) — Vladislav three-stage demo.
+    // When a PC attacks Vladislav (hooded-stranger), the first three
+    // attacks absorb zero damage and trigger scripted narrative beats.
+    // Stage 3 also fires Frightful Presence against all attackers.
+    // Past stage 3, normal combat. Kill switch state.flags.vladislavAutoDemo.
+    const useVladDemo = this.state.get('flags.vladislavAutoDemo') !== false;
+    if (useVladDemo && target.actorSlug === 'hooded-stranger' && attacker.type === 'pc') {
+      const prevStage = this.state.get('npcs.hooded-stranger.demoStage') || 0;
+      const newStage = prevStage + 1;
+      this.state.set('npcs.hooded-stranger.demoStage', newStage);
+      if (newStage <= 3) {
+        const speeches = {
+          1: {
+            text: 'Your weapon passes through me like morning mist. I have forgotten more about violence than you will ever learn.',
+            narrative: `${attacker.name}'s ${weaponName || 'attack'} passes through Vladislav's form as though through smoke — he rematerializes, unwounded, without having moved.`
+          },
+          2: {
+            text: 'The next one costs a finger. The one after that costs a hand.',
+            narrative: `Vladislav catches ${attacker.name}'s ${weaponName || 'weapon'} with one gloved hand and crushes the blade to scrap. He does not turn. He speaks without looking at them.`
+          },
+          3: {
+            text: 'You are alive because I am interested in whether you stay that way. Sit down.',
+            narrative: `Vladislav dissolves into mist. It boils across the room. When it reforms, he is behind the attackers, and their weapons lie on the table in front of them. Every PC within 30ft must make a Wisdom save DC 18 or be Frightened for 1 round.`
+          }
+        };
+        const s = speeches[newStage];
+        this.bus.dispatch('dm:whisper', {
+          text: `[VLADISLAV DEMO ${newStage}/3] ${s.narrative}`,
+          priority: 1, category: 'combat', source: 'combat-service'
+        });
+        // Scripted speech — Vladislav's voice, public to the room
+        this.bus.dispatch('npc:scripted_speech', {
+          npcId: 'hooded-stranger',
+          npc: 'Vladislav',
+          languageId: 'common',
+          text: s.text
+        });
+        // Stage 3: Frightful Presence save requirement
+        if (newStage === 3) {
+          this.bus.dispatch('combat:frightful_presence', {
+            source: 'hooded-stranger',
+            saveType: 'WIS',
+            saveDC: 18,
+            effect: 'frightened',
+            duration: 'one round',
+            affected: combat.turnOrder
+              .filter(c => c.type === 'pc' && c.isAlive)
+              .map(c => c.id)
+          });
+          this.bus.dispatch('dm:whisper', {
+            text: '[FRIGHTFUL PRESENCE] All PCs within 30ft of Vladislav: WIS save DC 18 or frightened 1 round.',
+            priority: 1, category: 'combat', source: 'combat-service'
+          });
+        }
+        return {
+          attackerId, attackerName: attacker.name,
+          targetId, targetName: target.name,
+          attackRoll, targetAC: target.ac,
+          hit: false, crit, damage: 0, damageType: damageType || 'untyped',
+          vladislavDemoStage: newStage,
+          immunityReason: null,
+          targetHpAfter: target.hp
+        };
+      }
+      // Stage 4+ falls through to normal resolution
+    }
+
     // Task 4 (session0-polish follow-up) — cover calculation.
     // Pull attacker + target tokens; compute cover against other tokens
     // and walls on the same map. effectiveAC = target.ac + coverBonus.
@@ -883,7 +950,34 @@ class CombatService {
           appliedDamage = halved;
         }
       }
+      // Task 5 (session0-polish follow-up) — Vladislav mercy.
+      // Vladislav doesn't kill the PCs. Any attack of his that would
+      // drop a PC below 1 HP clamps its damage so the PC ends at exactly 1.
+      let vladislavMercy = false;
+      if (
+        useVladDemo && appliedDamage > 0 &&
+        attacker.actorSlug === 'hooded-stranger' && target.type === 'pc' &&
+        target.hp?.current != null
+      ) {
+        const curHp = target.hp.current;
+        if (curHp - appliedDamage < 1) {
+          const clamped = Math.max(0, curHp - 1);
+          if (clamped !== appliedDamage) {
+            this.bus.dispatch('dm:whisper', {
+              text: `[VLADISLAV MERCY] ${target.name} would drop — damage clamped ${appliedDamage} → ${clamped}. Vladislav does not kill.`,
+              priority: 1, category: 'combat', source: 'combat-service'
+            });
+          }
+          appliedDamage = clamped;
+          vladislavMercy = true;
+        }
+      }
+
       if (appliedDamage > 0) this.modifyHp(targetId, -appliedDamage);
+      if (vladislavMercy) {
+        // Attach mercy flag to subsequent result record
+        target._vladislavMercyThisHit = true;
+      }
     }
 
     const result = {
@@ -900,8 +994,11 @@ class CombatService {
       damage: appliedDamage,
       damageType: damageType || 'untyped',
       immunityReason: immunityReason || null,
-      targetHpAfter: this._getCombatState().turnOrder.find(x => x.id === targetId)?.hp
+      targetHpAfter: this._getCombatState().turnOrder.find(x => x.id === targetId)?.hp,
+      vladislavMercy: !!target._vladislavMercyThisHit
     };
+    // Clear the per-hit mercy flag so it doesn't leak to later attacks
+    if (target._vladislavMercyThisHit) target._vladislavMercyThisHit = false;
 
     this.bus.dispatch('combat:attack_result', { ...result, combat: this._getCombatState() });
 
@@ -1941,9 +2038,13 @@ class CombatService {
         this.state.set('flags.useCover', body.useCover);
         result.useCover = body.useCover;
       }
+      if (typeof body.vladislavAutoDemo === 'boolean') {
+        this.state.set('flags.vladislavAutoDemo', body.vladislavAutoDemo);
+        result.vladislavAutoDemo = body.vladislavAutoDemo;
+      }
       if (Object.keys(result).length === 0) {
         return res.status(400).json({
-          error: 'body must set useTacticalPositioning, useOpportunityAttacks, or useCover (boolean)'
+          error: 'body must set useTacticalPositioning, useOpportunityAttacks, useCover, or vladislavAutoDemo (boolean)'
         });
       }
       res.json(result);

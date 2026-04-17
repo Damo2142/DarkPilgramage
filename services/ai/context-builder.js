@@ -386,6 +386,16 @@ class ContextBuilder {
       const app = c.appearance || {};
       const parts = [];
       parts.push(`${c.name || id}: ${c.race || '?'} ${c.class || '?'} Lv${c.level || 1}, HP ${hp.current || '?'}/${hp.max || '?'}, Dread ${dread.score || 0}/100 (${dread.threshold || 'calm'})`);
+      // Language awareness — Max must know what each PC can understand so
+      // he can gate NPC speech correctly (e.g. a Slovak-only NPC will be
+      // indecipherable to Spurt/Zarina unless bridged through Katya).
+      const langs = Array.isArray(c.languages) ? c.languages : [];
+      const langStruct = Array.isArray(c.languageStructured) ? c.languageStructured : [];
+      if (langStruct.length) {
+        parts.push(`  Languages: ${langStruct.map(l => `${l.displayName || l.id}(${l.fluency || 'fluent'})`).join(', ')}`);
+      } else if (langs.length) {
+        parts.push(`  Languages: ${langs.join(', ')}`);
+      }
       if (c.patron) parts.push(`  Subclass/Patron: ${c.patron}`);
       if (c.background) parts.push(`  Background: ${c.background}`);
       if (app.faith) parts.push(`  Faith: ${app.faith}`);

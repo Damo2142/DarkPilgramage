@@ -1205,10 +1205,22 @@ class MapService {
         const dy = Math.abs(snappedY - oldY) / grid;
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist > maxSquares) {
-          // Clamp to max movement range
-          const scale = maxSquares / dist;
-          snappedX = Math.floor((oldX + (snappedX - oldX) * scale - half) / grid) * grid + half;
-          snappedY = Math.floor((oldY + (snappedY - oldY) * scale - half) / grid) * grid + half;
+          // Clamp to max movement range. Use a slightly conservative factor
+          // (maxSquares - 0.01) so rounding after scaling can't overshoot
+          // the speed limit and then re-snap outside the allowed radius.
+          const scale = (maxSquares - 0.01) / dist;
+          const targetX = oldX + (snappedX - oldX) * scale;
+          const targetY = oldY + (snappedY - oldY) * scale;
+          snappedX = Math.round((targetX - half) / grid) * grid + half;
+          snappedY = Math.round((targetY - half) / grid) * grid + half;
+          // Final guard: if rounding still pushed past the limit, step back
+          // one square along the movement vector.
+          const newDx = Math.abs(snappedX - oldX) / grid;
+          const newDy = Math.abs(snappedY - oldY) / grid;
+          if (Math.sqrt(newDx*newDx + newDy*newDy) > maxSquares + 0.001) {
+            snappedX = oldX + Math.sign(snappedX - oldX) * Math.floor(maxSquares / Math.SQRT2) * grid;
+            snappedY = oldY + Math.sign(snappedY - oldY) * Math.floor(maxSquares / Math.SQRT2) * grid;
+          }
           this.bus.dispatch('dm:whisper', {
             text: `${token.name} tried to move ${Math.round(dist * 5)}ft but speed is ${speed}ft — clamped`,
             priority: 4, category: 'rules'
@@ -1387,7 +1399,7 @@ class MapService {
   _notifyNearDoor(wall, mapDef, excludePlayer, failedAttempt) {
     const doorX = (wall.x1 + wall.x2) / 2;
     const doorY = (wall.y1 + wall.y2) / 2;
-    const grid = mapDef.gridSize || 140;
+    const grid = mapDef.gridSize || 70;
     const hearingRange = (failedAttempt ? 20 : 60) / 5 * grid; // 20ft for rattling, 60ft for open/close
 
     // Check all PC tokens on this map

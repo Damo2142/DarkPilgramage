@@ -607,6 +607,15 @@ class ObservationService {
       res.json({ ok: true, playerId, text });
     });
 
+    // POST /api/debug/dispatch — generic bus event dispatch for smoke tests
+    // body: { event: string, data: object }
+    app.post('/api/debug/dispatch', (req, res) => {
+      const { event, data } = req.body || {};
+      if (!event || typeof event !== 'string') return res.status(400).json({ error: 'event (string) required' });
+      this.bus.dispatch(event, data || {});
+      res.json({ ok: true, dispatched: event });
+    });
+
     // POST /api/debug/npc-speak — dispatch literal NPC dialogue for testing
     // Fires npc:approved → voice-service → ElevenLabs → room speaker
     // body: { npcId, text, private?: boolean, toPlayerId?: string, languageId?: string }

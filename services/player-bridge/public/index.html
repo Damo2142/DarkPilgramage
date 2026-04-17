@@ -1429,6 +1429,56 @@ function fmt(n){return n>=0?'+'+n:''+n;}
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
+// Chromebook blocks Audio().play() until the user has interacted with the page.
+// We install a one-shot gesture listener that unlocks audio, and queue any
+// audio that arrives before unlock so it plays the moment the user taps.
+window._audioUnlocked = false;
+window._audioQueue = [];
+function _unlockAudio(){
+  if (window._audioUnlocked) return;
+  window._audioUnlocked = true;
+  try {
+    var silent = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
+    silent.volume = 0;
+    silent.play().catch(function(){});
+  } catch(e){}
+  while (window._audioQueue.length) {
+    var item = window._audioQueue.shift();
+    try { playAudioUrl(item.url, item.volume, item.loop); } catch(e){}
+  }
+}
+['touchstart','mousedown','keydown','click'].forEach(function(ev){
+  window.addEventListener(ev, _unlockAudio, { once:true, capture:true });
+});
+function playAudioUrl(url, volume, loop){
+  if (!url) return;
+  if (!window._audioUnlocked) {
+    window._audioQueue.push({ url: url, volume: volume, loop: !!loop });
+    // Show one-time prompt so Dave/players know to tap
+    if (!window._audioUnlockPrompted) {
+      window._audioUnlockPrompted = true;
+      try { showToast('Audio', 'Tap anywhere to enable sound', 6000); } catch(e){}
+    }
+    return;
+  }
+  try {
+    if (loop) {
+      if (!window._ambience) window._ambience = new Audio();
+      window._ambience.src = url;
+      window._ambience.loop = true;
+      window._ambience.volume = volume || 0.3;
+      var p = window._ambience.play();
+      if (p && p.catch) p.catch(function(e){ console.warn('[audio:ambience]', e && e.message); });
+    } else {
+      var a = new Audio(url);
+      a.volume = volume || 0.5;
+      a.onerror = function(){ console.warn('[audio] load failed:', url); };
+      var p = a.play();
+      if (p && p.catch) p.catch(function(e){ console.warn('[audio:play]', e && e.message); });
+    }
+  } catch(e) { console.warn('[audio] exception:', e && e.message); }
+}
+
 // ── WS ──────────────────────────────────────────────────────────────
 var _serverBoot = null; // track server boot time to detect restarts
 function connect(){
@@ -1491,6 +1541,20 @@ function handle(m){
     case 'npc:audio': handlePrivateNpcAudio(m); AudioCue.npcSpeech(); break;
     case 'chat:p2p': handleP2P(m); break;
     case 'narrator:whisper': handleNarratorWhisper(m); break;
+    case 'private:whisper':
+      showToast(m.source || 'Voice', m.text || '', 7000);
+      if (m.tier === 'bagman' && typeof applyHorror === 'function') applyHorror('dread_vision', {intensity: 0.4}, 4000);
+      AudioCue.npcSpeech();
+      break;
+    case 'friendly_fire:shooter':
+      showToast('⚠ Friendly Fire', m.text || 'Your shot veers toward an ally.', 6000);
+      AudioCue.damage && AudioCue.damage();
+      break;
+    case 'friendly_fire:victim':
+      showToast('⚠ Hit By Ally', m.text || ('Struck by ' + (m.shooterName||'ally') + '!'), 6000);
+      if (typeof applyHorror === 'function') applyHorror('screen_flash', {color:'rgba(180,40,40,0.5)'}, 400);
+      AudioCue.damage && AudioCue.damage();
+      break;
     case 'dm:private_message':
       if (m.style === 'observation') { showObservation(m.text, m.durationMs || 45000); AudioCue.observation(); }
       else { showToast('DM', m.text, m.durationMs || 8000); }
@@ -1558,16 +1622,12 @@ function handle(m){
     case 'combat:your_turn':        displayYourTurn(m.spellStatus, m.movementFeet); AudioCue.yourTurn(); break;
     // Addition 2 — telepathy contact (Vladislav / Letavec / Page)
     case 'telepathy:touch':         displayTelepathyTouch(m.style, m.text); break;
-    // Audio streaming for remote players
+    // Audio streaming for remote players — queue if autoplay is locked (Chromebook needs user gesture)
     case 'audio:play':
-      if(m.url) { const a=new Audio(m.url); a.volume=m.volume||0.5; a.play().catch(()=>{}); }
+      if(m.url) playAudioUrl(m.url, m.volume||0.5, false);
       break;
     case 'audio:ambience':
-      if(m.url) {
-        if(!window._ambience) window._ambience=new Audio();
-        window._ambience.src=m.url; window._ambience.loop=true; window._ambience.volume=m.volume||0.3;
-        window._ambience.play().catch(()=>{});
-      }
+      if(m.url) playAudioUrl(m.url, m.volume||0.3, true);
       break;
     // Map sync events
     case 'map:full_update':
@@ -3779,13 +3839,7 @@ function handleP2P(m) {
 function handlePrivateNpcAudio(m) {
   var name = m.npc || 'NPC';
   var text = m.text || '';
-  if (m.url) {
-    try {
-      var audio = new Audio(m.url);
-      audio.volume = 0.95;
-      audio.play().catch(function(e) { console.warn('[npc:audio] play failed:', e.message); });
-    } catch (e) {}
-  }
+  if (m.url) playAudioUrl(m.url, 0.95, false);
   if (typeof addChat === 'function') addChat(name + ' (to you)', text, '#c9a54e');
   if (window.ChatBar && ChatBar.appendMessage) {
     ChatBar.appendMessage({ type: 'npc', speaker: name + ' (to you)', text: text });

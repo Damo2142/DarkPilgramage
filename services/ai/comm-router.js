@@ -710,8 +710,8 @@ class CommRouter {
     // PRIVATE — only the source player hears (still apply language barrier)
     if (npcDialogue._private && npcDialogue._sourcePlayerId) {
       const lr = this.resolveLanguage(npcId, npcDialogue._sourcePlayerId, { languageId });
-      const adjustedText = this._applyLanguageTier(text, lr);
-      this._sendNpcAudioToPlayer(npcDialogue._sourcePlayerId, npcId, adjustedText, 'FULL', lr);
+      const adjustedText = this._applyLanguageTier(text, lr, npcDialogue.narratorTranslation);
+      this._sendNpcAudioToPlayer(npcDialogue._sourcePlayerId, npcId, adjustedText, 'FULL', lr, text);
       this.bus.dispatch('dm:whisper', {
         text: `[NPC private] ${npcDialogue.npc || npcId} → ${this._charName(npcDialogue._sourcePlayerId)}: ${lr.result}${lr.via ? ' via ' + lr.via : ''}`,
         priority: 3, category: 'npc', source: 'comm-router'
@@ -742,8 +742,8 @@ class CommRouter {
       else if (lr.result === 'KATYA_BRIDGE') finalTier = 'KATYA_BRIDGE';
       else if (lr.result === 'PARTIAL' && tier === 'FULL') finalTier = 'PARTIAL';
 
-      const adjustedText = this._applyLanguageTier(text, lr);
-      this._sendNpcAudioToPlayer(pid, npcId, adjustedText, finalTier, lr);
+      const adjustedText = this._applyLanguageTier(text, lr, npcDialogue.narratorTranslation);
+      this._sendNpcAudioToPlayer(pid, npcId, adjustedText, finalTier, lr, text);
 
       const name = this._charName(pid);
       if (finalTier === 'FULL') fullPlayers.push(name);
@@ -765,7 +765,7 @@ class CommRouter {
     });
   }
 
-  _sendNpcAudioToPlayer(playerId, npcId, text, tier, langResult) {
+  _sendNpcAudioToPlayer(playerId, npcId, text, tier, langResult, rawText) {
     let displayText = text;
     // If language tier is already applied (text begins with [marker]), trust it.
     // Otherwise apply proximity-based truncation as before.
@@ -775,8 +775,16 @@ class CommRouter {
       displayText = '...' + kept.join(' ') + '...';
     }
     const npcName = this.state.get(`npcs.${npcId}.name`) || npcId;
+    // BARRIER players must not see the raw text even via fullText — the
+    // player client has debug views that would expose it. For everyone
+    // else, fullText carries the ORIGINAL raw speech (e.g. Slovak source)
+    // so the UI can offer an optional "show original" toggle alongside
+    // the displayed translation.
+    const isBarrier = langResult && langResult.result === 'BARRIER';
+    const raw = rawText != null ? rawText : text;
     this.bus.dispatch('player:npc_speech', {
-      playerId, npcId, npcName, text: displayText, tier, fullText: text,
+      playerId, npcId, npcName, text: displayText, tier,
+      fullText: isBarrier ? null : raw,
       language: langResult ? (langResult.spoken || langResult.sharedLang) : null,
       languageResult: langResult || null
     });
@@ -993,8 +1001,14 @@ class CommRouter {
       }
     }
 
-    // 4. NPC can fall back to Common if speaker has any commonFluency and player has Common
-    if (playerLangById['common'] && (npcLangs.ids.includes('common') || npcLangs.commonFluency)) {
+    // 4. NPC can fall back to Common if speaker has any commonFluency and player has Common —
+    //    BUT ONLY when the DM has NOT explicitly chosen a language. An explicit
+    //    languageId (from a scripted event or the DM saying "in Slovak, Marta
+    //    says…") means the NPC is deliberately speaking that tongue — the
+    //    fallback must NOT silently translate it into Common for confused
+    //    listeners. They get BARRIER so the player sees "[unintelligible]".
+    const dmSpecifiedLanguage = !!options.languageId;
+    if (!dmSpecifiedLanguage && playerLangById['common'] && (npcLangs.ids.includes('common') || npcLangs.commonFluency)) {
       const cf = (npcLangs.commonFluency || 'fluent').toLowerCase();
       if (/fluent/.test(cf)) return { result: 'FULL', sharedLang: 'common', via: 'fallback_common' };
       if (/conversational/.test(cf)) return { result: 'PARTIAL', sharedLang: 'common', via: 'fallback_common', fluency: 'conversational' };
@@ -1037,20 +1051,49 @@ class CommRouter {
   /**
    * Apply a language tier transformation to spoken text.
    */
-  _applyLanguageTier(text, langResult) {
-    if (!langResult || langResult.result === 'FULL') return text;
+  _applyLanguageTier(text, langResult, narratorTranslation) {
+    if (!langResult) return text;
+
+    // Beta finding F8 (2026-04-17): when a PC's character FULLY understands
+    // a non-Common language, the player still needs to READ the content.
+    // Show the narrator's English translation with a "(in X) ..." prefix
+    // so the PLAYER knows what the CHARACTER heard. If no translation is
+    // provided, fall back to the raw text.
+    if (langResult.result === 'FULL') {
+      const spoken = langResult.sharedLang || langResult.spoken;
+      if (spoken && spoken !== 'common' && narratorTranslation) {
+        return `(in ${spoken}, you understand) ${narratorTranslation}`;
+      }
+      return text;
+    }
+
     if (langResult.result === 'PARTIAL') {
+      // PARTIAL fluency — show the translation but with a hedge prefix,
+      // OR if no translation, fall back to the old "every other word" effect.
+      const spoken = langResult.sharedLang || langResult.spoken || 'partial';
+      if (narratorTranslation) {
+        // Strip ~half the words from the English to convey partial comprehension
+        const words = narratorTranslation.split(/\s+/);
+        const kept = words.map((w, i) => (i % 2 === 0) ? w : '...').join(' ');
+        return `(in ${spoken}, you catch some of it) ${kept}`;
+      }
       const words = text.split(/\s+/);
-      const kept = words.filter((_, i) => i % 2 === 0); // ~50% words
-      return '[' + (langResult.sharedLang || 'partial') + '] ...' + kept.join(' ') + '...';
+      const kept = words.filter((_, i) => i % 2 === 0);
+      return '[' + spoken + '] ...' + kept.join(' ') + '...';
     }
+
     if (langResult.result === 'KATYA_BRIDGE') {
-      return '[Katya translates from ' + langResult.spoken + '] ' + text;
+      // Katya is translating from the foreign language. Player sees the
+      // English via her filter.
+      const translated = narratorTranslation || text;
+      return `[Katya translates from ${langResult.spoken}] ${translated}`;
     }
+
     if (langResult.result === 'BARRIER') {
       // Player hears sound but no comprehension
       return '[unintelligible — ' + (langResult.spoken || 'foreign tongue') + ']';
     }
+
     return text;
   }
 

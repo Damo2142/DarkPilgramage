@@ -407,7 +407,11 @@ class PlayerBridgeService {
       });
     }, 'player-bridge');
 
-    // Section 6 — NPC speech routed to specific player by proximity tier
+    // Section 6 — NPC speech routed to specific player by proximity tier.
+    // Forward the language-barrier tier so the client can style unintelligible
+    // speech differently (italic / muted / [in Slovak]), and include the
+    // speaker's language so the player UI can surface "you don't know this
+    // tongue" hints where appropriate.
     this.bus.subscribe('player:npc_speech', (env) => {
       const d = env.data || {};
       if (!d.playerId) return;
@@ -416,7 +420,9 @@ class PlayerBridgeService {
         npcId: d.npcId,
         npcName: d.npcName,
         text: d.text,
-        tier: d.tier || 'FULL'
+        tier: d.tier || 'FULL',
+        language: d.language || null,
+        languageResult: d.languageResult || null
       });
     }, 'player-bridge');
 

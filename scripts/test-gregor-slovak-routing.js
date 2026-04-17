@@ -135,12 +135,26 @@ function assert(cond, msg) {
 
 console.log('\n── Expected routing behavior ──');
 
-// 1. Ed's Chromebook receives the Slovak text via player:npc_speech
+// 1. Ed's Chromebook receives the message. Post-F8 (2026-04-17 beta): Ed's
+// CHARACTER speaks Slovak but the PLAYER reads English. For FULL-tier
+// non-Common delivery, the message carries the English narratorTranslation
+// with an "(in slovak, you understand)" prefix. Raw Slovak is kept in
+// fullText for UI that wants to display both.
 const edSpeech = dispatched.find(d => d.event === 'player:npc_speech' && d.data.playerId === 'ed');
 assert(!!edSpeech, 'Ed receives player:npc_speech');
 if (edSpeech) {
-  assert(edSpeech.data.text && edSpeech.data.text.includes('Počúvaj'),
-    'Ed receives the Slovak text (not the translation)');
+  assert(
+    edSpeech.data.text && /in slovak, you understand/i.test(edSpeech.data.text),
+    'Ed sees "(in slovak, you understand)" prefix'
+  );
+  assert(
+    edSpeech.data.text && edSpeech.data.text.includes('Matthias'),
+    'Ed sees the English translation (player-readable)'
+  );
+  assert(
+    edSpeech.data.fullText && edSpeech.data.fullText.includes('Počúvaj'),
+    'Raw Slovak preserved in fullText for optional display'
+  );
 }
 
 // 2. Other players do NOT receive this private whisper

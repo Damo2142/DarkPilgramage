@@ -34,6 +34,12 @@ class AmbientLifeService {
     this._tomasState = {
       phase: 'normal', lastWhisperPhase: null, goalActivated: false, transformed: false
     };
+    // Task 6 (session0-polish follow-up) — Vladislav awareness phase machine
+    this._vladislavState = {
+      awarenessPhase: 'neutral',
+      lastAnnouncedPhase: null,
+      tokenMovedToWindow: false
+    };
     this._piotrState = {
       chainIntact: true, breakChance: 0, lastChainTestHour: -1
     };
@@ -750,6 +756,7 @@ class AmbientLifeService {
     const totalMinutes = h * 60 + m;
 
     this._tickTomas(h, m, totalMinutes);
+    this._tickVladislavAwareness(h, m, totalMinutes);
     this._tickPiotr(h, m, totalMinutes);
     this._tickGasSpore(h, m, totalMinutes);
     this._tickKamenny(h, m, totalMinutes);
@@ -812,6 +819,93 @@ class AmbientLifeService {
             hidden: false, hp: { current: 58, max: 58 }, ac: 11, image: 'werewolf.webp'
           });
         }
+      }
+    }
+  }
+
+  // ─── VLADISLAV AWARENESS ─────────────────────────────────────
+
+  /**
+   * Task 6 (session0-polish follow-up) — per-tick advancement of
+   * Vladislav's awareness phase. Transitions driven by world-clock
+   * time plus flags set elsewhere (Dominik arrival, recognition at 21:15).
+   *
+   * Schedule:
+   *   17:30-18:00 → neutral
+   *   18:00-20:00 → unease
+   *   20:00+ (or Dominik arrived flag) → sharpened_unease
+   *   21:00 → window_watch (also moves his token to the east window)
+   *   21:15+ (or recognition flag) → recognition then calculating
+   *   22:00+ → reactive
+   *   06:00+ → departure
+   *
+   * On each phase change, sets state.npcs.hooded-stranger.awarenessPhase,
+   * dispatches creature:vladislav_phase_change, and whispers the DM earbud.
+   */
+  _tickVladislavAwareness(h, m, totalMinutes) {
+    const ORDER = ['neutral', 'unease', 'sharpened_unease', 'window_watch',
+                   'recognition', 'calculating', 'reactive', 'departure'];
+    const current = this._vladislavState.awarenessPhase || 'neutral';
+    const idx = (p) => ORDER.indexOf(p);
+    const postMidnight = (h >= 0 && h < 12);   // Oct 16 morning
+
+    // Compute the "time-appropriate" phase for the current tick.
+    let target = current;   // default: no change
+
+    if (postMidnight && current !== 'departure' && h >= 6) {
+      // Dawn — advance to departure regardless of prior phase
+      target = 'departure';
+    } else if (postMidnight) {
+      // Past midnight but before dawn — keep current phase (should be reactive
+      // by now, don't regress if the tick hits a low totalMinutes value).
+    } else if (totalMinutes >= 22 * 60) {
+      target = 'reactive';
+    } else if (this.state.get('flags.vladislav_knows_about_dominik') === true) {
+      target = totalMinutes >= 21 * 60 + 20 ? 'calculating' : 'recognition';
+    } else if (totalMinutes >= 21 * 60) {
+      target = 'window_watch';
+    } else if (totalMinutes >= 20 * 60 || this.state.get('flags.dominik_arrived') === true) {
+      target = 'sharpened_unease';
+    } else if (totalMinutes >= 18 * 60) {
+      target = 'unease';
+    } else {
+      target = 'neutral';
+    }
+
+    // Ratchet forward — never regress
+    if (idx(target) <= idx(current)) return;
+
+    const prev = current;
+    this._vladislavState.awarenessPhase = target;
+    this.state.set('npcs.hooded-stranger.awarenessPhase', target);
+
+    this._whisperDM(
+      `VLADISLAV: awareness ${prev} → ${target} (at ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}).`,
+      2, 'story'
+    );
+    this.bus.dispatch('creature:vladislav_phase_change', {
+      from: prev, to: target,
+      gameTime: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`
+    });
+
+    // Side effect on window_watch entry: move his token to the east window.
+    // Phase 5 fragment carries the east window as (window-east) at (22,8)
+    // grid coordinates on the ground floor = (22*140+70, 8*140+70) = (3150, 1190).
+    // Actual map uses hooded-stranger start at (4100, 700); the east window
+    // on pallidhearfloor1 is at approximately (4900, 1260) — the right edge.
+    if (target === 'window_watch' && !this._vladislavState.tokenMovedToWindow) {
+      this._vladislavState.tokenMovedToWindow = true;
+      const windowX = 4700, windowY = 1260;
+      const entry = this._findNpcToken('hooded-stranger');
+      if (entry) {
+        const [tokenId, tok] = entry;
+        this.state.set(`map.tokens.${tokenId}.x`, windowX);
+        this.state.set(`map.tokens.${tokenId}.y`, windowY);
+        this.bus.dispatch('map:token_moved', {
+          tokenId, x: windowX, y: windowY,
+          oldX: tok.x, oldY: tok.y,
+          reason: 'ambient-life-phase-change'
+        });
       }
     }
   }

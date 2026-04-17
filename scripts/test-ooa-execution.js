@@ -136,13 +136,13 @@ section('Scenario 1 — NPC flees, PC executes OoA');
     x: 980, y: 420  // next to ed
   };
   const ed = {
-    id: 'ed', name: 'FrostyCritter', type: 'pc',
+    id: 'ed', name: 'Vaelthion Shadeknife', type: 'pc',
     hp: { current: 18, max: 18 }, ac: 13, isAlive: true, conditions: [], initiative: 10, initMod: 2,
     x: 840, y: 420
   };
   // Seed ed's character attacks
   state.set('players.ed.character', {
-    name: 'FrostyCritter',
+    name: 'Vaelthion Shadeknife',
     attacks: [
       { name: 'Dagger', toHit: 5, damage: '1d4+3', damageType: 'Piercing', range: '5/5' }
     ]
@@ -185,7 +185,7 @@ section('Scenario 2 — Reaction already used');
     hp: { current: 7, max: 7 }, ac: 15, isAlive: true, conditions: [], x: 980, y: 420
   };
   const ed = {
-    id: 'ed', name: 'FrostyCritter', type: 'pc',
+    id: 'ed', name: 'Vaelthion Shadeknife', type: 'pc',
     hp: { current: 18, max: 18 }, ac: 13, isAlive: true, conditions: [], x: 840, y: 420,
     _reactionUsedThisRound: true
   };
@@ -215,7 +215,7 @@ section('Scenario 3 — Kill switch off');
     hp: { current: 7, max: 7 }, ac: 15, isAlive: true, conditions: [], x: 980, y: 420
   };
   const ed = {
-    id: 'ed', name: 'FrostyCritter', type: 'pc',
+    id: 'ed', name: 'Vaelthion Shadeknife', type: 'pc',
     hp: { current: 18, max: 18 }, ac: 13, isAlive: true, conditions: [], x: 840, y: 420
   };
   state.set('players.ed.character', { attacks: [{ name: 'Dagger', toHit: 5, damage: '1d4+3', range: '5/5' }] });

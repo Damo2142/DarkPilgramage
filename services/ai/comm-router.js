@@ -1635,7 +1635,7 @@ class CommRouter {
    * registered observation event for the scene. That leaked cellar-only
    * observations (gas spore, Piotr's chains) to players whose tokens were
    * in the common room — Ed rolled perception anywhere, gas-spore tier-2
-   * observations fired for him because DC 12 was easy for a halfling rogue.
+   * observations fired for him because DC 12 was easy for a rogue with expertise.
    * Now filters by the player's token zone: cellar-tagged observations
    * only fire if the player is in the cellar-access zone, upper-floor
    * observations only on the upper floor, etc.

@@ -1,5 +1,5 @@
 {
-  "_note": "Override DDB-synced language data with campaign-specific assignments. Keys are player IDs (kim, jerome, ed, jen, nick) \u2014 these match character-assignments.json.",
+  "_note": "Override DDB-synced language data with campaign-specific assignments. Keys are player IDs (kim, jerome, ed, jen, nick) — these match character-assignments.json.",
   "kim": {
     "characterName": "Zarina Firethorn",
     "languages": [
@@ -19,10 +19,10 @@
         "id": "draconic",
         "displayName": "Draconic",
         "fluency": "fluent",
-        "note": "Universal dragon tongue \u2014 understood everywhere."
+        "note": "Universal dragon tongue — understood everywhere."
       }
     ],
-    "languageNote": "Zarina's Elvish is from the Americas \u2014 completely unknown to any European NPC. To them it sounds like no language they have encountered. Her Draconic will be useful at all three castles \u2014 old records kept in Draconic at Orava, binding-script elements at Houska."
+    "languageNote": "Zarina's Elvish is from the Americas — completely unknown to any European NPC. To them it sounds like no language they have encountered. Her Draconic will be useful at all three castles — old records kept in Draconic at Orava, binding-script elements at Houska."
   },
   "jerome": {
     "characterName": "Barry Goodfellow Frascht",
@@ -34,41 +34,34 @@
         "note": null
       }
     ],
-    "languageNote": "Barry speaks Common only. As a Van Helsing bloodline descendant he may have encountered other languages in his family records \u2014 this can surface as an arc beat. Complete barrier with all local languages."
+    "languageNote": "Barry speaks Common only. As a Van Helsing bloodline descendant he may have encountered other languages in his family records — this can surface as an arc beat. Complete barrier with all local languages."
   },
   "ed": {
-    "characterName": "Spurt the Sorcerer",
-    "playerNote": "Spurt is currently played by AI but has the same character data slot.",
+    "characterName": "Vaelthion Shadeknife",
     "languages": [
       {
         "id": "common",
         "displayName": "Common (Latin)",
         "fluency": "fluent",
         "note": null
-      },
-      {
-        "id": "draconic",
-        "displayName": "Draconic",
-        "fluency": "fluent \u2014 native",
-        "note": "Universal dragon tongue. Spurt thinks in Draconic."
-      },
-       {
-        "id": "polish",
-        "displayName": "Polish",
-        "fluency": "conversational",
-        "note": "Picked up on the road through Poland."
       },
       {
         "id": "slovak",
         "displayName": "Slovak",
-        "fluency": "partial",
-        "note": "Enough to understand Marta when she switches to Slovak if frightened. Enough to catch Gregor's warnings without Katya."
-      }      
+        "fluency": "fluent — native",
+        "note": "Native speaker. Understands Gregor, Marta when Slovak, Tomas native tongue, Dominik's Slovak whispers."
+      },
+      {
+        "id": "polish",
+        "displayName": "Polish",
+        "fluency": "conversational",
+        "note": "Adjacent to Slovak; picks up dialect words easily."
+      }
     ],
-    "languageNote": "Spurt is from the Americas but speaks Common and Draconic. Draconic being universal means he can speak it anywhere \u2014 it predates human civilization on every continent. Vladislav recognizes it immediately when Spurt speaks it."
+    "languageNote": "Vaelthion is the party's only fluent Slovak speaker. Gregor, Marta (when frightened), Dominik private whispers all route to him. Central to Session 0 narrative structure."
   },
   "spurt": {
-    "_alias": "Same as ed \u2014 Spurt AI player slot.",
+    "_alias": "Same as ed — Spurt AI player slot.",
     "characterName": "Spurt the Sorcerer",
     "languages": [
       {
@@ -80,7 +73,7 @@
       {
         "id": "draconic",
         "displayName": "Draconic",
-        "fluency": "fluent \u2014 native",
+        "fluency": "fluent — native",
         "note": "Universal dragon tongue. Spurt thinks in Draconic."
       }
     ],
@@ -98,13 +91,13 @@
       {
         "id": "aglarondan",
         "displayName": "Aglarondan",
-        "fluency": "fluent \u2014 native",
+        "fluency": "fluent — native",
         "note": "Americas origin language."
       },
       {
         "id": "chondathan",
         "displayName": "Chondathan",
-        "fluency": "fluent \u2014 native",
+        "fluency": "fluent — native",
         "note": "Americas origin language."
       },
       {
@@ -134,11 +127,11 @@
       {
         "id": "infernal",
         "displayName": "Infernal",
-        "fluency": "instinctive \u2014 unknown to character",
+        "fluency": "instinctive — unknown to character",
         "note": "Chazz can read and understand Infernal without having formally learned it. He does not know he can do this. First revealed at Houska when he reads binding-script before realizing he is reading it. Max whispers DM when this triggers: 'Chazz can read this. Watch.'"
       }
     ],
-    "languageNote": "Chazz has been in Europe for 40 years \u2014 he is the party's primary translator for Central European languages. He gets information first when translating. His Infernal literacy is instinctive and unknown to him \u2014 a tiefling bloodline gift he has never had reason to discover."
+    "languageNote": "Chazz has been in Europe for 40 years — he is the party's primary translator for Central European languages. He gets information first when translating. His Infernal literacy is instinctive and unknown to him — a tiefling bloodline gift he has never had reason to discover."
   },
   "jen": {
     "characterName": "Marfire 2.0",
@@ -153,12 +146,12 @@
         "id": "elvish_americas",
         "displayName": "Elvish (Americas dialect)",
         "fluency": "fluent",
-        "note": "Shared with Zarina \u2014 their private channel. Unknown to Europeans."
+        "note": "Shared with Zarina — their private channel. Unknown to Europeans."
       },
       {
         "id": "giant",
         "displayName": "Giant",
-        "fluency": "fluent \u2014 native",
+        "fluency": "fluent — native",
         "note": "Firbolg heritage language. No Giant speakers in Central Europe but old Giant inscriptions exist in remote locations."
       },
       {
@@ -168,6 +161,6 @@
         "note": "Communicates with beasts and plants regardless of language. Animals understand her intent. She understands their emotion and intent not words. Complete barrier with all European languages except Common."
       }
     ],
-    "languageNote": "Marfire arrived 3 months ago and has not acquired European languages. Complete barrier with Slovak, Czech, German, Hungarian. Her shared Elvish with Zarina is their private channel \u2014 Vladislav understands Elvish and will not reveal this. Her Speech of Beast and Leaf delivers animal intelligence no one else can access."
+    "languageNote": "Marfire arrived 3 months ago and has not acquired European languages. Complete barrier with Slovak, Czech, German, Hungarian. Her shared Elvish with Zarina is their private channel — Vladislav understands Elvish and will not reveal this. Her Speech of Beast and Leaf delivers animal intelligence no one else can access."
   }
 }

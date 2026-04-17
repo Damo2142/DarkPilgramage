@@ -555,7 +555,7 @@
       "nameRevealedToPlayers": false
     },
     "ed": {
-      "name": "FrostyCritter's Character",
+      "name": "Vaelthion Shadeknife",
       "type": "pc",
       "x": 2170,
       "y": 1890,
@@ -565,7 +565,7 @@
         "current": 18,
         "max": 18
       },
-      "ac": 10,
+      "ac": 12,
       "nameRevealedToPlayers": false,
       "light": null
     },

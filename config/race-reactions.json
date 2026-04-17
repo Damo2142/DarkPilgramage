@@ -76,27 +76,26 @@
     },
 
     "ed": {
-      "characterName": "Spurt the Sorcerer",
-      "race": "Kobold",
+      "characterName": "Vaelthion Shadeknife",
+      "race": "Human",
       "europeanReception": {
-        "baseline": "Tier 1-2 in German-speaking areas specifically. The kobold is Germanic folklore. A literal kobold walking into a German inn causes terrified recognition — not what is that but I know what that is.",
-        "germanic": "Germans and Dutch: folklore-specific fear. The stories say kobolds curse households, steal children, cause fires. The stories are wrong about Spurt specifically but nobody knows that yet.",
-        "slavic": "Czechs and Slovaks have similar creatures but different names. Less specific recognition, more general wariness about small strange things.",
-        "practical": "Four months in Europe has taught Spurt exactly which behaviors reduce fear and which increase it. He has optimized for food acquisition and not being attacked.",
-        "ozone": "The faint smell of ozone around him adds to the supernatural read. Lightning-smell on something that looks like a household spirit is not reassuring."
+        "baseline": "Tier 0. Human, unremarkable on sight. The race lever does NOT pull on Vaelthion — what pulls is his Slovak fluency. To Slovak-speaking villagers he reads as a regional native; to German-speaking merchants and Austrian clergy he reads as a Slav, with the suspicion that comes with that in 1274 Central Europe.",
+        "slavic": "Czechs and Slovaks treat him as one of their own once he opens his mouth. Doors that stay closed to other PCs open for him.",
+        "germanic": "Germans (Henryk) and Austrian clergy (Aldric, Brother Matthias) read him as a Slav. Polite but distant. Not hostile, but he is not their kind.",
+        "practical": "Vaelthion uses his Slovak deliberately and sparingly — most rogues don't broadcast their leverage."
       },
       "pallidHart": {
-        "tier": 1,
-        "marta": "Brings him extra food unprompted. This is either kindness or an offering. Possibly both.",
-        "gregor": "Has gone very still since Spurt arrived. Watching him the way you watch something you do not want to startle.",
-        "henryk": "German. Knows the stories. His grandmother told him. He is trying very hard to look normal and failing.",
-        "aldric": "Interested. The friar's theology has apparently already accommodated kobolds.",
-        "aldous": "Nodded at Spurt when he arrived. Practical acknowledgment. Not his problem tonight.",
-        "katya": "Asked Spurt where he came from within five minutes of his arrival. Has been asking follow-up questions since.",
-        "maxWhisper": "Henryk the German merchant has gone quiet since Spurt arrived. He keeps glancing at him. He grew up with stories about kobolds. None of the stories ended well for the humans."
+        "tier": 0,
+        "marta": "Treats him as a local. Speaks to him in Slovak when no one else is listening. Trusts him more than the others by default.",
+        "gregor": "Will choose Vaelthion to die speaking to. Slovak is the only language Gregor has left at the end. This is the load-bearing Session 0 hook.",
+        "henryk": "Polite German distance. Will trade with him but not confide in him.",
+        "aldric": "Sees a Slav. Civil. Disinterested.",
+        "aldous": "Already clocked him as a rogue. Practical respect. Will not pry.",
+        "katya": "Recognizes a fellow traveler with secrets. Won't ask, won't tell.",
+        "maxWhisper": "Old Gregor has been watching Vaelthion since he came in. When the Slovak slips out, Gregor's whole posture changes. He has decided who he is going to die telling."
       },
-      "german_inn": { "tier": 2, "note": "Innkeeper may refuse service. Henryk-type reaction scaled up." },
-      "slavic_village": { "tier": 1, "note": "Wary but not specific. Strange small thing from the forest — concerning but not folkloric." }
+      "german_inn": { "tier": 1, "note": "Slavic accent draws polite distance. Service rendered but not warmly." },
+      "slavic_village": { "tier": 0, "note": "Local. Welcomed. Doors open. People speak freely around him." }
     },
 
     "kim": {

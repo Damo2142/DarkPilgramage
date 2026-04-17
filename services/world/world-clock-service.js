@@ -789,9 +789,14 @@ class WorldClockService {
           gameTime: this.gameTime.toISOString()
         });
 
+        // Task 8 (session0-polish follow-up) — resolve _lookup markers on
+        // the event data before dispatching. Lets timed events reference
+        // runtime positions like "ed-token-position" and adjacent-tile.
+        const resolvedData = this._resolveLookups(evt.data);
+
         // Also dispatch the actual event type
         if (evt.event) {
-          this.bus.dispatch(evt.event, { ...evt.data, _timedEvent: evt.id });
+          this.bus.dispatch(evt.event, { ...resolvedData, _timedEvent: evt.id });
         }
 
         // Task 7 (session0-polish follow-up) — dispatchEvents support.
@@ -799,11 +804,13 @@ class WorldClockService {
         // each { event, data }. Useful for side effects: npc:arrival,
         // state:flag_set, token:move etc. Runs AFTER the outer event
         // dispatch so handlers see consistent ordering.
+        // _lookup markers in sub-event payloads are also resolved.
         if (Array.isArray(evt.data?.dispatchEvents)) {
           for (const sub of evt.data.dispatchEvents) {
             if (sub && sub.event) {
               try {
-                this.bus.dispatch(sub.event, { ...(sub.data || {}), _timedEventParent: evt.id });
+                const subData = this._resolveLookups(sub.data || {});
+                this.bus.dispatch(sub.event, { ...subData, _timedEventParent: evt.id });
               } catch (e) {
                 console.warn(`[WorldClock] dispatchEvents sub "${sub.event}" failed:`, e.message);
               }
@@ -1306,6 +1313,113 @@ class WorldClockService {
     const h = this.gameTime.getHours().toString().padStart(2, '0');
     const m = this.gameTime.getMinutes().toString().padStart(2, '0');
     return `${h}:${m}`;
+  }
+
+  /**
+   * Task 8 (session0-polish follow-up) — recursively walk `data` and
+   * replace any `_lookup` markers with resolved runtime values.
+   *
+   * Supported lookups (string values):
+   *   "<id>-token-position"       → picks an unoccupied tile adjacent to
+   *                                  the referenced token, closest to the
+   *                                  containing token:move's entityId if
+   *                                  available; otherwise returns token
+   *                                  position exactly.
+   *   "<id>-token-position-exact" → the referenced token's exact position
+   *                                  (not adjacent)
+   *
+   * Shape rules:
+   *   - When _lookup appears on an object that also carries x/y, the
+   *     resolved {x, y} REPLACES the x/y values on that object, and
+   *     _lookup is stripped.
+   *   - Arrays and other object keys are walked recursively.
+   *   - If a lookup can't resolve (no such token), x/y are left as-is.
+   */
+  _resolveLookups(data) {
+    if (!data) return data;
+    // Clone so we don't mutate the stored timed-event data
+    const cloned = this._deepClone(data);
+    this._resolveLookupsInPlace(cloned, cloned);
+    return cloned;
+  }
+
+  _deepClone(v) {
+    if (v === null || typeof v !== 'object') return v;
+    if (Array.isArray(v)) return v.map(x => this._deepClone(x));
+    const out = {};
+    for (const k of Object.keys(v)) out[k] = this._deepClone(v[k]);
+    return out;
+  }
+
+  _resolveLookupsInPlace(node, rootData) {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) { node.forEach(n => this._resolveLookupsInPlace(n, rootData)); return; }
+
+    // Does this object carry a _lookup marker?
+    if (typeof node._lookup === 'string') {
+      const resolved = this._doLookup(node._lookup, rootData);
+      if (resolved) {
+        node.x = resolved.x;
+        node.y = resolved.y;
+      }
+      // Strip the marker regardless — keeps downstream handlers simple
+      delete node._lookup;
+    }
+
+    for (const k of Object.keys(node)) {
+      this._resolveLookupsInPlace(node[k], rootData);
+    }
+  }
+
+  /**
+   * Resolve a single _lookup string to {x, y} or null.
+   * Supports "<id>-token-position" (adjacent) and "-exact" (literal).
+   * For adjacent lookups we pick a tile adjacent to the reference token
+   * that is closest to the moving token's current position, if the
+   * rootData carries `entityId` (the token:move's mover).
+   */
+  _doLookup(key, rootData) {
+    const exactMatch = key.match(/^(.+)-token-position-exact$/);
+    const adjMatch   = key.match(/^(.+)-token-position$/);
+    const refId = (exactMatch || adjMatch) ? (exactMatch || adjMatch)[1] : null;
+    if (!refId) return null;
+    const refTok = this.state.get(`map.tokens.${refId}`);
+    if (!refTok || typeof refTok.x !== 'number') return null;
+    if (exactMatch) return { x: refTok.x, y: refTok.y };
+
+    // Adjacent — pick closest-to-mover unoccupied tile
+    const gridSize = this.state.get('map.gridSize') || 140;
+    const moverId  = rootData?.entityId;
+    const moverTok = moverId ? this.state.get(`map.tokens.${moverId}`) : null;
+
+    const offsets = [
+      [ 0, -1], [ 1, -1], [ 1, 0], [ 1, 1],
+      [ 0,  1], [-1,  1], [-1, 0], [-1,-1]
+    ];
+    const occupied = new Set();
+    const tokens = this.state.get('map.tokens') || {};
+    for (const [tid, tok] of Object.entries(tokens)) {
+      if (tid === refId || tid === moverId) continue;
+      if (typeof tok.x !== 'number') continue;
+      occupied.add(`${tok.x},${tok.y}`);
+    }
+
+    const candidates = offsets
+      .map(([dx, dy]) => ({ x: refTok.x + dx * gridSize, y: refTok.y + dy * gridSize }))
+      .filter(p => !occupied.has(`${p.x},${p.y}`));
+
+    if (candidates.length === 0) return { x: refTok.x, y: refTok.y }; // fallback
+    if (!moverTok || typeof moverTok.x !== 'number') return candidates[0];
+
+    // Pick closest to mover
+    let best = candidates[0];
+    let bestDist = Infinity;
+    for (const c of candidates) {
+      const dx = c.x - moverTok.x, dy = c.y - moverTok.y;
+      const d = dx * dx + dy * dy;
+      if (d < bestDist) { bestDist = d; best = c; }
+    }
+    return best;
   }
 
   getFormattedGameTime() {

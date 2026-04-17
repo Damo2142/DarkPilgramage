@@ -2526,26 +2526,39 @@ Available targets: ${enemies.map(e => `"${e.name}" (id: check turnOrder)`).join(
     )?.gridSize || 140;
     const NpcTactics = require('./npc-tactics');
 
-    const ally = (c) => c && c.id !== targetId && c.id !== shooterId
-      && c.type === target.type
+    // 5e rule: ranged attack into melee has disadvantage if ANY creature
+    // (not self, not target) is within 5 ft of target. Friendly-fire
+    // REDIRECT on miss, however, picks from creatures on shooter's side only.
+    // Two predicates: adjacent (any), friendly (for the redirect pool).
+    const adjacentCreature = (c) => c && c.id !== targetId && c.id !== shooterId
       && c.isAlive && c.hp?.current > 0;
+    const friendlyToShooter = (c) => adjacentCreature(c) && c.type === shooter.type;
 
-    const alliesAdjacent = [];
+    // Collect any creature adjacent to target (for disadvantage check)
+    // and subset who are on shooter's side (for friendly-fire redirect pool).
+    const anyAdjacent = [];
+    const friendliesAdjacent = [];
     if (targetTok && typeof targetTok.x === 'number') {
       for (const c of combat.turnOrder) {
-        if (!ally(c)) continue;
+        if (!adjacentCreature(c)) continue;
         const tok = this.state.get(`map.tokens.${c.id}`);
         if (!tok || typeof tok.x !== 'number') continue;
         const dist = NpcTactics.distanceFeet(tok, targetTok, gridSize);
-        if (dist <= 5) alliesAdjacent.push(c);
+        if (dist <= 5) {
+          anyAdjacent.push(c);
+          if (friendlyToShooter(c)) friendliesAdjacent.push(c);
+        }
       }
     }
+    // alliesAdjacent kept as a name for backward-compat with response fields,
+    // but it is the friendly-fire pool specifically (not the disadvantage trigger).
+    const alliesAdjacent = friendliesAdjacent;
 
-    // Determine disadvantage — second d20 if allies present. Take lower.
+    // Determine disadvantage — second d20 if ANY creature is adjacent.
     const d20First = Number.isFinite(d20) ? d20 : this._rollD20();
     let d20Used = d20First;
     let disadvantage = false;
-    if (alliesAdjacent.length > 0) {
+    if (anyAdjacent.length > 0) {
       disadvantage = true;
       const d20Second = this._rollD20();
       d20Used = Math.min(d20First, d20Second);
@@ -2564,7 +2577,8 @@ Available targets: ${enemies.map(e => `"${e.name}" (id: check turnOrder)`).join(
       disadvantage,
       d20First,
       d20Used,
-      alliesAdjacentCount: alliesAdjacent.length,
+      anyAdjacentCount: anyAdjacent.length,   // triggers disadvantage
+      alliesAdjacentCount: alliesAdjacent.length,   // friendly-fire pool
       alliesAdjacentIds: alliesAdjacent.map(c => c.id),
       friendlyFire: false,
       victimId: null,

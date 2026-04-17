@@ -131,27 +131,32 @@ section('Scenario 2 — Disadvantage when target has ally adjacent');
   });
   restore();
 
-  assert(res.disadvantage === true, 'disadvantage flag set');
-  assert(res.alliesAdjacentCount === 1, 'one ally detected within 5ft');
+  assert(res.disadvantage === true, 'disadvantage flag set (any creature adj)');
+  assert(res.anyAdjacentCount === 1, 'one creature (NPC wolf) adjacent — triggers disadvantage');
+  assert(res.alliesAdjacentCount === 0, 'no shooter-side allies adjacent — no friendly-fire pool');
   assert(res.d20Used === 1, 'used the lower d20 (1)');
   assert(res.hit === false, '1+5 = 6 vs AC 13 misses');
-  assert(res.friendlyFire === false, 'd4=3 → no friendly fire');
-  assert(res.d4 === 3, 'd4 value captured on response');
+  assert(res.friendlyFire === false, 'no FF possible — no allies adjacent');
+  assert(res.d4 === undefined, 'd4 not rolled — no allies to hit');
 }
 
 // ─── Scenario 3: miss with ally adjacent, d4=1 → friendly fire ───
-section('Scenario 3 — Friendly fire hits the adjacent ally');
+// Updated Saturday testing: per 5e, disadvantage fires for ANY creature
+// adjacent to target; friendly fire REDIRECT only picks from shooter's-side.
+// Use PC ally (ed) adjacent to target to exercise the friendly-fire pool.
+section('Scenario 3 — Friendly fire hits the shooter-side adjacent ally');
 {
   const { svc, bus, state } = makeCombatService();
   const shooter = pc('nick', 400, 400);
   const wolfA   = npc('wolf-1', 1000, 400);
-  const wolfB   = npc('wolf-2', 1000, 540, 11, 13, 'Wolf B');
-  seedCombat(state, [shooter, wolfA, wolfB]);
+  // Ed is a PC on shooter's side, 5ft south of wolf-1 → counts as friendly-fire victim
+  const edAlly  = pc('ed', 1000, 540, 18, 15);
+  seedCombat(state, [shooter, wolfA, edAlly]);
 
   // Need to force:
   //   - d20 second (disadvantage re-roll) → miss: give 0.0 (rolls 1)
   //   - d4 → 1: give 0.0 (Math.floor(0*4)+1 = 1)
-  //   - random ally pick → 0.0 picks first (wolf-2 is the only one)
+  //   - random ally pick → 0.0 picks first (ed is only shooter-side adj)
   const restore = stubRandom([0.0, 0.0, 0.0]);
   const res = svc.processRangedAttack({
     shooterId: 'nick', targetId: 'wolf-1',
@@ -161,7 +166,7 @@ section('Scenario 3 — Friendly fire hits the adjacent ally');
 
   assert(res.hit === false, 'shot missed (disadvantage pulled d20 to 1)');
   assert(res.friendlyFire === true, 'friendly fire fired on d4=1');
-  assert(res.victimId === 'wolf-2', 'victim is the adjacent wolf-2');
+  assert(res.victimId === 'ed', 'victim is the adjacent PC ally ed');
   assert(res.victimDamage === 7, 'victim took the full damage');
   assert(res.d4 === 1, 'd4 captured as 1');
 
@@ -169,7 +174,7 @@ section('Scenario 3 — Friendly fire hits the adjacent ally');
   const ffEvent = bus.events('combat:friendly_fire');
   assert(ffEvent.length === 1, 'combat:friendly_fire dispatched');
   if (ffEvent.length === 1) {
-    assert(ffEvent[0].data.victim === 'wolf-2', 'event carries victim id');
+    assert(ffEvent[0].data.victim === 'ed', 'event carries victim id');
     assert(ffEvent[0].data.damage === 7, 'event carries damage');
   }
   const ffWhispers = bus.events('dm:whisper').filter(w => /FRIENDLY FIRE/.test(w.data.text || ''));
@@ -194,15 +199,15 @@ section('Scenario 4 — No adjacent allies, plain miss');
   assert(res.d4 === undefined, 'no d4 rolled (nobody to hit)');
 }
 
-// ─── Scenario 5: two allies adjacent, friendly fire picks one ───
-section('Scenario 5 — Two adjacent allies, d4=1 picks one');
+// ─── Scenario 5: two PC allies adjacent to target, friendly fire picks one ───
+section('Scenario 5 — Two PC allies adjacent, d4=1 picks one');
 {
   const { svc, bus, state } = makeCombatService();
   const shooter = pc('nick', 400, 400);
   const wolfA   = npc('wolf-1', 1000, 400);
-  const wolfB   = npc('wolf-2', 1000, 540, 11, 13, 'Wolf B');
-  const wolfC   = npc('wolf-3', 1140, 400, 11, 13, 'Wolf C');  // 5ft east of wolf-1
-  seedCombat(state, [shooter, wolfA, wolfB, wolfC]);
+  const edAlly  = pc('ed', 1000, 540, 18, 15);     // south of target
+  const kimAlly = pc('kim', 1140, 400, 22, 13);    // east of target
+  seedCombat(state, [shooter, wolfA, edAlly, kimAlly]);
 
   // Stub: d20 second = 0 (miss), d4 = 0 (→1, friendly fire), pick = 0.6 (→ index 1)
   const restore = stubRandom([0.0, 0.0, 0.6]);
@@ -213,8 +218,8 @@ section('Scenario 5 — Two adjacent allies, d4=1 picks one');
   restore();
 
   assert(res.friendlyFire === true, 'friendly fire fired');
-  assert(res.alliesAdjacentCount === 2, 'two allies adjacent');
-  assert(res.victimId === 'wolf-3', 'picked wolf-3 via 0.6 → index 1');
+  assert(res.alliesAdjacentCount === 2, 'two PC allies adjacent');
+  assert(res.victimId === 'kim', 'picked kim via 0.6 → index 1');
 }
 
 console.log(`\n══ RESULTS ══`);

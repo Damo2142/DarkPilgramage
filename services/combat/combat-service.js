@@ -1496,15 +1496,28 @@ class CombatService {
     const cfg = this._creatureConfigFor(actorSlug);
     if (!cfg) return null;
     const actions = Array.isArray(cfg.actions) ? cfg.actions : [];
-    const first = actions.find(a => a && (a.name && (a.attackBonus != null || a.damage)));
+    // Actor files use snake_case (attack_bonus, damage_dice). Older/DDB-shaped
+    // configs use camelCase (attackBonus, damage). Accept either.
+    const first = actions.find(a =>
+      a && a.name && (
+        a.attackBonus != null || a.attack_bonus != null ||
+        a.damage != null || a.damage_dice != null
+      )
+    );
     if (!first) return null;
     // Normalize common shapes: DDB-style "+9 to hit ... 7 (1d6+4)" vs simple config
-    let attackBonus = first.attackBonus;
+    let attackBonus = first.attackBonus ?? first.attack_bonus;
     if (attackBonus == null && typeof first.desc === 'string') {
       const m = first.desc.match(/\+(\d+)\s*to\s*hit/i);
       if (m) attackBonus = parseInt(m[1], 10);
     }
     let damage = first.damage;
+    if (!damage && first.damage_dice) {
+      const bonus = first.damage_bonus != null ? first.damage_bonus : null;
+      damage = bonus != null
+        ? `${first.damage_dice}${bonus >= 0 ? '+' : ''}${bonus}`
+        : first.damage_dice;
+    }
     if (!damage && typeof first.desc === 'string') {
       const m = first.desc.match(/\((\d+d\d+(?:\s*\+\s*\d+)?)\)/);
       if (m) damage = m[1].replace(/\s+/g, '');
@@ -1513,7 +1526,7 @@ class CombatService {
       name: first.name || 'Attack',
       attackBonus: Number.isFinite(attackBonus) ? attackBonus : 3,
       damage: damage || '1d6',
-      damageType: first.damageType || 'bludgeoning'
+      damageType: first.damageType || first.damage_type || 'bludgeoning'
     };
   }
 
@@ -1783,13 +1796,26 @@ class CombatService {
     // Phase 1 (session0-polish) — flag toggle for positional tactics.
     // Use during live session if the tactical brain misbehaves: POST with
     // { useTacticalPositioning: false } to revert to the AI/basic path.
+    //
+    // Task 2 (follow-up) — also accepts useOpportunityAttacks to disable
+    // OoA auto-execution. Pass one or both; unspecified keys stay as-is.
     app.post('/api/combat/set-flag', (req, res) => {
-      const { useTacticalPositioning } = req.body || {};
-      if (typeof useTacticalPositioning !== 'boolean') {
-        return res.status(400).json({ error: 'useTacticalPositioning must be boolean' });
+      const body = req.body || {};
+      const result = {};
+      if (typeof body.useTacticalPositioning === 'boolean') {
+        this.state.set('combat.useTacticalPositioning', body.useTacticalPositioning);
+        result.useTacticalPositioning = body.useTacticalPositioning;
       }
-      this.state.set('combat.useTacticalPositioning', useTacticalPositioning);
-      res.json({ useTacticalPositioning });
+      if (typeof body.useOpportunityAttacks === 'boolean') {
+        this.state.set('flags.useOpportunityAttacks', body.useOpportunityAttacks);
+        result.useOpportunityAttacks = body.useOpportunityAttacks;
+      }
+      if (Object.keys(result).length === 0) {
+        return res.status(400).json({
+          error: 'body must set useTacticalPositioning and/or useOpportunityAttacks (boolean)'
+        });
+      }
+      res.json(result);
     });
 
     // POST /api/combat/next — advance to next turn
@@ -2135,19 +2161,23 @@ Available targets: ${enemies.map(e => `"${e.name}" (id: check turnOrder)`).join(
       reason: 'combat-tactical'
     });
 
-    // Whisper OoA detections. Actual damage resolution is a Phase 2
-    // concern — Dave runs these by hand until that plumbing lands.
+    // Execute OoAs: for each detected trigger, the hostile (PC) attacks
+    // the moving NPC. Honors reaction tracking and the useOpportunityAttacks
+    // kill switch (defaults on). See _executeOpportunityAttack for the
+    // full flow — roll, apply damage via processAttack, dispatch event.
     if (decision.triggersOoaFrom && decision.triggersOoaFrom.length > 0) {
+      const ooaEnabled = this.state.get('flags.useOpportunityAttacks') !== false;
       for (const hostileId of decision.triggersOoaFrom) {
         const hostile = (this._getCombatState().turnOrder || []).find(c => c.id === hostileId);
         if (!hostile) continue;
-        // Mark reaction used — prevents the same PC from getting OoA on
-        // a later NPC's move in the same round.
-        hostile._reactionUsedThisRound = true;
-        this.bus.dispatch('dm:whisper', {
-          text: `[OoA] ${combatant.name} leaves ${hostile.name}'s reach — opportunity attack available if ${hostile.name}'s reaction not yet used. Roll manually or via attack resolver.`,
-          priority: 1, category: 'combat', source: 'combat-service'
-        });
+        if (!ooaEnabled) {
+          this.bus.dispatch('dm:whisper', {
+            text: `[OoA disabled] ${combatant.name} leaves ${hostile.name}'s reach — kill switch active, no auto-execution.`,
+            priority: 2, category: 'combat', source: 'combat-service'
+          });
+          continue;
+        }
+        this._executeOpportunityAttack(hostile.id, combatant.id, 'pc_strikes_fleeing_npc');
       }
     }
 
@@ -2158,6 +2188,247 @@ Available targets: ${enemies.map(e => `"${e.name}" (id: check turnOrder)`).join(
         text: `[tactics] ${combatant.name}: ${decision.reasoning}`,
         priority: 2, category: 'combat', source: 'combat-service'
       });
+    }
+  }
+
+  // ── Task 2 (session0-polish follow-up) — OoA execution ────────────────
+
+  /**
+   * Resolve the best melee attack for a combatant. Works for both PCs
+   * (reads character.attacks) and NPCs (reads actor config).
+   * Returns { attackBonus, damageDice, damageType, weaponName, reach } or null.
+   *
+   * Prefer melee (reach 5ft) over ranged. For PCs, pick the highest-damage
+   * melee attack in their character.attacks. For NPCs, use the first action
+   * that parses as a melee attack.
+   */
+  _resolveAttackForCombatant(combatantId) {
+    const combat = this._getCombatState();
+    const c = (combat.turnOrder || []).find(x => x.id === combatantId);
+    if (!c) return null;
+
+    if (c.type === 'pc') {
+      const charData = this.state.get(`players.${combatantId}.character`);
+      const attacks = charData?.attacks || [];
+      // Find the best melee attack: range starts with "5/" is the common 5ft
+      // melee format. If none, fall back to the first attack.
+      let best = null;
+      for (const atk of attacks) {
+        const rangeStr = String(atk.range || atk.reach || '5/5');
+        const isMelee = rangeStr.startsWith('5/') || rangeStr === '5' || /reach\s*5/i.test(rangeStr);
+        if (!isMelee) continue;
+        if (!best) { best = atk; continue; }
+        // Prefer higher damage — crude heuristic: larger die size
+        const bm = String(best.damage || '1d4').match(/d(\d+)/);
+        const am = String(atk.damage  || '1d4').match(/d(\d+)/);
+        if (am && bm && Number(am[1]) > Number(bm[1])) best = atk;
+      }
+      if (!best && attacks.length > 0) best = attacks[0];
+      if (!best) {
+        // Ultimate fallback — unarmed strike
+        return {
+          attackBonus: 2, damageDice: '1', damageBonus: 0,
+          damageType: 'bludgeoning', weaponName: 'Unarmed strike', reach: 5
+        };
+      }
+      // Parse damage dice and bonus: "1d6+2" → dice "1d6", bonus 2
+      const dmgMatch = String(best.damage || '1d6').match(/(\d+d\d+)\s*([+-]\s*\d+)?/);
+      const damageDice = dmgMatch ? dmgMatch[1] : '1d6';
+      const damageBonus = dmgMatch && dmgMatch[2]
+        ? parseInt(dmgMatch[2].replace(/\s/g, ''), 10) || 0
+        : 0;
+      return {
+        attackBonus: Number.isFinite(best.toHit) ? best.toHit : 3,
+        damageDice,
+        damageBonus,
+        damageType: (best.damageType || 'slashing').toLowerCase(),
+        weaponName: best.name || 'melee attack',
+        reach: 5
+      };
+    }
+
+    // NPC — reuse existing creature action resolver
+    const action = this._creatureActionFromConfig(c.actorSlug);
+    if (!action) return null;
+    const dmgMatch = String(action.damage || '1d6').match(/(\d+d\d+)\s*([+-]\s*\d+)?/);
+    const damageDice = dmgMatch ? dmgMatch[1] : '1d6';
+    const damageBonus = dmgMatch && dmgMatch[2]
+      ? parseInt(dmgMatch[2].replace(/\s/g, ''), 10) || 0
+      : 0;
+    return {
+      attackBonus: action.attackBonus,
+      damageDice,
+      damageBonus,
+      damageType: action.damageType || 'slashing',
+      weaponName: action.name || 'attack',
+      reach: 5
+    };
+  }
+
+  /**
+   * Execute an opportunity attack. Attacker strikes target once.
+   *
+   * Flow:
+   *  1. Check kill switch + reaction availability
+   *  2. Resolve attacker's best melee attack
+   *  3. Roll d20 + attackBonus
+   *  4. Compute target AC (pulled from turn order)
+   *  5. Hit/miss; on hit, roll damage
+   *  6. Apply via processAttack (honors immunities / resistances / cover)
+   *  7. Mark attacker's reaction used
+   *  8. Dispatch combat:opportunity_attack and DM whisper
+   *
+   * `direction` is a label for logging: 'pc_strikes_fleeing_npc' or
+   * 'npc_strikes_fleeing_pc'.
+   */
+  _executeOpportunityAttack(attackerId, targetId, direction) {
+    const ooaEnabled = this.state.get('flags.useOpportunityAttacks') !== false;
+    if (!ooaEnabled) return { fired: false, reason: 'kill_switch_off' };
+
+    const combat = this._getCombatState();
+    if (!combat.active) return { fired: false, reason: 'no_active_combat' };
+
+    const attacker = (combat.turnOrder || []).find(c => c.id === attackerId);
+    const target   = (combat.turnOrder || []).find(c => c.id === targetId);
+    if (!attacker || !target) return { fired: false, reason: 'combatant_missing' };
+    if (!attacker.isAlive)    return { fired: false, reason: 'attacker_dead' };
+    if (!target.isAlive)      return { fired: false, reason: 'target_dead' };
+
+    // Reaction check — each combatant has at most one per round
+    if (attacker._reactionUsedThisRound) {
+      this.bus.dispatch('dm:whisper', {
+        text: `[OoA skipped] ${attacker.name}'s reaction already spent this round.`,
+        priority: 2, category: 'combat', source: 'combat-service'
+      });
+      return { fired: false, reason: 'reaction_already_used' };
+    }
+
+    const attack = this._resolveAttackForCombatant(attackerId);
+    if (!attack) {
+      this.bus.dispatch('dm:whisper', {
+        text: `[OoA skipped] ${attacker.name} has no resolvable melee attack.`,
+        priority: 2, category: 'combat', source: 'combat-service'
+      });
+      return { fired: false, reason: 'no_attack' };
+    }
+
+    // Roll
+    const d20 = this._rollD20();
+    const attackRoll = d20 + attack.attackBonus;
+    const crit = d20 === 20;
+    const targetAC = target.ac || 12;
+    const baseHit = crit || attackRoll >= targetAC;
+
+    // Mark the reaction as spent BEFORE resolving so a downstream bug
+    // can't cause an infinite chain if this fires again somehow.
+    attacker._reactionUsedThisRound = true;
+
+    if (!baseHit) {
+      this.bus.dispatch('dm:whisper', {
+        text: `[OPPORTUNITY ATTACK] ${attacker.name} strikes at ${target.name} as they flee — d20(${d20}) + ${attack.attackBonus} = ${attackRoll} vs AC ${targetAC} — MISS. (${direction})`,
+        priority: 1, category: 'combat', source: 'combat-service'
+      });
+      this.bus.dispatch('combat:opportunity_attack', {
+        attacker: attacker.id, target: target.id, hit: false,
+        d20, attackRoll, targetAC, weapon: attack.weaponName, direction
+      });
+      return { fired: true, hit: false, attackRoll, targetAC };
+    }
+
+    // Hit — roll damage, apply via processAttack so immunities/resistances/
+    // cover (Task 4) all get their chance. processAttack signature:
+    // (attackerId, targetId, attackRoll, damage, damageType, crit, weaponName, magical, silvered)
+    const damageRoll = this._rollDiceExpression(attack.damageDice);
+    const damage = damageRoll + (attack.damageBonus || 0);
+    const result = this.processAttack(
+      attackerId, targetId, attackRoll, damage,
+      attack.damageType, crit, attack.weaponName, false, false
+    );
+
+    const hitMiss = result?.hit ? (crit ? 'CRIT HIT' : 'HIT') : 'MISS';
+    const dmgFragment = result?.hit ? ` — ${result.damage} ${result.damageType || attack.damageType}` : '';
+
+    this.bus.dispatch('dm:whisper', {
+      text: `[OPPORTUNITY ATTACK] ${attacker.name} → ${target.name} with ${attack.weaponName} as they flee — d20(${d20}) + ${attack.attackBonus} = ${attackRoll} vs AC ${result?.targetAC ?? targetAC} — ${hitMiss}${dmgFragment}. (${direction})`,
+      priority: 1, category: 'combat', source: 'combat-service'
+    });
+
+    this.bus.dispatch('combat:opportunity_attack', {
+      attacker: attacker.id,
+      target: target.id,
+      hit: !!result?.hit,
+      crit,
+      damage: result?.damage || 0,
+      damageType: result?.damageType || attack.damageType,
+      weapon: attack.weaponName,
+      d20, attackRoll,
+      targetAC: result?.targetAC ?? targetAC,
+      direction
+    });
+
+    return {
+      fired: true, hit: !!result?.hit,
+      damage: result?.damage || 0, attackRoll,
+      targetAC: result?.targetAC ?? targetAC
+    };
+  }
+
+  /**
+   * Detect PC→NPC OoAs when a PC moves mid-combat. Subscribed via
+   * _setupEventListeners. Runs only when combat is active and the moved
+   * token belongs to a PC. Any NPC whose reach the PC exits auto-fires
+   * an OoA (NPCs do not have an opt-out modal — they always take the
+   * shot when available and hit chance estimate > 25%).
+   */
+  _handlePcMoveForOoA(env) {
+    const data = env?.data || {};
+    const tokenId = data.tokenId;
+    if (!tokenId) return;
+
+    const combat = this._getCombatState();
+    if (!combat.active) return;
+    const movedCombatant = (combat.turnOrder || []).find(c => c.id === tokenId);
+    if (!movedCombatant || movedCombatant.type !== 'pc') return;
+
+    const ooaEnabled = this.state.get('flags.useOpportunityAttacks') !== false;
+    if (!ooaEnabled) return;
+
+    // map-service dispatches oldX/oldY alongside x/y. If absent
+    // (e.g. some internal dispatcher), we have no way to compute a path
+    // crossing — bail out rather than risk a spurious OoA.
+    const prevPos = (typeof data.oldX === 'number' && typeof data.oldY === 'number')
+      ? { x: data.oldX, y: data.oldY }
+      : null;
+    const newPos = { x: data.x, y: data.y };
+    if (!prevPos) return;
+    if (data.reason === 'combat-tactical') return;   // NPC tactical move, already handled via _applyNpcMovement
+    if (data.reason === 'scene-reset') return;       // scene-population repositioning — not a real move
+
+    // Skip disengage — if the PC used the Disengage action this turn,
+    // state.combat.turnOrder[i]._disengagedThisTurn is true.
+    if (movedCombatant._disengagedThisTurn) return;
+
+    const NpcTactics = require('./npc-tactics');
+    const mapSvc = this.orchestrator.getService('map');
+    const gridSize = mapSvc?.maps?.get(mapSvc.activeMapId)?.gridSize || 140;
+
+    // For each hostile NPC in combat, check whether the move exits their reach.
+    for (const npc of (combat.turnOrder || [])) {
+      if (npc.id === tokenId) continue;
+      if (npc.type === 'pc') continue;
+      if (!npc.isAlive) continue;
+      if (npc._reactionUsedThisRound) continue;
+
+      const npcTok = this.state.get(`map.tokens.${npc.id}`);
+      if (!npcTok || typeof npcTok.x !== 'number') continue;
+
+      const npcReach = 5;  // simplification — can be read from actor config later
+      const wasInReach = NpcTactics.distanceFeet(prevPos, npcTok, gridSize) <= npcReach;
+      const nowInReach = NpcTactics.distanceFeet(newPos,  npcTok, gridSize) <= npcReach;
+
+      if (wasInReach && !nowInReach) {
+        this._executeOpportunityAttack(npc.id, tokenId, 'npc_strikes_fleeing_pc');
+      }
     }
   }
 
@@ -2432,6 +2703,16 @@ Respond with JSON: { "items": [{ "name": "...", "description": "...", "type": "w
       const { tokenId } = env.data;
       if (combat.turnOrder.some(x => x.id === tokenId)) {
         this.removeCombatant(tokenId);
+      }
+    }, 'combat');
+
+    // Task 2 (session0-polish follow-up) — PC→NPC opportunity attacks.
+    // When a PC token moves mid-combat, check whether the path exits the
+    // reach of any hostile NPC and execute an OoA if so. Honors the
+    // useOpportunityAttacks kill switch and per-round reaction tracking.
+    this.bus.subscribe('map:token_moved', (env) => {
+      try { this._handlePcMoveForOoA(env); } catch (e) {
+        console.error('[CombatService] OoA detection failed:', e.message);
       }
     }, 'combat');
 

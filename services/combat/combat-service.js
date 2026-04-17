@@ -1934,6 +1934,61 @@ class CombatService {
       res.json(combat);
     });
 
+    // Task 12 (session0-polish follow-up) — AoE friendly-fire check.
+    // Given a center point, radius, and shape, list which PCs + NPCs are
+    // inside the AoE. DM Attack Resolver can surface this as a warning
+    // badge before a spell with AoE is rolled.
+    //
+    // Body: { casterId, center: {x,y}, radiusFt, shape? = 'circle' | 'cube' }
+    // Response: { affected: [ { id, name, type, distanceFt, friendly } ],
+    //             friendlyCount, enemyCount, warning: string }
+    app.post('/api/combat/aoe-check', (req, res) => {
+      try {
+        const { casterId, center, radiusFt, shape = 'circle' } = req.body || {};
+        if (!casterId || !center || typeof radiusFt !== 'number') {
+          return res.status(400).json({ error: 'casterId, center:{x,y}, radiusFt required' });
+        }
+        const combat = this._getCombatState();
+        const caster = combat.turnOrder.find(c => c.id === casterId);
+        if (!caster) return res.status(404).json({ error: 'caster not in combat' });
+
+        const mapSvc = this.orchestrator.getService('map');
+        const gridSize = mapSvc?.maps?.get(mapSvc.activeMapId)?.gridSize || 140;
+        const allTokens = this.state.get('map.tokens') || {};
+
+        const affected = [];
+        for (const [tid, tok] of Object.entries(allTokens)) {
+          if (tid === casterId) continue;
+          if (typeof tok.x !== 'number') continue;
+          let distFt;
+          if (shape === 'cube') {
+            const dx = Math.abs(tok.x - center.x), dy = Math.abs(tok.y - center.y);
+            distFt = Math.max(dx, dy) / gridSize * 5;  // Chebyshev
+          } else {
+            const dx = tok.x - center.x, dy = tok.y - center.y;
+            distFt = Math.sqrt(dx * dx + dy * dy) / gridSize * 5;  // Euclidean
+          }
+          if (distFt > radiusFt) continue;
+          const other = combat.turnOrder.find(c => c.id === tid);
+          const sameSide = other && other.type === caster.type;
+          affected.push({
+            id: tid, name: tok.name || tid,
+            type: other?.type || tok.type || 'npc',
+            distanceFt: Math.round(distFt * 10) / 10,
+            friendly: !!sameSide
+          });
+        }
+        const friendlyCount = affected.filter(a => a.friendly).length;
+        const enemyCount    = affected.length - friendlyCount;
+        const warning = friendlyCount > 0
+          ? `⚠ AoE includes ally ${affected.filter(a => a.friendly).map(a => a.name).join(', ')} — save required or full damage.`
+          : null;
+        res.json({ affected, friendlyCount, enemyCount, warning });
+      } catch (e) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
     // Task 4 (session0-polish follow-up) — cover query endpoint.
     // Lets DM Attack Resolver display a cover badge before rolling.
     // GET /api/combat/cover/:attackerId/:targetId — returns the cover info

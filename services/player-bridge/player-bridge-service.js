@@ -433,6 +433,46 @@ class PlayerBridgeService {
       });
     }, 'player-bridge');
 
+    // Task 12 (session0-polish follow-up) — player-targeted Chromebook
+    // messages from combat mechanics. All three send via the same
+    // {type} WS payload the Chromebook UI is already set up to render
+    // as a private whisper. The type label is distinct so the UI can
+    // style them differently (red flash for friendly fire, dread border
+    // for Bagman, etc).
+    this.bus.subscribe('player:private_whisper', (env) => {
+      const d = env.data || {};
+      if (!d.playerId) return;
+      this._sendToPlayer(d.playerId, {
+        type: 'private:whisper',
+        text: d.text || '',
+        source: d.source || 'narrator',
+        tier: d.tier || null
+      });
+    }, 'player-bridge');
+
+    this.bus.subscribe('player:friendly_fire_shooter', (env) => {
+      const d = env.data || {};
+      if (!d.playerId) return;
+      this._sendToPlayer(d.playerId, {
+        type: 'friendly_fire:shooter',
+        text: d.text || 'You see your shot veer toward your own. Too late.',
+        shooterName: d.shooterName || null,
+        victimName: d.victimName || null
+      });
+    }, 'player-bridge');
+
+    this.bus.subscribe('player:friendly_fire_victim', (env) => {
+      const d = env.data || {};
+      if (!d.playerId) return;
+      this._sendToPlayer(d.playerId, {
+        type: 'friendly_fire:victim',
+        text: d.text || '',
+        damage: d.damage || 0,
+        damageType: d.damageType || null,
+        shooterName: d.shooterName || null
+      });
+    }, 'player-bridge');
+
     // Section 6 — Player to player private message
     this.bus.subscribe('player:p2p_message', (env) => {
       const d = env.data || {};

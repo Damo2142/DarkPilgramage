@@ -1773,6 +1773,33 @@ class CombatService {
       res.json(combat);
     });
 
+    // Task 3 (session0-polish follow-up) — shooting into melee endpoint.
+    // Body mirrors processRangedAttack opts. Response includes the full
+    // attack result plus disadvantage/d4/friendlyFire fields so the UI
+    // can render appropriate whispers.
+    app.post('/api/combat/attack/ranged', (req, res) => {
+      const { shooterId, targetId, d20, toHit, damage, damageType, crit, weaponName, magical, silvered } = req.body || {};
+      if (!shooterId || !targetId) {
+        return res.status(400).json({ error: 'shooterId and targetId required' });
+      }
+      if (!Number.isFinite(d20) || !Number.isFinite(toHit) || !Number.isFinite(damage)) {
+        return res.status(400).json({ error: 'd20, toHit, damage must be numbers' });
+      }
+      try {
+        const result = this.processRangedAttack({
+          shooterId, targetId, d20, toHit, damage,
+          damageType: damageType || 'piercing',
+          crit: !!crit,
+          weaponName: weaponName || 'ranged attack',
+          magical: !!magical,
+          silvered: !!silvered
+        });
+        res.json(result);
+      } catch (e) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
     // Phase 1 (session0-polish) — POST /api/combat/override-npc-turn
     // DM-provided decision: skip the tactical AI for this NPC and execute
     // the given action/target directly. Body: { combatantId, actionIndex,
@@ -2189,6 +2216,155 @@ Available targets: ${enemies.map(e => `"${e.name}" (id: check turnOrder)`).join(
         priority: 2, category: 'combat', source: 'combat-service'
       });
     }
+  }
+
+  // ── Task 3 (session0-polish follow-up) — Shooting into melee ──────────
+
+  /**
+   * Ranged attack that enforces 5e shooting-into-melee rules plus Dave's
+   * house rule: on a miss when a non-self ally is within 5ft of the target,
+   * roll a d4 server-side; on 1, redirect the hit to that ally with no save.
+   *
+   * Called from the DM Attack Resolver panel via POST /api/combat/attack/ranged.
+   * Direct calls to processAttack for ranged shots should use this instead
+   * so the teaching-session mechanics are automatic.
+   *
+   * Params mirror processAttack but attackRoll is the pre-advantage d20+bonus
+   * the caller already rolled for the shooter. If the target has an adjacent
+   * ally, we re-roll with disadvantage — taking the LOWER of the two d20s —
+   * and the damage is still the caller's provided damage dice total.
+   *
+   * @param {object} opts
+   *   shooterId, targetId — combatant ids
+   *   d20 — the actual die face (1..20); we compute attackRoll = d20 + toHit
+   *   toHit — shooter's attack bonus
+   *   damage — pre-rolled damage total (caller computed dice)
+   *   damageType
+   *   crit — boolean (ignored on second-roll advantage check)
+   *   weaponName
+   *   magical, silvered — same as processAttack
+   * @returns {object} { hit, damage, targetAC, friendlyFire, victimId?, ...}
+   */
+  processRangedAttack(opts) {
+    const {
+      shooterId, targetId, d20, toHit = 0,
+      damage, damageType, crit = false, weaponName = 'ranged attack',
+      magical = false, silvered = false
+    } = opts;
+
+    const combat = this._getCombatState();
+    const shooter = combat.turnOrder.find(c => c.id === shooterId);
+    const target  = combat.turnOrder.find(c => c.id === targetId);
+    if (!shooter || !target) {
+      return { error: 'shooter or target not in combat', shooterId, targetId };
+    }
+
+    // Identify allies of the target within 5ft — same side, not self, alive, with positions
+    const targetTok = this.state.get(`map.tokens.${targetId}`);
+    const gridSize  = this.orchestrator.getService('map')?.maps?.get(
+      this.orchestrator.getService('map')?.activeMapId
+    )?.gridSize || 140;
+    const NpcTactics = require('./npc-tactics');
+
+    const ally = (c) => c && c.id !== targetId && c.id !== shooterId
+      && c.type === target.type
+      && c.isAlive && c.hp?.current > 0;
+
+    const alliesAdjacent = [];
+    if (targetTok && typeof targetTok.x === 'number') {
+      for (const c of combat.turnOrder) {
+        if (!ally(c)) continue;
+        const tok = this.state.get(`map.tokens.${c.id}`);
+        if (!tok || typeof tok.x !== 'number') continue;
+        const dist = NpcTactics.distanceFeet(tok, targetTok, gridSize);
+        if (dist <= 5) alliesAdjacent.push(c);
+      }
+    }
+
+    // Determine disadvantage — second d20 if allies present. Take lower.
+    const d20First = Number.isFinite(d20) ? d20 : this._rollD20();
+    let d20Used = d20First;
+    let disadvantage = false;
+    if (alliesAdjacent.length > 0) {
+      disadvantage = true;
+      const d20Second = this._rollD20();
+      d20Used = Math.min(d20First, d20Second);
+    }
+    const attackRoll = d20Used + toHit;
+    const effectiveCrit = d20Used === 20;  // crit requires the final die to be 20
+
+    // Resolve the shot
+    const result = this.processAttack(
+      shooterId, targetId, attackRoll, damage,
+      damageType, effectiveCrit, weaponName, magical, silvered
+    );
+
+    const response = {
+      ...result,
+      disadvantage,
+      d20First,
+      d20Used,
+      alliesAdjacentCount: alliesAdjacent.length,
+      alliesAdjacentIds: alliesAdjacent.map(c => c.id),
+      friendlyFire: false,
+      victimId: null,
+      victimName: null
+    };
+
+    // Friendly fire on miss — only if there are adjacent allies
+    if (!result?.hit && alliesAdjacent.length > 0) {
+      const d4 = Math.floor(Math.random() * 4) + 1;
+      response.d4 = d4;
+      if (d4 === 1) {
+        // Pick a random ally to take the hit
+        const victim = alliesAdjacent[Math.floor(Math.random() * alliesAdjacent.length)];
+        response.friendlyFire = true;
+        response.victimId = victim.id;
+        response.victimName = victim.name;
+
+        // Apply damage directly via modifyHp — guaranteed hit, no save.
+        // Use processAttack would re-compute hit vs AC, which we don't want
+        // for a scripted friendly-fire redirect.
+        this.modifyHp(victim.id, -Math.abs(damage));
+        response.victimDamage = damage;
+
+        // DM earbud whisper
+        this.bus.dispatch('dm:whisper', {
+          text: `[FRIENDLY FIRE] ${shooter.name}'s ${weaponName} veers toward ${victim.name} (d4=${d4}) — ${damage} ${damageType || 'damage'} applied.`,
+          priority: 1, category: 'combat', source: 'combat-service'
+        });
+        // Shooter's Chromebook — red flash narrative
+        this.bus.dispatch('player:friendly_fire_shooter', {
+          playerId: shooter.type === 'pc' ? shooter.id : null,
+          shooterName: shooter.name,
+          victimName: victim.name,
+          text: 'You see your shot veer toward your own. Too late.'
+        });
+        // Victim's Chromebook — wound narrative
+        this.bus.dispatch('player:friendly_fire_victim', {
+          playerId: victim.type === 'pc' ? victim.id : null,
+          victimName: victim.name,
+          shooterName: shooter.name,
+          damage, damageType,
+          text: `${shooter.name}'s ${weaponName} lands in you — not the enemy. ${damage} ${damageType || 'damage'}.`
+        });
+        // Structured event for UI layers / logs
+        this.bus.dispatch('combat:friendly_fire', {
+          shooter: shooter.id,
+          intendedTarget: target.id,
+          victim: victim.id,
+          damage, damageType,
+          d4, weaponName
+        });
+      } else {
+        this.bus.dispatch('dm:whisper', {
+          text: `[MISS] ${shooter.name}'s ${weaponName} misses ${target.name} cleanly (d4=${d4}, no friendly fire).`,
+          priority: 2, category: 'combat', source: 'combat-service'
+        });
+      }
+    }
+
+    return response;
   }
 
   // ── Task 2 (session0-polish follow-up) — OoA execution ────────────────

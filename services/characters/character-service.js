@@ -22,8 +22,93 @@ const SKILL_MAP = {
 };
 const ALIGNMENTS = {1:'LG',2:'NG',3:'CG',4:'LN',5:'TN',6:'CN',7:'LE',8:'NE',9:'CE'};
 
+// 5e class saving-throw proficiencies (PHB per-class entries).
+// Used as a safety net: DDB sometimes omits save proficiencies from the
+// modifier list, so after ingest we add whatever is missing here.
+const CLASS_SAVE_PROFS = {
+  Barbarian: ['str','con'], Bard: ['dex','cha'], Cleric: ['wis','cha'],
+  Druid: ['int','wis'], Fighter: ['str','con'], Monk: ['str','dex'],
+  Paladin: ['wis','cha'], Ranger: ['str','dex'], Rogue: ['dex','int'],
+  Sorcerer: ['con','cha'], Warlock: ['wis','cha'], Wizard: ['int','wis'],
+  Artificer: ['con','int']
+};
+
 function abilityMod(score) { return Math.floor((score - 10) / 2); }
 function modStr(mod) { return mod >= 0 ? '+' + mod : '' + mod; }
+
+// Skill → ability map used by the recompute pass.
+const _SKILL_ABILITY = {
+  'acrobatics':'dex', 'animal-handling':'wis', 'arcana':'int', 'athletics':'str',
+  'deception':'cha', 'history':'int', 'insight':'wis', 'intimidation':'cha',
+  'investigation':'int', 'medicine':'wis', 'nature':'int', 'perception':'wis',
+  'performance':'cha', 'persuasion':'cha', 'religion':'int', 'sleight-of-hand':'dex',
+  'stealth':'dex', 'survival':'wis'
+};
+
+/**
+ * Recompute savingThrows and skill modifiers from canonical ability scores +
+ * class-save-profs + existing proficiency tier tags. Idempotent.
+ *
+ * Treats abilities[*].score as ground truth. Preserves the 'proficient'
+ * and 'proficiency' flags already on the character but:
+ *  - Adds missing class-based save proficiencies (the main DDB gap).
+ *  - Recomputes every save/skill modifier so they stay consistent with
+ *    whatever ability score is on the character right now. This catches
+ *    hand-edits where someone bumped DEX 15→16 but skill rows stayed at
+ *    the old value.
+ */
+function recomputeDerivedStats(char) {
+  if (!char || typeof char !== 'object') return char;
+  const abilities = char.abilities || {};
+  const pb = char.proficiencyBonus || 2;
+
+  // Normalize ability modifiers against scores (source of truth: score).
+  for (const abbr of ['str','dex','con','int','wis','cha']) {
+    const a = abilities[abbr];
+    if (!a) continue;
+    const score = typeof a.score === 'number' ? a.score : 10;
+    const mod = abilityMod(score);
+    a.score = score;
+    a.modifier = mod;
+    a.modifierStr = modStr(mod);
+  }
+
+  // Saving throws — add class-save-profs, then recompute modifiers.
+  const classes = Array.isArray(char.classes) && char.classes.length
+    ? char.classes
+    : (char.class ? [{ name: char.class, level: char.level || 1 }] : []);
+  const classSaveProfs = new Set();
+  for (const c of classes) {
+    for (const abbr of (CLASS_SAVE_PROFS[c.name] || [])) classSaveProfs.add(abbr);
+  }
+  char.savingThrows = char.savingThrows || {};
+  for (const abbr of ['str','dex','con','int','wis','cha']) {
+    const existing = char.savingThrows[abbr] || {};
+    const proficient = !!existing.proficient || classSaveProfs.has(abbr);
+    const abMod = (abilities[abbr] || {}).modifier || 0;
+    char.savingThrows[abbr] = { modifier: abMod + (proficient ? pb : 0), proficient };
+  }
+
+  // Skills — preserve proficiency tier ('none' | 'proficiency' | 'expertise'
+  // | 'half-proficiency'). Recompute modifier from ability + tier.
+  char.skills = char.skills || {};
+  for (const [skillKey, statKey] of Object.entries(_SKILL_ABILITY)) {
+    const existing = char.skills[skillKey] || {};
+    const tier = existing.proficiency || 'none';
+    const bonus = tier === 'expertise' ? pb * 2
+                : tier === 'proficiency' ? pb
+                : tier === 'half-proficiency' ? Math.floor(pb / 2)
+                : 0;
+    const abMod = (abilities[statKey] || {}).modifier || 0;
+    char.skills[skillKey] = { modifier: abMod + bonus, proficiency: tier };
+  }
+
+  // Initiative defaults to DEX unless an explicit override is already set.
+  const dexMod = (abilities.dex || {}).modifier || 0;
+  if (typeof char.initiative !== 'number') char.initiative = dexMod;
+
+  return char;
+}
 
 // ── Spell-slot tables (PHB 113 + Warlock pact magic) ──
 const FULL_CASTER_SLOTS = {
@@ -1004,6 +1089,11 @@ class CharacterService {
           }
           data.languageValidation = validation;
         }
+        // Recompute saves + skills in-memory on every load so even cached
+        // character files get class save proficiencies applied and stay
+        // internally consistent with their ability scores. Does not touch
+        // the file on disk — only the in-memory object handed to state.
+        recomputeDerivedStats(data);
         chars[String(id)] = data;
       } catch (err) {
         console.warn('[Characters] Failed to parse ' + file + ': ' + err.message);
@@ -1476,6 +1566,11 @@ class CharacterService {
     // Addition 10 — ensure every inventory item has a stable id before
     // writing so the DM editor can address it. DDB items arrive without ids.
     this._ensureInventoryIds(char);
+
+    // Recompute saves + skills from canonical ability scores + class save
+    // proficiencies. DDB sometimes omits class save profs from the modifier
+    // list — this guarantees every PC has their correct 5e save proficiencies.
+    recomputeDerivedStats(char);
 
     this.saveCharacter(String(ddbId), char);
     console.log('[DDB] Synced: ' + char.name + ' (' + char.race + ' ' + char.class + ' ' + char.level + ')');

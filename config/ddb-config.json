@@ -1,10 +1,10 @@
 {
+  "_note": "Vaelthion (164451753) intentionally excluded from auto-sync 2026-04-17 — Dave has manual edits (AC 13, added Slovak/Polish to raw languages array) that would be clobbered by character-service.js saveCharacter on every DDB refresh. Re-add only if Ed's DDB sheet needs to be pulled in again.",
   "characterIds": [
     "162472191",
     "162702065",
     "164126673",
     "164256380",
-    "164256658",
-    "164451753"
+    "164256658"
   ]
 }

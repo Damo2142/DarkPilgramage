@@ -861,7 +861,7 @@ var chatMessages = [];
 var apiHealth = { status: 'OFFLINE', latency: null };
 
 function $(id) { return document.getElementById(id); }
-function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 function pad(n) { return String(n).padStart(2, '0'); }
 function fmtTime(d) { var date = (d instanceof Date) ? d : new Date(d); return pad(date.getHours()) + ':' + pad(date.getMinutes()); }
 function fmtGameTime(iso) {

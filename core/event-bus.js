@@ -33,7 +33,13 @@ const DEDUP_SKIP_EVENTS = new Set([
   // Private messages and observation triggers — each dispatch is a distinct
   // observation for a distinct player. Dedup fingerprint (text+playerId)
   // would collapse rapid-fire active-look reveals into a single delivery.
-  'dm:private_message', 'observation:trigger', 'dm:whisper'
+  'dm:private_message', 'observation:trigger', 'dm:whisper',
+  // Task SAT-002 follow-up — state:flag_set distinguished only by the
+  // `flag` field which is not in the fingerprint. Two adjacent flag_sets
+  // (e.g., vladislav_named_in_slovak + vladislav_mentioned_bag_warning
+  // both dispatched from vladislav-approaches-gregor dispatchEvents)
+  // were being deduped as identical. Skip dedup.
+  'state:flag_set', 'npc:arrival', 'map:token_added'
 ]);
 
 class EventBus extends EventEmitter {

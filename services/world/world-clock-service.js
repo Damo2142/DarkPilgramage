@@ -275,6 +275,19 @@ class WorldClockService {
     // Secret reveal
     this.bus.subscribe('secret:reveal', (env) => this._onSecretReveal(env.data), 'world-clock');
 
+    // Task SAT-001 follow-up — state:flag_set handler.
+    // Fragments (Phase 3/4/5) dispatch this as a side-effect to record
+    // narrative flags (vladislav_knows_about_dominik, vladislav_departed,
+    // matthias_password_given etc). Before this subscriber, the events
+    // fired but nothing wrote to state.flags.<name>. Listeners that gate
+    // on those flags (ambient-life Vladislav awareness, conditional
+    // whispers) therefore didn't advance.
+    this.bus.subscribe('state:flag_set', (env) => {
+      const d = env?.data || {};
+      if (!d.flag || typeof d.flag !== 'string') return;
+      this.state.set(`flags.${d.flag}`, d.value !== undefined ? d.value : true);
+    }, 'world-clock');
+
     // Campaign continuity — check hooks on beat completion
     this.bus.subscribe('story:beat', (env) => {
       this._checkHookPayoffs(env.data);

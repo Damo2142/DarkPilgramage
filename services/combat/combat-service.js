@@ -2824,7 +2824,7 @@ Available targets: ${enemies.map(e => `"${e.name}" (id: check turnOrder)`).join(
     const combat = this._getCombatState();
     if (!combat.active) return;
     const movedCombatant = (combat.turnOrder || []).find(c => c.id === tokenId);
-    if (!movedCombatant || movedCombatant.type !== 'pc') return;
+    if (!movedCombatant) return;
 
     const ooaEnabled = this.state.get('flags.useOpportunityAttacks') !== false;
     if (!ooaEnabled) return;
@@ -2839,6 +2839,7 @@ Available targets: ${enemies.map(e => `"${e.name}" (id: check turnOrder)`).join(
     if (!prevPos) return;
     if (data.reason === 'combat-tactical') return;   // NPC tactical move, already handled via _applyNpcMovement
     if (data.reason === 'scene-reset') return;       // scene-population repositioning — not a real move
+    if (data.reason === 'ambient-life-phase-change') return;  // Vlad phase-move, not combat
 
     // Skip disengage — if the PC used the Disengage action this turn,
     // state.combat.turnOrder[i]._disengagedThisTurn is true.
@@ -2848,22 +2849,30 @@ Available targets: ${enemies.map(e => `"${e.name}" (id: check turnOrder)`).join(
     const mapSvc = this.orchestrator.getService('map');
     const gridSize = mapSvc?.maps?.get(mapSvc.activeMapId)?.gridSize || 140;
 
-    // For each hostile NPC in combat, check whether the move exits their reach.
-    for (const npc of (combat.turnOrder || [])) {
-      if (npc.id === tokenId) continue;
-      if (npc.type === 'pc') continue;
-      if (!npc.isAlive) continue;
-      if (npc._reactionUsedThisRound) continue;
+    // SAT follow-up — OoA detection runs bidirectionally based on mover type:
+    // - PC moved: check each hostile NPC's reach (existing behavior)
+    // - NPC moved: check each hostile PC's reach (the DM-manual-NPC-move case)
+    // Both cases: the *stationary combatant* of the other side fires the OoA.
+    const otherTypeForMover = movedCombatant.type === 'pc' ? 'npc' : 'pc';
+    const directionLabel = movedCombatant.type === 'pc'
+      ? 'npc_strikes_fleeing_pc'
+      : 'pc_strikes_fleeing_npc';
 
-      const npcTok = this.state.get(`map.tokens.${npc.id}`);
-      if (!npcTok || typeof npcTok.x !== 'number') continue;
+    for (const attacker of (combat.turnOrder || [])) {
+      if (attacker.id === tokenId) continue;
+      if (attacker.type !== otherTypeForMover) continue;
+      if (!attacker.isAlive) continue;
+      if (attacker._reactionUsedThisRound) continue;
 
-      const npcReach = 5;  // simplification — can be read from actor config later
-      const wasInReach = NpcTactics.distanceFeet(prevPos, npcTok, gridSize) <= npcReach;
-      const nowInReach = NpcTactics.distanceFeet(newPos,  npcTok, gridSize) <= npcReach;
+      const attackerTok = this.state.get(`map.tokens.${attacker.id}`);
+      if (!attackerTok || typeof attackerTok.x !== 'number') continue;
+
+      const reach = 5;  // simplification — can be read from actor config later
+      const wasInReach = NpcTactics.distanceFeet(prevPos, attackerTok, gridSize) <= reach;
+      const nowInReach = NpcTactics.distanceFeet(newPos,  attackerTok, gridSize) <= reach;
 
       if (wasInReach && !nowInReach) {
-        this._executeOpportunityAttack(npc.id, tokenId, 'npc_strikes_fleeing_pc');
+        this._executeOpportunityAttack(attacker.id, tokenId, directionLabel);
       }
     }
   }

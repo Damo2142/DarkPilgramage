@@ -143,7 +143,10 @@
           "priority": 1,
           "category": "story",
           "dmOnly": true,
-          "checkFlag": "state.players.ed.absent === false"
+          "checkFlag": "state.players.ed.absent === false",
+          "dispatchEvents": [
+            { "event": "state:flag_set", "data": { "flag": "ed_has_been_whispered_by_dominik", "value": true } }
+          ]
         }
       },
       {

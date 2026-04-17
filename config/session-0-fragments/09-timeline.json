@@ -1,0 +1,87 @@
+{
+  "_fragment": "Phase 9 (session0-polish) — timeline additions: 18:20 shutter-Ed, 19:00 horse-dies, 19:15 upstairs-volunteer, 20:45 Marta-Kim confession, 21:45 wolves-through-window, 23:45 Tomas-cellar-descent",
+  "world": {
+    "timedEvents": [
+      {
+        "id": "ground-floor-shutter-ed-spotlight",
+        "gameTime": "1274-10-15T18:20:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "Shutter bangs in the wind — Ed-focused observation + passive perception DC 14 for others",
+          "text": "A gust of wind slams a shutter against its frame. Ed (and only Ed) glimpses a shape through the snow — wrong proportions for any animal, moving against the wind direction. Two seconds and the snow obscures it again. Dispatch observation 'letavec-shutter-ed' private to Ed. For other PCs, DC 14 passive perception: they notice Ed flinched and hear wet breathing carried on a wind blowing the other way.",
+          "priority": 2,
+          "category": "story",
+          "observations": [
+            { "id": "letavec-shutter-ed", "tier": 2, "dc": 0, "targetCharacter": "ed", "bypassPPCheck": true, "text": "Something large passed the window. Wingspan wrong for a bird. It was moving AGAINST the wind — not with it. Your eyes were the only ones on the window at that moment. You did not imagine it." },
+            { "id": "letavec-shutter-others", "tier": 2, "dc": 14, "text": "Ed flinched at the window. Over the wind, carried from the wrong direction — wet breathing. Very brief. It was not coming from any of you." }
+          ]
+        }
+      },
+      {
+        "id": "horse-dies-in-stable",
+        "gameTime": "1274-10-15T19:00:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "Horse screams in the stable, cut off mid-scream",
+          "text": "From outside: a horse screams. The scream stops too quickly — cut off. If anyone investigates (DC 0 to go, DC 10 CON to endure the cold if no cloak), they find tracks in the snow: three-toed, large, circling the barn twice and then vanishing at the ridgeline. No continuation of the tracks — the creature flew. The stableboy is missing. Body is not findable in the dark; Dave's call whether it's found at dawn. Horror +10 for any PC who sees the tracks.",
+          "priority": 2,
+          "category": "story",
+          "observations": [
+            { "id": "horse-tracks-three-toed", "tier": 1, "text": "The tracks in the snow around the stable are three-toed, bird-like in shape but far too large. They circle the barn twice and stop. Nothing walks away. Whatever made them was airborne." }
+          ]
+        }
+      },
+      {
+        "id": "upstairs-shutter-volunteer",
+        "gameTime": "1274-10-15T19:15:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "Marta asks a volunteer to go check a door banging upstairs",
+          "text": "Marta wipes her hands on her apron. 'I heard a door bang upstairs. Maybe a shutter. I don't have the legs for those stairs tonight — would one of you...?' The hallway upstairs is quiet when the volunteer arrives. Rats audible in the walls but don't emerge. Doors all closed except Room 3 (Dominik will take it later — for now it's empty and the door is slightly ajar, as if Marta aired it out). Spawn 1 in Room 5 is suppressed and will NOT reveal unless the PC explicitly opens Room 5's door. Default volunteer returns unharmed.",
+          "priority": 2,
+          "category": "story"
+        }
+      },
+      {
+        "id": "marta-confession-to-kim",
+        "gameTime": "1274-10-15T20:45:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "Marta shows Kim the scar — private story beat",
+          "text": "CONDITIONAL: only if Kim is within 5ft of Marta and they have spoken at least once. Marta steers Kim into the kitchen under a pretext of fetching more ale. In the small candlelit space, she pulls her collar aside — a scar along her shoulder and collarbone, old, ragged, the wrong shape for a blade or an animal. She speaks quietly, in Common: 'Three years ago. He doesn't remember. The abbey gave us this inn to hide, but tonight... tonight I'm afraid he will not come back to me.' Pause. 'If he transforms and can't be saved, make it quick. Don't let him feel it.' Delivered private to Kim's Chromebook.",
+          "priority": 2,
+          "category": "story",
+          "dmOnly": true,
+          "checkFlag": "kim_within_5ft_of_marta"
+        }
+      },
+      {
+        "id": "wolves-through-window",
+        "gameTime": "1274-10-15T21:45:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "Wolf crashes through window (was 20:30 in spec, moved per work order)",
+          "text": "A window shatters — glass scatters across the floor boards. A wolf (CR 1/4, 11 HP, AC 12, 2d4+2 bite) lands in the common room, snarls once, and is on whoever is closest. One round later a second window breaks behind the party — empty, distraction. The front door swings open in the wind. If party piles on the wolf and ignores the door: a second, larger wolf (same CR 1/4 but 16 HP, 2d4+3 bite) slips in the front door and attacks the back line — whoever has ranged weapons or low HP. If party holds positions and covers the door: second wolf retreats into the blizzard. Consequence for bad positioning: flanked PCs take claw damage (~8 HP) and disadvantage on movement checks for rest of session due to a shallow back-tendon slice.",
+          "priority": 1,
+          "category": "combat",
+          "dispatchEvents": [
+            { "event": "combat:wolves_arrive", "data": { "ids": ["wolf-front", "wolf-rear"], "spawnAt": { "x": 2500, "y": 200 } } }
+          ]
+        }
+      },
+      {
+        "id": "tomas-descends-to-cellar-if-contained",
+        "gameTime": "1274-10-15T23:45:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "If Tomas is contained in the cellar, he briefly surfaces — small perception beat for Ed",
+          "text": "CONDITIONAL: only fires if state.npcs.tomas.phase === 'transformed' AND state.npcs.tomas.location === 'cellar' AND state.npcs.tomas.status !== 'dead'. In hybrid form, Tomas briefly descends further into the cellar — a key in a lock, audible through the floor. If Ed is downstairs near the cellar door, DC 10 perception: hear the key turn. DC 13: hear Tomas's breathing stabilize. No tokens move — this is atmosphere.",
+          "priority": 3,
+          "category": "atmosphere",
+          "dmOnly": true,
+          "checkFlag": "tomas_contained_in_cellar_transformed"
+        }
+      }
+    ]
+  }
+}

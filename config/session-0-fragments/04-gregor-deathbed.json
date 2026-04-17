@@ -1,0 +1,91 @@
+{
+  "_fragment": "Phase 4 (session0-polish) — Gregor's deathbed scene: collapse → deathbed message (Slovak) → death save → bag handoff → Vladislav approaches",
+  "world": {
+    "timedEvents": [
+      {
+        "id": "gregor-collapse-severe",
+        "gameTime": "1274-10-15T21:00:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "Gregor convulses hard — the pre-existing 21:00 collapse event escalates",
+          "text": "Gregor shudders in his chair, then convulses. A wet sound from his throat. He slides to the floor. Marta cries out. DC 12 Medicine reveals poisoning, not disease — traces of an unusual compound on his lips. DC 15 Medicine identifies the compound as a vampire-prepared toxin, slow-acting, probably administered in drink hours before the session began. Vladislav's gaze shifts to Gregor for a long moment then back to his window — DC 13 passive perception notices this.",
+          "priority": 1,
+          "category": "story",
+          "observations": [
+            { "id": "gregor-poison-dc12", "tier": 3, "dc": 12, "skill": "medicine", "text": "Not a heart attack. Not disease. Traces of something foreign on his lips — a compound, oily and greenish. Someone poisoned this man." },
+            { "id": "gregor-poison-dc15", "tier": 3, "dc": 15, "skill": "medicine", "text": "The compound is vampire work — a slow-acting toxin that prevents coagulation. He was poisoned hours ago. Probably in his drink." },
+            { "id": "vlad-watches-gregor-dc13", "tier": 2, "dc": 13, "skill": "perception", "text": "Vladislav's eyes went to Gregor and stayed there for a full three seconds. Then away. Nobody else in the room held that look that long." }
+          ]
+        }
+      },
+      {
+        "id": "gregor-moves-to-ed",
+        "gameTime": "1274-10-15T21:05:00",
+        "event": "token:move",
+        "data": {
+          "entityId": "patron-farmer",
+          "to": { "x": 0, "y": 0, "_lookup": "ed-token-position" },
+          "duration": 1500,
+          "hidden": false,
+          "reason": "deathbed-reach",
+          "staticNarration": "Gregor's eyes find Ed across the room. With a strength that should be impossible for a dying man, he grabs Ed's sleeve and pulls him close. His grip is a vise. His lips are trying to shape words."
+        }
+      },
+      {
+        "id": "gregor-deathbed-message",
+        "gameTime": "1274-10-15T21:08:00",
+        "event": "npc:scripted_speech",
+        "data": {
+          "npcId": "patron-farmer",
+          "npc": "Old Gregor",
+          "languageId": "slovak",
+          "targetPlayer": "ed",
+          "_deliveryMode": "private_to_ed_chromebook_with_english_to_dm_earbud",
+          "text": "Počúvaj. Tento vak — ide k Matthiasovi. Otec Matthias. Opátstvo svätého Prokopa, dva dni na juh, za čiernymi borovicami. Vezmi si dnes v noci čo potrebuješ. Budeš to potrebovať. Ale... ale neber z neho bez opatrnosti. To nie je obyčajný vak. Počul som ho. Počuje nás. Starí hovorili o Vreckárovi — žije v takých vakoch. Matthias ho... držal... ticho... mnoho rokov. Nezobuď ho. Bledý — ten v rohu — je skutočný. Pozoroval ma celú noc. Myslel som, že som blázon. Nie som blázon. Povedz Matthiasovi že som nebol blázon. Povedz mu... povedz mu že Gregor Koval dnes v noci videl Bledú laň a nebál sa. Povedz... povedz mu že kapucňa povedala, že jeho modlitby stále fungujú... Vladislav... povedz mu Vladislav...",
+          "narratorTranslation": "Listen. This bag — it goes to Matthias. Father Matthias. Abbey of Saint Prokop, two days south, past the black pines. Take what you need tonight. You will need it. But do not reach inside without care. This is not an ordinary bag. I have heard it. It hears us. The old ones spoke of the Bagman — it lives in bags such as this. Matthias has kept him quiet for many years. Do not wake him. The pallid one — the one in the corner — he is real. He has been watching me all night. I thought I was mad. I am not mad. Tell Matthias I was not mad. Tell him Gregor Koval saw the Pallid Hart tonight and was not afraid. Tell him... tell him the hooded one said his prayers still work... Vladislav... tell him Vladislav...",
+          "languageNote": "SLOVAK — delivered private to Ed's Chromebook with English translation to DM earbud. This is the central narrative beat: Matthias named, Abbey named, Bagman warned about, Vladislav named, Vladislav's mutual-tolerance relationship with Matthias confirmed. If Ed isn't present, Marta hears and Max should prompt Dave to have Marta repeat the key names to the party in broken Common later."
+        }
+      },
+      {
+        "id": "gregor-death-save-window",
+        "gameTime": "1274-10-15T21:10:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "Gregor death-save window — 2 minute window starting here",
+          "text": "Gregor is fading. If a PC has administered healing (cure wounds, potion of healing, lesser restoration) or a healing potion from Pieter's kit by this point, he stabilizes: unconscious but alive. The vampire toxin requires an actual cure the party doesn't have — he'll live the night but not walk out of the inn. Otherwise he dies in the next two minutes. Set state.npcs.patron-farmer.status to 'dead' OR 'stable' based on action. Fire npc:died event if dead.",
+          "priority": 1,
+          "category": "story",
+          "dmOnly": true
+        }
+      },
+      {
+        "id": "gregor-death-or-stable",
+        "gameTime": "1274-10-15T21:12:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "Resolve Gregor death OR stable; hand off bag to Ed if dead/unconscious",
+          "text": "If state.npcs.patron-farmer.status === 'dead': narrate Gregor's death quietly — 'Gregor's hand loosens on Ed's sleeve. His eyes are still open. They are looking at something Ed can't see.' Dispatch npc:died { npcId: 'patron-farmer' }. Transfer state.items.bag-of-holding-cellar.carrier = 'ed'. Add the bag to Ed's inventory via /api/characters/ed/inventory/add. If state.npcs.patron-farmer.status === 'stable': Gregor is unconscious, Marta drags him to a back room. Bag remains in Gregor's hand until morning; if PCs insist, Marta gives it to them then with a sob. DO NOT raise horror on Ed or the party for Gregor's death — Gregor earned a death that does not break the party's spirit. He chose Ed. Ed carrying the bag IS his dignity.",
+          "priority": 1,
+          "category": "story",
+          "dmOnly": true
+        }
+      },
+      {
+        "id": "vladislav-approaches-gregor",
+        "gameTime": "1274-10-15T21:13:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "Vladislav approaches Gregor's body — major beat",
+          "text": "CONDITIONAL: only if Gregor died (state.npcs.patron-farmer.status === 'dead') AND Vladislav is alive. Vladislav stands from his corner without sound. Every PC with passive perception ≥ 10 sees it. He crosses the common room with the unhurried dignity of a man who has walked many thousands of steps like this. He kneels beside Gregor. Places one gloved hand on Gregor's forehead, briefly. Speaks Slovak, quietly — only Ed hears the words clearly, but everyone hears the language: 'Odpočívaj v pokoji, starec. Prenesiem odkaz.' (Rest in peace, old man. I will carry the message.) Then he stands. Turns to the room. Speaks in Common, measured: 'He was a good man. Be careful with that bag. Do not reach inside without need. And when you do, do not linger.' Returns to his corner. Sets state.flags.vladislav_named_in_slovak = true. Sets state.flags.vladislav_mentioned_bag_warning = true. For Ed specifically: this is the first moment he knows the hooded stranger's name — because Gregor's dying words used the same name Vladislav just spoke to.",
+          "priority": 1,
+          "category": "story",
+          "dmOnly": false,
+          "dispatchEvents": [
+            { "event": "state:flag_set", "data": { "flag": "vladislav_named_in_slovak", "value": true } },
+            { "event": "state:flag_set", "data": { "flag": "vladislav_mentioned_bag_warning", "value": true } }
+          ]
+        }
+      }
+    ]
+  }
+}

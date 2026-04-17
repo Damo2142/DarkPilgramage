@@ -1,0 +1,20 @@
+{
+  "_fragment": "Phase 11 (session0-polish) — cleanup. Adds cleanup timed events and clarifies the stale midnight tomas_breaks cue.",
+  "_note": "The existing tomas_breaks timed event at 1274-10-16T00:00:00 in session-0.json cannot be edited via the array-concat fragment loader (fragments append, they do not replace). Instead this fragment adds a new sibling event at 1274-10-16T00:01:00 that makes the midnight cue's role explicit: it is a narration stub, the real transform already happened at 22:00 in ambient-life-service.js.",
+  "world": {
+    "timedEvents": [
+      {
+        "id": "tomas-midnight-clarification",
+        "gameTime": "1274-10-16T00:01:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "Clarifies the stale tomas_breaks cue one minute earlier",
+          "text": "NOTE: the tomas_breaks timed event that just fired at midnight is a stale DM cue. Ambient-life-service.js executed the actual transformation at 22:00. If state.npcs.tomas.phase === 'transformed' already: the midnight message is atmosphere only — Tomas is already a werewolf (contained in cellar, or loose in the room). If he is somehow still human at midnight: something intervened (party healed him, contained him pre-22:00, killed him early). In that case, treat tomas_breaks as flavor and use the PC actions to explain why.",
+          "priority": 3,
+          "category": "atmosphere",
+          "dmOnly": true
+        }
+      }
+    ]
+  }
+}

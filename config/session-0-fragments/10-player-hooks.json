@@ -1,0 +1,107 @@
+{
+  "_fragment": "Phase 10 (session0-polish) — per-player campaign hooks for Ed, Kim, Jen, Nick, Spurt, matching the pattern established by Barry's existing hooks in session-0.json",
+  "_note": "The work order referenced Ed/Kim/Jen/Nick/Spurt hook specifications from an earlier overnight-prep message that was not included in this session's context. These hooks are AI-drafted scaffolds that fit each character's class/background/race. Dave should review, edit, or replace before play. Hooks are marked `scaffold: true` so the DM knows they're draft.",
+  "futureHooks": {
+    "ed-underground-contact": {
+      "type": "player-arc",
+      "tier": "latent",
+      "player": "ed",
+      "pc": "FrostyCritter's Character",
+      "playerClass": "Rogue",
+      "playerRace": "Halfling",
+      "scaffold": true,
+      "description": "Ed's criminal-background contacts extend further than he admits — a halfling fence in the trading town of Spiš who owes him a debt from a forgotten job. If the party needs illicit goods, a discreet seller, or a fast exit from an inquisitor, Ed can (reluctantly) call in this favor once.",
+      "seededAt": "Session 0 — if Ed is the one Gregor hands the bag to, he's now carrying something worth fence-level attention; his contact instincts will react",
+      "notes": "Dave: flesh out the fence's name, location, what they want in return. This is a hook, not a plot."
+    },
+    "ed-slovak-loyalty": {
+      "type": "player-arc",
+      "tier": "latent",
+      "player": "ed",
+      "scaffold": true,
+      "description": "Ed speaks Slovak fluently. In this region that makes him a favored son of the local people — villagers will open doors for him that stay closed to other PCs. Cost: suspicion from German-speaking merchants and the Austrian clergy who dominate the church network.",
+      "seededAt": "Session 0 — Gregor chose to die speaking Slovak to Ed. Villagers will hear of this by morning if Ed tells anyone."
+    },
+
+    "kim-mark-of-detection-hunted": {
+      "type": "player-arc",
+      "tier": "background-threat",
+      "player": "kim",
+      "pc": "Zarina Firethorn",
+      "playerClass": "Fighter (Eldritch Knight)",
+      "playerRace": "Mark of Detection Half-Elf",
+      "scaffold": true,
+      "description": "The Mark of Detection makes Zarina visible to those who know what to look for. Two nations ago, a broker tried to hire her. She declined. The broker did not take it gracefully. Someone will recognize her at Houska or Čachtice — whether to bring her in or to warn her is undetermined and should be decided based on the party's arc.",
+      "seededAt": "Session 0 — background. If Dominik's master is the broker, that's a fold. Dave's call.",
+      "notes": "Already referenced in session-0.json's existing player hooks — this fragment formalizes it as a futureHook entry."
+    },
+    "kim-detect-magic-at-houska": {
+      "type": "player-arc",
+      "tier": "payoff-ready",
+      "player": "kim",
+      "scaffold": true,
+      "description": "Zarina's Mark of Detection includes Detect Magic. At Houska, the layered wards and entity residue will be overwhelming — she'll see things the other PCs cannot. This is a gift and a vulnerability.",
+      "seededAt": "Session 0 — upstairs Room 5's Necronomicon page already triggers her mark; full payoff is at Houska."
+    },
+
+    "jen-speech-of-beast-and-leaf": {
+      "type": "player-arc",
+      "tier": "latent-active",
+      "player": "jen",
+      "pc": "Marfire 2.0",
+      "playerClass": "Barbarian (Path of the Totem Warrior)",
+      "playerRace": "Firbolg",
+      "scaffold": true,
+      "description": "Marfire can communicate with animals and plants through Speech of Beast and Leaf. In Session 0 this is the key to understanding the Letavec's hunt (the horse in the stable knows), the rats (who fear Piotr), and the owls in the eaves (who counted the Letavec's passes). At Houska, the forest itself has things to say.",
+      "seededAt": "Session 0 — already planted in existing player hooks as 'marfire-horse-opportunity'. This fragment extends the arc to Houska and Čachtice."
+    },
+    "jen-firbolg-ancestry": {
+      "type": "player-arc",
+      "tier": "latent",
+      "player": "jen",
+      "scaffold": true,
+      "description": "Firbolg bloodlines remember. There is a grove two weeks' travel west where Marfire's people still live. When the region's troubles reach a breaking point, that grove will be the closest refuge and will test whether Marfire's bloodline remembers her.",
+      "seededAt": "Session 0 — background. Not triggered Sunday."
+    },
+
+    "nick-bards-college-connections": {
+      "type": "player-arc",
+      "tier": "latent",
+      "player": "nick",
+      "pc": "Chazz \"Merry Tunes\" Mortimer",
+      "playerClass": "Bard (College of Lore)",
+      "playerRace": "Tiefling",
+      "scaffold": true,
+      "description": "Chazz trained at a College of Lore in the southern Empire. He has classmates scattered across the region — one at Houska (an archivist who may help or hinder), one at Čachtice (a court musician who owes Chazz a song-favor that he will absolutely not want to pay).",
+      "seededAt": "Session 0 — Katya Voss's reaction to any Chazz lore reference may surface a classmate name. Dave's call on timing."
+    },
+    "nick-old-knowledge": {
+      "type": "player-arc",
+      "tier": "latent-active",
+      "player": "nick",
+      "scaffold": true,
+      "description": "Chazz is 87 years old with a criminal background and a bard's memory. When the party encounters something from a forgotten time, Max whispers: 'Chazz has heard something about this. Old story, maybe a song. He remembers the shape of it if not the details.' The player gets to invent the content. Already planted in session-0 existing hooks — this fragment names it.",
+      "seededAt": "Session 0 — mechanically active from the start."
+    },
+
+    "spurt-kobold-cavetalk": {
+      "type": "player-arc",
+      "tier": "latent-active",
+      "player": "spurt-ai-pc",
+      "pc": "Spurt the Sorcerer",
+      "playerClass": "Sorcerer (Wild Magic)",
+      "playerRace": "Kobold",
+      "scaffold": true,
+      "description": "Spurt smells vampires like a miner smells gas. His kobold instincts flag 'cave-in coming' around Vladislav. This is a low-intensity passive — Spurt's AI agent should glance at Vladislav's corner every few minutes through Session 0. At Houska and Čachtice, his instincts will identify structural dangers (failing stonework, hidden pit traps, places where the walls have been 'reshaped' by nonhuman work) before other PCs notice.",
+      "seededAt": "Session 0 — already planted in existing player hooks as 'spurt-vladislav-glance'. This fragment extends it."
+    },
+    "spurt-wild-magic-regional-resonance": {
+      "type": "player-arc",
+      "tier": "latent",
+      "player": "spurt-ai-pc",
+      "scaffold": true,
+      "description": "The region has latent magical instability — old leylines cracked during the Mongol incursion. Spurt's Wild Magic surges are more frequent here than in normal play. Dave may increase surge chance to 1-in-10 rather than 1-in-20 for the campaign, with larger effects at ley-line junctions (Pallid Hart crossroads being the first).",
+      "seededAt": "Session 0 — ambient. Spurt's agent may surge once during the night without explanation, as color."
+    }
+  }
+}

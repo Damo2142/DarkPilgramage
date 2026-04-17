@@ -1,0 +1,65 @@
+{
+  "_fragment": "Phase 7 (session0-polish) — Father Matthias and Abbey of Saint Prokop futureHook seeds. Not used Sunday; becomes accessible Session 1+.",
+  "futureHooks": {
+    "abbey-of-saint-prokop": {
+      "type": "location",
+      "tier": "safe-haven",
+      "distance": "two days south of Pallid Hart, past the black pines",
+      "seededBy": ["gregor-deathbed-message", "vladislav-dawn-speech"],
+      "keeper": "father-matthias",
+      "services": ["healing", "disease-cure", "resurrection-with-cost"],
+      "notes": "Not used Sunday. Becomes accessible in Session 1+. Father Matthias has been negotiating with the Bagman for years — the Bagman stays quiet in the abbey because Matthias knows his true name, which he has never spoken to anyone living. The abbey sits on a hill overlooking a frozen creek. Thirty brothers, one abbot, one guest cleric (Matthias is not the abbot — he is the infirmarer). Graveyard holds markers for men who died in the region's older troubles."
+    },
+    "father-matthias": {
+      "type": "npc-future",
+      "class": "cleric",
+      "level": 12,
+      "domain": "light",
+      "race": "human",
+      "age": "approximately 60",
+      "location": "abbey-of-saint-prokop",
+      "knowsVladislav": true,
+      "managesBagman": true,
+      "personality": "Blunt, pragmatic. Was a soldier before he took orders. Asks questions before he helps. Does not believe in unearned miracles. Kind in a plain, undramatic way.",
+      "voice": "low, measured, slightly rough from a laryngeal wound he picked up during the Mongol incursion of 1241 which he does not talk about",
+      "relationships": {
+        "vladislav": "mutual-tolerance peace. Each knows what the other is. Matthias does not offer penance; Vladislav does not feed within a day's walk. Both have kept it.",
+        "gregor-koval": "long-standing friendship — Gregor delivered harvest tithes to the abbey for thirty-two years. Matthias will feel Gregor's death personally.",
+        "bagman": "Knows his true name. Has not spoken it in decades. The Bagman sleeps because Matthias is vigilant — the moment Matthias dies, the Bagman wakes for whoever holds the bag."
+      },
+      "servicesAndCosts": {
+        "cureWounds": { "cost": "donation, free to the faithful" },
+        "lesserRestoration": { "cost": "25 gp donation" },
+        "greaterRestoration": { "cost": "100 gp donation" },
+        "raiseDead": {
+          "cost": "500 gp + diamond component, body within 10 days, non-undead target",
+          "conditions": "Matthias may refuse if he judges the death was caused by the party's own stupidity twice. He will say so without softening."
+        },
+        "reincarnate": {
+          "cost": "1000 gp + rare herbs harvested at the treeline",
+          "notes": "If the body is destroyed, the PC returns as a random race from the standard reincarnation table. Matthias warns about this with a straight face."
+        },
+        "trueResurrection": {
+          "cost": "Not available here — requires a pilgrimage to Rome",
+          "notes": "Matthias will write a letter of introduction if the party is worth the ink."
+        }
+      },
+      "scenarioCompatibility": "NOT A DMPC. The party must travel to him. He does not travel with them. He has his own agenda — the region, the Houska entity, and the old equilibrium with Vladislav.",
+      "plannedIntroduction": "Session 1 or 2, when the party reaches the abbey following Gregor's deathbed direction or Vladislav's dawn password.",
+      "fullActorFileDeferred": true,
+      "fullActorFileTodo": "Write config/actors/father-matthias.json post-Session-0. Cleric 12 Light domain, AC 18 (plate + shield), 104 HP, Spiritual Weapon/Spirit Guardians/Flame Strike in the spell list, relevant domain features. Not required Sunday."
+    }
+  },
+  "npcs": {
+    "hooded-stranger": {
+      "_phase7_matthias_additions": {
+        "matthiasRelationship": {
+          "known": true,
+          "nature": "mutual-tolerance peace of old equilibrium",
+          "passwordForParty": "Tell him Vladislav said his prayers still work",
+          "notes": "Duplicates state in fragment 05-vladislav. If both fragments merge the value wins according to alphabetical fragment order — 07 lands after 05 — but since they contain identical data either way is fine."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "_fragment": "Phase 5 (session0-polish) — Vladislav enhancements: three-stage demo, awareness phases, Dominik recognition, counter-whisper, breadcrumb, search-body, dawn speech",
+  "npcs": {
+    "hooded-stranger": {
+      "_phase5_additions": {
+        "awarenessPhases": {
+          "neutral":           { "from": "17:30", "to": "18:00", "behavior": "still, not interested" },
+          "unease":            { "from": "18:00", "to": "20:00", "behavior": "senses something wrong in the inn, can't localize" },
+          "sharpened_unease":  { "from": "20:00", "to": "21:00", "behavior": "Dominik has arrived — suspicion narrows" },
+          "window_watch":      { "from": "21:00", "to": "21:15", "behavior": "moves to east window (existing event vladislav_to_window)" },
+          "recognition":       { "from": "21:15", "to": "21:20", "behavior": "recognizes Dominik as a rival spawn" },
+          "calculating":       { "from": "21:20", "to": "22:00", "behavior": "deciding who to use, who to warn, when to strike" },
+          "reactive":          { "from": "22:00", "to": "06:00", "behavior": "acts — counter-whispers, helps party if it helps him, fights if he must" },
+          "departure":         { "from": "06:00", "to": "06:30", "behavior": "dawn speech + exit" }
+        },
+        "demoStateMachine": {
+          "field": "state.npcs.hooded-stranger.demo_stage",
+          "default": 0,
+          "stages": {
+            "0": "untouched — acts normally",
+            "1": "first attack absorbed — weapon passes through his form like mist, rematerializes. No wound. No reaction. He continues whatever he was doing.",
+            "2": "second attack — catches the weapon one-handed and crushes the blade with two fingers. Speaks without turning: 'The next one costs a finger. The one after that costs a hand.'",
+            "3": "third attack — Frightful Presence (Wis DC 18, frightened 1 round). Dissolves into mist, reforms behind attackers, their weapons lie on the table. 'You are alive because I am interested in whether you stay that way. Sit down.' After stage 3, if attacks continue, he defends normally but deals non-lethal damage only."
+          },
+          "advanceOn": "any player melee or ranged attack against hooded-stranger that would otherwise land",
+          "resetOn": "combat ends with no fatalities OR scene resets"
+        },
+        "matthiasRelationship": {
+          "known": true,
+          "nature": "mutual-tolerance peace, an old equilibrium",
+          "passwordForParty": "Tell him Vladislav said his prayers still work",
+          "history": "Matthias and Vladislav negotiated a non-aggression years ago when the region nearly collapsed into open vampire-hunting. Matthias lets Vladislav pass the abbey road unmolested; Vladislav does not feed within a day's walk of the abbey. Both have honored it. Gregor heard this from Matthias decades ago, which is why his dying mind spoke Vladislav's name to Matthias — he trusted it meant something."
+        }
+      }
+    }
+  },
+  "world": {
+    "timedEvents": [
+      {
+        "id": "vladislav-breadcrumb-if-needed",
+        "gameTime": "1274-10-15T21:55:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "Vladislav breadcrumb: if party hasn't identified Tomas as the werewolf threat, Vlad hints — directly to Ed (fallback Kim)",
+          "text": "CONDITIONAL: only if state.flags.tomas_threat_identified !== true. Vladislav approaches Ed (fallback: Kim if Ed absent). Private dialogue to that PC's Chromebook, Common: 'The man who pours your drinks becomes something else tonight. You should decide, before the moon is full, whether you are his guests or his prey.' Important: this fires at 21:55, five minutes before 22:00 transform — any later and the hint is useless.",
+          "priority": 1,
+          "category": "story",
+          "dmOnly": true,
+          "checkFlag": "state.flags.tomas_threat_identified !== true"
+        }
+      },
+      {
+        "id": "vladislav-counter-whisper-to-ed",
+        "gameTime": "1274-10-15T22:00:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "Vladislav counter-whisper to Ed — only if Dominik has been working him",
+          "text": "CONDITIONAL: only if state.flags.ed_has_been_whispered_by_dominik === true. Private to Ed's Chromebook, Common: 'You play well. I heard a tune like that in Krakow, ten years ago. The bard who played it disappeared the next winter. I have a poor habit of outliving the people whose music I enjoy.' (pause) 'The monk is not what he seems. Neither am I. But tonight, on this matter, we are not enemies.'",
+          "priority": 1,
+          "category": "story",
+          "dmOnly": true,
+          "checkFlag": "state.flags.ed_has_been_whispered_by_dominik === true"
+        }
+      },
+      {
+        "id": "vladislav-search-the-body",
+        "gameTime": "1274-10-15T22:05:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "Vladislav approaches Dominik's corpse — if Dominik died",
+          "text": "CONDITIONAL: only if state.npcs.brother-dominik-novak.status === 'dead'. Fires once. Vladislav walks to Dominik's body. Looks at it for a long moment. Says quietly in Common, for the whole room: 'He was not alone. Search the body.' This is the party's clue that another spawn is in the inn (Spawn 1 upstairs). Set state.flags.vladislav_hinted_second_spawn = true.",
+          "priority": 1,
+          "category": "story",
+          "dmOnly": true,
+          "checkFlag": "state.npcs.brother-dominik-novak.status === 'dead'",
+          "oneShot": true
+        }
+      },
+      {
+        "id": "vladislav-dawn-speech",
+        "gameTime": "1274-10-16T06:00:00",
+        "event": "dm:whisper",
+        "data": {
+          "description": "Vladislav's dawn speech — if alive + party alive + not active enemies",
+          "text": "CONDITIONAL: fires only if state.npcs.hooded-stranger.status === 'alive' AND at least one PC is alive AND state.flags.vladislav_is_party_enemy !== true. Delivered in Common (Latin-accented) to the whole table. 'You fought like children. You shot past your own. You left them back exposed when you charged. In a week you will stand in a castle where the doors close behind you and the dead watch from the walls. If you fight there the way you fought here, you will not walk out. I do not say this to wound you. I say this because I have decided, against my better judgment, that you are worth the saying. There is an abbey two days south. Saint Prokop. The cleric there — Matthias — knows what I am and lets me pass. He will help you. Tell him Vladislav said his prayers still work. Sunrise is coming. I have to leave. Try not to die before we meet again.' Vladislav exits via the front door. At the treeline he dissolves into mist and is gone. Set state.flags.vladislav_departed = true. Set state.flags.matthias_password_given = true. Set state.futureHooks.abbey-of-saint-prokop.seeded = true.",
+          "priority": 1,
+          "category": "story",
+          "dmOnly": false,
+          "dispatchEvents": [
+            { "event": "state:flag_set", "data": { "flag": "vladislav_departed", "value": true } },
+            { "event": "state:flag_set", "data": { "flag": "matthias_password_given", "value": true } }
+          ]
+        }
+      }
+    ]
+  },
+  "slovakPhonetics": {
+    "_note": "Phonetic transliterations for Dave to deliver Slovak lines at the table without needing to read the accented text.",
+    "odpocivaj_v_pokoji": {
+      "slovak": "Odpočívaj v pokoji",
+      "phonetic": "od-po-CHEE-vai f po-KO-yee",
+      "english": "Rest in peace"
+    },
+    "prenesiem_odkaz": {
+      "slovak": "Prenesiem odkaz",
+      "phonetic": "pre-ne-SEE-em od-kaz",
+      "english": "I will carry the message"
+    },
+    "starec_priest_zveril": {
+      "slovak": "Starec, priest ti to zveril?",
+      "phonetic": "STA-rets, pree-est tee to ZVE-ril",
+      "english": "Old man, the priest entrusted this to you?"
+    },
+    "vladislav_povedal_modlitby_funguju": {
+      "slovak": "Vladislav povedal, že jeho modlitby stále fungujú",
+      "phonetic": "VLA-dis-laff PO-ve-dal zhe YE-ho MOD-lit-bi STA-le FUN-goo-yoo",
+      "english": "Vladislav said his prayers still work"
+    }
+  }
+}

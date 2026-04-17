@@ -480,6 +480,11 @@ class MapService {
         type: type || 'npc',
         x: x || 280,
         y: y || 350,
+        // Beta finding Saturday evening — actorSlug was silently dropped,
+        // leaving NPC combatants without actor config lookup in combat.
+        // Accept it from req.body so DM-added wolves / vampires / etc
+        // have resolvable attacks, cover, etc.
+        actorSlug: req.body.actorSlug || null,
         image: req.body.image || `${tokenId}.webp`,
         visible: req.body.visible !== false,
         hidden: req.body.hidden || false,

@@ -440,19 +440,37 @@ class SpurtAgent {
   _fallbackCombatAction(combatant) {
     const combat = this.state.get('combat') || {};
     const enemies = (combat.turnOrder || []).filter(c => c.type === 'npc' && c.isAlive);
-    const target = enemies[0];
+    const allies  = (combat.turnOrder || []).filter(c => c.type === 'pc'  && c.isAlive && c.id !== combatant.id);
 
-    // Low HP? Dodge
-    if (combatant.hp.current <= combatant.hp.max * 0.3) {
+    // Task 11 (session0-polish follow-up) — retreat threshold raised from
+    // 30% to 50% so Spurt models conservative play for the teaching session.
+    if (combatant.hp.current <= combatant.hp.max * 0.5) {
       return {
         action: 'dodge',
         target: null,
-        dialogue: 'Spurt is too hurt! Spurt hides behind something!',
-        reasoning: 'Low HP, taking dodge action for survival'
+        dialogue: 'Spurt is hurt! Spurt gets behind a wall!',
+        reasoning: 'HP below 50% threshold — retreat + Dodge action.'
       };
     }
 
-    // Default: Sorcerous Burst at nearest enemy
+    // Task 11 — tactical target pick. Priority ladder:
+    //   1. enemy spellcaster (class contains cleric/wizard/sorcerer/warlock/bard/druid)
+    //   2. enemy healer (cleric/paladin/druid)
+    //   3. enemy ranged striker (ranger/archer/rogue)
+    //   4. nearest-by-map-position
+    // Skip any target that has an ally within 5ft (friendly-fire avoidance
+    // for ranged attacks — Spurt's Sorcerous Burst is ranged).
+    const target = this._pickTacticalTarget(combatant, enemies, allies)
+                || enemies[0];
+
+    // Tactical callout dialogue — if Spurt noticed a flanked/caster threat
+    // targeting a squishy ally, surface it (once per decision).
+    const callout = this._tacticalCallout(combatant, enemies, allies);
+    if (callout) {
+      try { this.bus.dispatch('chat:message', { from: 'Spurt', text: callout, channel: 'ic' }); } catch (e) {}
+    }
+
+    // Default: Sorcerous Burst at the picked target
     return {
       action: 'cast_spell',
       spell: 'Sorcerous Burst',
@@ -461,6 +479,83 @@ class SpurtAgent {
       dialogue: 'Spurt blasts the bad thing! Yes yes!',
       reasoning: 'Default cantrip attack at range'
     };
+  }
+
+  /**
+   * Task 11 (session0-polish follow-up) — tactical target picker.
+   * Priority: caster > healer > ranged > nearest-by-map-position.
+   * Avoids targets who have an allied PC within 5ft (friendly-fire safety
+   * for Spurt's ranged cantrip). Returns null if no usable target found.
+   */
+  _pickTacticalTarget(combatant, enemies, allies) {
+    if (!enemies || enemies.length === 0) return null;
+
+    const NpcTactics = require('../combat/npc-tactics');
+    const gridSize = this.state.get('map.gridSize') || 140;
+    const selfTok = this.state.get(`map.tokens.${combatant.id}`);
+
+    const isCaster = (c) => /wizard|sorcer|warlock|bard|druid|cleric/i.test(
+      c.name + ' ' + (c.class || '') + ' ' + (c.actorSlug || '')
+    );
+    const isHealer = (c) => /cleric|paladin|druid/i.test(
+      c.name + ' ' + (c.class || '')
+    );
+    const isRanged = (c) => /ranger|archer|rogue/i.test(
+      c.name + ' ' + (c.class || '')
+    );
+
+    const hasAllyAdjacent = (enemy) => {
+      const eTok = this.state.get(`map.tokens.${enemy.id}`);
+      if (!eTok || typeof eTok.x !== 'number') return false;
+      for (const a of allies) {
+        const aTok = this.state.get(`map.tokens.${a.id}`);
+        if (!aTok || typeof aTok.x !== 'number') continue;
+        if (NpcTactics.distanceFeet(aTok, eTok, gridSize) <= 5) return true;
+      }
+      return false;
+    };
+
+    // Filter out friendly-fire candidates first
+    const safeEnemies = enemies.filter(e => !hasAllyAdjacent(e));
+    const pool = safeEnemies.length > 0 ? safeEnemies : enemies;  // degrade gracefully if every enemy has adjacent allies
+
+    // Priority ladders
+    const caster = pool.find(isCaster);
+    if (caster) return caster;
+    const healer = pool.find(isHealer);
+    if (healer) return healer;
+    const ranged = pool.find(isRanged);
+    if (ranged) return ranged;
+
+    // Nearest by map position
+    if (selfTok && typeof selfTok.x === 'number') {
+      let best = null, bestDist = Infinity;
+      for (const e of pool) {
+        const eTok = this.state.get(`map.tokens.${e.id}`);
+        if (!eTok || typeof eTok.x !== 'number') continue;
+        const d = NpcTactics.distanceFeet(selfTok, eTok, gridSize);
+        if (d < bestDist) { bestDist = d; best = e; }
+      }
+      if (best) return best;
+    }
+
+    return pool[0];
+  }
+
+  /**
+   * Task 11 — verbal tactical callout. If a dangerous enemy is targeting
+   * a squishy ally (low HP or caster), Spurt says something in character.
+   * Returns null if no callout is warranted.
+   */
+  _tacticalCallout(combatant, enemies, allies) {
+    for (const ally of allies) {
+      const pctHp = ally.hp?.current / Math.max(1, ally.hp?.max || 1);
+      if (pctHp > 0.3) continue;           // only call out for critically wounded allies
+      const threat = enemies.find(e => e.isAlive && e.hp?.current > 0);
+      if (!threat) return null;
+      return `${ally.name} is hurt! The ${threat.name || 'monster'} is after them — Spurt sees it!`;
+    }
+    return null;
   }
 
   _executeCombatAction(action) {

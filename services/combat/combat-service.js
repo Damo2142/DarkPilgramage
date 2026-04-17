@@ -2,7 +2,14 @@
  * combat-service.js — Initiative & Combat Tracker
  * Build 8: Turn-order tracker, initiative rolling, conditions, HP tracking
  * Mounts routes on dashboard service's Express app.
+ *
+ * Phase 1 (session0-polish): delegates NPC turn decisions to npc-tactics.js
+ * when the NPC has a map position. npc-tactics returns a decision carrying
+ * target, action, movement path, and detected opportunity-attack triggers.
+ * Fallback to the existing AI / basic path remains unchanged.
  */
+
+const NpcTactics = require('./npc-tactics');
 
 const D20_CONDITIONS = [
   'blinded', 'charmed', 'deafened', 'frightened', 'grappled',
@@ -285,6 +292,12 @@ class CombatService {
     if (nextIdx <= combat.currentTurn) {
       combat.round++;
       console.log(`[CombatService] Round ${combat.round}`);
+      // Phase 1 (session0-polish) — reset per-round reaction tracking at
+      // the start of each new round so OoA / Shield / etc. become available
+      // again. Combatants without the flag are unaffected.
+      for (const c of combat.turnOrder) {
+        if (c._reactionUsedThisRound) c._reactionUsedThisRound = false;
+      }
     }
 
     combat.currentTurn = nextIdx;
@@ -1747,6 +1760,38 @@ class CombatService {
       res.json(combat);
     });
 
+    // Phase 1 (session0-polish) — POST /api/combat/override-npc-turn
+    // DM-provided decision: skip the tactical AI for this NPC and execute
+    // the given action/target directly. Body: { combatantId, actionIndex,
+    // targetId, skipMovement? }. If skipMovement is false/absent and a
+    // movePath is provided, apply it before attacking.
+    app.post('/api/combat/override-npc-turn', async (req, res) => {
+      const { combatantId, actionIndex, targetId, movePath } = req.body || {};
+      if (!combatantId || typeof actionIndex !== 'number' || !targetId) {
+        return res.status(400).json({ error: 'combatantId, actionIndex, targetId required' });
+      }
+      const combat = this._getCombatState();
+      const c = combat.turnOrder.find(x => x.id === combatantId);
+      if (!c) return res.status(404).json({ error: 'combatant not in turn order' });
+      if (Array.isArray(movePath) && movePath.length > 0) {
+        this._applyNpcMovement(c, { movePath, triggersOoaFrom: [], reasoning: 'DM override move' });
+      }
+      await this._executeNpcCombatAction(c, { actionIndex, targetId });
+      res.json({ ok: true });
+    });
+
+    // Phase 1 (session0-polish) — flag toggle for positional tactics.
+    // Use during live session if the tactical brain misbehaves: POST with
+    // { useTacticalPositioning: false } to revert to the AI/basic path.
+    app.post('/api/combat/set-flag', (req, res) => {
+      const { useTacticalPositioning } = req.body || {};
+      if (typeof useTacticalPositioning !== 'boolean') {
+        return res.status(400).json({ error: 'useTacticalPositioning must be boolean' });
+      }
+      this.state.set('combat.useTacticalPositioning', useTacticalPositioning);
+      res.json({ useTacticalPositioning });
+    });
+
     // POST /api/combat/next — advance to next turn
     app.post('/api/combat/next', (req, res) => {
       const combat = this.nextTurn();
@@ -1892,6 +1937,31 @@ class CombatService {
   // ── NPC Tactical AI (Feature 52) ──────────────────────────────────────
 
   async _npcTacticalAI(combatant, combat) {
+    // Phase 1 (session0-polish) — try npc-tactics first for position-aware
+    // decisions. Falls through to the existing AI path if npc-tactics can't
+    // decide (no map position, no reachable target, etc.). Controlled by
+    // state.combat.useTacticalPositioning — defaults to true, DM can
+    // disable via POST /api/combat/set-flag for safety during a session.
+    const useTactical = this.state.get('combat.useTacticalPositioning');
+    if (useTactical !== false) {
+      try {
+        const decision = await this._tryPositionalDecide(combatant, combat);
+        if (decision) {
+          // Apply movement along the chosen path; dispatch OoA detections.
+          if (decision.movePath && decision.movePath.length > 0) {
+            this._applyNpcMovement(combatant, decision);
+          }
+          return {
+            actionIndex: decision.actionIndex,
+            targetId: decision.targetId,
+            reasoning: decision.reasoning
+          };
+        }
+      } catch (err) {
+        console.error('[CombatService] positional tactics threw for ' + combatant.name + ':', err.message);
+      }
+    }
+
     const aiEngine = this.orchestrator.getService('ai-engine');
     if (!aiEngine?.gemini?.available) {
       // No AI — fall back to basic tactics
@@ -1973,6 +2043,122 @@ Available targets: ${enemies.map(e => `"${e.name}" (id: check turnOrder)`).join(
     const basic = this._basicNpcTactics(combatant, combat);
     console.log('[CombatService] basicNpcTactics for ' + combatant.name + ':', JSON.stringify(basic));
     return basic;
+  }
+
+  // ── Phase 1 (session0-polish) — positional tactics bridge ────────────
+
+  /**
+   * Call npc-tactics.decide() with the right slice of state.
+   * Returns a decision { actionIndex, targetId, movePath, triggersOoaFrom,
+   * disadvantage, tier, reasoning } or null to fall through.
+   */
+  async _tryPositionalDecide(combatant, combat) {
+    const mapSvc = this.orchestrator.getService('map');
+    if (!mapSvc) return null;
+    const allTokens = this.state.get('map.tokens') || {};
+    const selfTok = allTokens[combatant.id];
+    if (!selfTok) return null;
+    // Determine which map the combatant is on
+    const mapId = mapSvc.playerMapAssignment?.[combatant.id] || mapSvc.activeMapId;
+    const mapDef = mapSvc.maps.get(mapId);
+    if (!mapDef) return null;
+
+    // Filter to tokens on the same map as the combatant (PCs have
+    // playerMapAssignment; NPCs default to activeMapId).
+    const tokensOnMap = {};
+    for (const [tid, tok] of Object.entries(allTokens)) {
+      const tokMap = mapSvc.playerMapAssignment?.[tid] || mapSvc.activeMapId;
+      if (tokMap === mapId) tokensOnMap[tid] = tok;
+    }
+
+    const actions = this.getActions(combatant.id);
+    if (!actions?.actions?.length) return null;
+
+    // Resolve INT score and tier override from actor config
+    const actorSlug = combatant.actorSlug || selfTok.actorSlug;
+    const actorCfg = actorSlug
+      ? (mapSvc.customActors?.get(actorSlug) || mapSvc.srdMonsters?.find(m => m.slug === actorSlug))
+      : null;
+    const intScore = Number.isFinite(combatant.int)
+      ? combatant.int
+      : (actorCfg?.intelligence ?? 10);
+    const intTierOverride = actorCfg?.int_tier || actorCfg?.int_tier_when_revealed || null;
+    const speedFt = actorCfg?.speed?.walk || 30;
+
+    // Attach the raw actor.actions array so npc-tactics.decide() can read
+    // attack_bonus / damage_bonus / damage_dice for scoring. getActions
+    // returns a UI-mapped shape without those fields.
+    const actionsWithRaw = { ...actions, raw: actorCfg?.actions || [] };
+
+    // Build reactionUsed set from combat state (each combatant's
+    // reactionUsedThisRound flag; falsy means reaction available).
+    const reactionUsedByHostiles = new Set();
+    for (const c of combat.turnOrder) {
+      if (c.type !== 'pc') continue;
+      if (c._reactionUsedThisRound) reactionUsedByHostiles.add(c.id);
+    }
+
+    // _pathBlockedByWall is a closure over mapSvc — bind it so npc-tactics
+    // can call with the standard signature.
+    const pathBlockedFn = (x1, y1, x2, y2, walls) => mapSvc._pathBlockedByWall(x1, y1, x2, y2, walls);
+
+    return NpcTactics.decide({
+      combatant, combat, actions: actionsWithRaw, mapDef, tokensOnMap,
+      intTierOverride, intScore, speedFt,
+      pathBlockedFn, reactionUsedByHostiles
+    });
+  }
+
+  /**
+   * Apply the chosen movement path. Dispatches map:token_moved for each
+   * step, then the final position. Detects + whispers opportunity attacks
+   * that fired along the path (execution of OoA damage is deferred to
+   * Phase 2 — for Phase 1 we detect and surface to the DM).
+   */
+  _applyNpcMovement(combatant, decision) {
+    const mapSvc = this.orchestrator.getService('map');
+    if (!mapSvc || !decision.movePath || decision.movePath.length === 0) return;
+
+    const tokens = this.state.get('map.tokens') || {};
+    const selfTok = tokens[combatant.id];
+    if (!selfTok) return;
+
+    // Just snap to end position — a series of per-cell moves would be
+    // visually busy and the player-bridge map only renders current
+    // positions, not interpolated paths.
+    const finalStep = decision.movePath[decision.movePath.length - 1];
+    const updated = { ...selfTok, x: finalStep.x, y: finalStep.y };
+    this.state.set(`map.tokens.${combatant.id}`, updated);
+    this.bus.dispatch('map:token_moved', {
+      tokenId: combatant.id,
+      x: finalStep.x, y: finalStep.y,
+      reason: 'combat-tactical'
+    });
+
+    // Whisper OoA detections. Actual damage resolution is a Phase 2
+    // concern — Dave runs these by hand until that plumbing lands.
+    if (decision.triggersOoaFrom && decision.triggersOoaFrom.length > 0) {
+      for (const hostileId of decision.triggersOoaFrom) {
+        const hostile = (this._getCombatState().turnOrder || []).find(c => c.id === hostileId);
+        if (!hostile) continue;
+        // Mark reaction used — prevents the same PC from getting OoA on
+        // a later NPC's move in the same round.
+        hostile._reactionUsedThisRound = true;
+        this.bus.dispatch('dm:whisper', {
+          text: `[OoA] ${combatant.name} leaves ${hostile.name}'s reach — opportunity attack available if ${hostile.name}'s reaction not yet used. Roll manually or via attack resolver.`,
+          priority: 1, category: 'combat', source: 'combat-service'
+        });
+      }
+    }
+
+    // Reasoning whisper (low priority, story category so it routes to
+    // Max and is logged alongside atmosphere)
+    if (decision.reasoning) {
+      this.bus.dispatch('dm:whisper', {
+        text: `[tactics] ${combatant.name}: ${decision.reasoning}`,
+        priority: 2, category: 'combat', source: 'combat-service'
+      });
+    }
   }
 
   _basicNpcTactics(combatant, combat) {

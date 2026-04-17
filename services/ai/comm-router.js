@@ -151,13 +151,49 @@ class CommRouter {
     this.bus.subscribe('npc:scripted_speech', (env) => {
       try {
         const d = env.data || {};
+
+        // PRIVATE delivery: fragment / event author may pass either
+        //   { _private: true, _sourcePlayerId: 'ed' }   (original contract)
+        //   { targetPlayer: 'ed', _deliveryMode: 'private*' }  (fragment contract)
+        //
+        // Normalize to the original contract so routeNpcSpeech's PRIVATE
+        // branch runs and no other player receives the whisper. Also
+        // suppress the room-speaker npc:approved dispatch so ElevenLabs
+        // does not broadcast the Slovak text over the table.
+        const wantsPrivate =
+          d._private === true ||
+          !!d.targetPlayer ||
+          (typeof d._deliveryMode === 'string' && d._deliveryMode.startsWith('private'));
+        if (wantsPrivate) {
+          d._private = true;
+          if (!d._sourcePlayerId && d.targetPlayer) d._sourcePlayerId = d.targetPlayer;
+        }
+
         this.routeNpcSpeech(d);
+
+        // DM earbud translation: if the event carries narratorTranslation
+        // (and we are in a private-delivery path, where the table does not
+        // hear the original), whisper the English to the DM so Dave can
+        // narrate along. Priority 1 routes to the earbud via voice-service.
+        if (wantsPrivate && d.narratorTranslation) {
+          const target = d.targetPlayer || d._sourcePlayerId || 'a player';
+          const lang = d.languageId ? d.languageId : 'their language';
+          this.bus.dispatch('dm:whisper', {
+            text: `[${d.npc || d.npcId} → ${target} in ${lang}] ${d.narratorTranslation}`,
+            priority: 1, category: 'npc-translation', source: 'comm-router'
+          });
+        }
+
         // Also route through the room speaker so Katya's songs, scripted
         // monologues, and timed-event dialogue play audibly at the table.
         // voice-service subscribes to npc:approved; the same handler is
         // what NPC-auto-dialogue uses, so we reuse that pathway here
         // rather than introducing a parallel TTS trigger.
-        if (d.text) {
+        //
+        // For PRIVATE deliveries we suppress npc:approved entirely — the
+        // Slovak text goes only to the target player's Chromebook, and
+        // ElevenLabs never generates audio for the room speaker.
+        if (d.text && !wantsPrivate) {
           this.bus.dispatch('npc:approved', {
             id: 'scripted-' + Date.now(),
             npc: d.npc || d.npcId,

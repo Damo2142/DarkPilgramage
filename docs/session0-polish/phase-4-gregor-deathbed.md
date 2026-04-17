@@ -20,7 +20,7 @@ Full Slovak message at 21:08 includes all key names: Matthias, Prokop, Bagman (V
 ## Deferred
 
 - **`_lookup: "ed-token-position"` resolution at runtime** — the token:move handler in world-clock/map-service does not currently resolve `_lookup` values. For Sunday, Dave should manually move Gregor's token to Ed at 21:05, or the DM dashboard's NPC panel can be used. A proper lookup resolver is a Phase 2/3 follow-up.
-- **`_deliveryMode: "private_to_ed_chromebook_with_english_to_dm_earbud"`** — the scripted_speech handler currently routes based on `languageId + targetPlayer`. If Max's comm-router doesn't pick up `targetPlayer`, the scripted speech may route public instead of private. Dave should verify on Saturday test.
+- **~~`_deliveryMode: "private_to_ed_chromebook_with_english_to_dm_earbud"`~~** — **FIXED (Task 1, follow-up work order).** comm-router now recognizes `_deliveryMode: 'private*'` and `targetPlayer`. On a private delivery: normalizes to the existing `_private/_sourcePlayerId` contract, suppresses the `npc:approved` room-speaker dispatch, and whispers the `narratorTranslation` at priority 1 to the DM earbud. Verified by `scripts/test-gregor-slovak-routing.js` (7/7 assertions passing).
 - **`gregor-death-or-stable` resolution** — the 21:12 event describes what should happen but the state machine resolving `state.npcs.patron-farmer.status` on healing events is not implemented. Dave flips the status manually via `/api/npcs/patron-farmer` or via the DM dashboard's NPC panel.
 
 ## Risk

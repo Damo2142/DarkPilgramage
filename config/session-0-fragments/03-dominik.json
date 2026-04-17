@@ -99,6 +99,7 @@
           "priority": 1,
           "category": "story",
           "dmOnly": false,
+          "_arrivalPositionNote": "Front door is on the west wall at x=1120, y=700-980 (see config/maps/pallidhearfloor1.json — the door-type wall segments). Dominik arrives just east of the doorway, inside the common room proper (not inside the cellar-access sub-zone at x=1000-1280). (1500, 900) puts him stumbling out of the alcove into the common room, sandaled feet dark with frost, eyes sweeping the table.",
           "dispatchEvents": [
             {
               "event": "npc:arrival",
@@ -107,8 +108,8 @@
                 "tokenId": "brother-dominik-novak",
                 "name": "Brother Dominik Novák",
                 "type": "npc",
-                "x": 4600,
-                "y": 1900,
+                "x": 1500,
+                "y": 900,
                 "hidden": false,
                 "hp": { "current": 82, "max": 82 },
                 "ac": 15,
@@ -136,14 +137,17 @@
       {
         "id": "dominik-first-whisper-opening",
         "gameTime": "1274-10-15T20:20:00",
-        "event": "dm:whisper",
+        "event": "npc:scripted_speech",
         "data": {
-          "description": "Dominik's opening whisper to Ed — Slovak, private",
-          "text": "IF Ed is within 10ft of Dominik and they have exchanged at least one line: fire the opening Slovak whisper from npcs.brother-dominik-novak.whisperScript.opening. Deliver to Ed's Chromebook only. Set flag state.flags.ed_has_been_whispered_by_dominik = true. If Ed is unavailable, DELAY 5 minutes and re-check; skip entirely if Ed never comes within range.",
-          "priority": 1,
-          "category": "story",
-          "dmOnly": true,
-          "checkFlag": "state.players.ed.absent === false",
+          "description": "Dominik's opening whisper to Ed — Slovak, private (auto-dispatched)",
+          "npcId": "brother-dominik-novak",
+          "npc": "Brother Dominik Novák",
+          "languageId": "slovak",
+          "targetPlayer": "ed",
+          "_deliveryMode": "private_to_ed_chromebook_with_english_to_dm_earbud",
+          "text": "Priateľu, kráčal som po mnohých cestách. Pred dvoma nocami som prešiel dedinou, kde človek podobný vášmu kapucňovému spoločníkovi pýtal smer k tomuto hostincu. Na druhý deň ráno mala tá dedina tri pohreby.",
+          "narratorTranslation": "Friend, I have walked many roads. Two nights ago I passed through a village where a man matching your hooded companion's description asked for directions to this very inn. The village had three funerals the next morning.",
+          "languageNote": "SLOVAK — private whisper to Ed's Chromebook. DM earbud gets English translation via comm-router priority 1. Dominik has been circling the table looking for a moment alone with Ed since 20:05. By 20:20 he has engineered proximity (Dave narrate him sitting down next to Ed, or Ed being alone at the bar). The previous gating (proximity + 'exchanged a line') has been removed per Saturday beta finding 2 — Max can't reliably evaluate proximity, and gating was blocking the whisper from firing.",
           "dispatchEvents": [
             { "event": "state:flag_set", "data": { "flag": "ed_has_been_whispered_by_dominik", "value": true } }
           ]
@@ -201,27 +205,33 @@
       {
         "id": "dominik-second-whisper-middle",
         "gameTime": "1274-10-15T20:45:00",
-        "event": "dm:whisper",
+        "event": "npc:scripted_speech",
         "data": {
-          "description": "Dominik's middle whisper to Ed — Slovak, private",
-          "text": "Fire whisperScript.middle to Ed's Chromebook. Only if the 'opening' whisper fired and flag state.flags.ed_has_been_whispered_by_dominik === true. Text: 'The Church teaches us that evil wears the face of the ordinary...' (see npcs.brother-dominik-novak.whisperScript.middle).",
-          "priority": 1,
-          "category": "story",
-          "dmOnly": true,
-          "checkFlag": "state.flags.ed_has_been_whispered_by_dominik === true"
+          "description": "Dominik's middle whisper to Ed — Slovak, private (auto-dispatched)",
+          "npcId": "brother-dominik-novak",
+          "npc": "Brother Dominik Novák",
+          "languageId": "slovak",
+          "targetPlayer": "ed",
+          "_deliveryMode": "private_to_ed_chromebook_with_english_to_dm_earbud",
+          "text": "Cirkev nás učí, že zlo nosí tvár obyčajnosti. Modlím sa, aby som sa mýlil o ňom. Ale sledujte jeho ruky. Nezdvihne chlieb.",
+          "narratorTranslation": "The Church teaches us that evil wears the face of the ordinary. I pray I am wrong about him. But watch his hands. He does not pick up the bread.",
+          "languageNote": "SLOVAK — private to Ed. Deliberately no checkFlag gating (Saturday beta finding 2 — gating broke the whisper chain). Dominik keeps a veneer of piety, 'You should watch that man,' 'He doesn't eat the bread.'"
         }
       },
       {
         "id": "dominik-close-whisper",
         "gameTime": "1274-10-15T21:00:00",
-        "event": "dm:whisper",
+        "event": "npc:scripted_speech",
         "data": {
-          "description": "Dominik's close whisper to Ed — decline his drink",
-          "text": "Fire whisperScript.close. Only if middle whisper fired. Text: 'If he offers to pour for you tonight, decline gently...' See npcs.brother-dominik-novak.whisperScript.close.",
-          "priority": 1,
-          "category": "story",
-          "dmOnly": true,
-          "checkFlag": "state.flags.ed_has_been_whispered_by_dominik === true"
+          "description": "Dominik's close whisper to Ed — decline his drink (auto-dispatched)",
+          "npcId": "brother-dominik-novak",
+          "npc": "Brother Dominik Novák",
+          "languageId": "slovak",
+          "targetPlayer": "ed",
+          "_deliveryMode": "private_to_ed_chromebook_with_english_to_dm_earbud",
+          "text": "Ak vám dnes v noci ponúkne naliať, jemne odmietnite. Videl som, čo príde z takých láskavostí.",
+          "narratorTranslation": "If he offers to pour for you tonight, decline gently. I have seen what comes of such kindnesses.",
+          "languageNote": "SLOVAK — private to Ed. Dominik's final setup: plant the 'don't drink what he offers' warning. When Vladislav eventually speaks to the party, Ed should decline any hospitality Vlad offers, creating the tension Dominik wants."
         }
       },
       {

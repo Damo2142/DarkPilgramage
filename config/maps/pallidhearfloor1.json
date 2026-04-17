@@ -548,7 +548,7 @@
       "image": "jen.webp",
       "visible": true,
       "hp": {
-        "current": 16,
+        "current": 26,
         "max": 26
       },
       "ac": 12,
@@ -562,12 +562,12 @@
       "image": "ed.webp",
       "visible": true,
       "hp": {
-        "current": 8,
-        "max": 18,
-        "temp": 0
+        "current": 18,
+        "max": 18
       },
       "ac": 10,
-      "nameRevealedToPlayers": false
+      "nameRevealedToPlayers": false,
+      "light": null
     },
     "piotr-kowalski": {
       "tokenId": "piotr-kowalski",
@@ -631,8 +631,8 @@
       "actorSlug": "tomas",
       "name": "Tomas Birkov",
       "type": "npc",
-      "x": 3710,
-      "y": 1750,
+      "x": 3200,
+      "y": 1300,
       "hidden": false,
       "visible": true,
       "hp": {
@@ -688,8 +688,8 @@
       "actorSlug": "patron-farmer",
       "name": "Old Gregor",
       "type": "npc",
-      "x": 3570,
-      "y": 1330,
+      "x": 3150,
+      "y": 1750,
       "hidden": false,
       "visible": true,
       "hp": {
@@ -707,8 +707,8 @@
       "actorSlug": "patron-merchant",
       "name": "Henryk the Merchant",
       "type": "npc",
-      "x": 3430,
-      "y": 1470,
+      "x": 3290,
+      "y": 1890,
       "hidden": false,
       "visible": true,
       "hp": {
@@ -726,8 +726,8 @@
       "actorSlug": "patron-pilgrim",
       "name": "Brother Aldric",
       "type": "npc",
-      "x": 2590,
-      "y": 1050,
+      "x": 2310,
+      "y": 1750,
       "hidden": false,
       "visible": true,
       "hp": {

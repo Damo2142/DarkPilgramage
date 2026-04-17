@@ -1585,19 +1585,41 @@ class CommRouter {
 
   /**
    * Collect observation eventIds that should fire on an active look in the
-   * current scene. Reads from this.config.world?.observations || this.config.observations,
-   * mirroring how observation-service loads them. Filters by simple scene
-   * heuristic: upper-floor scene only includes events tagged 'upper'/'upstairs';
-   * everything else is treated as ground/cellar/anywhere and included for
-   * the ground scene. Unknown scene → return all eventIds.
+   * current scene AND the player's current zone. Reads from
+   * this.config.world?.observations || this.config.observations.
+   *
+   * Beta finding 3 (Saturday 2026-04-17): previously this returned EVERY
+   * registered observation event for the scene. That leaked cellar-only
+   * observations (gas spore, Piotr's chains) to players whose tokens were
+   * in the common room — Ed rolled perception anywhere, gas-spore tier-2
+   * observations fired for him because DC 12 was easy for a halfling rogue.
+   * Now filters by the player's token zone: cellar-tagged observations
+   * only fire if the player is in the cellar-access zone, upper-floor
+   * observations only on the upper floor, etc.
    */
-  _collectActiveLookObservationEvents() {
+  _collectActiveLookObservationEvents(playerId) {
     const cfg = this.config || {};
     const world = cfg.world || {};
     const obsList = world.observations || cfg.observations || [];
     if (!Array.isArray(obsList) || obsList.length === 0) return [];
     const sceneId = String(this.state.get('scene.id') || '').toLowerCase();
     const isUpper = sceneId.includes('upper') || sceneId.includes('upstairs');
+
+    // Determine the player's current zone (if playerId given and player has a token)
+    // Cellar-access zone per map: x=1000-1280, y=600-1020. Cellar interior
+    // (where Piotr + gas spore actually live) per scene _tokenPositioningNote:
+    // x=980-1540, y=1120-1400. We accept either as "cellar" for observation
+    // zone filtering.
+    let playerInCellar = false;
+    if (playerId) {
+      const tok = this.state.get(`map.tokens.${playerId}`);
+      if (tok && typeof tok.x === 'number' && typeof tok.y === 'number') {
+        const inCellarZone  = (tok.x >= 1000 && tok.x <= 1280 && tok.y >= 600  && tok.y <= 1020);
+        const inCellarInner = (tok.x >= 980  && tok.x <= 1540 && tok.y >= 1120 && tok.y <= 1400);
+        playerInCellar = inCellarZone || inCellarInner;
+      }
+    }
+
     const eventIds = [];
     const seen = new Set();
     for (const o of obsList) {
@@ -1605,10 +1627,16 @@ class CommRouter {
       if (!eid || seen.has(eid)) continue;
       const eidLower = String(eid).toLowerCase();
       const isUpperEvent = eidLower.includes('upper') || eidLower.includes('upstairs');
-      // Upper scene: only upper events. Other (or unknown) scenes: skip
-      // explicitly upper-tagged events so they don't leak into the tavern.
+      const isCellarEvent = eidLower.includes('cellar') ||
+        (Array.isArray(o.items) && o.items.some(i => String(i.id || '').toLowerCase().includes('gasspore') || String(i.id || '').toLowerCase().includes('piotr')));
+
+      // Upper scene: only upper events
       if (isUpper && !isUpperEvent) continue;
+      // Ground/other scene: skip upper-tagged events
       if (!isUpper && isUpperEvent && sceneId) continue;
+      // Cellar events: only fire if the player is physically in the cellar
+      if (isCellarEvent && !playerInCellar) continue;
+
       eventIds.push(eid);
       seen.add(eid);
     }
@@ -1656,11 +1684,9 @@ class CommRouter {
     });
 
     // Reference-path triggers — fire each registered observation event
-    // for the current scene. The observation service's _onObservationTrigger
-    // reference branch (`if (!d.text && this.observations.has(d.id))`) will
-    // fire all observations grouped under that eventId, with per-observation
-    // dedup so a given observation only fires once per session.
-    const eventIds = this._collectActiveLookObservationEvents();
+    // for the current scene AND zone. Beta finding 3: now zone-filtered
+    // so cellar observations don't leak to players in the common room.
+    const eventIds = this._collectActiveLookObservationEvents(playerId);
     for (const eid of eventIds) {
       this.bus.dispatch('observation:trigger', {
         id: eid,

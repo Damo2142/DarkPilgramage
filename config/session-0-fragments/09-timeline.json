@@ -45,14 +45,17 @@
       {
         "id": "marta-confession-to-kim",
         "gameTime": "1274-10-15T20:45:00",
-        "event": "dm:whisper",
+        "event": "npc:scripted_speech",
         "data": {
-          "description": "Marta shows Kim the scar — private story beat",
-          "text": "CONDITIONAL: only if Kim is within 5ft of Marta and they have spoken at least once. Marta steers Kim into the kitchen under a pretext of fetching more ale. In the small candlelit space, she pulls her collar aside — a scar along her shoulder and collarbone, old, ragged, the wrong shape for a blade or an animal. She speaks quietly, in Common: 'Three years ago. He doesn't remember. The abbey gave us this inn to hide, but tonight... tonight I'm afraid he will not come back to me.' Pause. 'If he transforms and can't be saved, make it quick. Don't let him feel it.' Delivered private to Kim's Chromebook.",
-          "priority": 2,
-          "category": "story",
-          "dmOnly": true,
-          "checkFlag": "kim_within_5ft_of_marta"
+          "description": "Marta shows Kim the scar — private (auto-dispatched)",
+          "npcId": "marta",
+          "npc": "Marta Kowalski",
+          "languageId": "common",
+          "targetPlayer": "kim",
+          "_deliveryMode": "private_to_kim_chromebook",
+          "text": "Three years ago. He doesn't remember. The abbey gave us this inn to hide, but tonight... tonight I'm afraid he will not come back to me. If he transforms and can't be saved, make it quick. Don't let him feel it.",
+          "narratorTranslation": null,
+          "languageNote": "Marta steers Kim into the kitchen under a pretext of fetching more ale. In the small candlelit space, she pulls her collar aside — a scar along her shoulder and collarbone, old, ragged, the wrong shape for a blade or an animal. Delivered private to Kim's Chromebook. Previous proximity gating (kim_within_5ft_of_marta) removed per Saturday beta finding 2 — proximity can't be reliably evaluated from timed event conditions. Dave should narrate the 'steer into kitchen' approach to justify the private moment."
         }
       },
       {

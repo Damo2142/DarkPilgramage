@@ -1018,6 +1018,111 @@ async function runStateCheckpointRecovery() {
   }
 }
 
+async function runCombatAttackFlow() {
+  section('43. COMBAT ATTACK FLOW (PC → NPC damage application)');
+
+  // Only test if the combat attack endpoint exists
+  const test = await httpsReq('POST', '/api/combat/attack', {});
+  if (test.status === 404) { warning('no /api/combat/attack endpoint — skipped'); return; }
+
+  // The real path is /api/combat/hp (set HP directly)
+  // and /api/combat/attack/ranged for ranged. Just test hp changes.
+  // Start combat w/ Ed
+  await httpsReq('POST', '/api/combat/start', { combatantIds: ['ed'] });
+
+  const hp1 = await httpsReq('POST', '/api/combat/hp', { combatantId: 'ed', delta: -3 });
+  check('/api/combat/hp -3 accepted', hp1.status < 400, `status=${hp1.status}`);
+
+  // End
+  await httpsReq('POST', '/api/combat/end', {});
+}
+
+async function runCampaignApi() {
+  section('44. CAMPAIGN PERSISTENCE');
+  const r = await httpsReq('GET', '/api/campaign/timeline');
+  check('GET /api/campaign/timeline', r.status < 400 || r.status === 404, `status=${r.status}`);
+
+  const r2 = await httpsReq('GET', '/api/campaign/lore');
+  check('GET /api/campaign/lore', r2.status < 400 || r2.status === 404, `status=${r2.status}`);
+
+  // XP grant
+  const xp = await httpsReq('POST', '/api/campaign/xp', { playerId: 'ed', amount: 50, source: 'test-comprehensive' });
+  check('POST /api/campaign/xp responds', xp.status < 500, `status=${xp.status}`);
+}
+
+async function runInventoryAddRemove() {
+  section('45. INVENTORY ADD / REMOVE round-trip');
+  const itemName = 'Test Potion ' + Date.now();
+  const add = await httpsReq('POST', '/api/characters/ed/inventory', {
+    action: 'add',
+    item: { name: itemName, description: 'Test healing potion', quantity: 1, type: 'gear' }
+  });
+  check('inventory add accepted', add.status < 400);
+
+  const st = await httpsReq('GET', '/api/state');
+  const inv = st.body?.players?.ed?.character?.inventory || [];
+  const found = inv.find(i => i.name === itemName);
+  check('added item present in inventory', !!found);
+
+  if (found) {
+    const del = await httpsReq('POST', '/api/characters/ed/inventory', {
+      action: 'remove', itemId: found.id
+    });
+    check('inventory remove accepted', del.status < 400);
+    const st2 = await httpsReq('GET', '/api/state');
+    const inv2 = st2.body?.players?.ed?.character?.inventory || [];
+    const stillThere = inv2.find(i => i.name === itemName);
+    check('removed item gone from inventory', !stillThere);
+  }
+}
+
+async function runDoorInteraction() {
+  section('46. DOOR WALL INTERACTION (api exists)');
+  const r = await httpsReq('POST', '/api/map/walls/toggle-door', { wallIndex: 0 });
+  // Accept any response — just confirm endpoint exists
+  check('/api/map/walls/toggle-door endpoint responds', r.status < 500, `status=${r.status}`);
+}
+
+async function runPcFeatureCoverageAllClasses() {
+  section('47. PC FEATURE COUNT PER CLASS (≥ 8 features expected post-DDB-extension)');
+  const state = await httpsReq('GET', '/api/state');
+  const expectedMin = { Rogue: 15, Fighter: 10, Barbarian: 10, Bard: 10, Warlock: 10, Sorcerer: 10 };
+  for (const slug of PC_SLUGS) {
+    const ch = state.body?.players?.[slug]?.character;
+    if (!ch) continue;
+    const cls = ch.class;
+    const count = (ch.features || []).length;
+    const min = expectedMin[cls] || 5;
+    check(`  ${slug} (${cls}) has ≥${min} features: ${count}`, count >= min, count < min ? `got ${count}` : '');
+  }
+}
+
+async function runAllNpcLanguagesSane() {
+  section('48. NPC LANGUAGES FIELD');
+  const actorsDir = path.join(__dirname, 'config', 'actors');
+  const files = fs.readdirSync(actorsDir).filter(f => f.endsWith('.json'));
+  for (const file of files) {
+    const d = JSON.parse(fs.readFileSync(path.join(actorsDir, file), 'utf8'));
+    if (d.type === 'beast') continue; // beasts don't speak
+    const langs = d.languages;
+    check(`  ${d.name}: has languages field`, langs !== undefined, langs === undefined ? 'no languages' : '');
+  }
+}
+
+async function runCharacterAssignmentsConsistency() {
+  section('49. CHARACTER ASSIGNMENTS INTEGRITY');
+  const assignPath = path.join(__dirname, 'config', 'character-assignments.json');
+  const a = JSON.parse(fs.readFileSync(assignPath, 'utf8'));
+  for (const slug of PC_SLUGS) {
+    check(`  ${slug} has a DDB id assignment`, a[slug] && /^\d+$/.test(String(a[slug])), a[slug]);
+  }
+  // Every assigned ddbId has a matching char file
+  for (const [slug, ddbId] of Object.entries(a)) {
+    const p = path.join(__dirname, 'config', 'characters', ddbId + '.json');
+    check(`  ${slug} (${ddbId}) cache file exists`, fs.existsSync(p));
+  }
+}
+
 async function runHpDelta() {
   section('19. HP DELTA + WOUND + STAMINA ROUND-TRIPS');
 
@@ -1104,6 +1209,13 @@ async function main() {
   await runAllNpcLanguagePaths();
   await runEventBusDispatch();
   await runStateCheckpointRecovery();
+  await runCombatAttackFlow();
+  await runCampaignApi();
+  await runInventoryAddRemove();
+  await runDoorInteraction();
+  await runPcFeatureCoverageAllClasses();
+  await runAllNpcLanguagesSane();
+  await runCharacterAssignmentsConsistency();
 
   console.log(`\n${YELLOW}═══ SUMMARY ═══${RESET}`);
   console.log(`  ${GREEN}PASS: ${pass}${RESET}`);

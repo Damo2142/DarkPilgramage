@@ -981,7 +981,10 @@ class CommRouter {
       if (/fluent|native/.test(fluency)) return { result: 'FULL', sharedLang: spokenId, fluency };
       if (/conversational/.test(fluency)) return { result: 'PARTIAL', sharedLang: spokenId, fluency };
       if (/basic/.test(fluency)) return { result: 'PARTIAL', sharedLang: spokenId, fluency: 'basic' };
-      return { result: 'FULL', sharedLang: spokenId, fluency };
+      if (/partial/.test(fluency)) return { result: 'PARTIAL', sharedLang: spokenId, fluency };
+      // Unknown fluency string — safest default is PARTIAL (partial understanding)
+      // rather than FULL. Only "fluent"/"native" should grant full comprehension.
+      return { result: 'PARTIAL', sharedLang: spokenId, fluency };
     }
 
     // 2. Mutually intelligible language

@@ -233,8 +233,12 @@ async function main() {
     addCheck('server', '/api/comm/npc-speak', false, 'status=' + npcR.status + ' (language gating not exercised)');
   } else {
     await sleep(1500);
-    // Expected: ed + nick have Slovak → FULL. kim + jen do NOT → BARRIER.
-    const slovakExpected = { ed: 'FULL', nick: 'FULL', kim: 'BARRIER', jen: 'BARRIER' };
+    // Expected per character-language-overrides.json:
+    //   ed  = Slovak native → FULL
+    //   nick = Slovak partial (conversational) → PARTIAL
+    //   kim = no Slovak → BARRIER
+    //   jen = no Slovak → BARRIER
+    const slovakExpected = { ed: 'FULL', nick: 'PARTIAL', kim: 'BARRIER', jen: 'BARRIER' };
     for (const p of PLAYERS) {
       const c = clients[p]; if (!c) continue;
       const got = c.events.slice(mark[p]).find(e => e.type === 'npc:speech');

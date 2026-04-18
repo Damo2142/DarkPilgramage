@@ -1495,13 +1495,38 @@ function openPlayerSheet(pid) {
     html += '</div>'; // end DM Inventory section
   }
 
-  // Features and traits
+  // Features and traits — show name, source, description, and a USE button.
+  // Clicking USE declares the feature use via POST /api/characters/feature/declare
+  // which fires a dm:whisper so Dave knows which ability the player is invoking
+  // and fires player:feature_declared so the table UI can react.
   if (ch.features && ch.features.length) {
-    html += '<div class="ov-section"><h3>Features &amp; Traits</h3><div class="ov-list">';
-    html += ch.features.slice(0, 30).map(function(f) {
+    html += '<div class="ov-section"><h3>Features, Traits &amp; Class Abilities (' + ch.features.length + ')</h3>';
+    // Filter out pure language entries (already shown in Languages section)
+    // but keep Thieves' Cant style class languages marked with a class source.
+    var features = ch.features.filter(function(f) {
+      if (typeof f !== 'object') return true;
+      var src = String(f.source || '').toLowerCase();
+      // Drop basic-language entries (Common, Slovak, Polish…) so the list
+      // focuses on actionable class/race features.
+      return !/^language$/i.test(src);
+    });
+    html += '<div class="ov-list" style="display:grid;grid-template-columns:1fr;gap:6px;">';
+    features.forEach(function(f) {
       var nm = typeof f === 'string' ? f : (f.name || '?');
-      return '<div>• ' + esc(nm) + '</div>';
-    }).join('');
+      var src = typeof f === 'object' ? (f.source || '') : '';
+      var desc = typeof f === 'object' ? (f.description || '') : '';
+      html += '<div style="background:var(--bg-dark);border:1px solid var(--border);border-radius:4px;padding:8px 10px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">' +
+          '<div style="font-weight:600;color:var(--gold);font-size:13px;">' + esc(nm) + '</div>' +
+          (src ? '<div style="font-size:10px;color:var(--text-dim);font-style:italic;">' + esc(src) + '</div>' : '') +
+        '</div>' +
+        (desc ? '<div style="font-size:11px;color:var(--text-dim);line-height:1.4;margin-top:4px;">' + esc(desc) + '</div>' : '') +
+        '<div style="margin-top:6px;display:flex;gap:6px;">' +
+          '<button class="tool-btn" style="font-size:10px;padding:3px 10px;" ' +
+          'onclick="declareFeatureUse(\'' + pid + '\',' + JSON.stringify(nm) + ')">USE</button>' +
+        '</div>' +
+      '</div>';
+    });
     html += '</div></div>';
   }
 

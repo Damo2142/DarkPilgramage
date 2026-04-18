@@ -33,6 +33,34 @@ const CLASS_SAVE_PROFS = {
   Artificer: ['con','int']
 };
 
+// SRD armor AC lookup (falls back when DDB doesn't populate
+// definition.armorClass on equipped items — "Leather" etc.).
+// Values match config/srd-equipment.json.
+const SRD_ARMOR_AC = {
+  'padded': { ac: 11, type: 'Light Armor' },
+  'leather': { ac: 11, type: 'Light Armor' },
+  'studded leather': { ac: 12, type: 'Light Armor' },
+  'hide': { ac: 12, type: 'Medium Armor' },
+  'chain shirt': { ac: 13, type: 'Medium Armor' },
+  'scale mail': { ac: 14, type: 'Medium Armor' },
+  'breastplate': { ac: 14, type: 'Medium Armor' },
+  'half plate': { ac: 15, type: 'Medium Armor' },
+  'ring mail': { ac: 14, type: 'Heavy Armor' },
+  'chain mail': { ac: 16, type: 'Heavy Armor' },
+  'splint': { ac: 17, type: 'Heavy Armor' },
+  'plate': { ac: 18, type: 'Heavy Armor' }
+};
+function _lookupArmor(name) {
+  if (!name) return null;
+  const n = String(name).toLowerCase().replace(/\s+armor$/, '').trim();
+  if (SRD_ARMOR_AC[n]) return SRD_ARMOR_AC[n];
+  // partial match — handles "Leather Jerkin", "Studded Leather +1", etc.
+  for (const key of Object.keys(SRD_ARMOR_AC)) {
+    if (n.includes(key)) return SRD_ARMOR_AC[key];
+  }
+  return null;
+}
+
 function abilityMod(score) { return Math.floor((score - 10) / 2); }
 function modStr(mod) { return mod >= 0 ? '+' + mod : '' + mod; }
 
@@ -106,6 +134,48 @@ function recomputeDerivedStats(char) {
   // Initiative defaults to DEX unless an explicit override is already set.
   const dexMod = (abilities.dex || {}).modifier || 0;
   if (typeof char.initiative !== 'number') char.initiative = dexMod;
+
+  // AC — recompute from equipped armor + DEX + shield. DDB frequently
+  // omits definition.armorClass for SRD items like generic Leather, so
+  // we fall back to the SRD_ARMOR_AC table by item name. Shields must be
+  // EXCLUDED from the armor match (DDB labels them type: 'Armor' with
+  // acType: 'shield').
+  const inventory = Array.isArray(char.inventory) ? char.inventory : [];
+  const isShieldItem = (i) => i && (
+    i.acType === 'shield' ||
+    (i.definition && i.definition.type === 'Shield') ||
+    (i.name && /\bshield\b/i.test(i.name))
+  );
+  const equippedArmor = inventory.find((i) => i && i.equipped && !isShieldItem(i) && (
+    (i.definition && (i.definition.armorClass || (i.definition.type && /armor/i.test(i.definition.type) && i.definition.type !== 'Shield'))) ||
+    (i.type && /armor/i.test(String(i.type)) && !/shield/i.test(String(i.type))) ||
+    _lookupArmor(i.name)
+  ));
+  const hasShield = inventory.some((i) => i && i.equipped && isShieldItem(i));
+  if (equippedArmor) {
+    const def = equippedArmor.definition || {};
+    let baseAC = def.armorClass;
+    let armorType = def.type;
+    if (typeof baseAC !== 'number') {
+      const srd = _lookupArmor(equippedArmor.name);
+      if (srd) { baseAC = srd.ac; armorType = srd.type; }
+    }
+    if (typeof baseAC === 'number') {
+      let ac;
+      if (armorType === 'Light Armor') ac = baseAC + dexMod;
+      else if (armorType === 'Medium Armor') ac = baseAC + Math.min(dexMod, 2);
+      else if (armorType === 'Heavy Armor') ac = baseAC;
+      else ac = baseAC + dexMod;
+      if (hasShield) ac += 2;
+      // Magic bonus from the item itself (e.g. +1 Leather → bonus=1)
+      const magicBonus = Number(equippedArmor.magical || equippedArmor.bonus || 0);
+      if (Number.isFinite(magicBonus) && magicBonus > 0) ac += magicBonus;
+      char.ac = ac;
+    }
+  } else if (typeof char.ac !== 'number') {
+    // No armor equipped — unarmored defense or plain 10+DEX
+    char.ac = 10 + dexMod + (hasShield ? 2 : 0);
+  }
 
   return char;
 }
@@ -478,10 +548,149 @@ class CharacterService {
             _broadcastAbilityState(playerId);
             return res.json({ ok: true, remaining: uses - 1 });
           }
-          default:
-            return res.status(400).json({ error: 'Unknown ability: ' + ability });
+
+          // ── Rogue (Ed = Vaelthion) ───────────────────────────────
+          case 'sneak_attack': {
+            // Per-turn flag; resets on turn-change event (combat:next_turn).
+            // Marks intent so the DM knows the next hit is a Sneak Attack +2d6.
+            if (abilities.sneak_attack_used_this_turn) {
+              return res.status(400).json({ error: 'Sneak Attack already declared this turn.' });
+            }
+            _setAbility(playerId, 'sneak_attack_used_this_turn', true);
+            const rogueLevel = (playerState.character && playerState.character.level) || 3;
+            const saDice = Math.ceil(rogueLevel / 2);
+            this.bus.dispatch('dm:whisper', {
+              text: `${charName} declares Sneak Attack — +${saDice}d6 damage on the next hit this turn (requires finesse/ranged + advantage OR ally within 5ft of target).`,
+              priority: 1, category: 'combat'
+            });
+            this.bus.dispatch('combat:sneak_attack_declared', { playerId, charName, dice: saDice + 'd6' });
+            _broadcastAbilityState(playerId);
+            return res.json({ ok: true, message: `Sneak Attack declared (${saDice}d6)`, abilities: _getAbilities(playerId) });
+          }
+          case 'cunning_action_dash':
+          case 'cunning_action_disengage':
+          case 'cunning_action_hide': {
+            if (abilities.cunning_action_used_this_turn) {
+              return res.status(400).json({ error: 'Cunning Action already used this turn (bonus action spent).' });
+            }
+            _setAbility(playerId, 'cunning_action_used_this_turn', true);
+            const actionKind = ability.replace('cunning_action_', '').toUpperCase();
+            this.bus.dispatch('dm:whisper', {
+              text: `${charName} uses Cunning Action — ${actionKind} as a bonus action.`,
+              priority: 2, category: 'combat'
+            });
+            _broadcastAbilityState(playerId);
+            return res.json({ ok: true, message: `Cunning Action: ${actionKind}`, abilities: _getAbilities(playerId) });
+          }
+
+          // ── Sorcerer (Spurt) ─────────────────────────────────────
+          case 'sorcery_points': {
+            if (action !== 'modify') return res.status(400).json({ error: 'action must be modify with delta' });
+            const delta = parseInt(req.body.delta, 10);
+            if (!Number.isFinite(delta)) return res.status(400).json({ error: 'delta (integer) required' });
+            const sorcLevel = (playerState.character && playerState.character.level) || 3;
+            const current = typeof abilities.sorcery_points === 'number' ? abilities.sorcery_points : sorcLevel;
+            const next = Math.max(0, Math.min(sorcLevel, current + delta));
+            _setAbility(playerId, 'sorcery_points', next);
+            this.bus.dispatch('dm:whisper', {
+              text: `${charName} sorcery points: ${current} → ${next} / ${sorcLevel}.`,
+              priority: 3, category: 'resource'
+            });
+            _broadcastAbilityState(playerId);
+            return res.json({ ok: true, sorcery_points: next, max: sorcLevel, abilities: _getAbilities(playerId) });
+          }
+          case 'wild_magic_surge': {
+            // Roll d20 — on natural 1, trigger a Wild Magic Surge (DM rolls d100).
+            const surgeRoll = Math.floor(Math.random() * 20) + 1;
+            const surged = surgeRoll === 1;
+            _setAbility(playerId, 'wild_magic_last_roll', surgeRoll);
+            if (surged) {
+              const d100 = Math.floor(Math.random() * 100) + 1;
+              _setAbility(playerId, 'wild_magic_last_d100', d100);
+              this.bus.dispatch('dm:whisper', {
+                text: `⚡ WILD MAGIC SURGE — ${charName} rolled 1 on surge check. DM: roll on surge table (d100 = ${d100}). Effect fires immediately.`,
+                priority: 1, category: 'magic'
+              });
+            } else {
+              this.bus.dispatch('dm:whisper', {
+                text: `${charName} wild magic check: d20=${surgeRoll}. No surge.`,
+                priority: 4, category: 'magic'
+              });
+            }
+            _broadcastAbilityState(playerId);
+            return res.json({ ok: true, surged, d20: surgeRoll, message: surged ? 'WILD MAGIC SURGE!' : 'no surge', abilities: _getAbilities(playerId) });
+          }
+
+          // ── Warlock (Barry) ──────────────────────────────────────
+          case 'pact_slots': {
+            if (action !== 'modify') return res.status(400).json({ error: 'action must be modify with delta' });
+            const delta = parseInt(req.body.delta, 10);
+            if (!Number.isFinite(delta)) return res.status(400).json({ error: 'delta (integer) required' });
+            const wlLevel = (playerState.character && playerState.character.level) || 3;
+            const maxSlots = wlLevel === 1 ? 1 : 2; // PHB Warlock (L3 = 2 slots)
+            const used = typeof abilities.pact_slots_used === 'number' ? abilities.pact_slots_used : 0;
+            const remaining = maxSlots - used;
+            // delta > 0 = recover a slot; delta < 0 = spend a slot
+            const nextUsed = Math.max(0, Math.min(maxSlots, used - delta));
+            _setAbility(playerId, 'pact_slots_used', nextUsed);
+            this.bus.dispatch('dm:whisper', {
+              text: `${charName} pact slots: ${maxSlots - used} → ${maxSlots - nextUsed} / ${maxSlots}.`,
+              priority: 3, category: 'resource'
+            });
+            _broadcastAbilityState(playerId);
+            return res.json({ ok: true, remaining: maxSlots - nextUsed, max: maxSlots, abilities: _getAbilities(playerId) });
+          }
+          case 'hex_active': {
+            if (abilities.hex_active) return res.status(400).json({ error: 'Hex already active. End it first.' });
+            _setAbility(playerId, 'hex_active', true);
+            _setAbility(playerId, 'concentration', 'Hex');
+            this.bus.dispatch('dm:whisper', {
+              text: `${charName} casts Hex. Concentration active — +1d6 necrotic on hits, disadvantage on one ability check type of choice. Lasts up to 1h (concentration).`,
+              priority: 1, category: 'magic'
+            });
+            _broadcastAbilityState(playerId);
+            return res.json({ ok: true, active: true, message: 'Hex active', abilities: _getAbilities(playerId) });
+          }
+          case 'hex_end': {
+            _setAbility(playerId, 'hex_active', false);
+            _setAbility(playerId, 'concentration', null);
+            this.bus.dispatch('dm:whisper', {
+              text: `${charName} ends Hex. Concentration dropped.`,
+              priority: 2, category: 'magic'
+            });
+            _broadcastAbilityState(playerId);
+            return res.json({ ok: true, active: false, abilities: _getAbilities(playerId) });
+          }
+
+          // ── Generic fallback: declare any named feature to the DM ────
+          default: {
+            // If the client sent an unrecognized ability, treat it as a
+            // generic "declare use" event. The DM gets an earbud whisper
+            // with the feature name; no automated mechanics apply. This
+            // covers Weapon Mastery declarations, racial traits, and any
+            // feature not yet wired to a specific handler.
+            this.bus.dispatch('dm:whisper', {
+              text: `${charName} declares use of: ${ability}. Apply mechanics per 5e rules.`,
+              priority: 2, category: 'ability-declare'
+            });
+            this.bus.dispatch('character:ability_declared', { playerId, ability, charName });
+            _broadcastAbilityState(playerId);
+            return res.json({ ok: true, message: `${ability} declared to DM`, abilities: _getAbilities(playerId) });
+          }
         }
       });
+
+      // Reset per-turn ability flags at end of each combatant's turn
+      this.bus.subscribe('combat:next_turn', (env) => {
+        const combatantId = env.data && env.data.previousCombatantId;
+        if (!combatantId) return;
+        const abil = _getAbilities(combatantId);
+        if (abil.sneak_attack_used_this_turn || abil.cunning_action_used_this_turn) {
+          _setAbility(combatantId, 'sneak_attack_used_this_turn', false);
+          _setAbility(combatantId, 'cunning_action_used_this_turn', false);
+          _broadcastAbilityState(combatantId);
+        }
+      }, 'characters');
 
       // Addition 6 — DM item award. Append-only path that dispatches
       // both a DM whisper and a player:notification so the target player
@@ -656,10 +865,19 @@ class CharacterService {
         }
 
         this.state.set('players.' + playerId + '.character.inventory', inventory);
+        // Recompute AC + saves + skills after any inventory change so
+        // armor / shield equip/unequip immediately updates the character
+        // sheet and combat service.
+        const currentChar = this.state.get('players.' + playerId + '.character');
+        if (currentChar) {
+          currentChar.inventory = inventory;
+          recomputeDerivedStats(currentChar);
+          this.state.set('players.' + playerId + '.character', currentChar);
+        }
         try { this._persistPlayerCharacter(playerId); } catch (e) {}
         this.bus.dispatch('character:update', { playerId });
         this.bus.dispatch('player:inventory_update', { playerId });
-        return res.json({ ok: true, inventory });
+        return res.json({ ok: true, inventory, ac: currentChar && currentChar.ac });
       });
 
       // Addition 5 — player notes persistence (server-side, debounced client).
@@ -1229,19 +1447,63 @@ class CharacterService {
     const dexMod = char.abilities?.dex?.modifier ?? 0;
     let ac = 10 + dexMod;
     const equipped = (char.inventory || []).filter(i => i.equipped);
-    const armor = equipped.find(i => i.acType && i.acType !== 'shield');
+
+    // Find equipped armor. Accepts three shapes:
+    //   1. Legacy: { acType: 'light'|'medium'|'heavy', ac: <base> }
+    //   2. DDB sync: { type: 'Armor', definition: { armorClass, type: 'Light Armor'|... } }
+    //   3. Hand-authored or SRD-stripped: { name: 'Leather', type: 'Armor', ac: <base> or no ac }
+    //      → fall back to SRD_ARMOR_AC lookup by name.
+    // Shields are EXCLUDED from this find — they apply separately below.
+    // DDB labels shields with type: 'Armor' + acType: 'shield', so we must
+    // reject on acType first.
+    const isShield = (i) => i.acType === 'shield'
+      || (i.definition && i.definition.type === 'Shield')
+      || (i.name && /\bshield\b/i.test(i.name));
+    const armor = equipped.find(i => {
+      if (isShield(i)) return false;
+      if (i.acType && i.acType !== 'shield') return true;
+      const def = i.definition || {};
+      if (def.type && /armor/i.test(def.type) && def.type !== 'Shield') return true;
+      if (i.type && /armor/i.test(String(i.type)) && !/shield/i.test(String(i.type))) return true;
+      if (_lookupArmor(i.name)) return true;
+      return false;
+    });
     if (armor) {
-      if (armor.acType === 'light') ac = armor.ac + dexMod;
-      else if (armor.acType === 'medium') ac = armor.ac + Math.min(2, dexMod);
-      else if (armor.acType === 'heavy') ac = armor.ac;
+      let baseAC = armor.ac;
+      let tier = armor.acType; // legacy: 'light' / 'medium' / 'heavy'
+      // DDB definition shape
+      if ((baseAC == null || !tier) && armor.definition) {
+        if (armor.definition.armorClass != null) baseAC = armor.definition.armorClass;
+        const t = String(armor.definition.type || '').toLowerCase();
+        if (/light/.test(t)) tier = 'light';
+        else if (/medium/.test(t)) tier = 'medium';
+        else if (/heavy/.test(t)) tier = 'heavy';
+      }
+      // SRD name lookup — authoritative fallback for stripped items
+      if (baseAC == null || !tier) {
+        const srd = _lookupArmor(armor.name);
+        if (srd) {
+          if (baseAC == null) baseAC = srd.ac;
+          if (!tier) tier = /light/i.test(srd.type) ? 'light' : /medium/i.test(srd.type) ? 'medium' : /heavy/i.test(srd.type) ? 'heavy' : null;
+        }
+      }
+      if (typeof baseAC === 'number' && tier) {
+        if (tier === 'light') ac = baseAC + dexMod;
+        else if (tier === 'medium') ac = baseAC + Math.min(2, dexMod);
+        else if (tier === 'heavy') ac = baseAC;
+        else ac = baseAC + dexMod;
+      }
     }
-    const shield = equipped.find(i => i.acType === 'shield');
-    if (shield) ac += shield.ac || 2;
-    // Magic item AC bonuses
+
+    // Shield — re-use the shield detector from above for consistency
+    const shield = equipped.find(isShield);
+    if (shield) ac += shield.ac || (shield.definition && shield.definition.armorClass) || 2;
+
+    // Magic bonus: item.modifiers.acBonus OR item.bonus OR item.magical (numeric)
     for (const item of equipped) {
-      if (!item.modifiers?.acBonus) continue;
       if (item.attunement && !item.attuned) continue;
-      ac += item.modifiers.acBonus;
+      const mb = item.modifiers?.acBonus;
+      if (typeof mb === 'number') ac += mb;
     }
     return ac;
   }
@@ -1694,22 +1956,113 @@ class CharacterService {
       }
     }
 
-    // Features
+    // Features — harvest from multiple DDB surfaces so we catch class
+    // features (Rage, Sneak Attack, Action Surge…), racial traits
+    // (Darkvision, Fey Ancestry…), feats, AND the legacy modifier list.
     const features = [];
+
+    // 1. Class features, level-gated. DDB exposes these on each class entry
+    //    as classFeatures[] with { definition: { name, snippet, description },
+    //    requiredLevel }. For lvl-3 characters we keep any feature whose
+    //    requiredLevel <= character's level in that class.
+    for (const c of (d.classes || [])) {
+      const clsName = c.definition?.name || 'Class';
+      const clsLevel = c.level || 1;
+      const defFeatures = c.definition?.classFeatures || [];
+      const instFeatures = c.classFeatures || [];
+      // Class-level pooled sources — cover both where DDB may put them
+      const merged = [...defFeatures, ...instFeatures];
+      const seen = new Set();
+      for (const cf of merged) {
+        const def = cf.definition || cf;
+        const lvl = cf.requiredLevel ?? cf.level ?? def.requiredLevel ?? 1;
+        if (lvl > clsLevel) continue;
+        const nm = def.name;
+        if (!nm || seen.has(nm)) continue;
+        seen.add(nm);
+        const descRaw = def.snippet || def.description || '';
+        const desc = String(descRaw).replace(/<[^>]+>/g, '').trim().slice(0, 400);
+        features.push({ name: nm, source: `${clsName} ${lvl}`, description: desc });
+      }
+      // Subclass features
+      const subFeatures = [
+        ...(c.subclassDefinition?.classFeatures || []),
+        ...(c.classFeatures?.filter(f => (f.definition?.componentTypeId) || (f.definition?.source === 'subclass')) || [])
+      ];
+      const subSeen = new Set();
+      for (const sf of subFeatures) {
+        const def = sf.definition || sf;
+        const lvl = sf.requiredLevel ?? def.requiredLevel ?? 1;
+        if (lvl > clsLevel) continue;
+        const nm = def.name;
+        if (!nm || subSeen.has(nm)) continue;
+        subSeen.add(nm);
+        const descRaw = def.snippet || def.description || '';
+        const desc = String(descRaw).replace(/<[^>]+>/g, '').trim().slice(0, 400);
+        features.push({
+          name: nm,
+          source: `${c.subclassDefinition?.name || 'Subclass'} ${lvl}`,
+          description: desc
+        });
+      }
+    }
+
+    // 2. Racial traits — DDB exposes as d.race.racialTraits[] with
+    //    { definition: { name, snippet, description } }. These include
+    //    Darkvision, Fey Ancestry, Stonecunning, Lucky, Brave, etc.
+    for (const rt of (d.race?.racialTraits || [])) {
+      const def = rt.definition || rt;
+      const nm = def.name;
+      if (!nm) continue;
+      const descRaw = def.snippet || def.description || '';
+      const desc = String(descRaw).replace(/<[^>]+>/g, '').trim().slice(0, 400);
+      features.push({ name: nm, source: d.race?.fullName || d.race?.baseRaceName || 'Race', description: desc });
+    }
+
+    // 3. Feats — d.feats[] with { definition: { name, ... } }
+    for (const ft of (d.feats || [])) {
+      const def = ft.definition || ft;
+      const nm = def.name;
+      if (!nm) continue;
+      const descRaw = def.snippet || def.description || '';
+      const desc = String(descRaw).replace(/<[^>]+>/g, '').trim().slice(0, 400);
+      features.push({ name: nm, source: 'Feat', description: desc });
+    }
+
+    // 4. Background features
+    for (const bf of (d.background?.customBackground?.featuresBackground || [])) {
+      const def = bf.definition || bf;
+      const nm = def.name;
+      if (!nm) continue;
+      features.push({ name: nm, source: 'Background', description: (def.snippet || def.description || '').replace(/<[^>]+>/g,'').slice(0, 400) });
+    }
+    if (d.background?.definition?.featureName) {
+      features.push({
+        name: d.background.definition.featureName,
+        source: 'Background: ' + (d.background.definition.name || ''),
+        description: (d.background.definition.featureDescription || '').replace(/<[^>]+>/g,'').slice(0, 400)
+      });
+    }
+
+    // 5. Modifier-based features (legacy path — Darkvision from modifiers,
+    //    Damage Resistance, etc.). Kept for backwards compatibility.
     for (const mod of allMods) {
       if (mod.type === 'bonus' || !mod.friendlyTypeName || !mod.friendlySubtypeName) continue;
       if (mod.type === 'proficiency' || mod.type === 'expertise') continue;
+      if (mod.type === 'language') continue; // covered by languages[]
       features.push({
         name: mod.friendlySubtypeName,
         source: mod.friendlyTypeName,
         description: mod.description || ''
       });
     }
-    // Deduplicate features by name
+
+    // Deduplicate by name (case-insensitive).
     const seenFeatures = new Set();
     const uniqueFeatures = features.filter(f => {
-      if (seenFeatures.has(f.name)) return false;
-      seenFeatures.add(f.name);
+      const key = String(f.name || '').toLowerCase();
+      if (!key || seenFeatures.has(key)) return false;
+      seenFeatures.add(key);
       return true;
     });
 

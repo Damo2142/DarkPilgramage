@@ -778,6 +778,46 @@
           <div style="text-align:center;margin-top:6px;color:#c8a820;font-size:13px;">Uses Remaining: <span id="action-surge-uses">1 / 1</span></div>
           <div style="font-size:11px;color:#6a5a48;margin-top:6px;line-height:1.5;">Gain an additional action this turn. Useable once per short rest.</div>
         </div>
+        <div id="ability-rogue" class="panel" style="display:none;">
+          <div class="st">Sneak Attack (2d6 at L3)</div>
+          <button class="add-btn" style="background:#5a1a4a;color:#fff;width:100%;padding:12px;font-size:14px;font-weight:bold;" onclick="declareAbility('sneak_attack')">🗡 DECLARE SNEAK ATTACK</button>
+          <div style="text-align:center;margin-top:6px;color:#c8a820;font-size:13px;">Used this turn: <span id="sneak-attack-flag">NO</span></div>
+          <div style="font-size:11px;color:#6a5a48;margin-top:6px;line-height:1.5;">Once per turn, add 2d6 to damage with a finesse/ranged weapon when you have advantage OR an ally is within 5ft of the target.</div>
+          <div class="st" style="margin-top:18px;">Cunning Action</div>
+          <div style="display:flex;gap:4px;">
+            <button class="add-btn" style="flex:1;background:#3a4a2a;color:#fff;padding:10px 4px;font-size:12px;" onclick="declareAbility('cunning_action_dash')">🏃 Dash</button>
+            <button class="add-btn" style="flex:1;background:#3a4a2a;color:#fff;padding:10px 4px;font-size:12px;" onclick="declareAbility('cunning_action_disengage')">↩ Disengage</button>
+            <button class="add-btn" style="flex:1;background:#3a4a2a;color:#fff;padding:10px 4px;font-size:12px;" onclick="declareAbility('cunning_action_hide')">👤 Hide</button>
+          </div>
+          <div style="font-size:11px;color:#6a5a48;margin-top:6px;line-height:1.5;">Bonus action: Dash, Disengage, or Hide. Consumes your bonus action for the turn.</div>
+        </div>
+        <div id="ability-sorcerer" class="panel" style="display:none;">
+          <div class="st">Sorcery Points</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button class="add-btn" style="background:#3a3028;color:#c8a820;padding:8px 14px;font-size:14px;" onclick="modifySorceryPoints(-1)">−</button>
+            <div style="flex:1;text-align:center;color:#c8a820;font-size:16px;font-weight:bold;">Points: <span id="sorcery-points-display">3 / 3</span></div>
+            <button class="add-btn" style="background:#3a3028;color:#c8a820;padding:8px 14px;font-size:14px;" onclick="modifySorceryPoints(+1)">+</button>
+          </div>
+          <div style="font-size:11px;color:#6a5a48;margin-top:6px;line-height:1.5;">Convert slot→points (bonus action) or points→slot. Spend on Metamagic. Long rest restores.</div>
+          <div class="st" style="margin-top:18px;">Wild Magic Surge</div>
+          <button class="add-btn" style="background:#b8408b;color:#fff;width:100%;padding:12px;font-size:14px;font-weight:bold;" onclick="declareAbility('wild_magic_surge')">✨ ROLL WILD MAGIC SURGE</button>
+          <div style="font-size:11px;color:#6a5a48;margin-top:6px;line-height:1.5;">After casting sorcerer spell 1+: roll d20 → on 1, DM rolls d100 on Wild Magic Surge table.</div>
+        </div>
+        <div id="ability-warlock" class="panel" style="display:none;">
+          <div class="st">Pact Magic (Warlock 3 — 2× L2 slots)</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button class="add-btn" style="background:#3a3028;color:#c8a820;padding:8px 14px;font-size:14px;" onclick="modifyPactSlots(-1)">−</button>
+            <div style="flex:1;text-align:center;color:#c8a820;font-size:16px;font-weight:bold;">Slots: <span id="pact-slots-display">2 / 2</span></div>
+            <button class="add-btn" style="background:#3a3028;color:#c8a820;padding:8px 14px;font-size:14px;" onclick="modifyPactSlots(+1)">+</button>
+          </div>
+          <div style="font-size:11px;color:#6a5a48;margin-top:6px;line-height:1.5;">Recovers on short rest.</div>
+          <div class="st" style="margin-top:18px;">Hex (Concentration)</div>
+          <button id="btn-hex" class="add-btn" style="background:#5a1a4a;color:#fff;width:100%;padding:12px;font-size:14px;font-weight:bold;" onclick="declareAbility('hex_active')">🔗 APPLY HEX</button>
+          <button id="btn-end-hex" class="add-btn" style="background:#3a1a2a;color:#fff;width:100%;padding:12px;font-size:14px;font-weight:bold;display:none;" onclick="declareAbility('hex_end')">END HEX</button>
+          <div style="font-size:11px;color:#6a5a48;margin-top:6px;line-height:1.5;">Curse target: +1d6 necrotic on your hits + disadvantage on one ability check type. Requires concentration.</div>
+          <div class="st" style="margin-top:18px;">Invocations</div>
+          <div style="font-size:11px;color:#6a5a48;line-height:1.5;">Invocations listed in Features tab. Always-on effects apply automatically in the narrative — DM applies effects manually.</div>
+        </div>
         <div id="ability-rest-controls" class="panel" style="margin-top:16px;">
           <div class="st">Rest</div>
           <div style="display:flex;gap:6px;">
@@ -1724,16 +1764,17 @@ function renderAbilities() {
   // `window.char && char.class` gate always produced '' and no ability
   // panel would ever show. Read char.class directly with a safety guard.
   var cls = (char && char.class) || '';
+  var lvl = (char && char.level) || 1;
   var empty = document.getElementById('abilities-empty');
-  var rage = document.getElementById('ability-rage');
-  var bardic = document.getElementById('ability-bardic');
-  var fighter = document.getElementById('ability-fighter');
-  if (rage) rage.style.display = 'none';
-  if (bardic) bardic.style.display = 'none';
-  if (fighter) fighter.style.display = 'none';
+  var panels = ['rage','bardic','fighter','rogue','sorcerer','warlock'];
+  panels.forEach(function(p){
+    var el = document.getElementById('ability-' + p);
+    if (el) el.style.display = 'none';
+  });
   var any = false;
   var abil = (_abilityState && _abilityState[PID]) || {};
   if (/Barbarian/i.test(cls)) {
+    var rage = document.getElementById('ability-rage');
     if (rage) rage.style.display = 'block';
     any = true;
     var rUses = typeof abil.rage_uses === 'number' ? abil.rage_uses : 3;
@@ -1746,18 +1787,89 @@ function renderAbilities() {
     if (active) showRageBanner(); else hideRageBanner();
   }
   if (/Bard/i.test(cls)) {
+    var bardic = document.getElementById('ability-bardic');
     if (bardic) bardic.style.display = 'block';
     any = true;
     var bUses = typeof abil.bardic_inspiration_uses === 'number' ? abil.bardic_inspiration_uses : 4;
     updateAbilityUses('bardic_inspiration', bUses, 4);
   }
   if (/Fighter/i.test(cls)) {
+    var fighter = document.getElementById('ability-fighter');
     if (fighter) fighter.style.display = 'block';
     any = true;
     updateAbilityUses('second_wind', typeof abil.second_wind_uses === 'number' ? abil.second_wind_uses : 1, 1);
     updateAbilityUses('action_surge', typeof abil.action_surge_uses === 'number' ? abil.action_surge_uses : 1, 1);
   }
+  if (/Rogue/i.test(cls)) {
+    var rogue = document.getElementById('ability-rogue');
+    if (rogue) rogue.style.display = 'block';
+    any = true;
+    var saFlag = document.getElementById('sneak-attack-flag');
+    if (saFlag) saFlag.textContent = abil.sneak_attack_used_this_turn ? 'YES' : 'NO';
+  }
+  if (/Sorcerer/i.test(cls)) {
+    var sorc = document.getElementById('ability-sorcerer');
+    if (sorc) sorc.style.display = 'block';
+    any = true;
+    var sp = typeof abil.sorcery_points === 'number' ? abil.sorcery_points : lvl;
+    var spDisp = document.getElementById('sorcery-points-display');
+    if (spDisp) spDisp.textContent = sp + ' / ' + lvl;
+  }
+  if (/Warlock/i.test(cls)) {
+    var wl = document.getElementById('ability-warlock');
+    if (wl) wl.style.display = 'block';
+    any = true;
+    var maxSlots = lvl === 1 ? 1 : 2;  // Warlock L1: 1, L2+: 2
+    var used = typeof abil.pact_slots_used === 'number' ? abil.pact_slots_used : 0;
+    var remaining = Math.max(0, maxSlots - used);
+    var slotDisp = document.getElementById('pact-slots-display');
+    if (slotDisp) slotDisp.textContent = remaining + ' / ' + maxSlots;
+    var hexActive = !!abil.hex_active;
+    var btnHex = document.getElementById('btn-hex');
+    var btnEndHex = document.getElementById('btn-end-hex');
+    if (btnHex) btnHex.style.display = hexActive ? 'none' : 'block';
+    if (btnEndHex) btnEndHex.style.display = hexActive ? 'block' : 'none';
+  }
   if (empty) empty.style.display = any ? 'none' : 'block';
+}
+
+// Generic ability-declare helper for features that don't have dedicated UI
+// mechanics — fires the backend endpoint which whispers the DM + applies
+// simple state changes (sneak_attack_used_this_turn, cunning_action_used,
+// hex_active, wild_magic_surge_rolled).
+function declareAbility(abilityName) {
+  fetch('/api/characters/ability', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ playerId: PID, ability: abilityName, action: 'declare' })
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      if (d.abilities) { _abilityState = _abilityState || {}; _abilityState[PID] = d.abilities; }
+      try { renderAbilities(); } catch (e) {}
+      showToast('Ability', (d.message || abilityName + ' declared'), 3000);
+    } else {
+      showToast('System', d.error || 'Ability unavailable', 3000);
+    }
+  }).catch(e => showToast('System', 'Ability failed: ' + e.message, 3000));
+}
+
+// Sorcery Points +/- buttons
+function modifySorceryPoints(delta) {
+  fetch('/api/characters/ability', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ playerId: PID, ability: 'sorcery_points', action: 'modify', delta: delta })
+  }).then(r => r.json()).then(d => {
+    if (d.ok && d.abilities) { _abilityState[PID] = d.abilities; renderAbilities(); }
+  }).catch(e => showToast('System', 'failed: ' + e.message, 3000));
+}
+
+// Pact slots +/- buttons
+function modifyPactSlots(delta) {
+  fetch('/api/characters/ability', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ playerId: PID, ability: 'pact_slots', action: 'modify', delta: delta })
+  }).then(r => r.json()).then(d => {
+    if (d.ok && d.abilities) { _abilityState[PID] = d.abilities; renderAbilities(); }
+  }).catch(e => showToast('System', 'failed: ' + e.message, 3000));
 }
 
 function updateAbilityUses(ability, remaining, max) {

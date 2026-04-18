@@ -1,6 +1,88 @@
 const fs = require('fs');
 const path = require('path');
 
+// Normalize an SRD-format actor stat block (open5e schema — snake_case,
+// flat ability scores) into the PC-style camelCase shape that combat-service,
+// dashboard UI, and AI prompts expect. Preserves all existing fields —
+// adds the normalized copies alongside so both shapes are readable.
+// Does NOT overwrite authoritative statblock saves/skills with recomputed
+// values; NPCs/monsters have hand-authored bonuses that must be trusted.
+function _abilityMod(score) { return Math.floor(((score || 10) - 10) / 2); }
+function _normalizeActorStatBlock(a) {
+  if (!a || typeof a !== 'object') return a;
+  // AC / HP
+  if (a.ac == null && a.armor_class != null) a.ac = a.armor_class;
+  if (!a.hp && a.hit_points != null) {
+    a.hp = { current: a.hit_points, max: a.hit_points, temp: 0 };
+  }
+  // Speed can be number or object
+  if (typeof a.speed === 'object' && a.speed) {
+    if (a.speed.walk != null && typeof a.speed.walk === 'number') {
+      a._speedWalk = a.speed.walk;
+    }
+  }
+  // Abilities — build nested structure from flat scores.
+  // If existing abilities object is present (PC-style char file), leave alone.
+  if (!a.abilities || typeof a.abilities !== 'object' || !a.abilities.str) {
+    const flatMap = { str: 'strength', dex: 'dexterity', con: 'constitution',
+                      int: 'intelligence', wis: 'wisdom', cha: 'charisma' };
+    const abilities = {};
+    let anyPresent = false;
+    for (const [abbr, longName] of Object.entries(flatMap)) {
+      const score = a[longName];
+      if (typeof score === 'number') {
+        anyPresent = true;
+        const mod = _abilityMod(score);
+        abilities[abbr] = { score, modifier: mod, modifierStr: (mod >= 0 ? '+' : '') + mod };
+      }
+    }
+    if (anyPresent) a.abilities = abilities;
+  }
+  // Saving throws — SRD uses flat `<ability>_save: <total-bonus>` fields
+  // (e.g. dexterity_save: 9 for Vladislav). The number IS the total
+  // modifier including ability and proficiency — trust it. Build the
+  // structured savingThrows shape combat + UI expect.
+  if (!a.savingThrows || typeof a.savingThrows !== 'object') {
+    const saveMap = { str: 'strength_save', dex: 'dexterity_save', con: 'constitution_save',
+                      int: 'intelligence_save', wis: 'wisdom_save', cha: 'charisma_save' };
+    const savingThrows = {};
+    let anyPresent = false;
+    for (const [abbr, field] of Object.entries(saveMap)) {
+      if (typeof a[field] === 'number') {
+        anyPresent = true;
+        savingThrows[abbr] = { modifier: a[field], proficient: true };
+      } else if (a.abilities && a.abilities[abbr]) {
+        // No explicit save — use raw ability modifier, not proficient.
+        savingThrows[abbr] = { modifier: a.abilities[abbr].modifier, proficient: false };
+      }
+    }
+    if (anyPresent || (a.abilities && Object.keys(a.abilities).length)) {
+      a.savingThrows = savingThrows;
+    }
+  }
+  // Skills — SRD ships a flat object { perception: 4, stealth: 6 }.
+  // UI wants { perception: { modifier, proficiency } }. Only transform if
+  // the existing shape is flat numbers.
+  if (a.skills && typeof a.skills === 'object') {
+    const first = Object.values(a.skills)[0];
+    if (typeof first === 'number') {
+      const out = {};
+      for (const [sk, mod] of Object.entries(a.skills)) {
+        // SRD uses spaces, PC-style uses hyphens ('animal-handling' vs 'animal handling')
+        const key = sk.replace(/\s+/g, '-').toLowerCase();
+        out[key] = { modifier: mod, proficiency: 'proficiency' };
+      }
+      a.skills = out;
+    }
+  }
+  // CR — SRD `challenge_rating` string, normalize to camelCase + numeric when possible
+  if (a.cr == null && a.challenge_rating != null) a.cr = a.challenge_rating;
+  // Actions — SRD has `attack_bonus`, `damage_dice`, `damage_bonus` on each.
+  // Combat-service already accepts both snake and camel (see _rollNpcAttack),
+  // so no transform needed — just note it's intentional.
+  return a;
+}
+
 class MapService {
   constructor() {
     this.name = 'map';
@@ -104,6 +186,7 @@ class MapService {
         const data = JSON.parse(fs.readFileSync(path.join(actorsDir, file), 'utf8'));
         if (data.slug) {
           data.custom = true;
+          _normalizeActorStatBlock(data);
           this.customActors.set(data.slug, data);
         }
       } catch(e) { console.warn(`[MapService] Failed to load actor ${file}:`, e.message); }

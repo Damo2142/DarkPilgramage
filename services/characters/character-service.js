@@ -1259,6 +1259,16 @@ class CharacterService {
           if (k.startsWith('_')) continue;
           langOverrides[k] = data[k];
         }
+        // Slug aliases — the override file was authored with short slugs
+        // (e.g. "spurt") but character-assignments maps players to longer
+        // slugs (e.g. "spurt-ai-pc"). Alias the common variants so both
+        // the override file AND the assignments file stay working.
+        const ALIASES = { 'spurt': 'spurt-ai-pc' };
+        for (const [shortKey, fullKey] of Object.entries(ALIASES)) {
+          if (langOverrides[shortKey] && !langOverrides[fullKey]) {
+            langOverrides[fullKey] = langOverrides[shortKey];
+          }
+        }
       }
     } catch (err) {
       console.warn('[Characters] Language overrides parse failed:', err.message);

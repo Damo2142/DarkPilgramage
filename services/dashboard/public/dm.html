@@ -519,7 +519,7 @@
     <button id="btn-start-campaign" class="session-btn large" onclick="SessionMode.startCampaign()" style="display:none;" title="Initialize the campaign — one-time only">★ START CAMPAIGN</button>
     <button id="btn-start-session" class="session-btn large" onclick="SessionMode.startSession()" style="display:none;">▶ START SESSION</button>
     <button id="btn-resume-save" class="session-btn muted" onclick="SessionMode.resumeSave()" style="display:none;">↻ Resume Save</button>
-    <button id="btn-pause-session" class="session-btn muted" onclick="SessionMode.pauseSession()" style="display:none;">‖ PAUSE</button>
+    <button id="btn-pause-session" class="session-btn muted" onclick="SessionMode.togglePauseResume()" style="display:none;" title="Pause/Resume the live session (freezes clock, ambient ticks, and NPC autonomy)">‖ PAUSE</button>
     <button id="btn-stop-session" class="session-btn danger" onclick="SessionMode.stopSession()" style="display:none;">■ STOP SESSION</button>
     <span id="session-mode-status" class="session-status-text">Loading…</span>
     <span class="spacer" style="flex:1;"></span>
@@ -990,7 +990,7 @@ var SessionMode = {
           }).catch(function() {});
         }
       } else if (d.mode === 'live-session') {
-        if (pauseSe) pauseSe.style.display = 'inline-block';
+        if (pauseSe) { pauseSe.style.display = 'inline-block'; SessionMode._syncPauseBtn(); }
         if (stopSe) stopSe.style.display = 'inline-block';
       }
       if (status) status.textContent = 'Mode: ' + d.mode + (d.testMode ? ' [TEST]' : '');
@@ -1026,6 +1026,28 @@ var SessionMode = {
       addWhisper({ tag: 'SYSTEM', text: 'Resumed save' });
       SessionMode.refresh();
     });
+  },
+  togglePauseResume: function() {
+    // Toggle between pause and resume based on current session.status.
+    fetch('/api/state').then(function(r){ return r.json(); }).then(function(s){
+      var status = s && s.session && s.session.status;
+      var url = status === 'paused' ? '/api/session/resume' : '/api/session/pause';
+      var msg = status === 'paused' ? 'Session resumed — clock running' : 'Session paused — clock frozen';
+      fetch(url, { method: 'POST' }).then(function(r){ return r.json(); }).then(function(){
+        addWhisper({ tag: 'SYSTEM', text: msg });
+        SessionMode._syncPauseBtn();
+      });
+    });
+  },
+  _syncPauseBtn: function() {
+    var btn = $('btn-pause-session');
+    if (!btn) return;
+    fetch('/api/state').then(function(r){ return r.json(); }).then(function(s){
+      var paused = s && s.session && s.session.status === 'paused';
+      btn.textContent = paused ? '▶ RESUME' : '‖ PAUSE';
+      btn.classList.toggle('danger', paused);
+      btn.classList.toggle('muted', !paused);
+    }).catch(function(){});
   },
   pauseSession: function() {
     fetch('/api/session/pause', { method: 'POST' }).then(function(r) { return r.json(); }).then(function(d) {
@@ -1714,6 +1736,7 @@ function handleMsg(msg) {
     if (p === 'session.status') {
       if (v === 'active' && !sessionStartedAt) sessionStartedAt = Date.now();
       if (v !== 'active') sessionStartedAt = null;
+      if (window.SessionMode && SessionMode._syncPauseBtn) SessionMode._syncPauseBtn();
     }
     return;
   }

@@ -737,7 +737,16 @@ class CharacterService {
       // flipping hex_active / clearing concentration state + whispering the
       // result to the DM. No DM action required unless they want to force
       // advantage/disadvantage after the fact.
+      // Prime from state so the FIRST hp:update after a cold-server
+      // declare-Hex-then-take-damage path still has a prev value to diff
+      // against. Without this, _hpCache[pid] is undefined on first hit and
+      // the save never rolls (line below at `typeof prev !== 'number'`).
       this._hpCache = {};
+      const _seedPlayers = this.state.get('players') || {};
+      for (const pid of Object.keys(_seedPlayers)) {
+        const cur = _seedPlayers[pid]?.character?.hp?.current;
+        if (typeof cur === 'number') this._hpCache[pid] = cur;
+      }
       this.bus.subscribe('hp:update', (env) => {
         const d = env.data || {};
         const playerId = d.playerId;
@@ -755,15 +764,25 @@ class CharacterService {
         const charName = this.state.get('players.' + playerId + '.character.name') || playerId;
         const conSave = this.state.get('players.' + playerId + '.character.savingThrows.con') || {};
         const conMod = conSave.modifier || 0;
-        const d20 = Math.floor(Math.random() * 20) + 1;
+        // Exhaustion tier 3+ (PHB 2014 table) imposes disadvantage on saves.
+        const disadv = this.state.get('players.' + playerId + '.character._exhaustionDisadvSaves') === true;
+        const d20a = Math.floor(Math.random() * 20) + 1;
+        const d20b = disadv ? (Math.floor(Math.random() * 20) + 1) : null;
+        const d20 = disadv ? Math.min(d20a, d20b) : d20a;
+        const d20s = disadv ? [d20a, d20b] : null;
         const total = d20 + conMod;
         const crit = d20 === 1 ? 'NAT 1 (auto-fail)' : d20 === 20 ? 'NAT 20 (auto-succeed)' : '';
         const passed = d20 === 20 ? true : d20 === 1 ? false : total >= dc;
         const spellName = abil.concentration;
+        // Expose last roll for DM inspection + test verification.
+        this.state.set('debug.lastConcentrationRoll', {
+          playerId, spellName, d20, d20s, disadv, dc, conMod, total, passed, damage, ts: Date.now()
+        });
 
+        const disadvMark = disadv ? ` (disadv — took ${d20} of ${d20s.join('/')})` : '';
         if (passed) {
           this.bus.dispatch('dm:whisper', {
-            text: `🔗 CONCENTRATION — ${charName} took ${damage} damage; rolled ${d20}${conMod >= 0 ? '+' : ''}${conMod}=${total} vs DC ${dc}. HELD${crit ? ' — ' + crit : ''}. ${spellName} continues.`,
+            text: `🔗 CONCENTRATION — ${charName} took ${damage} damage; rolled ${d20}${conMod >= 0 ? '+' : ''}${conMod}=${total} vs DC ${dc}${disadvMark}. HELD${crit ? ' — ' + crit : ''}. ${spellName} continues.`,
             priority: 2, category: 'concentration'
           });
         } else {
@@ -773,9 +792,9 @@ class CharacterService {
             _setAbility(playerId, 'hex_active', false);
           }
           _broadcastAbilityState(playerId);
-          this.bus.dispatch('concentration:broken', { playerId, spell: spellName, damage, dc, roll: d20, total });
+          this.bus.dispatch('concentration:broken', { playerId, spell: spellName, damage, dc, roll: d20, total, disadv });
           this.bus.dispatch('dm:whisper', {
-            text: `🔗 CONCENTRATION BROKEN — ${charName} took ${damage} damage; rolled ${d20}${conMod >= 0 ? '+' : ''}${conMod}=${total} vs DC ${dc}. FAILED${crit ? ' — ' + crit : ''}. ${spellName} ENDS.`,
+            text: `🔗 CONCENTRATION BROKEN — ${charName} took ${damage} damage; rolled ${d20}${conMod >= 0 ? '+' : ''}${conMod}=${total} vs DC ${dc}${disadvMark}. FAILED${crit ? ' — ' + crit : ''}. ${spellName} ENDS.`,
             priority: 1, category: 'concentration'
           });
         }
@@ -841,15 +860,18 @@ class CharacterService {
         res.json({ ok: true, tier: next, effects: EFFECTS[next] });
       });
 
-      // Long rest removes one exhaustion level — subscribe to rest events.
-      this.bus.subscribe('character:rest', (env) => {
+      // Long rest removes one exhaustion level. Rest endpoint dispatches
+      // `session:long_rest { playerId }` — subscribe to that, not a
+      // never-emitted 'character:rest'.
+      this.bus.subscribe('session:long_rest', (env) => {
         const d = env.data || {};
-        if (!d.playerId || d.type !== 'long') return;
+        if (!d.playerId) return;
         const current = this.state.get('players.' + d.playerId + '.exhaustion') || 0;
         if (current > 0) {
           const next = current - 1;
           this.state.set('players.' + d.playerId + '.exhaustion', next);
           const charName = this.state.get('players.' + d.playerId + '.character.name') || d.playerId;
+          this.bus.dispatch('exhaustion:updated', { playerId: d.playerId, tier: next, reason: 'long-rest' });
           this.bus.dispatch('dm:whisper', {
             text: `${charName} long rest: exhaustion ${current} → ${next}.`,
             priority: 3, category: 'exhaustion'

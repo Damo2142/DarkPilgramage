@@ -1282,6 +1282,104 @@ async function runRecklessAttackToggle() {
   check('reckless-attack toggle off', r2.body?.reckless === false);
 }
 
+async function runRecklessAdvantageOnIncomingAttacks() {
+  section('61. RECKLESS ATTACK — NPC attacking reckless PC rolls with advantage');
+  // End any stale combat first
+  await httpsReq('POST', '/api/combat/end', {});
+  await httpsReq('POST', '/api/players/jen/full-rest', {});
+
+  // Clear any prior reckless state (endpoint is a toggle)
+  const s0 = await httpsReq('GET', '/api/state');
+  if (s0.body?.players?.jen?.abilities?.reckless_attack_active === true) {
+    await httpsReq('POST', '/api/characters/jen/reckless-attack', {});
+  }
+  // Toggle reckless ON
+  await httpsReq('POST', '/api/characters/jen/reckless-attack', {});
+  const s1 = await httpsReq('GET', '/api/state');
+  const isReckless = s1.body?.players?.jen?.abilities?.reckless_attack_active === true;
+  check('jen is reckless', isReckless, `got=${s1.body?.players?.jen?.abilities?.reckless_attack_active}`);
+
+  // Spawn a wolf token first so combat add-combatant can resolve it. Fresh
+  // servers don't have ambient-life wolves placed yet, so we seed one.
+  await httpsReq('DELETE', '/api/map/token/test-wolf', null);
+  await httpsReq('POST', '/api/map/token/add', {
+    tokenId: 'test-wolf', name: 'Test Wolf', type: 'npc',
+    actorSlug: 'wolf', x: 400, y: 400, hp: { current: 11, max: 11 }, ac: 13
+  });
+  // Start combat with jen + wolf
+  const start = await httpsReq('POST', '/api/combat/start', { combatantIds: ['jen'] });
+  check('combat started', start.status < 400);
+  const addWolf = await httpsReq('POST', '/api/combat/add-combatant', { tokenId: 'test-wolf' });
+  check('wolf added to combat', addWolf.status < 400, `status=${addWolf.status} body=${JSON.stringify(addWolf.body).slice(0,120)}`);
+
+  const combat = await httpsReq('GET', '/api/combat');
+  const wolfEntry = (combat.body?.turnOrder || []).find(c => c.id === 'test-wolf' || c.actorSlug === 'wolf');
+  if (!wolfEntry) { check('wolf in turnOrder', false, `turnOrder=${JSON.stringify(combat.body?.turnOrder || []).slice(0,200)}`); }
+  else {
+    // Roll the wolf's attack against jen — should apply advantage
+    const roll = await httpsReq('POST', '/api/combat/npc-roll', {
+      combatantId: wolfEntry.id, actionIndex: 0, targetId: 'jen'
+    });
+    check('NPC roll vs reckless target reports advantage',
+      roll.body?.advantage === true,
+      `advantage=${roll.body?.advantage}, d20=${roll.body?.d20}, reason=${roll.body?.advantageReason || 'none'}`);
+    check('NPC roll vs reckless target includes both d20s',
+      Array.isArray(roll.body?.d20s) && roll.body.d20s.length === 2,
+      `d20s=${JSON.stringify(roll.body?.d20s)}`);
+    if (Array.isArray(roll.body?.d20s) && roll.body.d20s.length === 2) {
+      check('advantage d20 is the higher of the two rolls',
+        roll.body.d20 === Math.max(roll.body.d20s[0], roll.body.d20s[1]),
+        `d20=${roll.body.d20} max=${Math.max(...roll.body.d20s)}`);
+    }
+  }
+
+  // Cleanup
+  await httpsReq('POST', '/api/combat/end', {});
+  await httpsReq('POST', '/api/characters/jen/reckless-attack', {}); // toggle OFF
+  await httpsReq('DELETE', '/api/map/token/test-wolf', null);
+}
+
+async function runExhaustionDisadvOnConcentrationSave() {
+  section('62. EXHAUSTION tier 3+ — concentration save rolls with disadvantage');
+  await httpsReq('POST', '/api/players/jerome/full-rest', {});
+  // Reset exhaustion first
+  await httpsReq('POST', '/api/characters/jerome/exhaustion', { set: 0 });
+  // Set exhaustion tier 3 (adds disadv on attacks and saves per PHB)
+  const exh = await httpsReq('POST', '/api/characters/jerome/exhaustion', { set: 3 });
+  check('jerome exhaustion set to 3', exh.body?.tier === 3, `got=${exh.body?.tier}`);
+  const sExh = await httpsReq('GET', '/api/state');
+  check('jerome _exhaustionDisadvSaves flag set',
+    sExh.body?.players?.jerome?.character?._exhaustionDisadvSaves === true,
+    `got=${sExh.body?.players?.jerome?.character?._exhaustionDisadvSaves}`);
+
+  // Declare Hex (concentration) and damage once to trigger auto-save
+  await httpsReq('POST', '/api/characters/ability', {
+    playerId: 'jerome', ability: 'hex_active', action: 'declare'
+  });
+  await httpsReq('POST', '/api/hp/jerome', { delta: -14 });
+  await new Promise(r => setTimeout(r, 250));
+
+  // Inspect the last-concentration-roll debug state (populated by the fix).
+  const s = await httpsReq('GET', '/api/state');
+  const last = s.body?.debug?.lastConcentrationRoll;
+  check('concentration save was rolled',
+    last && last.playerId === 'jerome' && typeof last.d20 === 'number',
+    `last=${JSON.stringify(last || null)}`);
+  check('concentration save applied disadvantage (tier-3 exhaustion)',
+    last && last.disadv === true,
+    `disadv=${last?.disadv}, d20s=${JSON.stringify(last?.d20s || null)}`);
+  if (last && Array.isArray(last.d20s) && last.d20s.length === 2) {
+    check('disadv save took the LOWER of the two d20s',
+      last.d20 === Math.min(last.d20s[0], last.d20s[1]),
+      `d20=${last.d20}, min=${Math.min(...last.d20s)}`);
+  }
+
+  // Cleanup
+  await httpsReq('POST', '/api/characters/jerome/exhaustion', { set: 0 });
+  await httpsReq('POST', '/api/characters/ability', { playerId: 'jerome', ability: 'hex_end', action: 'declare' });
+  await httpsReq('POST', '/api/players/jerome/full-rest', {});
+}
+
 async function runPauseResumeEndpoint() {
   section('60. SESSION PAUSE/RESUME (DM break button)');
   const p = await httpsReq('POST', '/api/session/pause', {});
@@ -1398,6 +1496,8 @@ async function main() {
   await runExhaustionTiers();
   await runRecklessAttackToggle();
   await runPauseResumeEndpoint();
+  await runRecklessAdvantageOnIncomingAttacks();
+  await runExhaustionDisadvOnConcentrationSave();
 
   console.log(`\n${YELLOW}═══ SUMMARY ═══${RESET}`);
   console.log(`  ${GREEN}PASS: ${pass}${RESET}`);

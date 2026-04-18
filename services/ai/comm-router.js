@@ -978,12 +978,15 @@ class CommRouter {
     // 1. Direct match — player speaks the language
     if (playerLangById[spokenId]) {
       const fluency = (playerLangById[spokenId].fluency || 'fluent').toLowerCase();
-      if (/fluent|native/.test(fluency)) return { result: 'FULL', sharedLang: spokenId, fluency };
+      // Racial/innate access is FULL — Firbolg's Speech of Beast and Leaf,
+      // Tiefling Infernal, etc. The character inherently understands without
+      // having "learned" it.
+      if (/fluent|native|special|instinctive|innate|racial/.test(fluency)) return { result: 'FULL', sharedLang: spokenId, fluency };
       if (/conversational/.test(fluency)) return { result: 'PARTIAL', sharedLang: spokenId, fluency };
       if (/basic/.test(fluency)) return { result: 'PARTIAL', sharedLang: spokenId, fluency: 'basic' };
       if (/partial/.test(fluency)) return { result: 'PARTIAL', sharedLang: spokenId, fluency };
       // Unknown fluency string — safest default is PARTIAL (partial understanding)
-      // rather than FULL. Only "fluent"/"native" should grant full comprehension.
+      // rather than FULL. Only "fluent"/"native"/racial should grant full comprehension.
       return { result: 'PARTIAL', sharedLang: spokenId, fluency };
     }
 

@@ -177,6 +177,95 @@
       "partiallyIntelligibleWith": [],
       "knownBy": "Spurt, any dragon-adjacent creature",
       "specialRule": "Vladislav immediately recognizes Draconic if spoken. His expression shifts. He says nothing but he is now more interested in Spurt than before. Flag as HIGH priority Max whisper."
+    },
+
+    {
+      "id": "giant",
+      "name": "Giant",
+      "displayName": "Giant",
+      "region": "Universal",
+      "family": "Giant",
+      "notes": "The language of giants and their kin — also spoken by firbolgs (Marfire's people). No European speakers in 1274 Central Europe.",
+      "mutuallyIntelligibleWith": [],
+      "partiallyIntelligibleWith": [],
+      "knownBy": "Marfire (Firbolg), giants, ogres"
+    },
+    {
+      "id": "speech_beast_leaf",
+      "name": "Speech of Beast and Leaf",
+      "displayName": "Speech of Beast and Leaf",
+      "region": "Universal",
+      "family": "Firbolg-Feywild",
+      "notes": "Firbolg racial — limited communication with beasts and plants. Not a spoken language other humanoids can learn.",
+      "mutuallyIntelligibleWith": [],
+      "partiallyIntelligibleWith": [],
+      "knownBy": "Marfire (Firbolg)"
+    },
+    {
+      "id": "infernal",
+      "name": "Infernal",
+      "displayName": "Infernal",
+      "region": "Universal",
+      "family": "Fiendish",
+      "notes": "The language of devils. Tieflings know it innately. In this setting no living NPC speaks it — if it's heard, something is very wrong.",
+      "mutuallyIntelligibleWith": [],
+      "partiallyIntelligibleWith": [],
+      "knownBy": "Chazz (Tiefling), devils, some sages"
+    },
+    {
+      "id": "abyssal",
+      "name": "Abyssal",
+      "displayName": "Abyssal",
+      "region": "Universal",
+      "family": "Fiendish",
+      "notes": "The language of demons and the Abyss. Similar concern as Infernal — if heard in 1274 Europe, a Bad Thing is in the room.",
+      "mutuallyIntelligibleWith": [],
+      "partiallyIntelligibleWith": [],
+      "knownBy": "Demons, cultists, some sages"
+    },
+    {
+      "id": "celestial",
+      "name": "Celestial",
+      "displayName": "Celestial",
+      "region": "Universal",
+      "family": "Upper-planar",
+      "notes": "Language of good-aligned outsiders — angels, devas. A blessed tongue in Church theology.",
+      "mutuallyIntelligibleWith": [],
+      "partiallyIntelligibleWith": [],
+      "knownBy": "Celestials, high clergy (Aldric has exposure)"
+    },
+    {
+      "id": "czech",
+      "name": "Czech",
+      "displayName": "Czech",
+      "region": "European",
+      "family": "Slavic",
+      "notes": "West Slavic language, nearly identical to Old Slovak in 1274. Mutually intelligible with Slovak, partially with Polish.",
+      "mutuallyIntelligibleWith": ["slovak"],
+      "partiallyIntelligibleWith": ["polish"],
+      "knownBy": "Bohemian travelers, Henryk, Nick"
+    },
+    {
+      "id": "aglarondan",
+      "name": "Aglarondan",
+      "displayName": "Aglarondan",
+      "region": "Forgotten Realms",
+      "family": "Realms-Chessentan",
+      "notes": "A Forgotten Realms language carried over from Chazz's character sheet. No speakers in 1274 Europe — capability marker only.",
+      "mutuallyIntelligibleWith": [],
+      "partiallyIntelligibleWith": [],
+      "knownBy": "Chazz"
+    },
+    {
+      "id": "chondathan",
+      "name": "Chondathan",
+      "displayName": "Chondathan",
+      "region": "Forgotten Realms",
+      "family": "Realms",
+      "notes": "A Forgotten Realms language from Chazz's character sheet. No speakers in 1274 Europe — capability marker only.",
+      "mutuallyIntelligibleWith": [],
+      "partiallyIntelligibleWith": [],
+      "knownBy": "Chazz"
     }
   ]
 }

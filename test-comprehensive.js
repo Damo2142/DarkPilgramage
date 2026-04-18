@@ -1123,6 +1123,78 @@ async function runCharacterAssignmentsConsistency() {
   }
 }
 
+async function runRaceReactionsIntegrity() {
+  section('50. RACE REACTIONS CONFIG (per-PC entries)');
+  const p = path.join(__dirname, 'config', 'race-reactions.json');
+  const d = JSON.parse(fs.readFileSync(p, 'utf8'));
+  const chars = d.characters || {};
+  for (const slug of PC_SLUGS) {
+    // Not every PC needs a race-reactions entry; skip spurt-ai-pc since
+    // it goes by "spurt" in older configs and some may not be there.
+    if (slug === 'spurt-ai-pc' || slug === 'jerome') continue;
+    const cfg = chars[slug];
+    check(`  ${slug} has race-reactions entry`, !!cfg, cfg ? cfg.characterName : 'missing');
+    if (cfg) {
+      check(`    ${slug}.characterName matches`, typeof cfg.characterName === 'string' && cfg.characterName.length > 0);
+      check(`    ${slug}.race defined`, !!cfg.race);
+    }
+  }
+}
+
+async function runPcLanguageIdsInRegistry(state) {
+  section('51. PC language IDs exist in registry');
+  const reg = JSON.parse(fs.readFileSync(path.join(__dirname, 'config', 'languages.json'), 'utf8')).languages;
+  const regIds = new Set(reg.map(l => l.id));
+  for (const slug of PC_SLUGS) {
+    const ls = state.players?.[slug]?.character?.languageStructured || [];
+    for (const l of ls) {
+      check(`  ${slug} language "${l.id}" in registry`, regIds.has(l.id), regIds.has(l.id) ? '' : `not in registry`);
+    }
+  }
+}
+
+async function runAbilityScoreRanges(state) {
+  section('52. ABILITY SCORES IN SANE RANGE (1-30)');
+  for (const slug of PC_SLUGS) {
+    const ch = state.players?.[slug]?.character;
+    if (!ch || !ch.abilities) continue;
+    for (const ab of ['str','dex','con','int','wis','cha']) {
+      const score = ch.abilities[ab]?.score;
+      check(`  ${slug}.${ab} = ${score} in [1,30]`, score >= 1 && score <= 30);
+    }
+  }
+}
+
+async function runPcHpFullAtStart(state) {
+  section('53. PC HP RATIO (current / max)');
+  for (const slug of PC_SLUGS) {
+    const hp = state.players?.[slug]?.character?.hp;
+    if (!hp) continue;
+    check(`  ${slug} HP current ${hp.current} <= max ${hp.max}`, hp.current <= hp.max && hp.current >= 0);
+    check(`  ${slug} HP max > 0 (${hp.max})`, hp.max > 0);
+  }
+}
+
+async function runDdbConfigIntegrity() {
+  section('54. DDB-CONFIG.JSON INTEGRITY');
+  const p = path.join(__dirname, 'config', 'ddb-config.json');
+  const d = JSON.parse(fs.readFileSync(p, 'utf8'));
+  const ids = d.characterIds || [];
+  check(`ddb-config.characterIds is array`, Array.isArray(ids));
+  check(`all entries are numeric strings`, ids.every(i => /^\d+$/.test(String(i))));
+}
+
+async function runNpcCrDistribution() {
+  section('55. NPC CHALLENGE RATINGS PRESENT');
+  const actorsDir = path.join(__dirname, 'config', 'actors');
+  const files = fs.readdirSync(actorsDir).filter(f => f.endsWith('.json'));
+  for (const file of files) {
+    const d = JSON.parse(fs.readFileSync(path.join(actorsDir, file), 'utf8'));
+    const cr = d.challenge_rating ?? d.cr;
+    check(`  ${d.name}: CR ${cr}`, cr !== undefined && cr !== null, cr == null ? 'missing CR' : '');
+  }
+}
+
 async function runHpDelta() {
   section('19. HP DELTA + WOUND + STAMINA ROUND-TRIPS');
 
@@ -1216,6 +1288,12 @@ async function main() {
   await runPcFeatureCoverageAllClasses();
   await runAllNpcLanguagesSane();
   await runCharacterAssignmentsConsistency();
+  await runRaceReactionsIntegrity();
+  await runPcLanguageIdsInRegistry(state);
+  await runAbilityScoreRanges(state);
+  await runPcHpFullAtStart(state);
+  await runDdbConfigIntegrity();
+  await runNpcCrDistribution();
 
   console.log(`\n${YELLOW}═══ SUMMARY ═══${RESET}`);
   console.log(`  ${GREEN}PASS: ${pass}${RESET}`);

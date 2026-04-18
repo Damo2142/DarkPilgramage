@@ -722,7 +722,7 @@ class CombatService {
   /**
    * Roll dice for an NPC action (server-side)
    */
-  rollNpcAction(combatantId, actionIndex) {
+  rollNpcAction(combatantId, actionIndex, targetId = null) {
     const combat = this._getCombatState();
     const c = combat.turnOrder.find(x => x.id === combatantId);
     if (!c || !c.actorSlug) return null;
@@ -735,7 +735,24 @@ class CombatService {
     const parsed = this._parseAction(action.desc);
     if (!parsed) return { error: 'Cannot parse action', action: action.name, desc: action.desc };
 
-    const d20 = this._rollD20();
+    // PHB 2024 Barbarian 2: a Reckless target grants advantage on incoming
+    // attack rolls until the start of their next turn. Only applies when we
+    // know who's being attacked — rollNpcAction can be called without a
+    // target (legacy single-target DM panel).
+    let advantage = false;
+    let advantageReason = null;
+    if (targetId) {
+      const tAbil = this.state.get(`players.${targetId}.abilities`) || {};
+      if (tAbil.reckless_attack_active === true) {
+        advantage = true;
+        advantageReason = 'target reckless';
+      }
+    }
+
+    const d20a = this._rollD20();
+    const d20b = advantage ? this._rollD20() : null;
+    const d20 = advantage ? Math.max(d20a, d20b) : d20a;
+    const d20s = advantage ? [d20a, d20b] : null;
     const crit = d20 === 20;
     const miss = d20 === 1;
     const attackRoll = d20 + parsed.toHit;
@@ -749,6 +766,9 @@ class CombatService {
       combatantName: c.name,
       actionName: action.name,
       d20,
+      d20s,
+      advantage,
+      advantageReason,
       toHitBonus: parsed.toHit,
       attackRoll,
       crit,
@@ -1422,7 +1442,7 @@ class CombatService {
   }
 
   async _executeNpcCombatAction(combatant, decision) {
-    const rollResult = this.rollNpcAction(combatant.id, decision.actionIndex);
+    const rollResult = this.rollNpcAction(combatant.id, decision.actionIndex, decision.targetId);
     if (!rollResult || rollResult.error) {
       // Pre-attack failure — surface it so the DM knows the NPC turn fizzled
       // rather than being silent.

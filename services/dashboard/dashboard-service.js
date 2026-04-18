@@ -1055,14 +1055,17 @@ Answer concisely (2-4 sentences). If it's a rules question, give the D&D 5e rule
     });
 
     // POST /api/combat/npc-roll — DM rolls an NPC action (server-side dice)
+    // Optional targetId lets the roller apply advantage/disadvantage from
+    // target-state flags (e.g. reckless_attack_active grants advantage to
+    // incoming attacks).
     this.app.post('/api/combat/npc-roll', (req, res) => {
       const combatSvc = this.orchestrator.getService('combat');
       if (!combatSvc) return res.status(503).json({ error: 'Combat service unavailable' });
-      const { combatantId, actionIndex } = req.body || {};
+      const { combatantId, actionIndex, targetId } = req.body || {};
       if (!combatantId || typeof actionIndex !== 'number') {
         return res.status(400).json({ error: 'combatantId and actionIndex required' });
       }
-      const result = combatSvc.rollNpcAction(combatantId, actionIndex);
+      const result = combatSvc.rollNpcAction(combatantId, actionIndex, targetId || null);
       if (!result) return res.status(404).json({ error: 'Combatant or action not found' });
       if (result.error) return res.status(400).json(result);
       res.json(result);

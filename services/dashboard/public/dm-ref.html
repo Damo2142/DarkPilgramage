@@ -498,6 +498,13 @@
       <span id="nav-tod">EVENING</span>
       <span id="nav-weather">BLIZZARD</span>
     </span>
+    <!-- Session pause / resume — halts the game clock + narrative for breaks.
+         Green PAUSE when running, amber RESUME when paused. -->
+    <button id="nav-pause-btn" class="tool-btn primary"
+            style="margin-left:12px;min-width:90px;padding:6px 12px;font-weight:700;"
+            onclick="togglePauseSession()" title="Pause the game clock for a break">
+      ⏸ PAUSE
+    </button>
   </div>
 
   <!-- TAB BAR -->
@@ -898,7 +905,51 @@ function updateNavStrip() {
   var dot = $('nav-ai-dot'), label = $('nav-ai-text');
   dot.className = 'nav-dot ' + (apiHealth.status === 'ONLINE' ? 'online' : 'offline');
   label.textContent = 'AI ' + (apiHealth.status || '?');
+  // Sync pause button label + color with session.status
+  var pauseBtn = document.getElementById('nav-pause-btn');
+  if (pauseBtn) {
+    var status = stateData.session && stateData.session.status;
+    if (status === 'paused') {
+      pauseBtn.innerHTML = '▶ RESUME';
+      pauseBtn.style.background = '#c8a820';
+      pauseBtn.style.color = '#1a1412';
+      pauseBtn.title = 'Resume the session and game clock';
+      // Subtle pulse on the clock when paused so it's obvious at a glance
+      var clk = document.getElementById('nav-clock');
+      if (clk) clk.style.opacity = '0.4';
+    } else {
+      pauseBtn.innerHTML = '⏸ PAUSE';
+      pauseBtn.style.background = '';
+      pauseBtn.style.color = '';
+      pauseBtn.title = 'Pause the game clock for a break';
+      var clk = document.getElementById('nav-clock');
+      if (clk) clk.style.opacity = '1';
+    }
+  }
 }
+
+// Pause/Resume toggle — halts or resumes the world clock + session state.
+// Called from the nav-strip button. Works off stateData.session.status.
+function togglePauseSession() {
+  var status = stateData.session && stateData.session.status;
+  var endpoint = (status === 'paused') ? '/api/session/resume' : '/api/session/pause';
+  fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d && d.status) {
+        if (!stateData.session) stateData.session = {};
+        stateData.session.status = d.status;
+        updateNavStrip();
+        if (typeof addTranscript === 'function') {
+          addTranscript({ speaker: 'system', text: d.status === 'paused' ? 'Session paused — world clock halted.' : 'Session resumed.' });
+        }
+      }
+    })
+    .catch(function(e) {
+      if (typeof addTranscript === 'function') addTranscript({ speaker: 'system', text: 'Pause/resume failed: ' + e.message });
+    });
+}
+window.togglePauseSession = togglePauseSession;
 
 function pollHealth() {
   fetch('/api/ai/health').then(function(r) { return r.json(); }).then(function(d) {

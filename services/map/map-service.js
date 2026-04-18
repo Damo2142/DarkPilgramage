@@ -1282,7 +1282,11 @@ class MapService {
       const combat = this.state.get('combat');
       if (combat && combat.active) {
         const charData = this.state.get(`players.${tokenId}.character`);
-        const speed = charData?.speed || 30;
+        let speed = charData?.speed || 30;
+        // Exhaustion effect: tier 2 halves speed, tier 5 reduces to 0.
+        const exh = this.state.get(`players.${tokenId}.exhaustion`) || 0;
+        if (exh >= 5) speed = 0;
+        else if (exh >= 2) speed = Math.floor(speed / 2);
         const maxSquares = Math.floor(speed / 5);
         const dx = Math.abs(snappedX - oldX) / grid;
         const dy = Math.abs(snappedY - oldY) / grid;

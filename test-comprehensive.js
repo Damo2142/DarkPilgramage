@@ -1195,6 +1195,105 @@ async function runNpcCrDistribution() {
   }
 }
 
+async function runSpellSaveDcAutoCompute(state) {
+  section('56. SPELL SAVE DC + ATTACK BONUS auto-compute');
+  // 5e formula: 8 + PB + spellcasting-ability-mod
+  const expected = {
+    'spurt-ai-pc': { ab: 'cha', dc: 13, atk: 5 }, // Sorcerer CHA+3, PB+2
+    nick: { ab: 'cha', dc: 14, atk: 6 },          // Bard CHA+4, PB+2
+    jerome: { ab: 'cha', dc: 12, atk: 4 },        // Warlock CHA+2, PB+2
+    kim: { ab: 'int', dc: 10, atk: 2 }            // Eldritch Knight INT+0, PB+2
+  };
+  for (const [slug, exp] of Object.entries(expected)) {
+    const ch = state.players?.[slug]?.character;
+    check(`  ${slug} spellcastingAbility = ${exp.ab}`, ch?.spellcastingAbility === exp.ab, `got ${ch?.spellcastingAbility}`);
+    check(`  ${slug} spellSaveDC = ${exp.dc}`, ch?.spellSaveDC === exp.dc, `got ${ch?.spellSaveDC}`);
+    check(`  ${slug} spellAttackBonus = +${exp.atk}`, ch?.spellAttackBonus === exp.atk, `got ${ch?.spellAttackBonus}`);
+  }
+  // Non-casters have no spellAb
+  for (const slug of ['ed', 'jen']) {
+    const ch = state.players?.[slug]?.character;
+    check(`  ${slug} (non-caster) has no spellcastingAbility`, ch?.spellcastingAbility == null, `got ${ch?.spellcastingAbility}`);
+  }
+}
+
+async function runConcentrationAutoRoll() {
+  section('57. CONCENTRATION auto-roll on damage');
+  // Heal Barry back to full
+  await httpsReq('POST', '/api/players/jerome/full-rest', {});
+  // Cast Hex
+  const hex = await httpsReq('POST', '/api/characters/ability', {
+    playerId: 'jerome', ability: 'hex_active', action: 'declare'
+  });
+  check('hex applied', hex.body?.active === true);
+
+  // Apply enough damage to exercise the check. Multiple runs because d20 varies.
+  // We don't assert the save passes or fails — just that the system auto-rolls
+  // and that hex_active eventually flips when a failure occurs.
+  let brokeAtLeastOnce = false;
+  for (let i = 0; i < 8; i++) {
+    await httpsReq('POST', '/api/players/jerome/full-rest', {});
+    await httpsReq('POST', '/api/characters/ability', { playerId: 'jerome', ability: 'hex_active', action: 'declare' });
+    await httpsReq('POST', '/api/hp/jerome', { delta: -14 });  // DC 10+, hard save
+    await new Promise(r => setTimeout(r, 150));
+    const st = await httpsReq('GET', '/api/state');
+    const abil = st.body?.players?.jerome?.abilities || {};
+    if (!abil.hex_active && !abil.concentration) { brokeAtLeastOnce = true; break; }
+  }
+  check('Concentration auto-breaks on failed save (within 8 tries)', brokeAtLeastOnce,
+    brokeAtLeastOnce ? '' : 'hex never broke — auto-roll may not be firing');
+
+  // Clean up
+  await httpsReq('POST', '/api/characters/ability', { playerId: 'jerome', ability: 'hex_end', action: 'declare' });
+  await httpsReq('POST', '/api/players/jerome/full-rest', {});
+}
+
+async function runExhaustionTiers() {
+  section('58. EXHAUSTION tiers (counter + effects)');
+  // Set Ed's exhaustion to 2
+  const r1 = await httpsReq('POST', '/api/characters/ed/exhaustion', { set: 2 });
+  check('POST /api/characters/ed/exhaustion set=2', r1.status < 400 && r1.body?.tier === 2, `status=${r1.status}`);
+
+  const st = await httpsReq('GET', '/api/state');
+  const tier = st.body?.players?.ed?.exhaustion;
+  check('ed exhaustion tier persisted = 2', tier === 2, `got ${tier}`);
+  check('ed character._exhaustionDisadvAbilities flag set', st.body?.players?.ed?.character?._exhaustionDisadvAbilities === true);
+
+  // Bump to 4 — HP max should halve
+  const preMax = st.body?.players?.ed?.character?.hp?.max;
+  await httpsReq('POST', '/api/characters/ed/exhaustion', { set: 4 });
+  const st2 = await httpsReq('GET', '/api/state');
+  const midMax = st2.body?.players?.ed?.character?.hp?.max;
+  check(`HP max halved at tier 4 (${preMax} → ${midMax})`, midMax === Math.floor(preMax / 2),
+    `preMax=${preMax} midMax=${midMax}`);
+
+  // Reset to 0
+  await httpsReq('POST', '/api/characters/ed/exhaustion', { set: 0 });
+  const st3 = await httpsReq('GET', '/api/state');
+  const postMax = st3.body?.players?.ed?.character?.hp?.max;
+  check(`HP max restored when exhaustion clears (${postMax})`, postMax === preMax, `got ${postMax}`);
+}
+
+async function runRecklessAttackToggle() {
+  section('59. RECKLESS ATTACK toggle');
+  const r1 = await httpsReq('POST', '/api/characters/jen/reckless-attack', {});
+  check('reckless-attack toggle on', r1.body?.reckless === true);
+  const r2 = await httpsReq('POST', '/api/characters/jen/reckless-attack', {});
+  check('reckless-attack toggle off', r2.body?.reckless === false);
+}
+
+async function runPauseResumeEndpoint() {
+  section('60. SESSION PAUSE/RESUME (DM break button)');
+  const p = await httpsReq('POST', '/api/session/pause', {});
+  check('pause returns status:paused', p.body?.status === 'paused', `got ${p.body?.status}`);
+  const st = await httpsReq('GET', '/api/state');
+  check('state.session.status = paused', st.body?.session?.status === 'paused');
+  const r = await httpsReq('POST', '/api/session/resume', {});
+  check('resume returns status:active', r.body?.status === 'active', `got ${r.body?.status}`);
+  const st2 = await httpsReq('GET', '/api/state');
+  check('state.session.status = active after resume', st2.body?.session?.status === 'active');
+}
+
 async function runHpDelta() {
   section('19. HP DELTA + WOUND + STAMINA ROUND-TRIPS');
 
@@ -1294,6 +1393,11 @@ async function main() {
   await runPcHpFullAtStart(state);
   await runDdbConfigIntegrity();
   await runNpcCrDistribution();
+  await runSpellSaveDcAutoCompute(state);
+  await runConcentrationAutoRoll();
+  await runExhaustionTiers();
+  await runRecklessAttackToggle();
+  await runPauseResumeEndpoint();
 
   console.log(`\n${YELLOW}═══ SUMMARY ═══${RESET}`);
   console.log(`  ${GREEN}PASS: ${pass}${RESET}`);

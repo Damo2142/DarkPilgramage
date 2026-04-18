@@ -24,6 +24,14 @@ const DEDUP_SKIP_EVENTS = new Set([
   'combat:shock_save_passed', 'combat:shock_failed',
   'combat:player_initiated', 'combat:player_joins',
   'combat:npc_suggestion', 'combat:forced_movement', 'combat:bleeding_tick',
+  // HP change events — every damage/heal is a discrete state change with
+  // distinct value but fingerprint only hashes playerId, so without this
+  // exclusion two consecutive /api/hp/ed delta=-3 calls collapse and the
+  // second is dropped (→ concentration auto-check never fires on second
+  // hit, wound recompute skipped, etc.).
+  'hp:update', 'exhaustion:updated', 'concentration:broken',
+  'character:update', 'character:ability_used', 'character:ability_declared',
+  'character:abilities_update',
   // Session lifecycle events — two long rests for the same player in the
   // same 5s window (test harness, back-to-back /api/characters/:pid/rest,
   // or DM clicking twice) otherwise fingerprint-match and the second gets

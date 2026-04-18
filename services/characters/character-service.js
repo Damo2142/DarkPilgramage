@@ -33,6 +33,18 @@ const CLASS_SAVE_PROFS = {
   Artificer: ['con','int']
 };
 
+// 5e spellcasting ability per class (for spell save DC + attack bonus).
+// Subclasses override (e.g. Rogue Arcane Trickster uses INT).
+const CLASS_SPELLCASTING_ABILITY = {
+  Artificer: 'int', Bard: 'cha', Cleric: 'wis', Druid: 'wis',
+  Paladin: 'cha', Ranger: 'wis', Sorcerer: 'cha', Warlock: 'cha',
+  Wizard: 'int'
+};
+const SUBCLASS_SPELLCASTING_ABILITY = {
+  'Arcane Trickster': 'int',
+  'Eldritch Knight': 'int'
+};
+
 // SRD armor AC lookup (falls back when DDB doesn't populate
 // definition.armorClass on equipped items — "Leather" etc.).
 // Values match config/srd-equipment.json.
@@ -134,6 +146,32 @@ function recomputeDerivedStats(char) {
   // Initiative defaults to DEX unless an explicit override is already set.
   const dexMod = (abilities.dex || {}).modifier || 0;
   if (typeof char.initiative !== 'number') char.initiative = dexMod;
+
+  // Spellcasting ability + save DC + attack bonus. Auto-detect from class
+  // + subclass (Arcane Trickster, Eldritch Knight). DDB usually ships
+  // spellcastingAbility but not always — so we compute when missing.
+  let spellAb = char.spellcastingAbility;
+  if (!spellAb) {
+    for (const c of classes) {
+      const cls = c.name;
+      const sub = c.subclass || c.subclassDefinition?.name;
+      if (sub && SUBCLASS_SPELLCASTING_ABILITY[sub]) { spellAb = SUBCLASS_SPELLCASTING_ABILITY[sub]; break; }
+      if (cls && CLASS_SPELLCASTING_ABILITY[cls]) { spellAb = CLASS_SPELLCASTING_ABILITY[cls]; break; }
+    }
+  }
+  if (spellAb && abilities[spellAb]) {
+    char.spellcastingAbility = spellAb;
+    const spellMod = abilities[spellAb].modifier || 0;
+    char.spellSaveDC = 8 + pb + spellMod;
+    char.spellAttackBonus = pb + spellMod;
+  }
+
+  // Passive perception = 10 + WIS mod + (prof if proficient in perception)
+  const wisMod = (abilities.wis || {}).modifier || 0;
+  const percSkill = (char.skills && char.skills.perception) || null;
+  const percProf = percSkill && (percSkill.proficiency === 'proficiency' || percSkill.proficiency === 'expertise');
+  char.passivePerception = 10 + wisMod + (percProf ? pb : 0);
+  if (percSkill && percSkill.proficiency === 'expertise') char.passivePerception += pb;
 
   // AC — recompute from equipped armor + DEX + shield. DDB frequently
   // omits definition.armorClass for SRD items like generic Leather, so
@@ -685,11 +723,175 @@ class CharacterService {
         const combatantId = env.data && env.data.previousCombatantId;
         if (!combatantId) return;
         const abil = _getAbilities(combatantId);
-        if (abil.sneak_attack_used_this_turn || abil.cunning_action_used_this_turn) {
+        if (abil.sneak_attack_used_this_turn || abil.cunning_action_used_this_turn || abil.reckless_attack_active) {
           _setAbility(combatantId, 'sneak_attack_used_this_turn', false);
           _setAbility(combatantId, 'cunning_action_used_this_turn', false);
+          _setAbility(combatantId, 'reckless_attack_active', false);
           _broadcastAbilityState(combatantId);
         }
+      }, 'characters');
+
+      // Concentration auto-check: when a concentrating PC takes damage, the
+      // system rolls the CON save automatically, compares to DC (max 10 or
+      // half damage per PHB p.203-204), and ENDS the spell on failure —
+      // flipping hex_active / clearing concentration state + whispering the
+      // result to the DM. No DM action required unless they want to force
+      // advantage/disadvantage after the fact.
+      this._hpCache = {};
+      this.bus.subscribe('hp:update', (env) => {
+        const d = env.data || {};
+        const playerId = d.playerId;
+        if (!playerId || typeof d.current !== 'number') return;
+        const prev = this._hpCache[playerId];
+        this._hpCache[playerId] = d.current;
+        if (typeof prev !== 'number') return;
+        const damage = prev - d.current;
+        if (damage <= 0) return;
+        const abil = _getAbilities(playerId);
+        if (!abil.concentration) return;
+
+        // Auto-roll the CON save.
+        const dc = Math.max(10, Math.floor(damage / 2));
+        const charName = this.state.get('players.' + playerId + '.character.name') || playerId;
+        const conSave = this.state.get('players.' + playerId + '.character.savingThrows.con') || {};
+        const conMod = conSave.modifier || 0;
+        const d20 = Math.floor(Math.random() * 20) + 1;
+        const total = d20 + conMod;
+        const crit = d20 === 1 ? 'NAT 1 (auto-fail)' : d20 === 20 ? 'NAT 20 (auto-succeed)' : '';
+        const passed = d20 === 20 ? true : d20 === 1 ? false : total >= dc;
+        const spellName = abil.concentration;
+
+        if (passed) {
+          this.bus.dispatch('dm:whisper', {
+            text: `🔗 CONCENTRATION — ${charName} took ${damage} damage; rolled ${d20}${conMod >= 0 ? '+' : ''}${conMod}=${total} vs DC ${dc}. HELD${crit ? ' — ' + crit : ''}. ${spellName} continues.`,
+            priority: 2, category: 'concentration'
+          });
+        } else {
+          // Drop concentration — end any active spells tied to it.
+          _setAbility(playerId, 'concentration', null);
+          if (abil.hex_active && /hex/i.test(spellName)) {
+            _setAbility(playerId, 'hex_active', false);
+          }
+          _broadcastAbilityState(playerId);
+          this.bus.dispatch('concentration:broken', { playerId, spell: spellName, damage, dc, roll: d20, total });
+          this.bus.dispatch('dm:whisper', {
+            text: `🔗 CONCENTRATION BROKEN — ${charName} took ${damage} damage; rolled ${d20}${conMod >= 0 ? '+' : ''}${conMod}=${total} vs DC ${dc}. FAILED${crit ? ' — ' + crit : ''}. ${spellName} ENDS.`,
+            priority: 1, category: 'concentration'
+          });
+        }
+      }, 'characters');
+
+      // ── Additional ability endpoints: Reckless Attack, Exhaustion ──
+
+      // Reckless Attack (Barbarian) — turn-duration toggle. Advantage on
+      // STR-based melee attacks this turn; enemies have advantage against
+      // you until your next turn.
+      app.post('/api/characters/:playerId/reckless-attack', (req, res) => {
+        const { playerId } = req.params;
+        const abil = _getAbilities(playerId);
+        const charName = this.state.get('players.' + playerId + '.character.name') || playerId;
+        const next = !abil.reckless_attack_active;
+        _setAbility(playerId, 'reckless_attack_active', next);
+        this.bus.dispatch('dm:whisper', {
+          text: next
+            ? `${charName} goes RECKLESS — advantage on STR melee attacks this turn; enemies have advantage against ${charName} until next turn.`
+            : `${charName} ends Reckless posture.`,
+          priority: 2, category: 'combat'
+        });
+        _broadcastAbilityState(playerId);
+        res.json({ ok: true, reckless: next });
+      });
+
+      // Exhaustion 0-6. Each tier applies cumulative penalties per PHB p.291:
+      //   1: disadvantage on ability checks
+      //   2: speed halved
+      //   3: + disadvantage on attack rolls and saving throws
+      //   4: + HP maximum halved
+      //   5: + speed reduced to 0
+      //   6: death
+      app.get('/api/characters/:playerId/exhaustion', (req, res) => {
+        const tier = this.state.get('players.' + req.params.playerId + '.exhaustion') || 0;
+        res.json({ ok: true, tier });
+      });
+      app.post('/api/characters/:playerId/exhaustion', (req, res) => {
+        const { playerId } = req.params;
+        const delta = parseInt((req.body || {}).delta, 10);
+        const set = (req.body || {}).set;
+        const current = this.state.get('players.' + playerId + '.exhaustion') || 0;
+        let next = current;
+        if (Number.isFinite(delta)) next = Math.max(0, Math.min(6, current + delta));
+        else if (Number.isFinite(parseInt(set, 10))) next = Math.max(0, Math.min(6, parseInt(set, 10)));
+        this.state.set('players.' + playerId + '.exhaustion', next);
+        const charName = this.state.get('players.' + playerId + '.character.name') || playerId;
+        const EFFECTS = [
+          'none',
+          'Disadvantage on ability checks',
+          '+ Speed halved',
+          '+ Disadvantage on attacks and saves',
+          '+ HP maximum halved',
+          '+ Speed reduced to 0',
+          'DEAD — exhaustion 6'
+        ];
+        this.bus.dispatch('dm:whisper', {
+          text: `${charName} exhaustion: ${current} → ${next}. ${EFFECTS[next] || ''}`,
+          priority: next >= 4 ? 1 : 3,
+          category: 'exhaustion'
+        });
+        this.bus.dispatch('exhaustion:updated', { playerId, tier: next, effects: EFFECTS[next] });
+        res.json({ ok: true, tier: next, effects: EFFECTS[next] });
+      });
+
+      // Long rest removes one exhaustion level — subscribe to rest events.
+      this.bus.subscribe('character:rest', (env) => {
+        const d = env.data || {};
+        if (!d.playerId || d.type !== 'long') return;
+        const current = this.state.get('players.' + d.playerId + '.exhaustion') || 0;
+        if (current > 0) {
+          const next = current - 1;
+          this.state.set('players.' + d.playerId + '.exhaustion', next);
+          const charName = this.state.get('players.' + d.playerId + '.character.name') || d.playerId;
+          this.bus.dispatch('dm:whisper', {
+            text: `${charName} long rest: exhaustion ${current} → ${next}.`,
+            priority: 3, category: 'exhaustion'
+          });
+        }
+      }, 'characters');
+
+      // Exhaustion effects: apply HP-max halving at tier 4 and death at tier 6.
+      // Speed + attack/save disadvantage flags are stored on the character
+      // so combat-service + map-service can read them at attack-roll /
+      // movement time. Speed halving is already applied in map-service's
+      // _moveToken when exhaustion >= 2.
+      this.bus.subscribe('exhaustion:updated', (env) => {
+        const d = env.data || {};
+        const { playerId, tier } = d;
+        if (!playerId) return;
+        const ch = this.state.get('players.' + playerId + '.character');
+        if (!ch) return;
+        // Store flags for combat-service to read on attack/save rolls.
+        ch._exhaustionDisadvAbilities = tier >= 1;
+        ch._exhaustionDisadvAttacks = tier >= 3;
+        ch._exhaustionDisadvSaves = tier >= 3;
+        // Tier 4: HP maximum halved. Stash original max once so we can
+        // restore when exhaustion drops back.
+        if (tier >= 4) {
+          if (ch._hpMaxOriginal == null) ch._hpMaxOriginal = ch.hp.max;
+          ch.hp.max = Math.floor(ch._hpMaxOriginal / 2);
+          if (ch.hp.current > ch.hp.max) ch.hp.current = ch.hp.max;
+        } else if (ch._hpMaxOriginal != null) {
+          ch.hp.max = ch._hpMaxOriginal;
+          delete ch._hpMaxOriginal;
+        }
+        // Tier 6: death.
+        if (tier >= 6) {
+          ch.hp.current = 0;
+          this.bus.dispatch('dm:whisper', {
+            text: `💀 ${ch.name || playerId} has reached exhaustion 6 — the character is DEAD.`,
+            priority: 1, category: 'exhaustion'
+          });
+        }
+        this.state.set('players.' + playerId + '.character', ch);
+        this.bus.dispatch('character:update', { playerId });
       }, 'characters');
 
       // Addition 6 — DM item award. Append-only path that dispatches

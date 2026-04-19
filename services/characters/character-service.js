@@ -1463,6 +1463,23 @@ class CharacterService {
       console.warn('[Characters] Origins overlay parse failed: ' + err.message);
     }
 
+    // Load backstory overrides (campaign-authored prose that must survive
+    // every DDB sync). Keyed by DDB ID. Per-field merge on top of the DDB
+    // pull; override value wins when present and non-null. Narrative-only:
+    // backstory.* (personality, ideals, bonds, flaws, backstoryText, allies,
+    // organizations, enemies, otherNotes) and a narrow slice of appearance
+    // (description, faith). Physical stats remain DDB's domain.
+    let backstoryOverrides = {};
+    try {
+      const bsPath = path.join(__dirname, '..', '..', 'config', 'backstory-overrides.json');
+      if (fs.existsSync(bsPath)) {
+        const data = JSON.parse(fs.readFileSync(bsPath, 'utf8'));
+        backstoryOverrides = data.byDDBId || {};
+      }
+    } catch (err) {
+      console.warn('[Characters] Backstory overrides parse failed: ' + err.message);
+    }
+
     // Load language validation rules
     let langRules = null;
     try {
@@ -1511,6 +1528,27 @@ class CharacterService {
         // Merge americas origin from overlay (does NOT modify the read-only file)
         if (originsOverlay[String(id)]?.americasOrigin) {
           data.americasOrigin = originsOverlay[String(id)].americasOrigin;
+        }
+        // Merge backstory override on top of DDB pull (per-field, override
+        // wins). Protects campaign-authored narrative content from being
+        // wiped when a DDB re-sync writes null into empty notes fields.
+        const bsOv = backstoryOverrides[String(id)];
+        if (bsOv) {
+          if (bsOv.backstory && typeof bsOv.backstory === 'object') {
+            const existing = (data.backstory && typeof data.backstory === 'object') ? data.backstory : {};
+            data.backstory = { ...existing };
+            for (const [k, v] of Object.entries(bsOv.backstory)) {
+              if (v != null) data.backstory[k] = v;
+            }
+          }
+          if (bsOv.appearance && typeof bsOv.appearance === 'object') {
+            const existing = (data.appearance && typeof data.appearance === 'object') ? data.appearance : {};
+            data.appearance = { ...existing };
+            for (const [k, v] of Object.entries(bsOv.appearance)) {
+              if (v != null) data.appearance[k] = v;
+            }
+          }
+          data._backstoryOverrideApplied = true;
         }
         // Initialize purse from DDB currency if not present in state
         if (!data.purse) {

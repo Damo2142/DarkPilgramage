@@ -31,6 +31,23 @@
         "confirmed": false,
         "note": "Barry is a European human — Frascht family, hunter bloodline tied to Central European folkloric tradition (Van Helsing precedent). No Americas connection."
       }
+    },
+    "164256658": {
+      "name": "Marfire (Firbolg Barbarian)",
+      "americasOrigin": {
+        "confirmed": true,
+        "continent": "The same continent as Zarina's mother's people — the western deep-forest of a land with no European name",
+        "howArrivedInEurope": "Taken in 1270 by a Cistercian expedition led by Father Girard. Presented to the Pope as a 'wonder of God' conversion trophy. Sent to the Abbey of the Seven Flames in the Apennines. Has been in the Order's service for three years eight months. Her parents are held in a Cistercian stockade on the Green-World coast as hostages against her obedience.",
+        "europeanReaction": "Nobody in 1274 Europe has a category for a firbolg from beyond the western horizon. Common people react with terror or pilgrimage-awe. The Church treats her as a sanctified wonder; the Order of the Seven Flames uses her as a weapon. Village priests have written letters about her for four years.",
+        "languagesFromAmericas": [
+          "Elvish (Americas dialect, same root as Zarina's mother's people)",
+          "Speech of Beast and Leaf (works globally on animals; European trees answer in a slow, off-meter rhythm)"
+        ],
+        "vladislavReaction": "He has not encountered her kind before and he is very old. He is interested the way he is interested in Zarina — carefully. Her scale does not intimidate him. Her strangeness does not either. Her grief might.",
+        "kamennyReaction": "The Kamenný has geological memory of the continent she comes from. It recognizes her kin-signature in the same way it recognizes Zarina's. If and when communication is established it will place a stone at her feet as well — a different stone.",
+        "elvishNote": "Her Elvish is from her mother's people of the Americas. It may not be mutually intelligible with European Elvish. Flag for DM review when she attempts Elvish with a European elf or with Zarina; the two Americas dialects share some words.",
+        "orderNote": "She wears the Order of the Seven Flames' iron torc under her clothing at all times. It identifies her as Order-affiliated to any cleric, abbot, or Crusader order member who sees it. Removing it is the narrative event that ends her parents' protection."
+      }
     }
   },
   "npcReactionsToNonHumans": {
